@@ -44,6 +44,18 @@ func TestPredicate(t *testing.T) {
 			},
 			Expected: true,
 		},
+		"path value equal 2": {
+			Predicate: &Path{
+				Parts:     []string{"foo"},
+				Condition: &Eq{"baz"},
+			},
+			Value: map[string]interface{}{
+				"foo": map[string]interface{}{
+					"bar": "baz",
+				},
+			},
+			Expected: false,
+		},
 		"path don't exists": {
 			Predicate: &Path{
 				Parts:     []string{"foo", "bar"},
@@ -105,5 +117,5 @@ func (e *evaluatePredicate) VisitPath(v *Path) any {
 		}
 	}
 
-	return true
+	return v.Condition.Accept(&evaluatePredicate{V: val}).(bool)
 }
