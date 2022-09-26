@@ -10,9 +10,10 @@ import (
 var output = flag.String("output", "-", "Output file for generated code")
 var types = flag.String("types", "", "Comma separated list of golang types to generate union for")
 var name = flag.String("name", "", "Name of the union type")
-var packageName = flag.String("packageName", "main", "go package name")
+var packageName = flag.String("package", "main", "go package name")
 
 func main() {
+	flag.Usage()
 	flag.Parse()
 
 	g := mkunion.Generate{
