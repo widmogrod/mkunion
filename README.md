@@ -4,14 +4,14 @@ Improves work with unions in golang by generating beautiful code (in other langu
 ## Usage
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion
+go install github.com/widmogrod/cmd/mkunion@latest
 ```
 
 Create your first union
 ```go
 package example
 
-//go:generate mkunion -name=Vehicle -types=Plane,Car,Boat -path=simple_union_example_gen_test -packageName=example
+//go:generate mkunion -name=Vehicle -types=Plane,Car,Boat -output=simple_union_example_gen_test.go -packageName=example
 type (
     Car   struct{}
     Plane struct{}
