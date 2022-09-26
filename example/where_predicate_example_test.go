@@ -1,14 +1,13 @@
 package example
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-//go:generate go run ../cmd/mkunion/main.go -name=WherePredicate -types=Eq,Gt,Lt,And,Or,Path -path=where_predicate_example_gen_test -packageName=example
+//go:generate go run ../cmd/mkunion/main.go -name=WherePredicate -types=Eq,And,Or,Path -output=where_predicate_example_gen_test -packageName=example
 type (
 	Eq   struct{ V interface{} }
-	Gt   struct{ V interface{} }
-	Lt   struct{ V interface{} }
 	And  []WherePredicate
 	Or   []WherePredicate
 	Path struct {
@@ -18,10 +17,93 @@ type (
 )
 
 func TestPredicate(t *testing.T) {
-	_ = And{
-		&Path{
-			Parts:     []string{"name"},
-			Condition: &Eq{"bar"},
+	useCases := map[string]struct {
+		Predicate WherePredicate
+		Value     interface{}
+		Expected  bool
+	}{
+		"simple equality": {
+			Predicate: &Eq{V: "bar"},
+			Value:     "bar",
+			Expected:  true,
+		},
+		"equality fails": {
+			Predicate: &Eq{V: "bar"},
+			Value:     "foo",
+			Expected:  false,
+		},
+		"path value equal": {
+			Predicate: &Path{
+				Parts:     []string{"foo", "bar"},
+				Condition: &Eq{"baz"},
+			},
+			Value: map[string]interface{}{
+				"foo": map[string]interface{}{
+					"bar": "baz",
+				},
+			},
+			Expected: true,
+		},
+		"path don't exists": {
+			Predicate: &Path{
+				Parts:     []string{"foo", "bar"},
+				Condition: &Eq{"baz"},
+			},
+			Value:    "some string",
+			Expected: false,
 		},
 	}
+
+	for name, uc := range useCases {
+		t.Run(name, func(t *testing.T) {
+			isTrue := &evaluatePredicate{V: uc.Value}
+			result := uc.Predicate.Accept(isTrue).(bool)
+			assert.Equal(t, uc.Expected, result)
+		})
+	}
+}
+
+var _ WherePredicateVisitor = (*evaluatePredicate)(nil)
+
+type evaluatePredicate struct {
+	V interface{}
+}
+
+func (e *evaluatePredicate) VisitEq(v *Eq) any {
+	return v.V == e.V
+}
+
+func (e *evaluatePredicate) VisitAnd(v *And) any {
+	for _, p := range *v {
+		if !p.Accept(e).(bool) {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *evaluatePredicate) VisitOr(v *Or) any {
+	for _, p := range *v {
+		if p.Accept(e).(bool) {
+			return true
+		}
+	}
+	return false
+
+}
+
+func (e *evaluatePredicate) VisitPath(v *Path) any {
+	val := e.V
+	for _, p := range v.Parts {
+		m, ok := val.(map[string]interface{})
+		if !ok {
+			return false
+		}
+		val, ok = m[p]
+		if !ok {
+			return false
+		}
+	}
+
+	return true
 }
