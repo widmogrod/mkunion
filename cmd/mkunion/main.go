@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-var path = flag.String("path", "-", "path to *.dpr file")
-var types = flag.String("types", "", "path to *.dpr file")
-var name = flag.String("name", "", "path to *.dpr file")
+var output = flag.String("output", "-", "output to *.dpr file")
+var types = flag.String("types", "", "output to *.dpr file")
+var name = flag.String("name", "", "output to *.dpr file")
 var packageName = flag.String("packageName", "main", "go package name")
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(*path+".go", result, 0644)
+	err = ioutil.WriteFile(*output+".go", result, 0644)
 	if err != nil {
 		panic(err)
 	}
