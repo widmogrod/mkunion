@@ -6,7 +6,7 @@ import (
 )
 
 func TestTravers(t *testing.T) {
-	g := TraverseGenerator{
+	g := ReducerGenerator{
 		Name:        "Tree",
 		PackageName: "visitor",
 		Types:       []string{"Branch", "Leaf"},

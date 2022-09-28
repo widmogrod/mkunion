@@ -6,7 +6,7 @@ import (
 )
 
 func TestExtractInferenceForTree(t *testing.T) {
-	out, err := InferFromFile("example/tree_example_test.go")
+	out, err := InferFromFile("example/tree_example.go")
 	assert.NoError(t, err)
 	assert.Equal(t, "example", out.PackageName)
 	assert.Equal(t,
@@ -22,7 +22,7 @@ func TestExtractInferenceForTree(t *testing.T) {
 }
 
 func TestExtractInferenceForWherePredicate(t *testing.T) {
-	out, err := InferFromFile("example/where_predicate_example_test.go")
+	out, err := InferFromFile("example/where_predicate_example.go")
 	assert.NoError(t, err)
 	assert.Equal(t, "example", out.PackageName)
 	assert.Equal(t,

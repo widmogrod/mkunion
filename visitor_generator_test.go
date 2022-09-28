@@ -6,10 +6,10 @@ import (
 )
 
 func TestGeneration(t *testing.T) {
-	g := UnionVisitorGenerator{
+	g := VisitorGenerator{
 		Name:        "Vehicle",
-		PackageName: "visitor",
 		Types:       []string{"Plane", "Car", "Boat"},
+		PackageName: "visitor",
 	}
 
 	result, err := g.Generate()
