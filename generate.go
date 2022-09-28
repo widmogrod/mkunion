@@ -6,7 +6,7 @@ import (
 )
 
 type (
-	Generate struct {
+	UnionVisitorGenerator struct {
 		Types       []string
 		Name        string
 		PackageName string
@@ -72,7 +72,7 @@ var (
 	render = template.Must(template.New("main").Parse(tmpl))
 )
 
-func (g *Generate) Generate() ([]byte, error) {
+func (g *UnionVisitorGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
 	err := render.ExecuteTemplate(result, "main", g)
 	if err != nil {

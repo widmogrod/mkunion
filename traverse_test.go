@@ -6,12 +6,12 @@ import (
 )
 
 func TestTravers(t *testing.T) {
-	g := Traverse{
+	g := TraverseGenerator{
 		Name:        "Tree",
 		PackageName: "visitor",
 		Types:       []string{"Branch", "Leaf"},
-		Branches: map[string][]string{
-			"Branch": {"L", "R"},
+		Branches: map[string][]Branching{
+			"Branch": {{Lit: PtrStr("L")}, {Lit: PtrStr("R")}},
 		},
 	}
 

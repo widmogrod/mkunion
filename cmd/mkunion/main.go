@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"syscall"
 )
@@ -18,7 +20,7 @@ func main() {
 	var app *cli.App
 	app = &cli.App{
 		Name:                   "mkunion",
-		Description:            "Generate union type and visitor pattern gor golang",
+		Description:            "UnionVisitorGenerator union type and visitor pattern gor golang",
 		EnableBashCompletion:   true,
 		DefaultCommand:         "golang",
 		UseShortOptionHandling: true,
@@ -48,21 +50,47 @@ func main() {
 					},
 				},
 				Action: func(c *cli.Context) error {
-					g := mkunion.Generate{
-						Types:       strings.Split(c.String("types"), ","),
-						Name:        c.String("name"),
-						PackageName: c.String("package"),
+					cwd, _ := syscall.Getwd()
+					file := path.Join(cwd, os.Getenv("GOFILE"))
+					inferred, err := mkunion.InferFromFile(file)
+					if err != nil {
+						return err
+					}
+					u := mkunion.UnionVisitorGenerator{
+						Types: strings.Split(c.String("types"), ","),
+						Name:  c.String("name"),
+						//PackageName: c.String("package"),
+						PackageName: inferred.PackageName,
 					}
 
-					result, err := g.Generate()
-					if err != nil {
-						panic(err)
+					t := mkunion.TraverseGenerator{
+						Name: u.Name,
+						//PackageName: u.PackageName,
+						PackageName: inferred.PackageName,
+						Types:       u.Types,
+						Branches:    inferred.ForVariantType(u.Name, u.Types),
+						NoHeader:    true,
 					}
 
-					err = ioutil.WriteFile(c.String("output"), result, 0644)
+					unionVisitor, err := u.Generate()
 					if err != nil {
-						panic(err)
+						return err
 					}
+
+					traverse, err := t.Generate()
+					if err != nil {
+						return err
+					}
+
+					bb := bytes.Buffer{}
+					bb.Write(unionVisitor)
+					bb.Write(traverse)
+
+					err = ioutil.WriteFile(c.String("output"), bb.Bytes(), 0644)
+					if err != nil {
+						return err
+					}
+
 					return nil
 				},
 			},

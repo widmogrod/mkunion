@@ -13,6 +13,8 @@ type (
 	Path struct {
 		Parts     []string
 		Condition WherePredicate
+		Then      []WherePredicate
+		X         Eq
 	}
 )
 

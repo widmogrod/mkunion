@@ -6,7 +6,7 @@ import (
 )
 
 func TestGeneration(t *testing.T) {
-	g := Generate{
+	g := UnionVisitorGenerator{
 		Name:        "Vehicle",
 		PackageName: "visitor",
 		Types:       []string{"Plane", "Car", "Boat"},
