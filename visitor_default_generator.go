@@ -17,7 +17,7 @@ var (
 	optionalVisitorTmpl = header + `
 package {{ .PackageName }}
 {{ $name := .Name }}
-type {{ $name }}NonExhaustiveG[A any] struct {
+type {{ $name }}DefaultVisitor[A any] struct {
 	Default A
 	{{- range .Types }}
 	On{{ . }} func(x *{{ . }}) A
@@ -25,7 +25,7 @@ type {{ $name }}NonExhaustiveG[A any] struct {
 }
 
 {{- range .Types }}
-func (t *{{ $name }}NonExhaustiveG[A]) Visit{{ . }}(v *{{ . }}) any {
+func (t *{{ $name }}DefaultVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	if t.On{{ . }} != nil {
 		return t.On{{ . }}(v)
 	}

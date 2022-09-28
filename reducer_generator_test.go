@@ -21,22 +21,29 @@ func TestTravers(t *testing.T) {
 package visitor
 
 type (
-	TreeReducer[A any] struct {
-		Branch func(x *Branch, agg A) (result A, stop bool)
-		Leaf func(x *Leaf, agg A) (result A, stop bool)
+	TreeDefaultReduction[A any] struct {
+		PanicOnFallback bool
+		DefaultStopReduction bool
+		OnBranch func(x *Branch, agg A) (result A, stop bool)
+		OnLeaf func(x *Leaf, agg A) (result A, stop bool)
+	}
+
+	TreeReducer[A any] interface {
+		ReduceBranch(x *Branch, agg A) (result A, stop bool)
+		ReduceLeaf(x *Leaf, agg A) (result A, stop bool)
 	}
 )
 
-type dfsTree[A any] struct {
+type TreeDepthFirstVisitor[A any] struct {
 	stop   bool
 	result A
 	reduce TreeReducer[A]
 }
 
-var _ TreeVisitor = (*dfsTree[any])(nil)
+var _ TreeVisitor = (*TreeDepthFirstVisitor[any])(nil)
 
-func (d *dfsTree[A]) VisitBranch(v *Branch) any {
-	d.result, d.stop = d.reduce.Branch(v, d.result)
+func (d *TreeDepthFirstVisitor[A]) VisitBranch(v *Branch) any {
+	d.result, d.stop = d.reduce.ReduceBranch(v, d.result)
 	if d.stop {
 		return nil
 	}
@@ -50,8 +57,8 @@ func (d *dfsTree[A]) VisitBranch(v *Branch) any {
 	return nil
 }
 
-func (d *dfsTree[A]) VisitLeaf(v *Leaf) any {
-	d.result, d.stop = d.reduce.Leaf(v, d.result)
+func (d *TreeDepthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
+	d.result, d.stop = d.reduce.ReduceLeaf(v, d.result)
 	if d.stop {
 		return nil
 	}
@@ -60,7 +67,7 @@ func (d *dfsTree[A]) VisitLeaf(v *Leaf) any {
 }
 
 func ReduceTree[A any](r TreeReducer[A], v Tree, init A) A {
-	reducer := &dfsTree[A]{
+	reducer := &TreeDepthFirstVisitor[A]{
 		result: init,
 		reduce: r,
 	}
@@ -68,6 +75,29 @@ func ReduceTree[A any](r TreeReducer[A], v Tree, init A) A {
 	_ = v.Accept(reducer)
 
 	return reducer.result
+}
+
+var _ TreeReducer[any] = (*TreeDefaultReduction[any])(nil)
+
+
+func (t *TreeDefaultReduction[A]) ReduceBranch(x *Branch, agg A) (result A, stop bool) {
+	if t.OnBranch != nil {
+		return t.OnBranch(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *TreeDefaultReduction[A]) ReduceLeaf(x *Leaf, agg A) (result A, stop bool) {
+	if t.OnLeaf != nil {
+		return t.OnLeaf(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
 }
 `, string(result))
 }

@@ -17,7 +17,7 @@ func (s sumVisitor) VisitLeaf(v *Leaf) any {
 
 var _ TreeVisitor = (*sumVisitor)(nil)
 
-func TestTree(t *testing.T) {
+func TestTreeSumValues(t *testing.T) {
 	tree := &Branch{
 		L: &Leaf{Value: 1},
 		R: &Branch{
@@ -29,43 +29,45 @@ func TestTree(t *testing.T) {
 	assert.Equal(t, 6, tree.Accept(&sumVisitor{}))
 }
 
-//func TestTreeReducer(t *testing.T) {
-//	tree := &Branch{
-//		L: &Leaf{Value: 1},
-//		R: &Branch{
-//			L: &Leaf{Value: 2},
-//			R: &Leaf{Value: 3},
-//		},
-//	}
-//
-//	red := TreeReducer[int]{
-//		Branch: func(x *Branch, agg int) (int, bool) {
-//			return agg, false
-//		},
-//		Leaf: func(x *Leaf, agg int) (int, bool) {
-//			return agg + 1, false
-//		},
-//	}
-//
-//	result := ReduceTree(red, tree, 0)
-//	assert.Equal(t, 6, result)
-//}
+func TestTreeSumUsingReducer(t *testing.T) {
+	tree := &Branch{
+		L: &Leaf{Value: 1},
+		R: &Branch{
+			L: &Leaf{Value: 2},
+			R: &Leaf{Value: 3},
+		},
+	}
 
-//func TestTreeNonExhaustive(t *testing.T) {
-//	tree := &Branch{
-//		L: &Leaf{Value: 1},
-//		R: &Branch{
-//			L: &Leaf{Value: 2},
-//			R: &Leaf{Value: 3},
-//		},
-//	}
-//
-//	n := TreeNonExhaustiveG[int]{
-//		Default: 10,
-//		OnLeaf: func(x *Leaf) int {
-//			return x.Value
-//		},
-//	}
-//
-//	assert.Equal(t, 11, tree.Accept(&n))
-//}
+	var red TreeReducer[int] = &TreeDefaultReduction[int]{
+		PanicOnFallback:      false,
+		DefaultStopReduction: false,
+		//OnBranch: func(x *Branch, agg int) (result int, stop bool) {
+		//	return agg, false
+		//},
+		OnLeaf: func(x *Leaf, agg int) (int, bool) {
+			return agg + x.Value, false
+		},
+	}
+
+	result := ReduceTree(red, tree, 0)
+	assert.Equal(t, 6, result)
+}
+
+func TestTreeNonExhaustive(t *testing.T) {
+	tree := &Branch{
+		L: &Leaf{Value: 1},
+		R: &Branch{
+			L: &Leaf{Value: 2},
+			R: &Leaf{Value: 3},
+		},
+	}
+
+	n := TreeDefaultVisitor[int]{
+		Default: 10,
+		OnLeaf: func(x *Leaf) int {
+			return x.Value
+		},
+	}
+
+	assert.Equal(t, 10, tree.Accept(&n))
+}

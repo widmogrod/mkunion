@@ -30,23 +30,31 @@ package {{ .PackageName }}
 {{ $root := . }}
 {{- $name := .Name }}
 type (
-	{{ $name }}Reducer[A any] struct {
+	{{ $name }}DefaultReduction[A any] struct {
+		PanicOnFallback bool
+		DefaultStopReduction bool
 		{{- range .Types }}
-		{{ . }} func(x *{{ . }}, agg A) (result A, stop bool)
+		On{{ . }} func(x *{{ . }}, agg A) (result A, stop bool)
+		{{- end }}
+	}
+
+	{{ $name }}Reducer[A any] interface {
+		{{- range .Types }}
+		Reduce{{ . }}(x *{{ . }}, agg A) (result A, stop bool)
 		{{- end }}
 	}
 )
 
-type dfs{{ $name }}[A any] struct {
+type {{ $name }}DepthFirstVisitor[A any] struct {
 	stop   bool
 	result A
 	reduce {{ $name }}Reducer[A]
 }
 
-var _ {{ $name }}Visitor = (*dfs{{ $name }}[any])(nil)
+var _ {{ $name }}Visitor = (*{{ $name }}DepthFirstVisitor[any])(nil)
 {{ range $i, $type := .Types }}
-func (d *dfs{{ $name }}[A]) Visit{{ . }}(v *{{ . }}) any {
-	d.result, d.stop = d.reduce.{{ . }}(v, d.result)
+func (d *{{ $name }}DepthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
+	d.result, d.stop = d.reduce.Reduce{{ . }}(v, d.result)
 	if d.stop {
 		return nil
 	}
@@ -69,7 +77,7 @@ func (d *dfs{{ $name }}[A]) Visit{{ . }}(v *{{ . }}) any {
 }
 {{ end }}
 func Reduce{{ $name }}[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
-	reducer := &dfs{{ $name }}[A]{
+	reducer := &{{ $name }}DepthFirstVisitor[A]{
 		result: init,
 		reduce: r,
 	}
@@ -78,7 +86,20 @@ func Reduce{{ $name }}[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A 
 
 	return reducer.result
 }
-`
+
+var _ {{ $name }}Reducer[any] = (*{{ $name }}DefaultReduction[any])(nil)
+
+{{ range $i, $type := .Types }}
+func (t *{{ $name }}DefaultReduction[A]) Reduce{{ $type }}(x *{{ $type }}, agg A) (result A, stop bool) {
+	if t.On{{ $type }} != nil {
+		return t.On{{ $type }}(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+{{ end }}`
 )
 
 var (
