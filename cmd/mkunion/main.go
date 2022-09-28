@@ -1,34 +1,76 @@
 package main
 
 import (
-	"flag"
+	"context"
+	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
 	"io/ioutil"
+	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
-var output = flag.String("output", "-", "Output file for generated code")
-var types = flag.String("types", "", "Comma separated list of golang types to generate union for")
-var name = flag.String("name", "", "Name of the union type")
-var packageName = flag.String("package", "main", "go package name")
-
 func main() {
-	flag.Usage()
-	flag.Parse()
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	g := mkunion.Generate{
-		Types:       strings.Split(*types, ","),
-		Name:        *name,
-		PackageName: *packageName,
+	var app *cli.App
+	app = &cli.App{
+		Name:                   "mkunion",
+		Description:            "Generate union type and visitor pattern gor golang",
+		EnableBashCompletion:   true,
+		DefaultCommand:         "golang",
+		UseShortOptionHandling: true,
+		Commands: []*cli.Command{
+			{
+				Name: "golang",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Aliases:  []string{"n", "variant"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "types",
+						Aliases:  []string{"t"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "output",
+						Aliases:  []string{"o"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "package",
+						Aliases:  []string{"p"},
+						Required: true,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					g := mkunion.Generate{
+						Types:       strings.Split(c.String("types"), ","),
+						Name:        c.String("name"),
+						PackageName: c.String("package"),
+					}
+
+					result, err := g.Generate()
+					if err != nil {
+						panic(err)
+					}
+
+					err = ioutil.WriteFile(c.String("output"), result, 0644)
+					if err != nil {
+						panic(err)
+					}
+					return nil
+				},
+			},
+		},
 	}
 
-	result, err := g.Generate()
+	err := app.RunContext(ctx, os.Args)
 	if err != nil {
-		panic(err)
-	}
-
-	err = ioutil.WriteFile(*output, result, 0644)
-	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

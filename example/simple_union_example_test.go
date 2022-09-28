@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-//go:generate go run ../cmd/mkunion/main.go -name=Vehicle -types=Plane,Car,Boat -output=simple_union_example_gen_test.go -packageName=example
+//go:generate go run ../cmd/mkunion/main.go golang -name=Vehicle -types=Plane,Car,Boat -output=simple_union_example_gen_test.go -package=example
 type (
 	Car   struct{}
 	Plane struct{}

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-//go:generate go run ../cmd/mkunion/main.go -name=Tree -types=Branch,Leaf -output=tree_example_gen_test.go -packageName=example
+//go:generate go run ../cmd/mkunion/main.go golang -name=Tree -types=Branch,Leaf -output=tree_example_gen_test.go -package=example
 type (
 	Branch struct{ L, R Tree }
 	Leaf   struct{ Value int }

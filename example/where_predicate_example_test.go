@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-//go:generate go run ../cmd/mkunion/main.go -name=WherePredicate -types=Eq,And,Or,Path -output=where_predicate_example_gen_test.go -packageName=example
+//go:generate go run ../cmd/mkunion/main.go golang -name=WherePredicate -types=Eq,And,Or,Path -output=where_predicate_example_gen_test.go -package=example
 type (
 	Eq   struct{ V interface{} }
 	And  []WherePredicate

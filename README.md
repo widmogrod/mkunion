@@ -11,7 +11,7 @@ Create your first union
 ```go
 package example
 
-//go:generate mkunion -name=Vehicle -types=Plane,Car,Boat -output=simple_union_example_gen_test.go -packageName=example
+//go:generate mkunion -name=Vehicle -types=Plane,Car,Boat -output=simple_union_example_gen_test.go -package=example
 type (
     Car   struct{}
     Plane struct{}
