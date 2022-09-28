@@ -21,13 +21,6 @@ func TestTravers(t *testing.T) {
 package visitor
 
 type (
-	TreeDefaultReduction[A any] struct {
-		PanicOnFallback bool
-		DefaultStopReduction bool
-		OnBranch func(x *Branch, agg A) (result A, stop bool)
-		OnLeaf func(x *Leaf, agg A) (result A, stop bool)
-	}
-
 	TreeReducer[A any] interface {
 		ReduceBranch(x *Branch, agg A) (result A, stop bool)
 		ReduceLeaf(x *Leaf, agg A) (result A, stop bool)
@@ -79,6 +72,14 @@ func ReduceTree[A any](r TreeReducer[A], v Tree, init A) A {
 
 var _ TreeReducer[any] = (*TreeDefaultReduction[any])(nil)
 
+type (
+	TreeDefaultReduction[A any] struct {
+		PanicOnFallback bool
+		DefaultStopReduction bool
+		OnBranch func(x *Branch, agg A) (result A, stop bool)
+		OnLeaf func(x *Leaf, agg A) (result A, stop bool)
+	}
+)
 
 func (t *TreeDefaultReduction[A]) ReduceBranch(x *Branch, agg A) (result A, stop bool) {
 	if t.OnBranch != nil {

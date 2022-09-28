@@ -30,14 +30,6 @@ package {{ .PackageName }}
 {{ $root := . }}
 {{- $name := .Name }}
 type (
-	{{ $name }}DefaultReduction[A any] struct {
-		PanicOnFallback bool
-		DefaultStopReduction bool
-		{{- range .Types }}
-		On{{ . }} func(x *{{ . }}, agg A) (result A, stop bool)
-		{{- end }}
-	}
-
 	{{ $name }}Reducer[A any] interface {
 		{{- range .Types }}
 		Reduce{{ . }}(x *{{ . }}, agg A) (result A, stop bool)
@@ -89,6 +81,15 @@ func Reduce{{ $name }}[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A 
 
 var _ {{ $name }}Reducer[any] = (*{{ $name }}DefaultReduction[any])(nil)
 
+type (
+	{{ $name }}DefaultReduction[A any] struct {
+		PanicOnFallback bool
+		DefaultStopReduction bool
+		{{- range .Types }}
+		On{{ . }} func(x *{{ . }}, agg A) (result A, stop bool)
+		{{- end }}
+	}
+)
 {{ range $i, $type := .Types }}
 func (t *{{ $name }}DefaultReduction[A]) Reduce{{ $type }}(x *{{ $type }}, agg A) (result A, stop bool) {
 	if t.On{{ $type }} != nil {
