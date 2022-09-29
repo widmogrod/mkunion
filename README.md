@@ -63,11 +63,11 @@ tree := &Branch{
 
 var red TreeReducer[int] = &TreeDefaultReduction[int]{
     OnBranch: func(x *Branch, agg int) (result int, stop bool) {
-		// don't do anything, but continue traversing
+        // don't do anything, but continue traversing
         return agg, false
     },
     OnLeaf: func(x *Leaf, agg int) (int, bool) {
-		// add value to accumulator
+        // add value to accumulator
         return agg + x.Value, false
     },
 }
