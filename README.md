@@ -15,7 +15,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@2.0.0
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1
 ```
 
 ### Create your first union
