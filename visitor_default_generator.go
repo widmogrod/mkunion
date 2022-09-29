@@ -14,7 +14,7 @@ type (
 )
 
 var (
-	optionalVisitorTmpl = header + `
+	optionalVisitorTmpl = Header + `
 package {{ .PackageName }}
 {{ $name := .Name }}
 type {{ $name }}DefaultVisitor[A any] struct {

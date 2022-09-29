@@ -25,7 +25,7 @@ type ReducerGenerator struct {
 }
 
 var (
-	traverseTmpl = header + `
+	traverseTmpl = Header + `
 package {{ .PackageName }}
 {{ $root := . }}
 {{- $name := .Name }}

@@ -18,7 +18,7 @@ func main() {
 
 	var app *cli.App
 	app = &cli.App{
-		Name:                   "mkunion",
+		Name:                   mkunion.Program,
 		Description:            "VisitorGenerator union type and visitor pattern gor golang",
 		EnableBashCompletion:   true,
 		DefaultCommand:         "golang",
@@ -50,22 +50,22 @@ func main() {
 					if err != nil {
 						return err
 					}
-					u := mkunion.VisitorGenerator{
+					visitor := mkunion.VisitorGenerator{
 						Name:        c.String("name"),
 						Types:       strings.Split(c.String("types"), ","),
 						PackageName: inferred.PackageName,
 					}
 
-					t := mkunion.ReducerGenerator{
-						Name:        u.Name,
-						Types:       u.Types,
+					reducer := mkunion.ReducerGenerator{
+						Name:        visitor.Name,
+						Types:       visitor.Types,
 						PackageName: inferred.PackageName,
-						Branches:    inferred.ForVariantType(u.Name, u.Types),
+						Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
 					}
 
-					og := mkunion.VisitorDefaultGenerator{
-						Name:        u.Name,
-						Types:       u.Types,
+					defaultVisitor := mkunion.VisitorDefaultGenerator{
+						Name:        visitor.Name,
+						Types:       visitor.Types,
 						PackageName: inferred.PackageName,
 					}
 
@@ -73,16 +73,17 @@ func main() {
 						gen  mkunion.Generator
 						name string
 					}{
-						{gen: &u, name: "visitor_gen"},
-						{gen: &t, name: "reducer_gen"},
-						{gen: &og, name: "visitor_def_gen"},
+						{gen: &visitor, name: "visitor"},
+						{gen: &reducer, name: "reducer"},
+						{gen: &defaultVisitor, name: "default_visitor"},
 					}
 					for _, g := range generators {
 						b, err := g.gen.Generate()
 						if err != nil {
 							return err
 						}
-						err = ioutil.WriteFile(path.Join(cwd, baseName+"_"+g.name+".go"), b, 0644)
+						err = ioutil.WriteFile(path.Join(cwd,
+							baseName+"_"+mkunion.Program+"_"+g.name+".go"), b, 0644)
 						if err != nil {
 							return err
 						}
