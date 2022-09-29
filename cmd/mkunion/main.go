@@ -1,33 +1,97 @@
 package main
 
 import (
-	"flag"
+	"context"
+	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
 	"io/ioutil"
+	"log"
+	"os"
+	"os/signal"
+	"path"
 	"strings"
+	"syscall"
 )
 
-var output = flag.String("output", "-", "Output file for generated code")
-var types = flag.String("types", "", "Comma separated list of golang types to generate union for")
-var name = flag.String("name", "", "Name of the union type")
-var packageName = flag.String("packageName", "main", "go package name")
-
 func main() {
-	flag.Parse()
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	g := mkunion.Generate{
-		Types:       strings.Split(*types, ","),
-		Name:        *name,
-		PackageName: *packageName,
+	var app *cli.App
+	app = &cli.App{
+		Name:                   mkunion.Program,
+		Description:            "VisitorGenerator union type and visitor pattern gor golang",
+		EnableBashCompletion:   true,
+		DefaultCommand:         "golang",
+		UseShortOptionHandling: true,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "name",
+				Aliases:  []string{"n", "variant"},
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "types",
+				Aliases:  []string{"t"},
+				Required: true,
+			},
+		},
+		Action: func(c *cli.Context) error {
+			cwd, _ := syscall.Getwd()
+			sourceName := path.Base(os.Getenv("GOFILE"))
+			sourcePath := path.Join(cwd, sourceName)
+
+			baseName := strings.TrimSuffix(sourceName, path.Ext(sourceName))
+
+			// file name without extension
+			inferred, err := mkunion.InferFromFile(sourcePath)
+			if err != nil {
+				return err
+			}
+			visitor := mkunion.VisitorGenerator{
+				Name:        c.String("name"),
+				Types:       strings.Split(c.String("types"), ","),
+				PackageName: inferred.PackageName,
+			}
+
+			reducer := mkunion.ReducerGenerator{
+				Name:        visitor.Name,
+				Types:       visitor.Types,
+				PackageName: inferred.PackageName,
+				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
+			}
+
+			defaultVisitor := mkunion.VisitorDefaultGenerator{
+				Name:        visitor.Name,
+				Types:       visitor.Types,
+				PackageName: inferred.PackageName,
+			}
+
+			generators := []struct {
+				gen  mkunion.Generator
+				name string
+			}{
+				{gen: &visitor, name: "visitor"},
+				{gen: &reducer, name: "reducer"},
+				{gen: &defaultVisitor, name: "default_visitor"},
+			}
+			for _, g := range generators {
+				b, err := g.gen.Generate()
+				if err != nil {
+					return err
+				}
+				err = ioutil.WriteFile(path.Join(cwd,
+					baseName+"_"+mkunion.Program+"_"+g.name+".go"), b, 0644)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
 	}
 
-	result, err := g.Generate()
+	err := app.RunContext(ctx, os.Args)
 	if err != nil {
-		panic(err)
-	}
-
-	err = ioutil.WriteFile(*output, result, 0644)
-	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

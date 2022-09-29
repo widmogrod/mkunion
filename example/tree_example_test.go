@@ -5,11 +5,7 @@ import (
 	"testing"
 )
 
-//go:generate go run ../cmd/mkunion/main.go -name=Tree -types=Branch,Leaf -output=tree_example_gen_test.go -packageName=example
-type (
-	Branch struct{ L, R Tree }
-	Leaf   struct{ Value int }
-)
+var _ TreeVisitor = (*sumVisitor)(nil)
 
 type sumVisitor struct{}
 
@@ -21,9 +17,7 @@ func (s sumVisitor) VisitLeaf(v *Leaf) any {
 	return v.Value
 }
 
-var _ TreeVisitor = (*sumVisitor)(nil)
-
-func TestTree(t *testing.T) {
+func TestTreeSumValues(t *testing.T) {
 	tree := &Branch{
 		L: &Leaf{Value: 1},
 		R: &Branch{
@@ -33,4 +27,47 @@ func TestTree(t *testing.T) {
 	}
 
 	assert.Equal(t, 6, tree.Accept(&sumVisitor{}))
+}
+
+func TestTreeSumUsingReducer(t *testing.T) {
+	tree := &Branch{
+		L: &Leaf{Value: 1},
+		R: &Branch{
+			L: &Leaf{Value: 2},
+			R: &Leaf{Value: 3},
+		},
+	}
+
+	var red TreeReducer[int] = &TreeDefaultReduction[int]{
+		PanicOnFallback:      false,
+		DefaultStopReduction: false,
+		//OnBranch: func(x *Branch, agg int) (result int, stop bool) {
+		//	return agg, false
+		//},
+		OnLeaf: func(x *Leaf, agg int) (int, bool) {
+			return agg + x.Value, false
+		},
+	}
+
+	result := ReduceTree(red, tree, 0)
+	assert.Equal(t, 6, result)
+}
+
+func TestTreeNonExhaustive(t *testing.T) {
+	tree := &Branch{
+		L: &Leaf{Value: 1},
+		R: &Branch{
+			L: &Leaf{Value: 2},
+			R: &Leaf{Value: 3},
+		},
+	}
+
+	n := TreeDefaultVisitor[int]{
+		Default: 10,
+		OnLeaf: func(x *Leaf) int {
+			return x.Value
+		},
+	}
+
+	assert.Equal(t, 10, tree.Accept(&n))
 }
