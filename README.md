@@ -4,7 +4,7 @@ Improves work with unions in golang by generating beautiful code (in other langu
 ## Usage
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@1.0.1
+go install github.com/widmogrod/mkunion/cmd/mkunion@2.0.0
 ```
 
 Create your first union
