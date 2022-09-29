@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+var _ TreeVisitor = (*sumVisitor)(nil)
+
 type sumVisitor struct{}
 
 func (s sumVisitor) VisitBranch(v *Branch) any {
@@ -14,8 +16,6 @@ func (s sumVisitor) VisitBranch(v *Branch) any {
 func (s sumVisitor) VisitLeaf(v *Leaf) any {
 	return v.Value
 }
-
-var _ TreeVisitor = (*sumVisitor)(nil)
 
 func TestTreeSumValues(t *testing.T) {
 	tree := &Branch{
