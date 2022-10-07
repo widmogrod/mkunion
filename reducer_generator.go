@@ -15,6 +15,7 @@ type variantName = string
 type Branching struct {
 	Lit  *string
 	List *string
+	Map  *string
 }
 
 type ReducerGenerator struct {
@@ -59,6 +60,12 @@ func (d *{{ $name }}DepthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	{{- else if .List }}
 	for idx := range v.{{ .List }} {
 		if _ = v.{{ .List }}[idx].Accept(d); d.stop {
+			return nil
+		}
+	}
+	{{- else if .Map }}
+	for idx, _ := range v.{{ .Map }} {
+		if _ = v.{{ .Map }}[idx].Accept(d); d.stop {
 			return nil
 		}
 	}

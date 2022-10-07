@@ -130,7 +130,7 @@ go test ./...
 - [x] Add support for slice []{Variant} type traversal
 
 ### V1.1.x
-- [ ] Add support for map[any]{Variant} type
+- [x] Add support for map[any]{Variant} type
 - [ ] Add breath-first reducer traversal 
 - [ ] Add leaf-first reducer traversal [?]
 
@@ -139,3 +139,6 @@ go test ./...
 
 ### V2.x.x
 - [ ] Add support for generic union types
+
+### Knows bugs
+- [ ] Multiple go:generates mkunion in one file overwrite generated. Solution: split to multiple files
