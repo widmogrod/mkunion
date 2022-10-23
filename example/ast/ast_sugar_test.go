@@ -1,0 +1,45 @@
+package ast
+
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestAstSyntaxSugar(t *testing.T) {
+	data := MapAny{
+		"foo": "bar",
+		"question": MapAny{
+			"thanks": 22,
+		},
+	}
+
+	sugarAST := OrFields{
+		"foo": &EqTo{"baz"},
+		"question": &OrFields{
+			"thanks": &GrThan{10},
+		},
+	}
+
+	operatorAST := &AOr{
+		&AEq{
+			L: &AAccessor{[]string{"foo"}},
+			R: &ALit{"baz"},
+		},
+		&AGt{
+			L: &AAccessor{[]string{"question", "thanks"}},
+			R: &ALit{10},
+		},
+	}
+
+	translatedAST := sugarAST.Accept(&TranslateSyntaxASTtoOperatorAST{}).(Operator)
+
+	interpreter := NewInterpreter()
+
+	resultA := interpreter.Eval(operatorAST, data)
+	assert.True(t, resultA)
+
+	resultB := interpreter.Eval(translatedAST, data)
+	assert.True(t, resultB)
+
+	assert.Equal(t, resultA, resultB)
+}
