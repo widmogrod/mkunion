@@ -124,13 +124,21 @@ go test ./...
 ```
 
 ## Roadmap ideas
+### V1.0.x
+- [x] Add visitor generation for unions
+- [x] Add support for depth-first traversal
+- [x] Add support for slice []{Variant} type traversal
+
 ### V1.1.x
-- [ ] Add support for map[any]{Variant} type
+- [x] Add support for map[any]{Variant} type
 - [ ] Add breath-first reducer traversal 
-- [ ] Add leaf-first reducer traversal
+- [ ] Add leaf-first reducer traversal [?]
 
 ### V1.2.x
 - [ ] Add support for not-stop able reducer
 
 ### V2.x.x
 - [ ] Add support for generic union types
+
+### Knows bugs
+- [ ] Multiple go:generates mkunion in one file overwrite generated. Solution: split to multiple files

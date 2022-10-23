@@ -33,6 +33,7 @@ func TestExtractInferenceForWherePredicate(t *testing.T) {
 			"Path": {
 				{Lit: PtrStr("Condition")},
 				{List: PtrStr("Then")},
+				{Map: PtrStr("Y")},
 			},
 		},
 		out.ForVariantType("WherePredicate", []string{"Eq", "And", "Or", "Path"}))

@@ -50,12 +50,16 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			}
 
 			isList := false
+			isMap := false
 
 			var id *ast.Ident
 			var ok bool
-			if arr, isArr := field.Type.(*ast.ArrayType); isArr {
+			if arr, okArr := field.Type.(*ast.ArrayType); okArr {
 				id, ok = arr.Elt.(*ast.Ident)
 				isList = true
+			} else if m, okMap := field.Type.(*ast.MapType); okMap {
+				id, ok = m.Value.(*ast.Ident)
+				isMap = true
 			} else {
 				id, ok = field.Type.(*ast.Ident)
 			}
@@ -69,11 +73,13 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				continue
 			}
 
-			for _, n := range field.Names {
+			for _, ff := range field.Names {
 				fieldTypeName := fieldName
-				branch := Branching{Lit: PtrStr(n.Name)}
+				branch := Branching{Lit: PtrStr(ff.Name)}
 				if isList {
-					branch = Branching{List: PtrStr(n.Name)}
+					branch = Branching{List: PtrStr(ff.Name)}
+				} else if isMap {
+					branch = Branching{Map: PtrStr(ff.Name)}
 				}
 				f.Types[f.currentType][fieldTypeName] = append(f.Types[f.currentType][fieldTypeName], branch)
 			}

@@ -11,7 +11,11 @@ func TestTravers(t *testing.T) {
 		PackageName: "visitor",
 		Types:       []string{"Branch", "Leaf"},
 		Branches: map[string][]Branching{
-			"Branch": {{Lit: PtrStr("L")}, {Lit: PtrStr("R")}},
+			"Branch": {
+				{Lit: PtrStr("Lit")},
+				{List: PtrStr("List")},
+				{Map: PtrStr("Map")},
+			},
 		},
 	}
 
@@ -40,11 +44,18 @@ func (d *TreeDepthFirstVisitor[A]) VisitBranch(v *Branch) any {
 	if d.stop {
 		return nil
 	}
-	if _ = v.L.Accept(d); d.stop {
+	if _ = v.Lit.Accept(d); d.stop {
 		return nil
 	}
-	if _ = v.R.Accept(d); d.stop {
-		return nil
+	for idx := range v.List {
+		if _ = v.List[idx].Accept(d); d.stop {
+			return nil
+		}
+	}
+	for idx, _ := range v.Map {
+		if _ = v.Map[idx].Accept(d); d.stop {
+			return nil
+		}
 	}
 
 	return nil

@@ -10,5 +10,6 @@ type (
 		Condition WherePredicate
 		Then      []WherePredicate
 		X         Eq
+		Y         map[string]WherePredicate
 	}
 )
