@@ -2,6 +2,7 @@ package ast
 
 import (
 	"github.com/stretchr/testify/assert"
+	"sort"
 	"testing"
 )
 
@@ -50,6 +51,14 @@ func TestCalculationForListOfResults(t *testing.T) {
 						},
 					},
 				},
+				"question.verified": BoostRuleOneOf{
+					ConstBoost: &ConstBoost{
+						Boost: 100.0,
+						RuleOneOf: RuleOneOf{
+							Eq: true,
+						},
+					},
+				},
 			},
 		},
 		MustMatch: []FiledRule{
@@ -78,6 +87,13 @@ func TestCalculationForListOfResults(t *testing.T) {
 				"similarity": 0.7,
 			},
 		},
+		{
+			"question": map[string]interface{}{
+				"thanks":     2,
+				"similarity": 0.99,
+				"verified":   true,
+			},
+		},
 	}
 
 	calc := NewScoreCalculator()
@@ -89,4 +105,14 @@ func TestCalculationForListOfResults(t *testing.T) {
 	assert.Equal(t, 3.0, data[0]["score"])
 	assert.Equal(t, 0.0, data[1]["score"])
 	assert.Equal(t, 0.0, data[2]["score"])
+	assert.Equal(t, 100.0, data[3]["score"])
+
+	// now sort by score
+	sort.SliceStable(data, func(i, j int) bool {
+		return data[i]["score"].(float64) > data[j]["score"].(float64)
+	})
+
+	// pick first result
+	// notice that score 100 comes form last element, that is verified
+	assert.Equal(t, 100.0, data[0]["score"])
 }

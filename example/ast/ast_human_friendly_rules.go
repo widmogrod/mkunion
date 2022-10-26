@@ -7,6 +7,8 @@ import (
 
 type (
 	HumanFriendlyRules struct {
+		// OneOf implies OR for list of rules - AtLeastOneOf
+		// Lack  of it implies AND for list of rules - MustMatch
 		AtLeastOneOf []FiledBoostRule `json:"atLeastOneOf"`
 		MustMatch    []FiledRule      `json:"mustMatch"`
 	}
@@ -22,10 +24,11 @@ type (
 	RuleOneOf struct {
 		Eq interface{} `json:"eq,omitempty"`
 		Gt interface{} `json:"gt,omitempty"`
+		// There can be more operations supported
 	}
 	BoostRuleOneOf struct {
 		ConstBoost *ConstBoost `json:"boost,omitempty"`
-		ValueBoost *ValueBoost `json:"boostValue,omitempty"`
+		ValueBoost *ValueBoost `json:"valueBoost,omitempty"`
 	}
 	ConstBoost struct {
 		Boost float64 `json:"boost"`
@@ -33,6 +36,11 @@ type (
 	}
 	ValueBoost struct {
 		RuleOneOf
+		// There could be fields like
+		// - multiply: 1.2
+		// - exponential
+		// - or logarithmic
+		// That take value of attribute, and apply specific function
 	}
 )
 
