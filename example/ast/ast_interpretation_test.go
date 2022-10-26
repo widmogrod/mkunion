@@ -19,50 +19,50 @@ func TestInterpreter(t *testing.T) {
 	}{
 		"simple equality (foo == 'bar')": {
 			data: data,
-			expression: &AEq{
-				L: &AAccessor{[]string{"foo"}},
-				R: &ALit{"bar"},
+			expression: &Eq{
+				L: &Accessor{[]string{"foo"}},
+				R: &Lit{"bar"},
 			},
 			expected: true,
 		},
 		"simple equality (foo == 'bar') fails": {
 			data: data,
-			expression: &AEq{
-				L: &AAccessor{[]string{"foo"}},
-				R: &ALit{"baz"},
+			expression: &Eq{
+				L: &Accessor{[]string{"foo"}},
+				R: &Lit{"baz"},
 			},
 			expected: false,
 		},
 		"simple comparison (question.thanks > 10)": {
 			data: data,
-			expression: &AOr{
-				&AGt{
-					L: &AAccessor{[]string{"question", "thanks"}},
-					R: &ALit{10},
+			expression: &Or{
+				&Gt{
+					L: &Accessor{[]string{"question", "thanks"}},
+					R: &Lit{10},
 				},
 			},
 			expected: true,
 		},
 		"simple comparison (question.thanks > 100) fails": {
 			data: data,
-			expression: &AOr{
-				&AGt{
-					L: &AAccessor{[]string{"question", "thanks"}},
-					R: &ALit{100},
+			expression: &Or{
+				&Gt{
+					L: &Accessor{[]string{"question", "thanks"}},
+					R: &Lit{100},
 				},
 			},
 			expected: false,
 		},
 		"complex (foo == 'bar') or (question.thanks > 10) fails": {
 			data: data,
-			expression: &AOr{
-				&AEq{
-					L: &AAccessor{[]string{"foo"}},
-					R: &ALit{"baz"},
+			expression: &Or{
+				&Eq{
+					L: &Accessor{[]string{"foo"}},
+					R: &Lit{"baz"},
 				},
-				&AGt{
-					L: &AAccessor{[]string{"question", "thanks"}},
-					R: &ALit{100},
+				&Gt{
+					L: &Accessor{[]string{"question", "thanks"}},
+					R: &Lit{100},
 				},
 			},
 			expected: false,

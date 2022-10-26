@@ -1,8 +1,8 @@
 package ast
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Operator -types=AEq,AGt,AOr
+//go:generate go run ../../cmd/mkunion/main.go -name=Operator -types=Eq,Gt,Or
 type (
-	AEq struct{ L, R Value }
-	AGt struct{ L, R Value }
-	AOr []Operator
+	Eq struct{ L, R Value }
+	Gt struct{ L, R Value }
+	Or []Operator
 )

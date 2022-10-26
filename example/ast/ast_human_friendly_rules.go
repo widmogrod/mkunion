@@ -48,20 +48,20 @@ func (ast HumanFriendlyRules) MustMatchToOperation() Operator {
 		}
 	}
 	// TODO should be AND, but operator is not implemented yet
-	and := AOr(res)
+	and := Or(res)
 	return &and
 }
 
 func (ast HumanFriendlyRules) toOperator(rule RuleOneOf, field Field) (Operator, error) {
 	if rule.Eq != nil {
-		return &AEq{
-			L: &AAccessor{Path: field.ToPath()},
-			R: &ALit{Value: rule.Eq},
+		return &Eq{
+			L: &Accessor{Path: field.ToPath()},
+			R: &Lit{Value: rule.Eq},
 		}, nil
 	} else if rule.Gt != nil {
-		return &AGt{
-			L: &AAccessor{Path: field.ToPath()},
-			R: &ALit{Value: rule.Gt},
+		return &Gt{
+			L: &Accessor{Path: field.ToPath()},
+			R: &Lit{Value: rule.Gt},
 		}, nil
 	}
 	return nil, errors.New("unknown rule")
