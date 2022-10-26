@@ -21,11 +21,11 @@ type InterpretValueAST struct {
 	V MapAny
 }
 
-func (e *InterpretValueAST) VisitALit(v *ALit) any {
+func (e *InterpretValueAST) VisitLit(v *Lit) any {
 	return v.Value
 }
 
-func (e *InterpretValueAST) VisitAAccessor(v *AAccessor) any {
+func (e *InterpretValueAST) VisitAccessor(v *Accessor) any {
 	var val any = e.V
 	for _, p := range v.Path {
 		m, ok := val.(MapAny)
@@ -45,7 +45,7 @@ type IntrprateOperatorAST struct {
 	valueExtractor *InterpretValueAST
 }
 
-func (e *IntrprateOperatorAST) VisitAEq(v *AEq) any {
+func (e *IntrprateOperatorAST) VisitEq(v *Eq) any {
 	l := v.L.Accept(e.valueExtractor)
 	r := v.R.Accept(e.valueExtractor)
 	if l == noResult || r == noResult {
@@ -55,7 +55,7 @@ func (e *IntrprateOperatorAST) VisitAEq(v *AEq) any {
 	return reflect.DeepEqual(l, r)
 }
 
-func (e *IntrprateOperatorAST) VisitAGt(v *AGt) any {
+func (e *IntrprateOperatorAST) VisitGt(v *Gt) any {
 	l := v.L.Accept(e.valueExtractor)
 	r := v.R.Accept(e.valueExtractor)
 	if l == noResult || r == noResult {
@@ -81,7 +81,7 @@ func (e *IntrprateOperatorAST) VisitAGt(v *AGt) any {
 	return false
 }
 
-func (e *IntrprateOperatorAST) VisitAOr(v *AOr) any {
+func (e *IntrprateOperatorAST) VisitOr(v *Or) any {
 	for _, p := range *v {
 		if p.Accept(e).(bool) {
 			return true

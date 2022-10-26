@@ -20,14 +20,14 @@ func TestAstSyntaxSugar(t *testing.T) {
 		},
 	}
 
-	operatorAST := &AOr{
-		&AEq{
-			L: &AAccessor{[]string{"foo"}},
-			R: &ALit{"baz"},
+	operatorAST := &Or{
+		&Eq{
+			L: &Accessor{[]string{"foo"}},
+			R: &Lit{"baz"},
 		},
-		&AGt{
-			L: &AAccessor{[]string{"question", "thanks"}},
-			R: &ALit{10},
+		&Gt{
+			L: &Accessor{[]string{"question", "thanks"}},
+			R: &Lit{10},
 		},
 	}
 

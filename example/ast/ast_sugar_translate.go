@@ -7,16 +7,16 @@ type TranslateSyntaxASTtoOperatorAST struct {
 }
 
 func (a *TranslateSyntaxASTtoOperatorAST) VisitEqTo(v *EqTo) any {
-	return &AEq{
-		L: &AAccessor{a.currentField},
-		R: &ALit{Value: v.V},
+	return &Eq{
+		L: &Accessor{a.currentField},
+		R: &Lit{Value: v.V},
 	}
 }
 
 func (a *TranslateSyntaxASTtoOperatorAST) VisitGrThan(v *GrThan) any {
-	return &AGt{
-		L: &AAccessor{a.currentField},
-		R: &ALit{Value: v.V},
+	return &Gt{
+		L: &Accessor{a.currentField},
+		R: &Lit{Value: v.V},
 	}
 }
 
@@ -28,6 +28,6 @@ func (a *TranslateSyntaxASTtoOperatorAST) VisitOrFields(v *OrFields) any {
 		a.currentField = a.currentField[:len(a.currentField)-1]
 	}
 
-	or := AOr(result)
+	or := Or(result)
 	return &or
 }
