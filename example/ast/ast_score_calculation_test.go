@@ -34,7 +34,7 @@ func TestScoreCalculation_Calculate(t *testing.T) {
 		},
 	}
 
-	calc := NewScoreCalculator()
+	calc := NewScoreCalculatorFromHumanFriendlyRules()
 	res := calc.Calculate(ast, data)
 	assert.Equal(t, 3.0, res)
 }
@@ -96,7 +96,7 @@ func TestCalculationForListOfResults(t *testing.T) {
 		},
 	}
 
-	calc := NewScoreCalculator()
+	calc := NewScoreCalculatorFromHumanFriendlyRules()
 	for i, d := range data {
 		score := calc.Calculate(ast, d)
 		data[i]["score"] = score
@@ -115,4 +115,94 @@ func TestCalculationForListOfResults(t *testing.T) {
 	// pick first result
 	// notice that score 100 comes form last element, that is verified
 	assert.Equal(t, 100.0, data[0]["score"])
+}
+
+func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
+	ast := DescriptionOfBestResult{
+		AtLeastOneOf: []BoostWhenFieldRuleOneOf{
+			{
+				Boost: PtrFloat(3.0),
+				When: FieldRuleOneOf{
+					Field: "question.verified", Eq: true,
+				},
+			},
+			{
+				MultiplyUsingFieldValue: PtrBool(true),
+				When: FieldRuleOneOf{
+					Field: "question.thanks", Gt: 10,
+					Or: &FieldRuleOneOf{
+						// TODO change to And when it will be supported
+						//And: &FieldRuleOneOf{
+						Field: "question.avgScore",
+						Gt:    3,
+					},
+				},
+			},
+		},
+		MustMatchOneOf: []FieldRuleOneOf{
+			{
+				Field: "question.similarity",
+				Gt:    0.98,
+			},
+		},
+	}
+	data := []map[string]interface{}{
+		{
+			"question": map[string]interface{}{
+				"thanks":     22,
+				"similarity": 0.99,
+				"verified":   true,
+				"avgScore":   3.0,
+			},
+		},
+		{
+			"question": map[string]interface{}{
+				"thanks":     2,
+				"similarity": 0.99,
+				"verified":   false,
+				"avgScore":   2.0,
+			},
+		},
+		{
+			"question": map[string]interface{}{
+				"thanks":     22,
+				"similarity": 0.7,
+				"verified":   false,
+				"avgScore":   4.0,
+			},
+		},
+		{
+			"question": map[string]interface{}{
+				"thanks":     15,
+				"similarity": 0.99,
+				"verified":   false,
+				"avgScore":   3.1,
+			},
+		},
+	}
+
+	calc := NewScoreCalculatorFromDescriptionOfBestResult()
+	for i, d := range data {
+		score := calc.Calculate(ast, d)
+		data[i]["score"] = score
+	}
+
+	assert.Equal(t, 3.0*22, data[0]["score"])
+	assert.Equal(t, 0.0, data[1]["score"])
+	assert.Equal(t, 0.0, data[2]["score"])
+	assert.Equal(t, 15.0, data[3]["score"])
+
+	// now sort by score
+	sort.SliceStable(data, func(i, j int) bool {
+		return data[i]["score"].(float64) > data[j]["score"].(float64)
+	})
+
+	assert.Equal(t, 3.0*22, data[0]["score"])
+	assert.Equal(t, 15.0, data[1]["score"])
+	assert.Equal(t, 0.0, data[2]["score"])
+	assert.Equal(t, 0.0, data[3]["score"])
+
+	// pick first result
+
+	// notice that score
 }

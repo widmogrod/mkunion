@@ -20,9 +20,11 @@ func TestHumanFriendlyTwo(t *testing.T) {
 				},
 			},
 		},
-		MustMatch: &FieldRuleOneOf{
-			Field: "question.similarity",
-			Gt:    0.98,
+		MustMatchOneOf: []FieldRuleOneOf{
+			{
+				Field: "question.similarity",
+				Gt:    0.98,
+			},
 		},
 	}
 
@@ -45,10 +47,12 @@ func TestHumanFriendlyTwo(t *testing.T) {
       }
     }
   ],
-  "mustMatch": {
-    "field": "question.similarity",
-    "gt": 0.98
-  }
+  "mustMatchOneOf": [
+    {
+      "field": "question.similarity",
+      "gt": 0.98
+    }
+  ]
 }`
 
 	assert.JSONEq(t, expected, string(res))
