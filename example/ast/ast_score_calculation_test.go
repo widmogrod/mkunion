@@ -130,9 +130,7 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 				MultiplyUsingFieldValue: PtrBool(true),
 				When: FieldRuleOneOf{
 					Field: "question.thanks", Gt: 10,
-					Or: &FieldRuleOneOf{
-						// TODO change to And when it will be supported
-						//And: &FieldRuleOneOf{
+					And: &FieldRuleOneOf{
 						Field: "question.avgScore",
 						Gt:    3,
 					},
@@ -149,6 +147,7 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 	data := []map[string]interface{}{
 		{
 			"question": map[string]interface{}{
+				"id":         1,
 				"thanks":     22,
 				"similarity": 0.99,
 				"verified":   true,
@@ -157,6 +156,7 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 		},
 		{
 			"question": map[string]interface{}{
+				"id":         2,
 				"thanks":     2,
 				"similarity": 0.99,
 				"verified":   false,
@@ -165,6 +165,7 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 		},
 		{
 			"question": map[string]interface{}{
+				"id":         3,
 				"thanks":     22,
 				"similarity": 0.7,
 				"verified":   false,
@@ -173,10 +174,11 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 		},
 		{
 			"question": map[string]interface{}{
+				"id":         4,
 				"thanks":     15,
 				"similarity": 0.99,
 				"verified":   false,
-				"avgScore":   3.1,
+				"avgScore":   4.1,
 			},
 		},
 	}
@@ -187,7 +189,7 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 		data[i]["score"] = score
 	}
 
-	assert.Equal(t, 3.0*22, data[0]["score"])
+	assert.Equal(t, 3.0, data[0]["score"])
 	assert.Equal(t, 0.0, data[1]["score"])
 	assert.Equal(t, 0.0, data[2]["score"])
 	assert.Equal(t, 15.0, data[3]["score"])
@@ -197,8 +199,8 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 		return data[i]["score"].(float64) > data[j]["score"].(float64)
 	})
 
-	assert.Equal(t, 3.0*22, data[0]["score"])
-	assert.Equal(t, 15.0, data[1]["score"])
+	assert.Equal(t, 15.0, data[0]["score"])
+	assert.Equal(t, 3.0, data[1]["score"])
 	assert.Equal(t, 0.0, data[2]["score"])
 	assert.Equal(t, 0.0, data[3]["score"])
 
