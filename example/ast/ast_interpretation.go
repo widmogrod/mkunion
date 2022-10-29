@@ -94,3 +94,9 @@ func (e *IntrprateOperatorAST) Eval(ast Operator, data MapAny) bool {
 	e.valueExtractor.V = data
 	return ast.Accept(e).(bool)
 }
+
+func (e *IntrprateOperatorAST) Value(v Value, data MapAny) (value interface{}, found bool) {
+	e.valueExtractor.V = data
+	val := v.Accept(e.valueExtractor)
+	return val, val != noResult
+}
