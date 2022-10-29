@@ -33,6 +33,22 @@ func TestInterpreter(t *testing.T) {
 			},
 			expected: false,
 		},
+		"simple equality !(foo == 'baz')": {
+			data: data,
+			expression: &Not{&Eq{
+				L: &Accessor{[]string{"foo"}},
+				R: &Lit{"baz"},
+			}},
+			expected: true,
+		},
+		"simple equality !(foo == 'bar') fails": {
+			data: data,
+			expression: &Not{&Eq{
+				L: &Accessor{[]string{"foo"}},
+				R: &Lit{"bar"},
+			}},
+			expected: false,
+		},
 		"simple comparison (question.thanks > 10)": {
 			data: data,
 			expression: &Or{
@@ -53,9 +69,37 @@ func TestInterpreter(t *testing.T) {
 			},
 			expected: false,
 		},
-		"complex (foo == 'bar') or (question.thanks > 10) fails": {
+		"complex (foo == 'baz') or (question.thanks > 100) fails": {
 			data: data,
 			expression: &Or{
+				&Eq{
+					L: &Accessor{[]string{"foo"}},
+					R: &Lit{"baz"},
+				},
+				&Gt{
+					L: &Accessor{[]string{"question", "thanks"}},
+					R: &Lit{100},
+				},
+			},
+			expected: false,
+		},
+		"complex (foo == 'bar') and (question.thanks > 10) pass": {
+			data: data,
+			expression: &And{
+				&Eq{
+					L: &Accessor{[]string{"foo"}},
+					R: &Lit{"bar"},
+				},
+				&Gt{
+					L: &Accessor{[]string{"question", "thanks"}},
+					R: &Lit{10},
+				},
+			},
+			expected: true,
+		},
+		"complex (foo == 'baz') and (question.thanks > 100) fails": {
+			data: data,
+			expression: &And{
 				&Eq{
 					L: &Accessor{[]string{"foo"}},
 					R: &Lit{"baz"},

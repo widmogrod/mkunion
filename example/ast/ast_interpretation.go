@@ -68,10 +68,14 @@ func (e *IntrprateOperatorAST) VisitGt(v *Gt) any {
 		switch y := r.(type) {
 		case int:
 			return x > y
+		case float64:
+			return float64(x) > y
 		}
 		return false
 	case float64:
 		switch y := r.(type) {
+		case int:
+			return x > float64(y)
 		case float64:
 			return x > y
 		}
@@ -88,6 +92,19 @@ func (e *IntrprateOperatorAST) VisitOr(v *Or) any {
 		}
 	}
 	return false
+}
+
+func (e *IntrprateOperatorAST) VisitAnd(v *And) any {
+	for _, p := range *v {
+		if !p.Accept(e).(bool) {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *IntrprateOperatorAST) VisitNot(v *Not) any {
+	return !v.Operator.Accept(e).(bool)
 }
 
 func (e *IntrprateOperatorAST) Eval(ast Operator, data MapAny) bool {

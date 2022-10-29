@@ -55,11 +55,14 @@ func (a FieldRuleOneOf) ToOperation() Operator {
 		} else {
 			res = &Or{res, a.Or.ToOperation()}
 		}
-		// TODO uncomment when And and Not are implemented
-		//} else if a.And != nil {
-		//	return &And{res, a.Or.ToOperation()}
-		//} else if a.Not != nil {
-		//	return &Not{a.Not.ToOperation()}
+	} else if a.And != nil {
+		if res == nil {
+			res = a.And.ToOperation()
+		} else {
+			res = &And{res, a.And.ToOperation()}
+		}
+	} else if a.Not != nil {
+		return &Not{Operator: a.Not.ToOperation()}
 	}
 
 	return res
