@@ -44,7 +44,7 @@ func (d *VehicleDepthFirstVisitor[A]) VisitBoat(v *Boat) any {
 	return nil
 }
 
-func ReduceVehicle[A any](r VehicleReducer[A], v Vehicle, init A) A {
+func ReduceVehicleDepthFirst[A any](r VehicleReducer[A], v Vehicle, init A) A {
 	reducer := &VehicleDepthFirstVisitor[A]{
 		result: init,
 		reduce: r,

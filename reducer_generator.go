@@ -75,7 +75,7 @@ func (d *{{ $name }}DepthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	return nil
 }
 {{ end }}
-func Reduce{{ $name }}[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
+func Reduce{{ $name }}DepthFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
 	reducer := &{{ $name }}DepthFirstVisitor[A]{
 		result: init,
 		reduce: r,

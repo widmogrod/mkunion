@@ -40,7 +40,7 @@ func (d *TreeDepthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
 	return nil
 }
 
-func ReduceTree[A any](r TreeReducer[A], v Tree, init A) A {
+func ReduceTreeDepthFirst[A any](r TreeReducer[A], v Tree, init A) A {
 	reducer := &TreeDepthFirstVisitor[A]{
 		result: init,
 		reduce: r,

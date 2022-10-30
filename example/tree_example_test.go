@@ -49,7 +49,7 @@ func TestTreeSumUsingReducer(t *testing.T) {
 		},
 	}
 
-	result := ReduceTree(red, tree, 0)
+	result := ReduceTreeDepthFirst(red, tree, 0)
 	assert.Equal(t, 6, result)
 }
 

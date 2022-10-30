@@ -67,7 +67,7 @@ func (d *WherePredicateDepthFirstVisitor[A]) VisitPath(v *Path) any {
 	return nil
 }
 
-func ReduceWherePredicate[A any](r WherePredicateReducer[A], v WherePredicate, init A) A {
+func ReduceWherePredicateDepthFirst[A any](r WherePredicateReducer[A], v WherePredicate, init A) A {
 	reducer := &WherePredicateDepthFirstVisitor[A]{
 		result: init,
 		reduce: r,

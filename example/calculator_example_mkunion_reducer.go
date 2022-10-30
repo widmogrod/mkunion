@@ -56,7 +56,7 @@ func (d *CalcDepthFirstVisitor[A]) VisitMul(v *Mul) any {
 	return nil
 }
 
-func ReduceCalc[A any](r CalcReducer[A], v Calc, init A) A {
+func ReduceCalcDepthFirst[A any](r CalcReducer[A], v Calc, init A) A {
 	reducer := &CalcDepthFirstVisitor[A]{
 		result: init,
 		reduce: r,
