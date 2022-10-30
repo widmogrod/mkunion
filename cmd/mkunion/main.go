@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -47,6 +46,7 @@ func main() {
 			if err != nil {
 				return err
 			}
+
 			visitor := mkunion.VisitorGenerator{
 				Name:        c.String("name"),
 				Types:       strings.Split(c.String("types"), ","),
@@ -54,6 +54,13 @@ func main() {
 			}
 
 			reducer := mkunion.ReducerGenerator{
+				Name:        visitor.Name,
+				Types:       visitor.Types,
+				PackageName: inferred.PackageName,
+				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
+			}
+
+			reducerBreatheFirst := mkunion.ReducerBreatheFirstGenerator{
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
@@ -72,6 +79,7 @@ func main() {
 			}{
 				{gen: &visitor, name: "visitor"},
 				{gen: &reducer, name: "reducer"},
+				{gen: &reducerBreatheFirst, name: "reducer_bfs"},
 				{gen: &defaultVisitor, name: "default_visitor"},
 			}
 			for _, g := range generators {
@@ -79,7 +87,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				err = ioutil.WriteFile(path.Join(cwd,
+				err = os.WriteFile(path.Join(cwd,
 					baseName+"_"+mkunion.Program+"_"+g.name+".go"), b, 0644)
 				if err != nil {
 					return err
