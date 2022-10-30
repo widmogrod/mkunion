@@ -2,11 +2,10 @@
 package example
 
 type TreeDefaultVisitor[A any] struct {
-	Default  A
+	Default A
 	OnBranch func(x *Branch) A
-	OnLeaf   func(x *Leaf) A
+	OnLeaf func(x *Leaf) A
 }
-
 func (t *TreeDefaultVisitor[A]) VisitBranch(v *Branch) any {
 	if t.OnBranch != nil {
 		return t.OnBranch(v)

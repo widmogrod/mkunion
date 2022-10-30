@@ -12,9 +12,9 @@ type WherePredicate interface {
 	Accept(g WherePredicateVisitor) any
 }
 
-func (r *Eq) Accept(v WherePredicateVisitor) any   { return v.VisitEq(r) }
-func (r *And) Accept(v WherePredicateVisitor) any  { return v.VisitAnd(r) }
-func (r *Or) Accept(v WherePredicateVisitor) any   { return v.VisitOr(r) }
+func (r *Eq) Accept(v WherePredicateVisitor) any { return v.VisitEq(r) }
+func (r *And) Accept(v WherePredicateVisitor) any { return v.VisitAnd(r) }
+func (r *Or) Accept(v WherePredicateVisitor) any { return v.VisitOr(r) }
 func (r *Path) Accept(v WherePredicateVisitor) any { return v.VisitPath(r) }
 
 var (
@@ -25,9 +25,9 @@ var (
 )
 
 type WherePredicateOneOf struct {
-	Eq   *Eq   `json:",omitempty"`
-	And  *And  `json:",omitempty"`
-	Or   *Or   `json:",omitempty"`
+	Eq *Eq `json:",omitempty"`
+	And *And `json:",omitempty"`
+	Or *Or `json:",omitempty"`
 	Path *Path `json:",omitempty"`
 }
 
@@ -50,9 +50,9 @@ var _ WherePredicate = (*WherePredicateOneOf)(nil)
 
 type mapWherePredicateToOneOf struct{}
 
-func (t *mapWherePredicateToOneOf) VisitEq(v *Eq) any     { return &WherePredicateOneOf{Eq: v} }
-func (t *mapWherePredicateToOneOf) VisitAnd(v *And) any   { return &WherePredicateOneOf{And: v} }
-func (t *mapWherePredicateToOneOf) VisitOr(v *Or) any     { return &WherePredicateOneOf{Or: v} }
+func (t *mapWherePredicateToOneOf) VisitEq(v *Eq) any { return &WherePredicateOneOf{Eq: v} }
+func (t *mapWherePredicateToOneOf) VisitAnd(v *And) any { return &WherePredicateOneOf{And: v} }
+func (t *mapWherePredicateToOneOf) VisitOr(v *Or) any { return &WherePredicateOneOf{Or: v} }
 func (t *mapWherePredicateToOneOf) VisitPath(v *Path) any { return &WherePredicateOneOf{Path: v} }
 
 var defaultMapWherePredicateToOneOf WherePredicateVisitor = &mapWherePredicateToOneOf{}

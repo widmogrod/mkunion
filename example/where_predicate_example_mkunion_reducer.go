@@ -58,6 +58,11 @@ func (d *WherePredicateDepthFirstVisitor[A]) VisitPath(v *Path) any {
 			return nil
 		}
 	}
+	for idx, _ := range v.Y {
+		if _ = v.Y[idx].Accept(d); d.stop {
+			return nil
+		}
+	}
 
 	return nil
 }
@@ -77,12 +82,12 @@ var _ WherePredicateReducer[any] = (*WherePredicateDefaultReduction[any])(nil)
 
 type (
 	WherePredicateDefaultReduction[A any] struct {
-		PanicOnFallback      bool
+		PanicOnFallback bool
 		DefaultStopReduction bool
-		OnEq                 func(x *Eq, agg A) (result A, stop bool)
-		OnAnd                func(x *And, agg A) (result A, stop bool)
-		OnOr                 func(x *Or, agg A) (result A, stop bool)
-		OnPath               func(x *Path, agg A) (result A, stop bool)
+		OnEq func(x *Eq, agg A) (result A, stop bool)
+		OnAnd func(x *And, agg A) (result A, stop bool)
+		OnOr func(x *Or, agg A) (result A, stop bool)
+		OnPath func(x *Path, agg A) (result A, stop bool)
 	}
 )
 
