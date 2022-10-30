@@ -53,7 +53,7 @@ func main() {
 				PackageName: inferred.PackageName,
 			}
 
-			reducer := mkunion.ReducerGenerator{
+			reducer := mkunion.ReducerDepthFirstGenerator{
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
@@ -78,7 +78,7 @@ func main() {
 				name string
 			}{
 				{gen: &visitor, name: "visitor"},
-				{gen: &reducer, name: "reducer"},
+				{gen: &reducer, name: "reducer_dfs"},
 				{gen: &reducerBreatheFirst, name: "reducer_bfs"},
 				{gen: &defaultVisitor, name: "default_visitor"},
 			}

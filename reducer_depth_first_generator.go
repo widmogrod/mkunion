@@ -18,7 +18,7 @@ type Branching struct {
 	Map  *string
 }
 
-type ReducerGenerator struct {
+type ReducerDepthFirstGenerator struct {
 	Name        variantName
 	Types       []typeName
 	PackageName string
@@ -114,7 +114,7 @@ var (
 	renderTraverse = template.Must(template.New("main").Parse(traverseTmpl))
 )
 
-func (t *ReducerGenerator) Generate() ([]byte, error) {
+func (t *ReducerDepthFirstGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
 	err := renderTraverse.ExecuteTemplate(result, "main", t)
 	if err != nil {
