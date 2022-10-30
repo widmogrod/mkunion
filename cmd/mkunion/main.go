@@ -53,18 +53,24 @@ func main() {
 				PackageName: inferred.PackageName,
 			}
 
-			reducer := mkunion.ReducerDepthFirstGenerator{
+			depthFirstGenerator := mkunion.ReducerDepthFirstGenerator{
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
 				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
 			}
 
-			reducerBreatheFirst := mkunion.ReducerBreatheFirstGenerator{
+			breatheFirstGenerator := mkunion.ReducerBreatheFirstGenerator{
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
 				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
+			}
+
+			defaultReduction := mkunion.ReducerDefaultReductionGenerator{
+				Name:        visitor.Name,
+				Types:       visitor.Types,
+				PackageName: inferred.PackageName,
 			}
 
 			defaultVisitor := mkunion.VisitorDefaultGenerator{
@@ -78,8 +84,9 @@ func main() {
 				name string
 			}{
 				{gen: &visitor, name: "visitor"},
-				{gen: &reducer, name: "reducer_dfs"},
-				{gen: &reducerBreatheFirst, name: "reducer_bfs"},
+				{gen: &depthFirstGenerator, name: "reducer_dfs"},
+				{gen: &breatheFirstGenerator, name: "reducer_bfs"},
+				{gen: &defaultReduction, name: "default_reducer"},
 				{gen: &defaultVisitor, name: "default_visitor"},
 			}
 			for _, g := range generators {

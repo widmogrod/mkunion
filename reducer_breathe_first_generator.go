@@ -17,7 +17,6 @@ var (
 package {{ .PackageName }}
 {{ $root := . }}
 {{- $name := .Name }}
-
 var _ {{ $name }}Visitor = (*{{ $name }}BreatheFirstVisitor[any])(nil)
 
 type {{ $name }}BreatheFirstVisitor[A any] struct {
@@ -29,7 +28,6 @@ type {{ $name }}BreatheFirstVisitor[A any] struct {
 	visited       map[{{ $name }}]bool
 	shouldExecute map[{{ $name }}]bool
 }
-
 {{ range $i, $type := .Types }}
 func (d *{{ $name }}BreatheFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	d.queue = append(d.queue, v)
@@ -56,7 +54,6 @@ func (d *{{ $name }}BreatheFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	return nil
 }
 {{ end }}
-
 func (d *{{ $name }}BreatheFirstVisitor[A]) execute() {
 	for len(d.queue) > 0 {
 		if d.stop {

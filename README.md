@@ -131,7 +131,7 @@ go test ./...
 
 ### V1.1.x
 - [x] Add support for map[any]{Variant} type
-- [ ] Add breath-first reducer traversal
+- [x] Add breath-first reducer traversal
 
 ### V1.2.x
 - [ ] Add support for not-stop able reducer
