@@ -3,12 +3,11 @@ package example
 
 type WherePredicateDefaultVisitor[A any] struct {
 	Default A
-	OnEq    func(x *Eq) A
-	OnAnd   func(x *And) A
-	OnOr    func(x *Or) A
-	OnPath  func(x *Path) A
+	OnEq func(x *Eq) A
+	OnAnd func(x *And) A
+	OnOr func(x *Or) A
+	OnPath func(x *Path) A
 }
-
 func (t *WherePredicateDefaultVisitor[A]) VisitEq(v *Eq) any {
 	if t.OnEq != nil {
 		return t.OnEq(v)

@@ -12,8 +12,8 @@ type Vehicle interface {
 }
 
 func (r *Plane) Accept(v VehicleVisitor) any { return v.VisitPlane(r) }
-func (r *Car) Accept(v VehicleVisitor) any   { return v.VisitCar(r) }
-func (r *Boat) Accept(v VehicleVisitor) any  { return v.VisitBoat(r) }
+func (r *Car) Accept(v VehicleVisitor) any { return v.VisitCar(r) }
+func (r *Boat) Accept(v VehicleVisitor) any { return v.VisitBoat(r) }
 
 var (
 	_ Vehicle = (*Plane)(nil)
@@ -23,8 +23,8 @@ var (
 
 type VehicleOneOf struct {
 	Plane *Plane `json:",omitempty"`
-	Car   *Car   `json:",omitempty"`
-	Boat  *Boat  `json:",omitempty"`
+	Car *Car `json:",omitempty"`
+	Boat *Boat `json:",omitempty"`
 }
 
 func (r *VehicleOneOf) Accept(v VehicleVisitor) any {
@@ -45,8 +45,8 @@ var _ Vehicle = (*VehicleOneOf)(nil)
 type mapVehicleToOneOf struct{}
 
 func (t *mapVehicleToOneOf) VisitPlane(v *Plane) any { return &VehicleOneOf{Plane: v} }
-func (t *mapVehicleToOneOf) VisitCar(v *Car) any     { return &VehicleOneOf{Car: v} }
-func (t *mapVehicleToOneOf) VisitBoat(v *Boat) any   { return &VehicleOneOf{Boat: v} }
+func (t *mapVehicleToOneOf) VisitCar(v *Car) any { return &VehicleOneOf{Car: v} }
+func (t *mapVehicleToOneOf) VisitBoat(v *Boat) any { return &VehicleOneOf{Boat: v} }
 
 var defaultMapVehicleToOneOf VehicleVisitor = &mapVehicleToOneOf{}
 

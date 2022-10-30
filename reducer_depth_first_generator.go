@@ -18,7 +18,7 @@ type Branching struct {
 	Map  *string
 }
 
-type ReducerGenerator struct {
+type ReducerDepthFirstGenerator struct {
 	Name        variantName
 	Types       []typeName
 	PackageName string
@@ -75,7 +75,7 @@ func (d *{{ $name }}DepthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	return nil
 }
 {{ end }}
-func Reduce{{ $name }}[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
+func Reduce{{ $name }}DepthFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
 	reducer := &{{ $name }}DepthFirstVisitor[A]{
 		result: init,
 		reduce: r,
@@ -85,36 +85,14 @@ func Reduce{{ $name }}[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A 
 
 	return reducer.result
 }
-
-var _ {{ $name }}Reducer[any] = (*{{ $name }}DefaultReduction[any])(nil)
-
-type (
-	{{ $name }}DefaultReduction[A any] struct {
-		PanicOnFallback bool
-		DefaultStopReduction bool
-		{{- range .Types }}
-		On{{ . }} func(x *{{ . }}, agg A) (result A, stop bool)
-		{{- end }}
-	}
-)
-{{ range $i, $type := .Types }}
-func (t *{{ $name }}DefaultReduction[A]) Reduce{{ $type }}(x *{{ $type }}, agg A) (result A, stop bool) {
-	if t.On{{ $type }} != nil {
-		return t.On{{ $type }}(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-{{ end }}`
+`
 )
 
 var (
 	renderTraverse = template.Must(template.New("main").Parse(traverseTmpl))
 )
 
-func (t *ReducerGenerator) Generate() ([]byte, error) {
+func (t *ReducerDepthFirstGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
 	err := renderTraverse.ExecuteTemplate(result, "main", t)
 	if err != nil {

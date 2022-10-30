@@ -3,11 +3,10 @@ package example
 
 type CalcDefaultVisitor[A any] struct {
 	Default A
-	OnLit   func(x *Lit) A
-	OnSum   func(x *Sum) A
-	OnMul   func(x *Mul) A
+	OnLit func(x *Lit) A
+	OnSum func(x *Sum) A
+	OnMul func(x *Mul) A
 }
-
 func (t *CalcDefaultVisitor[A]) VisitLit(v *Lit) any {
 	if t.OnLit != nil {
 		return t.OnLit(v)

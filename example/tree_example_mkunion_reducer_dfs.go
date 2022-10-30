@@ -40,7 +40,7 @@ func (d *TreeDepthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
 	return nil
 }
 
-func ReduceTree[A any](r TreeReducer[A], v Tree, init A) A {
+func ReduceTreeDepthFirst[A any](r TreeReducer[A], v Tree, init A) A {
 	reducer := &TreeDepthFirstVisitor[A]{
 		result: init,
 		reduce: r,
@@ -49,35 +49,4 @@ func ReduceTree[A any](r TreeReducer[A], v Tree, init A) A {
 	_ = v.Accept(reducer)
 
 	return reducer.result
-}
-
-var _ TreeReducer[any] = (*TreeDefaultReduction[any])(nil)
-
-type (
-	TreeDefaultReduction[A any] struct {
-		PanicOnFallback      bool
-		DefaultStopReduction bool
-		OnBranch             func(x *Branch, agg A) (result A, stop bool)
-		OnLeaf               func(x *Leaf, agg A) (result A, stop bool)
-	}
-)
-
-func (t *TreeDefaultReduction[A]) ReduceBranch(x *Branch, agg A) (result A, stop bool) {
-	if t.OnBranch != nil {
-		return t.OnBranch(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *TreeDefaultReduction[A]) ReduceLeaf(x *Leaf, agg A) (result A, stop bool) {
-	if t.OnLeaf != nil {
-		return t.OnLeaf(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
 }

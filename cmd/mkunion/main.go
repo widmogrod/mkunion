@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -47,17 +46,31 @@ func main() {
 			if err != nil {
 				return err
 			}
+
 			visitor := mkunion.VisitorGenerator{
 				Name:        c.String("name"),
 				Types:       strings.Split(c.String("types"), ","),
 				PackageName: inferred.PackageName,
 			}
 
-			reducer := mkunion.ReducerGenerator{
+			depthFirstGenerator := mkunion.ReducerDepthFirstGenerator{
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
 				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
+			}
+
+			breatheFirstGenerator := mkunion.ReducerBreatheFirstGenerator{
+				Name:        visitor.Name,
+				Types:       visitor.Types,
+				PackageName: inferred.PackageName,
+				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
+			}
+
+			defaultReduction := mkunion.ReducerDefaultReductionGenerator{
+				Name:        visitor.Name,
+				Types:       visitor.Types,
+				PackageName: inferred.PackageName,
 			}
 
 			defaultVisitor := mkunion.VisitorDefaultGenerator{
@@ -71,7 +84,9 @@ func main() {
 				name string
 			}{
 				{gen: &visitor, name: "visitor"},
-				{gen: &reducer, name: "reducer"},
+				{gen: &depthFirstGenerator, name: "reducer_dfs"},
+				{gen: &breatheFirstGenerator, name: "reducer_bfs"},
+				{gen: &defaultReduction, name: "default_reducer"},
 				{gen: &defaultVisitor, name: "default_visitor"},
 			}
 			for _, g := range generators {
@@ -79,7 +94,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				err = ioutil.WriteFile(path.Join(cwd,
+				err = os.WriteFile(path.Join(cwd,
 					baseName+"_"+mkunion.Program+"_"+g.name+".go"), b, 0644)
 				if err != nil {
 					return err
