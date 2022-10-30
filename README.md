@@ -7,7 +7,7 @@ It's a good idea to use it when you have a lot of unions in your codebase.
 What is offers?
 - Visitor interface with appropriate methods added to each union type
 - Default implementation of Visitor that simplifies work with unions
-- Reducer that can do recursive traversal & default implementation of Reducer, fantastic for traversing ASTs
+- Reducer that can do recursive traversal (depth and breadth first) & default implementation of Reducer, fantastic for traversing ASTs
 
 Have fun! I hope you will find it useful.
 
@@ -41,8 +41,10 @@ Go will generate few files for you in the same location as union defnition
 // source file
 example/tree_example.go
 // generated file
+example/tree_example_mkunion_default_reducer.go
 example/tree_example_mkunion_default_visitor.go
-example/tree_example_mkunion_reducer.go
+example/tree_example_mkunion_reducer_bfs.go
+example/tree_example_mkunion_reducer_dfs.go
 example/tree_example_mkunion_visitor.go
 ```
 Don't commit generated files to your repository. They are generated on the fly.
@@ -72,7 +74,7 @@ var red TreeReducer[int] = &TreeDefaultReduction[int]{
     },
 }
 
-result := ReduceTree(red, tree, 0)
+result := ReduceTreeDepthFirst(red, tree, 0)
 assert.Equal(t, 6, result)
 ```
 
@@ -131,13 +133,14 @@ go test ./...
 
 ### V1.1.x
 - [x] Add support for map[any]{Variant} type
-- [x] Add breath-first reducer traversal
-
 ### V1.2.x
-- [ ] Add support for not-stop able reducer
+- [x] Add breadth-first reducer traversal
 
 ### V1.3.x
 - [ ] Add support for multiple go:generate mkunion in one file
+- 
+### V1.4.x
+- [ ] Add support for not-stop able reducer
 
 ### V2.x.x
 - [ ] Add support for generic union types
