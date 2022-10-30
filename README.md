@@ -131,14 +131,17 @@ go test ./...
 
 ### V1.1.x
 - [x] Add support for map[any]{Variant} type
-- [ ] Add breath-first reducer traversal 
-- [ ] Add leaf-first reducer traversal [?]
+- [ ] Add breath-first reducer traversal
 
 ### V1.2.x
 - [ ] Add support for not-stop able reducer
 
+### V1.3.x
+- [ ] Add support for multiple go:generate mkunion in one file
+
 ### V2.x.x
 - [ ] Add support for generic union types
 
-### Knows bugs
-- [ ] Multiple go:generates mkunion in one file overwrite generated. Solution: split to multiple files
+## Knows bugs
+- [ ] Multiple go:generates mkunion in one file overwrite generated code. 
+  Solution: split it to multiple files
