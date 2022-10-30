@@ -61,7 +61,7 @@ func TestTreeSumUsingReducer(t *testing.T) {
 	assert.Equal(t, 10, result.Result)
 	assert.Equal(t, []int{1, 2, 3, 4}, result.Order)
 
-	result = ReduceTreeBreatheFirst(red, tree, orderAgg{})
+	result = ReduceTreeBreadthFirst(red, tree, orderAgg{})
 	assert.Equal(t, 10, result.Result)
 	assert.Equal(t, []int{1, 4, 2, 3}, result.Order)
 }

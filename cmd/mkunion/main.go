@@ -60,7 +60,7 @@ func main() {
 				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
 			}
 
-			breatheFirstGenerator := mkunion.ReducerBreatheFirstGenerator{
+			breadthFirstGenerator := mkunion.ReducerBreadthFirstGenerator{
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
@@ -85,7 +85,7 @@ func main() {
 			}{
 				{gen: &visitor, name: "visitor"},
 				{gen: &depthFirstGenerator, name: "reducer_dfs"},
-				{gen: &breatheFirstGenerator, name: "reducer_bfs"},
+				{gen: &breadthFirstGenerator, name: "reducer_bfs"},
 				{gen: &defaultReduction, name: "default_reducer"},
 				{gen: &defaultVisitor, name: "default_visitor"},
 			}

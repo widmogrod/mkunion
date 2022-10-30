@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-type ReducerBreatheFirstGenerator struct {
+type ReducerBreadthFirstGenerator struct {
 	Name        variantName
 	Types       []typeName
 	PackageName string
@@ -13,13 +13,13 @@ type ReducerBreatheFirstGenerator struct {
 }
 
 var (
-	breatheFirstTmpl = Header + `
+	breadthFirstTmpl = Header + `
 package {{ .PackageName }}
 {{ $root := . }}
 {{- $name := .Name }}
-var _ {{ $name }}Visitor = (*{{ $name }}BreatheFirstVisitor[any])(nil)
+var _ {{ $name }}Visitor = (*{{ $name }}BreadthFirstVisitor[any])(nil)
 
-type {{ $name }}BreatheFirstVisitor[A any] struct {
+type {{ $name }}BreadthFirstVisitor[A any] struct {
 	stop   bool
 	result A
 	reduce {{ $name }}Reducer[A]
@@ -29,7 +29,7 @@ type {{ $name }}BreatheFirstVisitor[A any] struct {
 	shouldExecute map[{{ $name }}]bool
 }
 {{ range $i, $type := .Types }}
-func (d *{{ $name }}BreatheFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
+func (d *{{ $name }}BreadthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	d.queue = append(d.queue, v)
 {{- range (index $root.Branches $type) -}}
 	{{- if .Lit}}
@@ -54,7 +54,7 @@ func (d *{{ $name }}BreatheFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	return nil
 }
 {{ end }}
-func (d *{{ $name }}BreatheFirstVisitor[A]) execute() {
+func (d *{{ $name }}BreadthFirstVisitor[A]) execute() {
 	for len(d.queue) > 0 {
 		if d.stop {
 			return
@@ -72,14 +72,14 @@ func (d *{{ $name }}BreatheFirstVisitor[A]) execute() {
 	return
 }
 
-func (d *{{ $name }}BreatheFirstVisitor[A]) pop() {{ $name }} {
+func (d *{{ $name }}BreadthFirstVisitor[A]) pop() {{ $name }} {
 	i := d.queue[0]
 	d.queue = d.queue[1:]
 	return i
 }
 
-func Reduce{{ $name }}BreatheFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
-	reducer := &{{ $name }}BreatheFirstVisitor[A]{
+func Reduce{{ $name }}BreadthFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
+	reducer := &{{ $name }}BreadthFirstVisitor[A]{
 		result:        init,
 		reduce:        r,
 		queue:         []{{ $name }}{v},
@@ -95,12 +95,12 @@ func Reduce{{ $name }}BreatheFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}
 )
 
 var (
-	renderBreatheFirst = template.Must(template.New("main").Parse(breatheFirstTmpl))
+	renderBreadthFirst = template.Must(template.New("main").Parse(breadthFirstTmpl))
 )
 
-func (t *ReducerBreatheFirstGenerator) Generate() ([]byte, error) {
+func (t *ReducerBreadthFirstGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := renderBreatheFirst.ExecuteTemplate(result, "main", t)
+	err := renderBreadthFirst.ExecuteTemplate(result, "main", t)
 	if err != nil {
 		return nil, err
 	}

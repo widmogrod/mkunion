@@ -7,7 +7,7 @@ It's a good idea to use it when you have a lot of unions in your codebase.
 What is offers?
 - Visitor interface with appropriate methods added to each union type
 - Default implementation of Visitor that simplifies work with unions
-- Reducer that can do recursive traversal (depth and breathe first) & default implementation of Reducer, fantastic for traversing ASTs
+- Reducer that can do recursive traversal (depth and breadth first) & default implementation of Reducer, fantastic for traversing ASTs
 
 Have fun! I hope you will find it useful.
 
@@ -134,7 +134,7 @@ go test ./...
 ### V1.1.x
 - [x] Add support for map[any]{Variant} type
 ### V1.2.x
-- [x] Add breath-first reducer traversal
+- [x] Add breadth-first reducer traversal
 
 ### V1.3.x
 - [ ] Add support for multiple go:generate mkunion in one file
