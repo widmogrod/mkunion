@@ -194,7 +194,7 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 	assert.Equal(t, 0.0, data[2]["score"])
 	assert.Equal(t, 15.0, data[3]["score"])
 
-	// now sort by score
+	// now sort by score - notice, that stable sort is used!
 	sort.SliceStable(data, func(i, j int) bool {
 		return data[i]["score"].(float64) > data[j]["score"].(float64)
 	})
@@ -204,7 +204,20 @@ func TestNewScoreCalculatorFromHDescriptionOfBestResult(t *testing.T) {
 	assert.Equal(t, 0.0, data[2]["score"])
 	assert.Equal(t, 0.0, data[3]["score"])
 
-	// pick first result
+	// pick first result and if has score > 0 then is best match
+	// because score = 0 means that result does not match criteria (look at score calculation implementation)
+	// and with stable sort, orders that don't match criteria won't change order
+	if data[0]["score"].(float64) > 0 {
+		topHit := data[0]
+		_ = topHit
+	}
 
-	// notice that score
+	// alternatively, for each record with score > 0 we can add label "best match"
+	for i := range data {
+		if data[i]["score"].(float64) > 0 {
+			data[i]["tags"] = []string{"best match"}
+		}
+	}
+
+	// done.
 }
