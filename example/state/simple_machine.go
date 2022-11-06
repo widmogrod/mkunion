@@ -6,7 +6,7 @@ var _ TransitionVisitor = (*Machine)(nil)
 
 var ErrInvalidTransition = fmt.Errorf("invalid transition")
 
-func NewState() *Machine {
+func NewMachine() *Machine {
 	return &Machine{}
 }
 

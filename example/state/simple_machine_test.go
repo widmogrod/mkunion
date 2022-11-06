@@ -96,7 +96,7 @@ func TestStateTransition(t *testing.T) {
 
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			m := &Machine{}
+			m := NewMachine()
 			for i, tr := range uc.transition {
 				err := m.Apply(tr)
 				if uc.expectedError[i] == nil {
