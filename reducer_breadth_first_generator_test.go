@@ -7,6 +7,7 @@ import (
 
 func TestReducerBreadthFirstGenerator(t *testing.T) {
 	g := ReducerBreadthFirstGenerator{
+		Header:      Header,
 		Name:        "Tree",
 		PackageName: "visitor",
 		Types:       []string{"Branch", "Leaf"},
@@ -45,7 +46,7 @@ func (d *TreeBreadthFirstVisitor[A]) VisitBranch(v *Branch) any {
 	for idx, _ := range v.Map {
 		d.queue = append(d.queue, v.Map[idx])
 	}
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceBranch(v, d.result)
@@ -57,7 +58,7 @@ func (d *TreeBreadthFirstVisitor[A]) VisitBranch(v *Branch) any {
 
 func (d *TreeBreadthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceLeaf(v, d.result)
