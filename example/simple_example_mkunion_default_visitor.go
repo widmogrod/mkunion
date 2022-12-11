@@ -4,9 +4,10 @@ package example
 type VehicleDefaultVisitor[A any] struct {
 	Default A
 	OnPlane func(x *Plane) A
-	OnCar func(x *Car) A
-	OnBoat func(x *Boat) A
+	OnCar   func(x *Car) A
+	OnBoat  func(x *Boat) A
 }
+
 func (t *VehicleDefaultVisitor[A]) VisitPlane(v *Plane) any {
 	if t.OnPlane != nil {
 		return t.OnPlane(v)

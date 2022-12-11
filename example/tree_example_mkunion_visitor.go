@@ -11,7 +11,7 @@ type Tree interface {
 }
 
 func (r *Branch) Accept(v TreeVisitor) any { return v.VisitBranch(r) }
-func (r *Leaf) Accept(v TreeVisitor) any { return v.VisitLeaf(r) }
+func (r *Leaf) Accept(v TreeVisitor) any   { return v.VisitLeaf(r) }
 
 var (
 	_ Tree = (*Branch)(nil)
@@ -20,7 +20,7 @@ var (
 
 type TreeOneOf struct {
 	Branch *Branch `json:",omitempty"`
-	Leaf *Leaf `json:",omitempty"`
+	Leaf   *Leaf   `json:",omitempty"`
 }
 
 func (r *TreeOneOf) Accept(v TreeVisitor) any {
@@ -39,7 +39,7 @@ var _ Tree = (*TreeOneOf)(nil)
 type mapTreeToOneOf struct{}
 
 func (t *mapTreeToOneOf) VisitBranch(v *Branch) any { return &TreeOneOf{Branch: v} }
-func (t *mapTreeToOneOf) VisitLeaf(v *Leaf) any { return &TreeOneOf{Leaf: v} }
+func (t *mapTreeToOneOf) VisitLeaf(v *Leaf) any     { return &TreeOneOf{Leaf: v} }
 
 var defaultMapTreeToOneOf TreeVisitor = &mapTreeToOneOf{}
 

@@ -15,7 +15,7 @@ type WherePredicateBreadthFirstVisitor[A any] struct {
 
 func (d *WherePredicateBreadthFirstVisitor[A]) VisitEq(v *Eq) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceEq(v, d.result)
@@ -27,7 +27,7 @@ func (d *WherePredicateBreadthFirstVisitor[A]) VisitEq(v *Eq) any {
 
 func (d *WherePredicateBreadthFirstVisitor[A]) VisitAnd(v *And) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceAnd(v, d.result)
@@ -39,7 +39,7 @@ func (d *WherePredicateBreadthFirstVisitor[A]) VisitAnd(v *And) any {
 
 func (d *WherePredicateBreadthFirstVisitor[A]) VisitOr(v *Or) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceOr(v, d.result)
@@ -58,7 +58,7 @@ func (d *WherePredicateBreadthFirstVisitor[A]) VisitPath(v *Path) any {
 	for idx, _ := range v.Y {
 		d.queue = append(d.queue, v.Y[idx])
 	}
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReducePath(v, d.result)

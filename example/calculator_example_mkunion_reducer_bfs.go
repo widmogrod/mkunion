@@ -15,7 +15,7 @@ type CalcBreadthFirstVisitor[A any] struct {
 
 func (d *CalcBreadthFirstVisitor[A]) VisitLit(v *Lit) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceLit(v, d.result)
@@ -29,7 +29,7 @@ func (d *CalcBreadthFirstVisitor[A]) VisitSum(v *Sum) any {
 	d.queue = append(d.queue, v)
 	d.queue = append(d.queue, v.Left)
 	d.queue = append(d.queue, v.Right)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceSum(v, d.result)
@@ -43,7 +43,7 @@ func (d *CalcBreadthFirstVisitor[A]) VisitMul(v *Mul) any {
 	d.queue = append(d.queue, v)
 	d.queue = append(d.queue, v.Left)
 	d.queue = append(d.queue, v.Right)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceMul(v, d.result)
