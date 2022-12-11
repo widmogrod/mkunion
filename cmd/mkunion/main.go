@@ -48,12 +48,14 @@ func main() {
 			}
 
 			visitor := mkunion.VisitorGenerator{
+				Header:      mkunion.Header,
 				Name:        c.String("name"),
 				Types:       strings.Split(c.String("types"), ","),
 				PackageName: inferred.PackageName,
 			}
 
 			depthFirstGenerator := mkunion.ReducerDepthFirstGenerator{
+				Header:      mkunion.Header,
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
@@ -61,6 +63,7 @@ func main() {
 			}
 
 			breadthFirstGenerator := mkunion.ReducerBreadthFirstGenerator{
+				Header:      mkunion.Header,
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
@@ -68,12 +71,14 @@ func main() {
 			}
 
 			defaultReduction := mkunion.ReducerDefaultReductionGenerator{
+				Header:      mkunion.Header,
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
 			}
 
 			defaultVisitor := mkunion.VisitorDefaultGenerator{
+				Header:      mkunion.Header,
 				Name:        visitor.Name,
 				Types:       visitor.Types,
 				PackageName: inferred.PackageName,
