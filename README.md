@@ -139,11 +139,15 @@ go test ./...
 - [x] Add support for map[any]{Variant} type
 ### V1.2.x
 - [x] Add breadth-first reducer traversal
+- [x] Use go:embed for templates
 
 ### V1.3.x
+- [ ] Add state machine generation
+
+### V1.4.x
 - [ ] Add support for multiple go:generate mkunion in one file
 - 
-### V1.4.x
+### V1.5.x
 - [ ] Add support for not-stop able reducer
 
 ### V2.x.x
