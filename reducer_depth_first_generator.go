@@ -2,6 +2,7 @@ package mkunion
 
 import (
 	"bytes"
+	_ "embed"
 	"text/template"
 )
 
@@ -12,6 +13,12 @@ func PtrStr(x string) *string {
 type typeName = string
 type variantName = string
 
+var (
+	//go:embed reducer_depth_first_generator.go.tmpl
+	traverseTmpl   string
+	renderTraverse = template.Must(template.New("main").Parse(traverseTmpl))
+)
+
 type Branching struct {
 	Lit  *string
 	List *string
@@ -19,78 +26,12 @@ type Branching struct {
 }
 
 type ReducerDepthFirstGenerator struct {
+	Header      string
 	Name        variantName
 	Types       []typeName
 	PackageName string
 	Branches    map[typeName][]Branching
 }
-
-var (
-	traverseTmpl = Header + `
-package {{ .PackageName }}
-{{ $root := . }}
-{{- $name := .Name }}
-type (
-	{{ $name }}Reducer[A any] interface {
-		{{- range .Types }}
-		Reduce{{ . }}(x *{{ . }}, agg A) (result A, stop bool)
-		{{- end }}
-	}
-)
-
-type {{ $name }}DepthFirstVisitor[A any] struct {
-	stop   bool
-	result A
-	reduce {{ $name }}Reducer[A]
-}
-
-var _ {{ $name }}Visitor = (*{{ $name }}DepthFirstVisitor[any])(nil)
-{{ range $i, $type := .Types }}
-func (d *{{ $name }}DepthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
-	d.result, d.stop = d.reduce.Reduce{{ . }}(v, d.result)
-	if d.stop {
-		return nil
-	}
-	
-	{{- range (index $root.Branches $type) -}}
-	{{- if .Lit}}
-	if _ = v.{{ .Lit }}.Accept(d); d.stop {
-		return nil
-	}
-	{{- else if .List }}
-	for idx := range v.{{ .List }} {
-		if _ = v.{{ .List }}[idx].Accept(d); d.stop {
-			return nil
-		}
-	}
-	{{- else if .Map }}
-	for idx, _ := range v.{{ .Map }} {
-		if _ = v.{{ .Map }}[idx].Accept(d); d.stop {
-			return nil
-		}
-	}
-	{{- end -}}
-	{{- end }}
-
-	return nil
-}
-{{ end }}
-func Reduce{{ $name }}DepthFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
-	reducer := &{{ $name }}DepthFirstVisitor[A]{
-		result: init,
-		reduce: r,
-	}
-
-	_ = v.Accept(reducer)
-
-	return reducer.result
-}
-`
-)
-
-var (
-	renderTraverse = template.Must(template.New("main").Parse(traverseTmpl))
-)
 
 func (t *ReducerDepthFirstGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
