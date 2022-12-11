@@ -7,6 +7,7 @@ import (
 
 func TestDepthFirstGenerator(t *testing.T) {
 	g := ReducerDepthFirstGenerator{
+		Header:      Header,
 		Name:        "Tree",
 		PackageName: "visitor",
 		Types:       []string{"Branch", "Leaf"},
@@ -79,6 +80,5 @@ func ReduceTreeDepthFirst[A any](r TreeReducer[A], v Tree, init A) A {
 	_ = v.Accept(reducer)
 
 	return reducer.result
-}
-`, string(result))
+}`, string(result))
 }

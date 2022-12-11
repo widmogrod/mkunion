@@ -7,6 +7,7 @@ import (
 
 func TestOptionalVisitor(t *testing.T) {
 	g := VisitorDefaultGenerator{
+		Header:      Header,
 		Name:        "Vehicle",
 		Types:       []string{"Plane", "Car", "Boat"},
 		PackageName: "visitor",
@@ -40,6 +41,5 @@ func (t *VehicleDefaultVisitor[A]) VisitBoat(v *Boat) any {
 		return t.OnBoat(v)
 	}
 	return t.Default
-}
-`, string(result))
+}`, string(result))
 }

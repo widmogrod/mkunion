@@ -2,6 +2,7 @@ package mkunion
 
 import (
 	"bytes"
+	_ "embed"
 	"text/template"
 )
 
@@ -14,72 +15,18 @@ type Generator interface {
 	Generate() ([]byte, error)
 }
 
-type (
-	VisitorGenerator struct {
-		Types       []string
-		Name        string
-		PackageName string
-	}
-)
-
 var (
-	tmpl = Header + `
-package {{ .PackageName }}
-{{ $name := .Name }}
-type {{ $name }}Visitor interface {
-	{{- range .Types }}
-	Visit{{ . }}(v *{{ . }}) any
-	{{- end }}
-}
-
-type {{ $name }} interface {
-	Accept(g {{ $name }}Visitor) any
-}
-{{ range .Types }}
-func (r *{{ . }}) Accept(v {{ $name }}Visitor) any { return v.Visit{{ . }}(r) }
-{{- end }}
-
-var (
-	{{- range .Types }}
-	_ {{ $name }} = (*{{ . }})(nil)
-	{{- end }}
+	//go:embed visitor_generator.go.tmpl
+	visitorTmpl string
+	render      = template.Must(template.New("main").Parse(visitorTmpl))
 )
 
-type {{ $name }}OneOf struct {
-{{- range .Types }}
-	{{ . }} *{{ . }} ` + "`json:\",omitempty\"`" + `
-{{- end }}
+type VisitorGenerator struct {
+	Header      string
+	Types       []string
+	Name        string
+	PackageName string
 }
-
-func (r *{{ $name }}OneOf) Accept(v {{ $name }}Visitor) any {
-	switch {
-{{- range .Types }}
-	case r.{{ . }} != nil:
-		return v.Visit{{ . }}(r.{{ . }})
-{{- end }}
-	default:
-		panic("unexpected")
-	}
-}
-
-var _ {{ $name }} = (*{{ $name }}OneOf)(nil)
-
-type map{{ $name }}ToOneOf struct{}
-{{ range .Types }}
-func (t *map{{ $name }}ToOneOf) Visit{{ . }}(v *{{ . }}) any { return &{{ $name }}OneOf{ {{- . }}: v} }
-{{- end }}
-
-var defaultMap{{ $name }}ToOneOf {{ $name }}Visitor = &map{{ $name }}ToOneOf{}
-
-func Map{{ $name }}ToOneOf(v {{ $name }}) *{{ $name }}OneOf {
-	return v.Accept(defaultMap{{ $name }}ToOneOf).(*{{ $name }}OneOf)
-}
-`
-)
-
-var (
-	render = template.Must(template.New("main").Parse(tmpl))
-)
 
 func (g *VisitorGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}

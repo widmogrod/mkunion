@@ -2,101 +2,23 @@ package mkunion
 
 import (
 	"bytes"
+	_ "embed"
 	"text/template"
 )
 
+var (
+	//go:embed reducer_breadth_first_generator.go.tmpl
+	breadthFirstTmpl   string
+	renderBreadthFirst = template.Must(template.New("main").Parse(breadthFirstTmpl))
+)
+
 type ReducerBreadthFirstGenerator struct {
+	Header      string
 	Name        variantName
 	Types       []typeName
 	PackageName string
 	Branches    map[typeName][]Branching
 }
-
-var (
-	breadthFirstTmpl = Header + `
-package {{ .PackageName }}
-{{ $root := . }}
-{{- $name := .Name }}
-var _ {{ $name }}Visitor = (*{{ $name }}BreadthFirstVisitor[any])(nil)
-
-type {{ $name }}BreadthFirstVisitor[A any] struct {
-	stop   bool
-	result A
-	reduce {{ $name }}Reducer[A]
-
-	queue         []{{ $name }}
-	visited       map[{{ $name }}]bool
-	shouldExecute map[{{ $name }}]bool
-}
-{{ range $i, $type := .Types }}
-func (d *{{ $name }}BreadthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
-	d.queue = append(d.queue, v)
-{{- range (index $root.Branches $type) -}}
-	{{- if .Lit}}
-	d.queue = append(d.queue, v.{{ .Lit }})
-	{{- else if .List }}
-	for idx := range v.{{ .List }} {
-		d.queue = append(d.queue, v.{{ .List }}[idx])
-	}
-	{{- else if .Map }}
-	for idx, _ := range v.{{ .Map }} {
-		d.queue = append(d.queue, v.{{ .Map }}[idx])
-	}
-	{{- end -}}
-{{- end }}
-	
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.Reduce{{ . }}(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-{{ end }}
-func (d *{{ $name }}BreadthFirstVisitor[A]) execute() {
-	for len(d.queue) > 0 {
-		if d.stop {
-			return
-		}
-
-		i := d.pop()
-		if d.visited[i] {
-			continue
-		}
-		d.visited[i] = true
-		d.shouldExecute[i] = true
-		i.Accept(d)
-	}
-
-	return
-}
-
-func (d *{{ $name }}BreadthFirstVisitor[A]) pop() {{ $name }} {
-	i := d.queue[0]
-	d.queue = d.queue[1:]
-	return i
-}
-
-func Reduce{{ $name }}BreadthFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}, init A) A {
-	reducer := &{{ $name }}BreadthFirstVisitor[A]{
-		result:        init,
-		reduce:        r,
-		queue:         []{{ $name }}{v},
-		visited:       make(map[{{ $name }}]bool),
-		shouldExecute: make(map[{{ $name }}]bool),
-	}
-
-	_ = v.Accept(reducer)
-
-	return reducer.result
-}
-`
-)
-
-var (
-	renderBreadthFirst = template.Must(template.New("main").Parse(breadthFirstTmpl))
-)
 
 func (t *ReducerBreadthFirstGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}

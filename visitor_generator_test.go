@@ -7,6 +7,7 @@ import (
 
 func TestGeneration(t *testing.T) {
 	g := VisitorGenerator{
+		Header:      Header,
 		Name:        "Vehicle",
 		Types:       []string{"Plane", "Car", "Boat"},
 		PackageName: "visitor",
@@ -68,6 +69,5 @@ var defaultMapVehicleToOneOf VehicleVisitor = &mapVehicleToOneOf{}
 
 func MapVehicleToOneOf(v Vehicle) *VehicleOneOf {
 	return v.Accept(defaultMapVehicleToOneOf).(*VehicleOneOf)
-}
-`, string(result))
+}`, string(result))
 }

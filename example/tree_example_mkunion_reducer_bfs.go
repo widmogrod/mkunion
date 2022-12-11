@@ -17,7 +17,7 @@ func (d *TreeBreadthFirstVisitor[A]) VisitBranch(v *Branch) any {
 	d.queue = append(d.queue, v)
 	d.queue = append(d.queue, v.L)
 	d.queue = append(d.queue, v.R)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceBranch(v, d.result)
@@ -29,7 +29,7 @@ func (d *TreeBreadthFirstVisitor[A]) VisitBranch(v *Branch) any {
 
 func (d *TreeBreadthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceLeaf(v, d.result)

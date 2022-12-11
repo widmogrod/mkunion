@@ -7,6 +7,7 @@ import (
 
 func TestDefaultReductionGenerator(t *testing.T) {
 	g := ReducerDefaultReductionGenerator{
+		Header:      Header,
 		Name:        "Tree",
 		PackageName: "visitor",
 		Types:       []string{"Branch", "Leaf"},

@@ -15,7 +15,7 @@ type VehicleBreadthFirstVisitor[A any] struct {
 
 func (d *VehicleBreadthFirstVisitor[A]) VisitPlane(v *Plane) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReducePlane(v, d.result)
@@ -27,7 +27,7 @@ func (d *VehicleBreadthFirstVisitor[A]) VisitPlane(v *Plane) any {
 
 func (d *VehicleBreadthFirstVisitor[A]) VisitCar(v *Car) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceCar(v, d.result)
@@ -39,7 +39,7 @@ func (d *VehicleBreadthFirstVisitor[A]) VisitCar(v *Car) any {
 
 func (d *VehicleBreadthFirstVisitor[A]) VisitBoat(v *Boat) any {
 	d.queue = append(d.queue, v)
-	
+
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceBoat(v, d.result)
