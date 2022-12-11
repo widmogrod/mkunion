@@ -4,10 +4,14 @@ Improves work with unions in golang by generating beautiful code (in other langu
 Project generates code for you, so you don't have to write it by hand. 
 It's a good idea to use it when you have a lot of unions in your codebase.
 
-What is offers?
+## What it offers?
 - Visitor interface with appropriate methods added to each union type
 - Default implementation of Visitor that simplifies work with unions
 - Reducer that can do recursive traversal (depth and breadth first) & default implementation of Reducer, fantastic for traversing ASTs
+
+## What it's useful for?
+- **Custom DSL**. When you want to create your own DSL, you can use this library to create AST for it. (./examples/ast)
+- **State machine**. When you need to manage state of your application, you can use this library to create states and transitions as unions. (./examples/state)
 
 Have fun! I hope you will find it useful.
 
