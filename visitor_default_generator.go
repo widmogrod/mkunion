@@ -2,42 +2,22 @@ package mkunion
 
 import (
 	"bytes"
+	_ "embed"
 	"text/template"
 )
 
-type (
-	VisitorDefaultGenerator struct {
-		Name        string
-		Types       []string
-		PackageName string
-	}
-)
-
 var (
-	optionalVisitorTmpl = Header + `
-package {{ .PackageName }}
-{{ $name := .Name }}
-type {{ $name }}DefaultVisitor[A any] struct {
-	Default A
-	{{- range .Types }}
-	On{{ . }} func(x *{{ . }}) A
-	{{- end }}
-}
-
-{{- range .Types }}
-func (t *{{ $name }}DefaultVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
-	if t.On{{ . }} != nil {
-		return t.On{{ . }}(v)
-	}
-	return t.Default
-}
-{{- end }}
-`
-)
-
-var (
+	//go:embed visitor_default_generator.go.tmpl
+	optionalVisitorTmpl   string
 	optionalVisitorRender = template.Must(template.New("main").Parse(optionalVisitorTmpl))
 )
+
+type VisitorDefaultGenerator struct {
+	Header      string
+	Name        string
+	Types       []string
+	PackageName string
+}
 
 func (g *VisitorDefaultGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
