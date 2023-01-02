@@ -56,43 +56,118 @@ In your CI/CD process you need to run go generate before testing & building your
 
 
 ### Use generated code
-With our example you may want to sum all values in tree.
+With our example you may want to **sum all values in tree**.
 
+
+To be precise, we want to sum values that `Leaf` struct holds.
+For example, such tree needs to be summed to 10:
 ```go
 tree := &Branch{
     L: &Leaf{Value: 1},
     R: &Branch{
-        L: &Leaf{Value: 2},
-        R: &Leaf{Value: 3},
+        L: &Branch{
+            L: &Leaf{Value: 2},
+            R: &Leaf{Value: 3},
+        },
+        R: &Leaf{Value: 4},
     },
 }
-
-var red TreeReducer[int] = &TreeDefaultReduction[int]{
-    OnBranch: func(x *Branch, agg int) (result int, stop bool) {
-        // don't do anything, but continue traversing
-        return agg, false
-    },
-    OnLeaf: func(x *Leaf, agg int) (int, bool) {
-        // add value to accumulator
-        return agg + x.Value, false
-    },
-}
-
-result := ReduceTreeDepthFirst(red, tree, 0)
-assert.Equal(t, 6, result)
 ```
 
-> Note: You can see that generated code knows how to traverse union recursively. 
-> You can write flat code and don't worry about recursion.
+To sum up values in a tree we can do it in 3 ways. 
+In all `mkunion` will help us to do it in a clean way.
 
-> Generator assumes that if in structure is reference to union type `Tree`, then it's recursive.
-> Such code can also work on slices. You can take a look at `example/where_predicate_example.go` to see something more complex
+#### 1. Implement tree reducer with help of `Match` function
+This approach is familiar with everyone who use functional programming.
 
+- In this approach you're responsible for defining how you want to travers tree. 
+  We will go with depth-first traversal.
+- `MustMatchTree` function will do type checking, you need to handle all cases.
 
-You may decide that you want to write down your own visitor for that, then you can do it like this:
 ```go
+func MyReduceDepthFirstTree[A any](x Tree, aggregate func (int, A) A, init A) A {
+    // MustMatchTree is generated function my mkunion
+    return MustMatchTree(
+	    x, 
+	    func (x *Leaf) B {
+	        return aggregate(x.Value, init)
+	    },
+	    func (x *Branch) B {
+	        // Note: here you define traversal order
+	        // Right branch first, left branch second
+	        return MyReduceDepthFirstTree(x.L, aggregate, MyReduceDepthFirstTree(x.R, f, init))
+	    }, 
+    )
+}
+```
+
+You use this function like this:
+```go
+result := MyReduceDepthFirstTree(tree, func (x, y int) int {
+    return x + y
+}, 0)
+assert.Equal(t, 10, result)
+```
+
+
+### 2. Leverage generated default reduction with traversal strategies (depth first, breadth first)
+You should use this approach
+ - When you need to traverse tree in different way than a depth first, like breadth first without writing your own code
+ - When you need to stop traversing of a tree at some point. For example, when you want to find a value in a tree, or meet some condition.
+
+To demonstrate different traversal strategies, we will reduce a tree to a structure that will hold not only result of sum, but also order of nodes visited
+
+```go
+// This structure will hold order of nodes visited, and resulting sum
+type orderAgg struct {
+    Order  []int
+    Result int
+}
+
+// This is how we define reducer function for traversal of tree
+
+var red TreeReducer[orderAgg] = &TreeDefaultReduction[orderAgg]{
+    PanicOnFallback:      false,
+    DefaultStopReduction: false,
+    OnLeaf: func(x *Leaf, agg orderAgg) (orderAgg, bool) {
+        return orderAgg{
+            Order:  append(agg.Order, x.Value),
+            Result: agg.Result + x.Value,
+        }, false
+    },
+}
+
+// Dept first traversal
+result := ReduceTreeDepthFirst(red, tree, orderAgg{})
+assert.Equal(t, 10, result.Result)
+assert.Equal(t, []int{1, 2, 3, 4}, result.Order) // notice that order is different!
+
+// Breadth first traversal
+result = ReduceTreeBreadthFirst(red, tree, orderAgg{})
+assert.Equal(t, 10, result.Result)
+assert.Equal(t, []int{1, 4, 2, 3}, result.Order) // notice that order is different!
+```
+
+Note:
+- You can see that generated code knows how to traverse union recursively. 
+  - You can write flat code and don't worry about recursion. 
+- Generator assumes that if in structure is reference to union type `Tree`, then it's recursive. 
+  - Such code can also work on slices. You can take a look at `example/where_predicate_example.go` to see something more complex
+
+
+#### 3. Implement visitor interface
+This is most open way to traverse tree.
+- You have to implement `TreeVisitor` interface that was generated for you by `mkunion` tool.
+- You have to define how traversal should happen
+
+This approach is better when you want to hold state or references in `sumVisitor` struct.
+In simple example this is not necessary, but in more complex cases you may store HTTP client, database connection or something else.
+
+```go
+// assert that sumVisitor implements TreeVisitor interface
 var _ TreeVisitor = (*sumVisitor)(nil)
 
+// implementation of sumVisitor
 type sumVisitor struct{}
 
 func (s sumVisitor) VisitBranch(v *Branch) any {
@@ -104,11 +179,9 @@ func (s sumVisitor) VisitLeaf(v *Leaf) any {
 }
 ```
 
-> Note: Naturally your visitor can be more complex, but it's up to you.
-
 You can use `sumVisitor` like this:
 ```go
-assert.Equal(t, 6, tree.Accept(&sumVisitor{}))
+assert.Equal(t, 10, tree.Accept(&sumVisitor{}))
 ```
 
 ## More examples 
@@ -137,19 +210,23 @@ go test ./...
 
 ### V1.1.x
 - [x] Add support for map[any]{Variant} type
+
 ### V1.2.x
 - [x] Add breadth-first reducer traversal
-- [x] Use go:embed for templates
 
 ### V1.3.x
-- [ ] Add state machine generation
+- [x] Use go:embed for templates
 
 ### V1.4.x
-- [ ] Add support for multiple go:generate mkunion in one file
-- 
-### V1.5.x
-- [ ] Add support for not-stop able reducer
+- [x] Add function generation like `Match` to simplify work with unions
+- [x] Benchmark implementation of `Match` vs Reducer (depth-first has close performance, but breadth-first is much slower)
 
+### V1.5.x
+- [ ] Add state machine generation
+
+### V1.6.x
+- [ ] Add support for multiple go:generate mkunion in one file
+ 
 ### V2.x.x
 - [ ] Add support for generic union types
 
