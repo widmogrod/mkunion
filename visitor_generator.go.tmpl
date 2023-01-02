@@ -1,5 +1,10 @@
 {{ .Header }}
 package {{ .PackageName }}
+
+import (
+	"github.com/widmogrod/mkunion/f"
+)
+
 {{ $name := .Name }}
 type {{ $name }}Visitor interface {
 	{{- range .Types }}
@@ -48,4 +53,13 @@ var defaultMap{{ $name }}ToOneOf {{ $name }}Visitor = &map{{ $name }}ToOneOf{}
 
 func Map{{ $name }}ToOneOf(v {{ $name }}) *{{ $name }}OneOf {
 	return v.Accept(defaultMap{{ $name }}ToOneOf).(*{{ $name }}OneOf)
+}
+{{ $i := len .Types}}
+func MustMatch{{ $name }}[TOut any](
+	x {{ $name }},
+	{{- range $k, $t := .Types }}
+	f{{ Add $k 1}} func(x *{{ $t }}) TOut,
+    {{- end }}
+) TOut {
+	return f.MustMatch{{ $i }}(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }})
 }

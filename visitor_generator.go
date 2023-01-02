@@ -18,7 +18,18 @@ type Generator interface {
 var (
 	//go:embed visitor_generator.go.tmpl
 	visitorTmpl string
-	render      = template.Must(template.New("main").Parse(visitorTmpl))
+	render      = template.Must(template.New("main").Funcs(map[string]any{
+		"GenIntSlice": func(from, to int) []int {
+			var result []int
+			for i := from; i <= to; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
+		"Add": func(a, b int) int {
+			return a + b
+		},
+	}).Parse(visitorTmpl))
 )
 
 type VisitorGenerator struct {
