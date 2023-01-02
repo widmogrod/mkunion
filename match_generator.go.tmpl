@@ -1,0 +1,40 @@
+{{ .Header }}
+package {{ .PackageName }}
+
+import (
+	"errors"
+	"fmt"
+)
+{{ range $i := GenIntSlice 2 .MaxSize }}
+func Match{{$i}}[TIn, TOut
+	{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} any](
+	x TIn,
+	{{- range $k := GenIntSlice 1 $i }}
+	f{{ $k }} func(x T{{ $k }}) TOut,
+	{{- end }}
+	df func(x TIn) TOut,
+) TOut {
+	switch y := any(x).(type) {
+	{{- range $k := GenIntSlice 1 $i }}
+	case T{{ $k }}:
+		return f{{ $k }}(y)
+    {{- end }}
+	}
+
+	return df(x)
+}
+
+func MustMatch{{$i}}[TIn, TOut{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} any](
+	x TIn,
+    {{- range $k := GenIntSlice 1 $i }}
+	f{{ $k }} func(x T{{ $k }}) TOut,
+	{{- end }}
+) TOut {
+	return Match{{$i}}(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }}{{- end }}, func(x TIn) TOut {
+	    {{- range $k := GenIntSlice 1 $i }}
+		var t{{ $k }} T{{ $k }}
+		{{- end }}
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected ({{ Join (Repeat "%T" $i) " or " }})", x {{- range $k := GenIntSlice 1 $i }}, t{{ $k }}{{- end }})))
+	})
+}
+{{ end }}

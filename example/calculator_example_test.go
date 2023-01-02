@@ -22,6 +22,19 @@ func TestCalculatorExample(t *testing.T) {
 
 	str := calculation.Accept(&calculatorPrint{}).(string)
 	fmt.Println(str)
+
+	result = Cal(calculation)
+	assert.Equal(t, 8, result)
+}
+
+func Cal(x Calc) int {
+	return MustMatchCalc(x, func(x *Lit) int {
+		return x.V
+	}, func(x *Sum) int {
+		return Cal(x.Left) + Cal(x.Right)
+	}, func(x *Mul) int {
+		return Cal(x.Left) * Cal(x.Right)
+	})
 }
 
 func TestCalculatorDynamicExample(t *testing.T) {
@@ -31,6 +44,8 @@ func TestCalculatorDynamicExample(t *testing.T) {
 		str := calculation.Accept(&calculatorPrint{}).(string)
 		t.Logf("expressions: %d = %s", expect, str)
 		result := calculation.Accept(&calculator{}).(int)
+		assert.Equal(t, expect, result)
+		result = Cal(calculation)
 		assert.Equal(t, expect, result)
 	}
 }
@@ -88,4 +103,45 @@ func (c *calculatorPrint) VisitSum(v *Sum) any {
 
 func (c *calculatorPrint) VisitMul(v *Mul) any {
 	return fmt.Sprintf("(%s * %s)", v.Left.Accept(c).(string), v.Right.Accept(c).(string))
+}
+
+/*
+Benchmark show that function is ~1.5x faster than visitor pattern!
+BenchmarkCalcVisitor-8          10280121               116.0 ns/op            56 B/op          7 allocs/op
+BenchmarkCalcVisitor-8          10285610               115.4 ns/op            56 B/op          7 allocs/op
+BenchmarkCalcVisitor-8          10358955               116.3 ns/op            56 B/op          7 allocs/op
+BenchmarkCalcVisitor-8          10388298               122.7 ns/op            56 B/op          7 allocs/op
+BenchmarkCalcVisitor-8          10213692               116.5 ns/op            56 B/op          7 allocs/op
+BenchmarkCakFunction-8          13601168                89.85 ns/op            0 B/op          0 allocs/op
+BenchmarkCakFunction-8          13480336                89.31 ns/op            0 B/op          0 allocs/op
+BenchmarkCakFunction-8          13494511                88.60 ns/op            0 B/op          0 allocs/op
+BenchmarkCakFunction-8          13612425                88.93 ns/op            0 B/op          0 allocs/op
+BenchmarkCakFunction-8          13485291                89.75 ns/op            0 B/op          0 allocs/op
+*/
+var (
+	benchCalcResult      int
+	benchCalcExpect      = 10000
+	benchCalcCalculation = GenerateCalcExpressions(benchCalcExpect)
+)
+
+func BenchmarkCalcVisitor(b *testing.B) {
+	var r int
+	for i := 0; i < b.N; i++ {
+		r = benchCalcCalculation.Accept(&calculator{}).(int)
+		if r != benchCalcExpect {
+			b.Fatalf("expect %d, got %d", benchCalcExpect, r)
+		}
+	}
+	benchCalcResult = r
+}
+
+func BenchmarkCakFunction(b *testing.B) {
+	var r int
+	for i := 0; i < b.N; i++ {
+		r = Cal(benchCalcCalculation)
+		if r != benchCalcExpect {
+			b.Fatalf("expect %d, got %d", benchCalcExpect, r)
+		}
+	}
+	benchCalcResult = r
 }
