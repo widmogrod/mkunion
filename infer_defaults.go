@@ -25,7 +25,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 }
 
 var (
-	matchGoGenerateExtractUnionName = regexp.MustCompile(`go:generate .* -name=(\w+)`)
+	matchGoGenerateExtractUnionName = regexp.MustCompile(`go:generate .* -{1,2}name=(\w+)`)
 )
 
 type InferredInfo struct {

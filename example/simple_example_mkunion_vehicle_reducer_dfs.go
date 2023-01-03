@@ -3,8 +3,8 @@ package example
 
 type (
 	VehicleReducer[A any] interface {
-		ReducePlane(x *Plane, agg A) (result A, stop bool)
 		ReduceCar(x *Car, agg A) (result A, stop bool)
+		ReducePlane(x *Plane, agg A) (result A, stop bool)
 		ReduceBoat(x *Boat, agg A) (result A, stop bool)
 	}
 )
@@ -17,8 +17,8 @@ type VehicleDepthFirstVisitor[A any] struct {
 
 var _ VehicleVisitor = (*VehicleDepthFirstVisitor[any])(nil)
 
-func (d *VehicleDepthFirstVisitor[A]) VisitPlane(v *Plane) any {
-	d.result, d.stop = d.reduce.ReducePlane(v, d.result)
+func (d *VehicleDepthFirstVisitor[A]) VisitCar(v *Car) any {
+	d.result, d.stop = d.reduce.ReduceCar(v, d.result)
 	if d.stop {
 		return nil
 	}
@@ -26,8 +26,8 @@ func (d *VehicleDepthFirstVisitor[A]) VisitPlane(v *Plane) any {
 	return nil
 }
 
-func (d *VehicleDepthFirstVisitor[A]) VisitCar(v *Car) any {
-	d.result, d.stop = d.reduce.ReduceCar(v, d.result)
+func (d *VehicleDepthFirstVisitor[A]) VisitPlane(v *Plane) any {
+	d.result, d.stop = d.reduce.ReducePlane(v, d.result)
 	if d.stop {
 		return nil
 	}
