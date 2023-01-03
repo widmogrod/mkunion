@@ -5,11 +5,11 @@ var _ VehicleReducer[any] = (*VehicleDefaultReduction[any])(nil)
 
 type (
 	VehicleDefaultReduction[A any] struct {
-		PanicOnFallback bool
+		PanicOnFallback      bool
 		DefaultStopReduction bool
-		OnPlane func(x *Plane, agg A) (result A, stop bool)
-		OnCar func(x *Car, agg A) (result A, stop bool)
-		OnBoat func(x *Boat, agg A) (result A, stop bool)
+		OnPlane              func(x *Plane, agg A) (result A, stop bool)
+		OnCar                func(x *Car, agg A) (result A, stop bool)
+		OnBoat               func(x *Boat, agg A) (result A, stop bool)
 	}
 )
 

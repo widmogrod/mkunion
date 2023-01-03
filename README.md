@@ -45,11 +45,11 @@ Go will generate few files for you in the same location as union defnition
 // source file
 example/tree_example.go
 // generated file
-example/tree_example_mkunion_default_reducer.go
-example/tree_example_mkunion_default_visitor.go
-example/tree_example_mkunion_reducer_bfs.go
-example/tree_example_mkunion_reducer_dfs.go
-example/tree_example_mkunion_visitor.go
+example/tree_example_mkunion_tree_default_reducer.go
+example/tree_example_mkunion_tree_default_visitor.go
+example/tree_example_mkunion_tree_reducer_bfs.go
+example/tree_example_mkunion_tree_reducer_dfs.go
+example/tree_example_mkunion_tree_visitor.go
 ```
 Don't commit generated files to your repository. They are generated on the fly.
 In your CI/CD process you need to run go generate before testing & building your project.
@@ -222,14 +222,11 @@ go test ./...
 - [x] Benchmark implementation of `Match` vs Reducer (depth-first has close performance, but breadth-first is much slower)
 
 ### V1.5.x
-- [ ] Add state machine generation
+- [x] Add support for multiple go:generate mkunion in one file
 
 ### V1.6.x
-- [ ] Add support for multiple go:generate mkunion in one file
+- [ ] Add state machine generation
  
 ### V2.x.x
 - [ ] Add support for generic union types
 
-## Knows bugs
-- [ ] Multiple go:generates mkunion in one file overwrite generated code. 
-  Solution: split it to multiple files

@@ -100,7 +100,7 @@ func main() {
 					return err
 				}
 				err = os.WriteFile(path.Join(cwd,
-					baseName+"_"+mkunion.Program+"_"+g.name+".go"), b, 0644)
+					baseName+"_"+mkunion.Program+"_"+strings.ToLower(visitor.Name)+"_"+g.name+".go"), b, 0644)
 				if err != nil {
 					return err
 				}
