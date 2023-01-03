@@ -13,24 +13,24 @@ type VehicleBreadthFirstVisitor[A any] struct {
 	shouldExecute map[Vehicle]bool
 }
 
-func (d *VehicleBreadthFirstVisitor[A]) VisitPlane(v *Plane) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReducePlane(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
 func (d *VehicleBreadthFirstVisitor[A]) VisitCar(v *Car) any {
 	d.queue = append(d.queue, v)
 
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
 		d.result, d.stop = d.reduce.ReduceCar(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *VehicleBreadthFirstVisitor[A]) VisitPlane(v *Plane) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReducePlane(v, d.result)
 	} else {
 		d.execute()
 	}

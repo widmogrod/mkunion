@@ -3,20 +3,20 @@ package example
 
 type VehicleDefaultVisitor[A any] struct {
 	Default A
-	OnPlane func(x *Plane) A
 	OnCar   func(x *Car) A
+	OnPlane func(x *Plane) A
 	OnBoat  func(x *Boat) A
 }
 
-func (t *VehicleDefaultVisitor[A]) VisitPlane(v *Plane) any {
-	if t.OnPlane != nil {
-		return t.OnPlane(v)
-	}
-	return t.Default
-}
 func (t *VehicleDefaultVisitor[A]) VisitCar(v *Car) any {
 	if t.OnCar != nil {
 		return t.OnCar(v)
+	}
+	return t.Default
+}
+func (t *VehicleDefaultVisitor[A]) VisitPlane(v *Plane) any {
+	if t.OnPlane != nil {
+		return t.OnPlane(v)
 	}
 	return t.Default
 }

@@ -7,15 +7,15 @@ type (
 	VehicleDefaultReduction[A any] struct {
 		PanicOnFallback      bool
 		DefaultStopReduction bool
-		OnPlane              func(x *Plane, agg A) (result A, stop bool)
 		OnCar                func(x *Car, agg A) (result A, stop bool)
+		OnPlane              func(x *Plane, agg A) (result A, stop bool)
 		OnBoat               func(x *Boat, agg A) (result A, stop bool)
 	}
 )
 
-func (t *VehicleDefaultReduction[A]) ReducePlane(x *Plane, agg A) (result A, stop bool) {
-	if t.OnPlane != nil {
-		return t.OnPlane(x, agg)
+func (t *VehicleDefaultReduction[A]) ReduceCar(x *Car, agg A) (result A, stop bool) {
+	if t.OnCar != nil {
+		return t.OnCar(x, agg)
 	}
 	if t.PanicOnFallback {
 		panic("no fallback allowed on undefined ReduceBranch")
@@ -23,9 +23,9 @@ func (t *VehicleDefaultReduction[A]) ReducePlane(x *Plane, agg A) (result A, sto
 	return agg, t.DefaultStopReduction
 }
 
-func (t *VehicleDefaultReduction[A]) ReduceCar(x *Car, agg A) (result A, stop bool) {
-	if t.OnCar != nil {
-		return t.OnCar(x, agg)
+func (t *VehicleDefaultReduction[A]) ReducePlane(x *Plane, agg A) (result A, stop bool) {
+	if t.OnPlane != nil {
+		return t.OnPlane(x, agg)
 	}
 	if t.PanicOnFallback {
 		panic("no fallback allowed on undefined ReduceBranch")
