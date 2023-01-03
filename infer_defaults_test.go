@@ -38,3 +38,15 @@ func TestExtractInferenceForWherePredicate(t *testing.T) {
 		},
 		out.ForVariantType("WherePredicate", []string{"Eq", "And", "Or", "Path"}))
 }
+
+func TestAST(t *testing.T) {
+	out, err := InferFromFile("example/ast/ast.go")
+	assert.NoError(t, err)
+	assert.Equal(t, "ast", out.PackageName)
+	assert.Equal(t,
+		map[string][]string{
+			"Value":    {"Lit", "Accessor"},
+			"Operator": {"Eq", "Gt", "And", "Or", "Not"},
+		},
+		out.possibleVariantTypes)
+}

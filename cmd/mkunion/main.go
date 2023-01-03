@@ -31,7 +31,7 @@ func main() {
 			&cli.StringFlag{
 				Name:     "types",
 				Aliases:  []string{"t"},
-				Required: true,
+				Required: false,
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -47,10 +47,18 @@ func main() {
 				return err
 			}
 
+			unionName := c.String("name")
+			var types []string
+			if c.String("types") != "" {
+				types = strings.Split(c.String("types"), ",")
+			} else {
+				types = inferred.PossibleVariantsTypes(unionName)
+			}
+
 			visitor := mkunion.VisitorGenerator{
 				Header:      mkunion.Header,
-				Name:        c.String("name"),
-				Types:       strings.Split(c.String("types"), ","),
+				Name:        unionName,
+				Types:       types,
 				PackageName: inferred.PackageName,
 			}
 
