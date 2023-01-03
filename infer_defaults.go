@@ -5,13 +5,34 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"strings"
 )
 
+func InferFromFile(filename string) (*InferredInfo, error) {
+	result := &InferredInfo{
+		Types:                map[string]map[string][]Branching{},
+		possibleVariantTypes: map[string][]string{},
+	}
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+
+	ast.Walk(result, f)
+	return result, nil
+}
+
+var (
+	matchGoGenerateExtractUnionName = regexp.MustCompile(`go:generate .* -name=(\w+)`)
+)
+
 type InferredInfo struct {
-	PackageName string
-	Types       map[string]map[string][]Branching
-	currentType string
+	PackageName          string
+	Types                map[string]map[string][]Branching
+	currentType          string
+	possibleVariantTypes map[string][]string
 }
 
 func (f *InferredInfo) ForVariantType(name string, types []string) map[string][]Branching {
@@ -28,8 +49,80 @@ func (f *InferredInfo) ForVariantType(name string, types []string) map[string][]
 	return result
 }
 
+func (f *InferredInfo) PossibleVariantsTypes(unionName string) []string {
+	return f.possibleVariantTypes[unionName]
+}
+
+// comment implementation was copied from func (g *CommentGroup) Text() string
+// and reduced return all comments lines. In contrast to original implementation
+// that skips declaration comments like "//go:generate" which is important
+// for inferring union types.
+func (f *InferredInfo) comment(g *ast.CommentGroup) string {
+	if g == nil {
+		return ""
+	}
+	comments := make([]string, len(g.List))
+	for i, c := range g.List {
+		comments[i] = c.Text
+	}
+
+	lines := make([]string, 0, 10) // most comments are less than 10 lines
+	for _, c := range comments {
+		// Remove comment markers.
+		// The parser has given us exactly the comment text.
+		switch c[1] {
+		case '/':
+			//-style comment (no newline at the end)
+			c = c[2:]
+			if len(c) == 0 {
+				// empty line
+				break
+			}
+			if c[0] == ' ' {
+				// strip first space - required for Example tests
+				c = c[1:]
+				break
+			}
+		case '*':
+			/*-style comment */
+			c = c[2 : len(c)-2]
+		}
+
+		lines = append(lines, c)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
 func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	switch t := n.(type) {
+	case *ast.GenDecl:
+		comment := f.comment(t.Doc)
+		if !strings.Contains(comment, "mkunion") {
+			return f
+		}
+		if t.Tok != token.TYPE {
+			return f
+		}
+
+		names := matchGoGenerateExtractUnionName.FindStringSubmatch(comment)
+		if len(names) < 2 {
+			return f
+		}
+
+		unionName := names[1]
+		if _, ok := f.possibleVariantTypes[unionName]; !ok {
+			f.possibleVariantTypes[unionName] = make([]string, 0)
+		}
+
+		for _, spec := range t.Specs {
+			switch s := spec.(type) {
+			case *ast.TypeSpec:
+				f.possibleVariantTypes[unionName] = append(f.possibleVariantTypes[unionName], s.Name.Name)
+			}
+		}
+		return f
+
 	case *ast.FuncDecl:
 		return nil
 
@@ -101,18 +194,4 @@ func (f *InferredInfo) traverseOption(tag string) bool {
 	}
 
 	return !opts.HasOption("notraverse")
-}
-
-func InferFromFile(filename string) (*InferredInfo, error) {
-	result := &InferredInfo{
-		Types: map[string]map[string][]Branching{},
-	}
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, filename, nil, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	ast.Walk(result, f)
-	return result, nil
 }

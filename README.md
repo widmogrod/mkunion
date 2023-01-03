@@ -28,11 +28,22 @@ Create your first union. In our example it's a simple tree with Branch and Leaf 
 package example
 
 //go:generate mkunion -name=Tree -types=Branch,Leaf
+type Branch struct{ L, R Tree }
+type Leaf   struct{ Value int }
+```
+
+With version `1.6` you can generate union types without specifying variant types names, like so:
+```go
+package example
+
+//go:generate mkunion -name=Tree
 type (
-	Branch struct{ L, R Tree }
-	Leaf   struct{ Value int }
+    Branch struct{ L, R Tree }
+    Leaf   struct{ Value int }
 )
 ```
+
+This is now recomended way of generating unions.
 
 ### Generate code
 Run 
@@ -225,6 +236,9 @@ go test ./...
 - [x] Add support for multiple go:generate mkunion in one file
 
 ### V1.6.x
+- [x] Add variant types inference
+
+### V1.7.x
 - [ ] Add state machine generation
  
 ### V2.x.x
