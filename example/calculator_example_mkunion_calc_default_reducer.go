@@ -5,11 +5,11 @@ var _ CalcReducer[any] = (*CalcDefaultReduction[any])(nil)
 
 type (
 	CalcDefaultReduction[A any] struct {
-		PanicOnFallback bool
+		PanicOnFallback      bool
 		DefaultStopReduction bool
-		OnLit func(x *Lit, agg A) (result A, stop bool)
-		OnSum func(x *Sum, agg A) (result A, stop bool)
-		OnMul func(x *Mul, agg A) (result A, stop bool)
+		OnLit                func(x *Lit, agg A) (result A, stop bool)
+		OnSum                func(x *Sum, agg A) (result A, stop bool)
+		OnMul                func(x *Mul, agg A) (result A, stop bool)
 	}
 )
 
