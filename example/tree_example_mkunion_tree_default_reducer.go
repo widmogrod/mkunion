@@ -5,10 +5,10 @@ var _ TreeReducer[any] = (*TreeDefaultReduction[any])(nil)
 
 type (
 	TreeDefaultReduction[A any] struct {
-		PanicOnFallback bool
+		PanicOnFallback      bool
 		DefaultStopReduction bool
-		OnBranch func(x *Branch, agg A) (result A, stop bool)
-		OnLeaf func(x *Leaf, agg A) (result A, stop bool)
+		OnBranch             func(x *Branch, agg A) (result A, stop bool)
+		OnLeaf               func(x *Leaf, agg A) (result A, stop bool)
 	}
 )
 
