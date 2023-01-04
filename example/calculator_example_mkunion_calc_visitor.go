@@ -44,6 +44,19 @@ func (r *CalcOneOf) Accept(v CalcVisitor) any {
 	}
 }
 
+func (r *CalcOneOf) Unwrap() Calc {
+	switch {
+	case r.Lit != nil:
+		return r.Lit
+	case r.Sum != nil:
+		return r.Sum
+	case r.Mul != nil:
+		return r.Mul
+	}
+
+	return nil
+}
+
 var _ Calc = (*CalcOneOf)(nil)
 
 type mapCalcToOneOf struct{}

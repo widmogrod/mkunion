@@ -62,6 +62,19 @@ func (r *VehicleOneOf) Accept(v VehicleVisitor) any {
 	}
 }
 
+func (r *VehicleOneOf) Unwrap() Vehicle {
+	switch {
+	case r.Plane != nil:
+		return r.Plane
+	case r.Car != nil:
+		return r.Car
+	case r.Boat != nil:
+		return r.Boat
+	}
+
+	return nil
+}
+
 var _ Vehicle = (*VehicleOneOf)(nil)
 
 type mapVehicleToOneOf struct{}

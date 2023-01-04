@@ -50,6 +50,21 @@ func (r *WherePredicateOneOf) Accept(v WherePredicateVisitor) any {
 	}
 }
 
+func (r *WherePredicateOneOf) Unwrap() WherePredicate {
+	switch {
+	case r.Eq != nil:
+		return r.Eq
+	case r.And != nil:
+		return r.And
+	case r.Or != nil:
+		return r.Or
+	case r.Path != nil:
+		return r.Path
+	}
+
+	return nil
+}
+
 var _ WherePredicate = (*WherePredicateOneOf)(nil)
 
 type mapWherePredicateToOneOf struct{}
