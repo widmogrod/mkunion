@@ -42,6 +42,17 @@ func (r *{{ $name }}OneOf) Accept(v {{ $name }}Visitor) any {
 	}
 }
 
+func (r *{{ $name }}OneOf) Unwrap() {{ $name }} {
+	switch {
+{{- range .Types }}
+	case r.{{ . }} != nil:
+		return r.{{ . }}
+{{- end }}
+	}
+
+	return nil
+}
+
 var _ {{ $name }} = (*{{ $name }}OneOf)(nil)
 
 type map{{ $name }}ToOneOf struct{}

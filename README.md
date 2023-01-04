@@ -237,10 +237,13 @@ go test ./...
 
 ### V1.6.x
 - [x] Add variant types inference
-
+- [x] Add `Unwrap` method to OneOf
+- 
 ### V1.7.x
 - [ ] Add state machine generation
- 
+- [ ] Allow to change visitor name form Visit* to i.e Handle*
+- [ ] Generate de-ser code for unions for json, protobuf, etc
+
 ### V2.x.x
 - [ ] Add support for generic union types
 

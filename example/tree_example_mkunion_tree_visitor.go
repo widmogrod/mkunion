@@ -38,6 +38,17 @@ func (r *TreeOneOf) Accept(v TreeVisitor) any {
 	}
 }
 
+func (r *TreeOneOf) Unwrap() Tree {
+	switch {
+	case r.Branch != nil:
+		return r.Branch
+	case r.Leaf != nil:
+		return r.Leaf
+	}
+
+	return nil
+}
+
 var _ Tree = (*TreeOneOf)(nil)
 
 type mapTreeToOneOf struct{}
