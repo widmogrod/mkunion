@@ -2,6 +2,7 @@ package schema
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -25,37 +26,23 @@ type Field struct {
 }
 
 type (
-	//TopLevel struct {
-	//	rt reflect.Type
-	//}
 	WhenField struct {
 		path   []string
 		setter func() Setter
 	}
 )
 
-//func MustTopLevel(t any) *TopLevel {
-//	rt := reflect.TypeOf(t)
-//	if rt.Kind() == reflect.Ptr {
-//		rt = rt.Elem()
-//	}
-//
-//	if rt.Kind() != reflect.Struct {
-//		panic("MustTopLevel: not a struct")
-//	}
-//
-//	return &TopLevel{rt: rt}
-//}
-
 func UseStruct(t any) func() Setter {
 	rt := reflect.TypeOf(t)
-	//if rt.Kind() == reflect.Ptr {
-	//	rt = rt.Elem()
-	//}
-	//
-	//if rt.Kind() != reflect.Struct {
-	//	panic("MustTopLevel: not a struct")
-	//}
+
+	isNotStruct := rt.Kind() != reflect.Struct
+	isNotPointerToStruct :=
+		rt.Kind() == reflect.Pointer &&
+			rt.Elem().Kind() != reflect.Struct
+
+	if isNotStruct && isNotPointerToStruct {
+		panic(fmt.Sprintf("UseStruct: not a struct, but %T", t))
+	}
 
 	return func() Setter {
 		return &StructSetter{
