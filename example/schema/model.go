@@ -119,14 +119,13 @@ var (
 func (s *StructSetter) Set(key string, value any) error {
 	e := s.r.Elem()
 	if e.Kind() == reflect.Ptr {
-		//f := s.r.Elem().FieldByName(key)
-		//if f.IsValid() && f.CanSet() {
-		//	f.Set(reflect.ValueOf(value))
-		//}
-		//b := reflect.New(s.r.Type().Elem()).Elem()
-		//f := b.FieldByName(key)
-		//f.Set(reflect.ValueOf(value))
-
+		e.Set(reflect.New(e.Type().Elem()))
+		y := e.Elem()
+		f := y.FieldByName(key)
+		if f.IsValid() && f.CanSet() {
+			f.Set(reflect.ValueOf(value))
+			return nil
+		}
 	} else if e.Kind() == reflect.Struct {
 		f := e.FieldByName(key)
 		if f.IsValid() && f.CanSet() {
@@ -134,27 +133,6 @@ func (s *StructSetter) Set(key string, value any) error {
 			return nil
 		}
 	}
-	//f := s.r.FieldByName(key)
-	//if f.IsValid() && f.CanSet() {
-	//	if f.Type().Kind() == reflect.Interface {
-	//		v := reflect.ValueOf(value)
-	//		//if v.Type().Kind() == reflect.Struct {
-	//		//	zz := reflect.ValueOf(value).
-	//		//		Convert(v.Type())
-	//		//	kv := zz.Interface()
-	//		//	_ = zz
-	//		//	f.Set(
-	//		//		reflect.ValueOf(&kv),
-	//		//	)
-	//		//} else if v.Type().Kind() == reflect.Ptr {
-	//		f.Set(v)
-	//		//}
-	//	} else {
-	//		f.Set(reflect.ValueOf(value))
-	//	}
-	//
-	//	return nil
-	//}
 
 	panic(errors.New("StructSetter:Set can't set"))
 }
