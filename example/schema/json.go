@@ -2,6 +2,7 @@ package schema
 
 import (
 	"encoding/json"
+	"log"
 	"reflect"
 )
 
@@ -61,58 +62,13 @@ func GoToSchema(x any) Schema {
 	}
 
 	return &Value{V: x}
-	//panic(fmt.Sprintf("GoToSchema:unknown type x=%setter", x))
 }
 
-//func SchemaToGo(x Schema, rules []Rule) any {
-//	return MustMatchSchema(
-//		x,
-//		func(x *Value) any {
-//			return x.V
-//		}, func(x *List) any {
-//			var r []any
-//			for _, v := range x.Items {
-//				r = append(r, SchemaToGo(v, rules))
-//			}
-//			return r
-//		}, func(x *Map) any {
-//			var isMap bool
-//			var r any = make(map[string]interface{})
-//
-//			for i := range rules {
-//				if setter, ok := rules[i].(*TopLevel); ok {
-//					rt := reflect.TypeOf(setter.setter)
-//					if rt.Kind() == reflect.Ptr {
-//						panic(fmt.Sprintf("RegisterName. Registred type must not be a pointer, but given %setter", setter.setter))
-//					}
-//					r = reflect.New(rt).Elem()
-//					isMap = true
-//					break
-//				}
-//			}
-//
-//			for i := range x.path {
-//				key := x.path[i].Name
-//				value := x.path[i].Value
-//
-//				if !isMap {
-//					r.(map[string]interface{})[key] = SchemaToGo(value, rules)
-//				} else {
-//					f := r.(reflect.Value).FieldByName(key)
-//					if f.IsValid() && f.CanSet() {
-//						f.Set(reflect.ValueOf(SchemaToGo(value, rules)))
-//					}
-//				}
-//			}
-//
-//			if isMap {
-//				return r.(reflect.Value).Interface()
-//			}
-//			return r
-//		})
-//}
+func SchemaToGo(x Schema, rules ...RuleMatcher) any {
+	return SchemaToGoWithPath(x, rules, nil)
+}
 
-func SchemaToGo(x Schema, rules []RuleMatcher, path []any) any {
+func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
 	return MustMatchSchema(
 		x,
 		func(x *Value) any {
@@ -121,27 +77,41 @@ func SchemaToGo(x Schema, rules []RuleMatcher, path []any) any {
 		func(x *List) any {
 			var setter Setter = &NativeList{l: []any{}}
 			for _, v := range x.Items {
-				_ = setter.Set("value is ignored", SchemaToGo(v, rules, append(path, "[*]")))
+				_ = setter.Set("value is ignored", SchemaToGoWithPath(v, rules, append(path, "[*]")))
 			}
 
 			return setter.Get()
 		},
 		func(x *Map) any {
-			var setter Setter = &NativeMap{m: map[string]interface{}{}}
+			var setters []Setter
 			for _, rule := range rules {
-				newSetter, ok := rule.Match(path)
+				newSetter, ok := rule.Match(path, x)
 				if ok {
-					setter = newSetter
-					break
+					setters = append(setters, newSetter)
 				}
 			}
 
-			for i := range x.Field {
-				key := x.Field[i].Name
-				value := x.Field[i].Value
-				_ = setter.Set(key, SchemaToGo(value, rules, append(path, key)))
+			setters = append(setters, &NativeMap{m: map[string]interface{}{}})
+
+			for _, setter := range setters {
+				var err error
+				for i := range x.Field {
+					key := x.Field[i].Name
+					value := x.Field[i].Value
+					err = setter.Set(key, SchemaToGoWithPath(value, rules, append(path, key)))
+					if err != nil {
+						break
+					}
+				}
+
+				if err != nil {
+					log.Println("SchemaToGoWithPath: setter err. next looop. err:", err)
+					continue
+				}
+
+				return setter.Get()
 			}
 
-			return setter.Get()
+			panic("reach unreachable!")
 		})
 }

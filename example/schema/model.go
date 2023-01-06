@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Schema
@@ -59,20 +60,42 @@ func WhenPath(path []string, setter func() Setter) *WhenField {
 }
 
 type RuleMatcher interface {
-	Match(path []any) (Setter, bool)
+	Match(path []any, x Schema) (Setter, bool)
 }
 
 var (
 	_ RuleMatcher = (*WhenField)(nil)
 )
 
-func (r *WhenField) Match(path []any) (Setter, bool) {
+func (r *WhenField) Match(path []any, x Schema) (Setter, bool) {
 	if len(path) != len(r.path) {
 		return nil, false
 	}
 
 	for i := range r.path {
-		if path[i] != r.path[i] {
+		parts := strings.Split(r.path[i], "?.")
+		if path[i] != parts[0] {
+			return nil, false
+		}
+
+		if len(parts) != 2 {
+			continue
+		}
+
+		m, ok := x.(*Map)
+		if !ok {
+			return nil, false
+		}
+
+		found := false
+		for _, f := range m.Field {
+			if f.Name == parts[1] {
+				found = true
+				break
+			}
+		}
+
+		if !found {
 			return nil, false
 		}
 	}
@@ -82,7 +105,8 @@ func (r *WhenField) Match(path []any) (Setter, bool) {
 
 type (
 	StructSetter struct {
-		r reflect.Value
+		r     reflect.Value
+		deref *reflect.Value
 	}
 	NativeMap struct {
 		m map[string]any
@@ -106,8 +130,11 @@ var (
 func (s *StructSetter) Set(key string, value any) error {
 	e := s.r.Elem()
 	if e.Kind() == reflect.Ptr {
-		e.Set(reflect.New(e.Type().Elem()))
-		y := e.Elem()
+		if s.deref == nil {
+			s.deref = &e
+			s.deref.Set(reflect.New(e.Type().Elem()))
+		}
+		y := s.deref.Elem()
 		f := y.FieldByName(key)
 		if f.IsValid() && f.CanSet() {
 			f.Set(reflect.ValueOf(value))
@@ -121,7 +148,7 @@ func (s *StructSetter) Set(key string, value any) error {
 		}
 	}
 
-	panic(errors.New("StructSetter:Set can't set"))
+	return errors.New(fmt.Sprintf("StructSetter:Set can't set value of type %T for key %s", value, key))
 }
 
 func (s *StructSetter) Get() any {
