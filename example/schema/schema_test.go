@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -29,6 +30,40 @@ func TestJsonToSchema(t *testing.T) {
 		Foo: 1,
 		Bar: 2,
 	}, gostruct)
+}
+
+type SomeOneOf struct {
+	A *TestStruct1
+	B *TestStruct2
+}
+
+func TestOneOfJSON(t *testing.T) {
+	in := &SomeOneOf{
+		A: &TestStruct1{
+			Bar: "bar",
+		},
+		B: &TestStruct2{
+			Baz: "baz",
+		},
+	}
+
+	data, err := json.Marshal(in)
+	assert.NoError(t, err)
+
+	t.Log(string(data))
+	assert.JSONEq(t,
+		`{"A":{"Foo":0,"Bar":"bar","Other":null},"B":{"Baz":"baz","Count":0}}`,
+		string(data))
+
+	sch, err := JsonToSchema(data)
+	assert.NoError(t, err)
+
+	out := SchemaToGo(sch,
+		WhenPath([]string{}, UseStruct(&SomeOneOf{})),
+		WhenPath([]string{"A"}, UseStruct(&TestStruct1{})),
+		WhenPath([]string{"B"}, UseStruct(&TestStruct2{})),
+	)
+	assert.Equal(t, in, out)
 }
 
 func TestSchemaConversions(t *testing.T) {

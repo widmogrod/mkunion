@@ -10,4 +10,4 @@ Most benefits
 - [ ] Support JSON float64 since value is `any` which is not always true. 
       Value should be split into Int, Float, String, Bool, and Null
 - [ ] Add cata, ana, and hylo morphisms
-
+- [ ] Write test with wrong type conversions

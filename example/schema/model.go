@@ -128,6 +128,10 @@ var (
 )
 
 func (s *StructSetter) Set(key string, value any) error {
+	if value == nil {
+		return nil
+	}
+	var f reflect.Value
 	e := s.r.Elem()
 	if e.Kind() == reflect.Ptr {
 		if s.deref == nil {
@@ -135,17 +139,22 @@ func (s *StructSetter) Set(key string, value any) error {
 			s.deref.Set(reflect.New(e.Type().Elem()))
 		}
 		y := s.deref.Elem()
-		f := y.FieldByName(key)
-		if f.IsValid() && f.CanSet() {
-			f.Set(reflect.ValueOf(value))
-			return nil
-		}
+		f = y.FieldByName(key)
 	} else if e.Kind() == reflect.Struct {
-		f := e.FieldByName(key)
-		if f.IsValid() && f.CanSet() {
-			f.Set(reflect.ValueOf(value))
-			return nil
+		f = e.FieldByName(key)
+	}
+
+	if f.IsValid() && f.CanSet() {
+		v := reflect.ValueOf(value)
+		if f.Type() != v.Type() {
+			if f.Type().Kind() == reflect.Int &&
+				v.Type().Kind() == reflect.Float64 {
+				f.Set(reflect.ValueOf(int(v.Float())))
+				return nil
+			}
 		}
+		f.Set(reflect.ValueOf(value))
+		return nil
 	}
 
 	return errors.New(fmt.Sprintf("StructSetter:Set can't set value of type %T for key %s", value, key))
