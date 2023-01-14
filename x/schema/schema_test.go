@@ -5,6 +5,7 @@ import (
 	"github.com/bxcodec/faker/v3"
 	"github.com/stretchr/testify/assert"
 	"math"
+	"math/rand"
 	"testing"
 )
 
@@ -70,6 +71,7 @@ type GenerateData struct {
 }
 
 func TestGeneratedDataConversion(t *testing.T) {
+	rand.Seed(rand.Int63())
 	data := GenerateData{}
 	faker.FakeData(&data)
 
