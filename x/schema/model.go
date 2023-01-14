@@ -9,11 +9,11 @@ import (
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Schema
 type (
-	Value struct {
-		V any
-	}
-
-	List struct {
+	None   struct{}
+	Bool   bool
+	Number float64
+	String string
+	List   struct {
 		Items []Schema
 	}
 	Map struct {
@@ -145,15 +145,46 @@ func (s *StructSetter) Set(key string, value any) error {
 	}
 
 	if f.IsValid() && f.CanSet() {
-		v := reflect.ValueOf(value)
-		if f.Type() != v.Type() {
-			if f.Type().Kind() == reflect.Int &&
-				v.Type().Kind() == reflect.Float64 {
-				f.Set(reflect.ValueOf(int(v.Float())))
-				return nil
+		// Try to do graceful conversion of types
+		// This is LOSS-FULL conversion for some types
+		switch f.Type().Kind() {
+		case reflect.Int,
+			reflect.Int8,
+			reflect.Int16,
+			reflect.Int32,
+			reflect.Int64:
+			switch v := value.(type) {
+			case float32:
+				f.SetInt(int64(v))
+			case float64:
+				f.SetInt(int64(v))
 			}
+			return nil
+
+		case reflect.Uint,
+			reflect.Uint8,
+			reflect.Uint16,
+			reflect.Uint32,
+			reflect.Uint64:
+			switch v := value.(type) {
+			case float32:
+				f.SetUint(uint64(v))
+			case float64:
+				f.SetUint(uint64(v))
+			}
+
+		case reflect.Float32,
+			reflect.Float64:
+			switch v := value.(type) {
+			case float32:
+				f.SetFloat(float64(v))
+			case float64:
+				f.SetFloat(v)
+			}
+		default:
+			f.Set(reflect.ValueOf(value))
 		}
-		f.Set(reflect.ValueOf(value))
+
 		return nil
 	}
 
@@ -180,4 +211,13 @@ func (s *NativeList) Set(k string, value any) error {
 
 func (s *NativeList) Get() any {
 	return s.l
+}
+
+func MkInt(x int) *Number {
+	v := Number(x)
+	return &v
+}
+
+func MkString(s string) *String {
+	return (*String)(&s)
 }

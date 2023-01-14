@@ -2,6 +2,7 @@ package schema
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
 )
@@ -17,6 +18,52 @@ func JsonToSchema(data []byte) (Schema, error) {
 
 func GoToSchema(x any) Schema {
 	switch y := x.(type) {
+	case nil:
+		return &None{}
+
+	case bool:
+		return (*Bool)(&y)
+
+	case string:
+		return MkString(y)
+
+	case float64:
+		v := Number(y)
+		return &v
+	case float32:
+		v := Number(y)
+		return &v
+	case int:
+		v := Number(y)
+		return &v
+	case int8:
+		v := Number(y)
+		return &v
+	case int16:
+		v := Number(y)
+		return &v
+	case int32:
+		v := Number(y)
+		return &v
+	case int64:
+		v := Number(y)
+		return &v
+	case uint:
+		v := Number(y)
+		return &v
+	case uint8:
+		v := Number(y)
+		return &v
+	case uint16:
+		v := Number(y)
+		return &v
+	case uint32:
+		v := Number(y)
+		return &v
+	case uint64:
+		v := Number(y)
+		return &v
+
 	case []interface{}:
 		var r = &List{}
 		for _, v := range y {
@@ -59,9 +106,17 @@ func GoToSchema(x any) Schema {
 			}
 			return GoToSchema(m)
 		}
+
+		if v.Kind() == reflect.Slice {
+			var r = &List{}
+			for i := 0; i < v.Len(); i++ {
+				r.Items = append(r.Items, GoToSchema(v.Index(i).Interface()))
+			}
+			return r
+		}
 	}
 
-	return &Value{V: x}
+	panic(fmt.Errorf("GoToSchema: unsupported type: %T", x))
 }
 
 func SchemaToGo(x Schema, rules ...RuleMatcher) any {
@@ -71,8 +126,17 @@ func SchemaToGo(x Schema, rules ...RuleMatcher) any {
 func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
 	return MustMatchSchema(
 		x,
-		func(x *Value) any {
-			return x.V
+		func(x *None) any {
+			return nil
+		},
+		func(x *Bool) any {
+			return bool(*x)
+		},
+		func(x *Number) any {
+			return float64(*x)
+		},
+		func(x *String) any {
+			return string(*x)
 		},
 		func(x *List) any {
 			var setter Setter = &NativeList{l: []any{}}
