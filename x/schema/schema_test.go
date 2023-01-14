@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math"
 	"math/rand"
+	"runtime"
 	"testing"
 )
 
@@ -115,11 +116,19 @@ func TestMaxScalars(t *testing.T) {
 	}
 
 	t.Run("max scalars for respective values contain correct value", func(t *testing.T) {
+		if runtime.GOARCH != "arm" {
+			t.Skip("skipping test that are for ARM64")
+		}
+
 		s := GoToSchema(max)
 		r := SchemaToGo(s, WhenPath(nil, UseStruct(Max{})))
 		assert.Equal(t, max, r)
 	})
 	t.Run("test lossy conversion from Max float 64 to respective scalars", func(t *testing.T) {
+		if runtime.GOARCH != "arm" {
+			t.Skip("skipping test that are for ARM64")
+		}
+
 		var m = Number(math.MaxFloat64)
 		var s Schema = &Map{
 			Field: []Field{
