@@ -69,3 +69,11 @@ func MustMatchTree[TOut any](
 ) TOut {
 	return f.MustMatch2(x, f1, f2)
 }
+
+func MustMatchTreeR2[TOut1, TOut2 any](
+	x Tree,
+	f1 func(x *Branch) (TOut1, TOut2),
+	f2 func(x *Leaf) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.MustMatch2R2(x, f1, f2)
+}

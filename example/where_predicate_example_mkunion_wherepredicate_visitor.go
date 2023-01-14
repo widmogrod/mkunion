@@ -89,3 +89,13 @@ func MustMatchWherePredicate[TOut any](
 ) TOut {
 	return f.MustMatch4(x, f1, f2, f3, f4)
 }
+
+func MustMatchWherePredicateR2[TOut1, TOut2 any](
+	x WherePredicate,
+	f1 func(x *Eq) (TOut1, TOut2),
+	f2 func(x *And) (TOut1, TOut2),
+	f3 func(x *Or) (TOut1, TOut2),
+	f4 func(x *Path) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.MustMatch4R2(x, f1, f2, f3, f4)
+}
