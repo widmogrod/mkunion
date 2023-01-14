@@ -238,11 +238,16 @@ go test ./...
 ### V1.6.x
 - [x] Add variant types inference
 - [x] Add `Unwrap` method to OneOf
-- 
+
 ### V1.7.x
+- [x] `MustMatch*R2` function return tuple as result
+- [ ] Introduce recursive schema prototype with
+
+### V1.8.x
 - [ ] Add state machine generation
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
 - [ ] Generate de-ser code for unions for json, protobuf, etc
+- [ ] Remove OneOf to be the same as variant! (breaking change)
 
 ### V2.x.x
 - [ ] Add support for generic union types

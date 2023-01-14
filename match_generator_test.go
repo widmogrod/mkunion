@@ -82,5 +82,66 @@ func MustMatch3[TIn, TOut, T1, T2, T3 any](
 		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T)", x, t1, t2, t3)))
 	})
 }
+
+func Match2R2[TIn, TOut1, TOut2, T1, T2 any](
+	x TIn,
+	f1 func(x T1) (TOut1, TOut2),
+	f2 func(x T2) (TOut1, TOut2),
+	df func(x TIn) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	switch y := any(x).(type) {
+	case T1:
+		return f1(y)
+	case T2:
+		return f2(y)
+	}
+
+	return df(x)
+}
+
+func MustMatch2R2[TIn, TOut1, TOut2, T1, T2 any](
+	x TIn,
+	f1 func(x T1) (TOut1, TOut2),
+	f2 func(x T2) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return Match2R2(x, f1, f2, func(x TIn) (TOut1, TOut2) {
+		var t1 T1
+		var t2 T2
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T)", x, t1, t2)))
+	})
+}
+
+func Match3R2[TIn, TOut1, TOut2, T1, T2, T3 any](
+	x TIn,
+	f1 func(x T1) (TOut1, TOut2),
+	f2 func(x T2) (TOut1, TOut2),
+	f3 func(x T3) (TOut1, TOut2),
+	df func(x TIn) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	switch y := any(x).(type) {
+	case T1:
+		return f1(y)
+	case T2:
+		return f2(y)
+	case T3:
+		return f3(y)
+	}
+
+	return df(x)
+}
+
+func MustMatch3R2[TIn, TOut1, TOut2, T1, T2, T3 any](
+	x TIn,
+	f1 func(x T1) (TOut1, TOut2),
+	f2 func(x T2) (TOut1, TOut2),
+	f3 func(x T3) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return Match3R2(x, f1, f2, f3, func(x TIn) (TOut1, TOut2) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T)", x, t1, t2, t3)))
+	})
+}
 `, string(result))
 }
