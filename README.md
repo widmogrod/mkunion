@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.7
 ```
 
 ### Create your first union
@@ -238,11 +238,17 @@ go test ./...
 ### V1.6.x
 - [x] Add variant types inference
 - [x] Add `Unwrap` method to OneOf
-- 
+
 ### V1.7.x
+- [x] `MustMatch*R2` function return tuple as result
+- [x] Introduce recursive schema prototype (`github.com/widmogrod/mkunion/x/schema` package)
+
+### V1.8.x
 - [ ] Add state machine generation
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
 - [ ] Generate de-ser code for unions for json, protobuf, etc
+- [ ] Remove OneOf to be the same as variant! (breaking change)
+- [ ] Allow extending (embedding) base Visitor interface with external interface
 
 ### V2.x.x
 - [ ] Add support for generic union types
