@@ -96,5 +96,14 @@ func MustMatchVehicle[TOut any](
 	f3 func(x *Boat) TOut,
 ) TOut {
 	return f.MustMatch3(x, f1, f2, f3)
+}
+
+func MustMatchVehicleR2[TOut1, TOut2 any](
+	x Vehicle,
+	f1 func(x *Plane) (TOut1, TOut2),
+	f2 func(x *Car) (TOut1, TOut2),
+	f3 func(x *Boat) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.MustMatch3R2(x, f1, f2, f3)
 }`, string(result))
 }
