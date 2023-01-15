@@ -53,13 +53,13 @@ func (a FieldRuleOneOf) ToOperation() Operator {
 		if res == nil {
 			res = a.Or.ToOperation()
 		} else {
-			res = &Or{res, a.Or.ToOperation()}
+			res = &Or{List: []Operator{res, a.Or.ToOperation()}}
 		}
 	} else if a.And != nil {
 		if res == nil {
 			res = a.And.ToOperation()
 		} else {
-			res = &And{res, a.And.ToOperation()}
+			res = &And{List: []Operator{res, a.And.ToOperation()}}
 		}
 	} else if a.Not != nil {
 		return &Not{Operator: a.Not.ToOperation()}

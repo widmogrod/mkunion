@@ -31,36 +31,36 @@ type (
 type (
 	Eq  struct{ L, R Value }
 	Gt  struct{ L, R Value }
-	And []Operator
-	Or  []Operator
+	And struct{ List []Operator }
+	Or  struct{ List []Operator }
 	Not struct{ Operator }
 )
 
 func init() {
 	// Value transformations
-	schema.RegisterTransformations(ValueSchemaTransformations())
-	schema.RegisterRules(ValueSchemaRules())
+	//schema.RegisterTransformations(CustomValueSchemaTransformations())
+	//schema.RegisterRules(CustomValueSchemaRules())
 
 	// Operator
-	schema.RegisterTransformations(OperatorSchemaTransformations())
-	schema.RegisterRules(OperatorSchemaRules())
+	//schema.RegisterTransformations(CustomOperatorSchemaTransformations())
+	//schema.RegisterRules(CustomOperatorSchemaRules())
 }
 
-func ValueSchemaTransformations() []schema.TransformFunc {
+func CustomValueSchemaTransformations() []schema.TransformFunc {
 	return []schema.TransformFunc{
 		schema.WrapStruct(&Lit{}, "Lit"),
 		schema.WrapStruct(&Accessor{}, "Accessor"),
 	}
 }
 
-func ValueSchemaRules() []schema.RuleMatcher {
+func CustomValueSchemaRules() []schema.RuleMatcher {
 	return []schema.RuleMatcher{
 		schema.UnwrapStruct(&Lit{}, "Lit"),
 		schema.UnwrapStruct(&Accessor{}, "Accessor"),
 	}
 }
 
-func OperatorSchemaTransformations() []schema.TransformFunc {
+func CustomOperatorSchemaTransformations() []schema.TransformFunc {
 	return []schema.TransformFunc{
 		schema.WrapStruct(&Eq{}, "Eq"),
 		schema.WrapStruct(&Gt{}, "Gt"),
@@ -70,12 +70,12 @@ func OperatorSchemaTransformations() []schema.TransformFunc {
 	}
 }
 
-func OperatorSchemaRules() []schema.RuleMatcher {
+func CustomOperatorSchemaRules() []schema.RuleMatcher {
 	return []schema.RuleMatcher{
 		schema.UnwrapStruct(&Eq{}, "Eq"),
 		schema.UnwrapStruct(&Gt{}, "Gt"),
-		//schema.UnwrapStruct(&And{}, "And"),
-		//schema.UnwrapStruct(&Or{}, "Or"),
+		schema.UnwrapStruct(&And{}, "And"),
+		schema.UnwrapStruct(&Or{}, "Or"),
 		schema.UnwrapStruct(&Not{}, "Not"),
 	}
 }

@@ -33,6 +33,11 @@ func main() {
 				Aliases:  []string{"t"},
 				Required: false,
 			},
+			&cli.StringFlag{
+				Name:     "skip-extension",
+				Aliases:  []string{"skip-ext"},
+				Required: false,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			cwd, _ := syscall.Getwd()
@@ -92,23 +97,34 @@ func main() {
 				PackageName: inferred.PackageName,
 			}
 
-			generators := []struct {
-				gen  mkunion.Generator
-				name string
-			}{
-				{gen: &visitor, name: "visitor"},
-				{gen: &depthFirstGenerator, name: "reducer_dfs"},
-				{gen: &breadthFirstGenerator, name: "reducer_bfs"},
-				{gen: &defaultReduction, name: "default_reducer"},
-				{gen: &defaultVisitor, name: "default_visitor"},
+			schema := mkunion.DeSerJsonGenerator{
+				Header:      mkunion.Header,
+				Name:        visitor.Name,
+				Types:       visitor.Types,
+				PackageName: inferred.PackageName,
 			}
-			for _, g := range generators {
-				b, err := g.gen.Generate()
+
+			generators := map[string]mkunion.Generator{
+				"visitor":         &visitor,
+				"reducer_dfs":     &depthFirstGenerator,
+				"reducer_bfs":     &breadthFirstGenerator,
+				"default_reducer": &defaultReduction,
+				"default_visitor": &defaultVisitor,
+				"schema":          &schema,
+			}
+
+			skipExtension := strings.Split(c.String("skip-extension"), ",")
+			for _, name := range skipExtension {
+				delete(generators, name)
+			}
+
+			for name, g := range generators {
+				b, err := g.Generate()
 				if err != nil {
 					return err
 				}
 				err = os.WriteFile(path.Join(cwd,
-					baseName+"_"+mkunion.Program+"_"+strings.ToLower(visitor.Name)+"_"+g.name+".go"), b, 0644)
+					baseName+"_"+mkunion.Program+"_"+strings.ToLower(visitor.Name)+"_"+name+".go"), b, 0644)
 				if err != nil {
 					return err
 				}

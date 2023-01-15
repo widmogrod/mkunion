@@ -28,6 +28,6 @@ func (a *TranslateSyntaxASTtoOperatorAST) VisitOrFields(v *OrFields) any {
 		a.currentField = a.currentField[:len(a.currentField)-1]
 	}
 
-	or := Or(result)
+	or := Or{result}
 	return &or
 }

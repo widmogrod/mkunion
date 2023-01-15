@@ -56,7 +56,7 @@ func (ast HumanFriendlyRules) MustMatchToOperation() Operator {
 		}
 	}
 	// TODO should be AND, but operator is not implemented yet
-	and := Or(res)
+	and := Or{res}
 	return &and
 }
 

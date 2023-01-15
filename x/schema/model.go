@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Schema
+//go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema
 type (
 	None   struct{}
 	Bool   bool
@@ -41,10 +41,6 @@ type (
 		unwrapField string
 	}
 )
-
-func (r *WhenField) UnwrapFieldName() string {
-	return r.unwrapField
-}
 
 func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
 	if r.unwrapField == "" {
@@ -100,13 +96,16 @@ var (
 
 func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
 	if len(r.path) == 2 {
+		if len(path) < 1 {
+			return nil, false
+		}
+
 		isAnyPath := r.path[0] == "*"
 		if isAnyPath {
-			parts := strings.Split(r.path[1], "?.")
-			for i := range path {
-				if parts[0] == path[i] {
-					return r.setter(), true
-				}
+			//parts := strings.Split(r.path[1], "?.")
+			lastPathItem := path[len(path)-1]
+			if r.path[1] == lastPathItem {
+				return r.setter(), true
 			}
 			return nil, false
 		}

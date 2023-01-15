@@ -1,6 +1,6 @@
 package example
 
-//go:generate go run ../cmd/mkunion/main.go -name=WherePredicate
+//go:generate go run ../cmd/mkunion/main.go -name=WherePredicate -skip-extension=schema
 type (
 	Eq   struct{ V interface{} }
 	And  []WherePredicate
