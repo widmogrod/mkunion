@@ -242,13 +242,15 @@ go test ./...
 ### V1.7.x
 - [x] `MustMatch*R2` function return tuple as result
 - [x] Introduce recursive schema prototype (`github.com/widmogrod/mkunion/x/schema` package)
+- [x] Integrate with schema for json serialization/deserialization
+- [x] `mkunion` can skip extensions `-skip-extensions=<generator_name>` to be generated
+- [x] Remove OneOf to be the same as variant! (breaking change)
 
 ### V1.8.x
 - [ ] Add state machine generation
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
-- [ ] Generate de-ser code for unions for json, protobuf, etc
-- [ ] Remove OneOf to be the same as variant! (breaking change)
 - [ ] Allow extending (embedding) base Visitor interface with external interface
+- [ ] Schema Registry should reject registration of names that are already registered!
 
 ### V2.x.x
 - [ ] Add support for generic union types

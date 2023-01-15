@@ -52,9 +52,11 @@ func TestInterpreter(t *testing.T) {
 		"simple comparison (question.thanks > 10)": {
 			data: data,
 			expression: &Or{
-				&Gt{
-					L: &Accessor{[]string{"question", "thanks"}},
-					R: &Lit{10},
+				[]Operator{
+					&Gt{
+						L: &Accessor{[]string{"question", "thanks"}},
+						R: &Lit{10},
+					},
 				},
 			},
 			expected: true,
@@ -62,9 +64,11 @@ func TestInterpreter(t *testing.T) {
 		"simple comparison (question.thanks > 100) fails": {
 			data: data,
 			expression: &Or{
-				&Gt{
-					L: &Accessor{[]string{"question", "thanks"}},
-					R: &Lit{100},
+				[]Operator{
+					&Gt{
+						L: &Accessor{[]string{"question", "thanks"}},
+						R: &Lit{100},
+					},
 				},
 			},
 			expected: false,
@@ -72,13 +76,15 @@ func TestInterpreter(t *testing.T) {
 		"complex (foo == 'baz') or (question.thanks > 100) fails": {
 			data: data,
 			expression: &Or{
-				&Eq{
-					L: &Accessor{[]string{"foo"}},
-					R: &Lit{"baz"},
-				},
-				&Gt{
-					L: &Accessor{[]string{"question", "thanks"}},
-					R: &Lit{100},
+				[]Operator{
+					&Eq{
+						L: &Accessor{[]string{"foo"}},
+						R: &Lit{"baz"},
+					},
+					&Gt{
+						L: &Accessor{[]string{"question", "thanks"}},
+						R: &Lit{100},
+					},
 				},
 			},
 			expected: false,
@@ -86,13 +92,15 @@ func TestInterpreter(t *testing.T) {
 		"complex (foo == 'bar') and (question.thanks > 10) pass": {
 			data: data,
 			expression: &And{
-				&Eq{
-					L: &Accessor{[]string{"foo"}},
-					R: &Lit{"bar"},
-				},
-				&Gt{
-					L: &Accessor{[]string{"question", "thanks"}},
-					R: &Lit{10},
+				[]Operator{
+					&Eq{
+						L: &Accessor{[]string{"foo"}},
+						R: &Lit{"bar"},
+					},
+					&Gt{
+						L: &Accessor{[]string{"question", "thanks"}},
+						R: &Lit{10},
+					},
 				},
 			},
 			expected: true,
@@ -100,13 +108,15 @@ func TestInterpreter(t *testing.T) {
 		"complex (foo == 'baz') and (question.thanks > 100) fails": {
 			data: data,
 			expression: &And{
-				&Eq{
-					L: &Accessor{[]string{"foo"}},
-					R: &Lit{"baz"},
-				},
-				&Gt{
-					L: &Accessor{[]string{"question", "thanks"}},
-					R: &Lit{100},
+				[]Operator{
+					&Eq{
+						L: &Accessor{[]string{"foo"}},
+						R: &Lit{"baz"},
+					},
+					&Gt{
+						L: &Accessor{[]string{"question", "thanks"}},
+						R: &Lit{100},
+					},
 				},
 			},
 			expected: false,

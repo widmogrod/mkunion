@@ -86,7 +86,7 @@ func (e *IntrprateOperatorAST) VisitGt(v *Gt) any {
 }
 
 func (e *IntrprateOperatorAST) VisitOr(v *Or) any {
-	for _, p := range *v {
+	for _, p := range v.List {
 		if p.Accept(e).(bool) {
 			return true
 		}
@@ -95,7 +95,7 @@ func (e *IntrprateOperatorAST) VisitOr(v *Or) any {
 }
 
 func (e *IntrprateOperatorAST) VisitAnd(v *And) any {
-	for _, p := range *v {
+	for _, p := range v.List {
 		if !p.Accept(e).(bool) {
 			return false
 		}

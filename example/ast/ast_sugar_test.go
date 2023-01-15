@@ -21,13 +21,15 @@ func TestAstSyntaxSugar(t *testing.T) {
 	}
 
 	operatorAST := &Or{
-		&Eq{
-			L: &Accessor{[]string{"foo"}},
-			R: &Lit{"baz"},
-		},
-		&Gt{
-			L: &Accessor{[]string{"question", "thanks"}},
-			R: &Lit{10},
+		[]Operator{
+			&Eq{
+				L: &Accessor{[]string{"foo"}},
+				R: &Lit{"baz"},
+			},
+			&Gt{
+				L: &Accessor{[]string{"question", "thanks"}},
+				R: &Lit{10},
+			},
 		},
 	}
 

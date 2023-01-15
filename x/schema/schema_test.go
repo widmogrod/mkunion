@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"github.com/bxcodec/faker/v3"
 	"github.com/stretchr/testify/assert"
 	"math"
@@ -76,8 +75,8 @@ func TestGeneratedDataConversion(t *testing.T) {
 	data := GenerateData{}
 	faker.FakeData(&data)
 
-	godata := GoToSchema(data)
-	gonative := SchemaToGo(godata, WhenPath(nil, UseStruct(GenerateData{})))
+	godata := FromGo(data)
+	gonative := ToGo(godata, WhenPath(nil, UseStruct(GenerateData{})))
 
 	assert.Equal(t, data, gonative)
 }
@@ -116,16 +115,16 @@ func TestMaxScalars(t *testing.T) {
 	}
 
 	t.Run("max scalars for respective values contain correct value", func(t *testing.T) {
-		if runtime.GOARCH != "arm" {
+		if runtime.GOARCH != "arm64" {
 			t.Skip("skipping test that are for ARM64")
 		}
 
-		s := GoToSchema(max)
-		r := SchemaToGo(s, WhenPath(nil, UseStruct(Max{})))
+		s := FromGo(max)
+		r := ToGo(s, WhenPath(nil, UseStruct(Max{})))
 		assert.Equal(t, max, r)
 	})
 	t.Run("test lossy conversion from Max float 64 to respective scalars", func(t *testing.T) {
-		if runtime.GOARCH != "arm" {
+		if runtime.GOARCH != "arm64" {
 			t.Skip("skipping test that are for ARM64")
 		}
 
@@ -147,7 +146,7 @@ func TestMaxScalars(t *testing.T) {
 				{Name: "Uint64", Value: &m},
 			},
 		}
-		r := SchemaToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
+		r := ToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
 		// Ints
 		assert.Equal(t, int(math.Inf(1)), r.Int)
 		assert.Equal(t, int8(math.Inf(1)), r.Int8)
@@ -184,7 +183,7 @@ func TestMaxScalars(t *testing.T) {
 				{Name: "Uint64", Value: &m},
 			},
 		}
-		r := SchemaToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
+		r := ToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
 		// Ints
 		assert.Equal(t, int(3), r.Int)
 		assert.Equal(t, int8(3), r.Int8)
@@ -204,66 +203,6 @@ func TestMaxScalars(t *testing.T) {
 	})
 }
 
-type AStruct struct {
-	Foo float64 `json:"foo"`
-	Bar float64 `json:"bar"`
-}
-
-func TestJsonToSchema(t *testing.T) {
-	json := []byte(`{"Foo": 1, "Bar": 2}`)
-	schema, err := JsonToSchema(json)
-	assert.NoError(t, err)
-
-	gonative := SchemaToGo(schema)
-	assert.Equal(t, map[string]interface{}{
-		"Foo": float64(1),
-		"Bar": float64(2),
-	}, gonative)
-
-	gostruct := SchemaToGo(
-		schema,
-		WhenPath([]string{}, UseStruct(AStruct{})),
-	)
-	assert.Equal(t, AStruct{
-		Foo: 1,
-		Bar: 2,
-	}, gostruct)
-}
-
-type SomeOneOf struct {
-	A *TestStruct1
-	B *TestStruct2
-}
-
-func TestOneOfJSON(t *testing.T) {
-	in := &SomeOneOf{
-		A: &TestStruct1{
-			Bar: "bar",
-		},
-		B: &TestStruct2{
-			Baz: "baz",
-		},
-	}
-
-	data, err := json.Marshal(in)
-	assert.NoError(t, err)
-
-	t.Log(string(data))
-	assert.JSONEq(t,
-		`{"A":{"Foo":0,"Bar":"bar","Other":null},"B":{"Baz":"baz","Count":0}}`,
-		string(data))
-
-	sch, err := JsonToSchema(data)
-	assert.NoError(t, err)
-
-	out := SchemaToGo(sch,
-		WhenPath([]string{}, UseStruct(&SomeOneOf{})),
-		WhenPath([]string{"A"}, UseStruct(&TestStruct1{})),
-		WhenPath([]string{"B"}, UseStruct(&TestStruct2{})),
-	)
-	assert.Equal(t, in, out)
-}
-
 func TestSchemaConversions(t *testing.T) {
 	useCases := map[string]struct {
 		in   any
@@ -280,7 +219,7 @@ func TestSchemaConversions(t *testing.T) {
 				},
 			},
 			// Yes, back conversion always normalise to floats and []any
-			// To map back to correct type use SchemaToGo(_, WhenPath(nil, UseSlice(int)))
+			// To map back to correct type use ToGo(_, WhenPath(nil, UseSlice(int)))
 			back: []interface{}{
 				float64(1),
 				float64(2),
@@ -312,9 +251,9 @@ func TestSchemaConversions(t *testing.T) {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			got := GoToSchema(uc.in)
+			got := FromGo(uc.in)
 			if assert.Equal(t, uc.out, got, "forward conversion issue") {
-				assert.Equal(t, uc.back, SchemaToGo(got), "back conversion issue")
+				assert.Equal(t, uc.back, ToGo(got), "back conversion issue")
 			}
 		})
 	}
@@ -528,7 +467,7 @@ func TestSchemaToGoStructs(t *testing.T) {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, uc.out, SchemaToGo(uc.in, uc.rules...))
+			assert.Equal(t, uc.out, ToGo(uc.in, uc.rules...))
 		})
 	}
 }

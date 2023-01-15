@@ -25,52 +25,6 @@ var (
 	_ Calc = (*Mul)(nil)
 )
 
-type CalcOneOf struct {
-	Lit *Lit `json:",omitempty"`
-	Sum *Sum `json:",omitempty"`
-	Mul *Mul `json:",omitempty"`
-}
-
-func (r *CalcOneOf) Accept(v CalcVisitor) any {
-	switch {
-	case r.Lit != nil:
-		return v.VisitLit(r.Lit)
-	case r.Sum != nil:
-		return v.VisitSum(r.Sum)
-	case r.Mul != nil:
-		return v.VisitMul(r.Mul)
-	default:
-		panic("unexpected")
-	}
-}
-
-func (r *CalcOneOf) Unwrap() Calc {
-	switch {
-	case r.Lit != nil:
-		return r.Lit
-	case r.Sum != nil:
-		return r.Sum
-	case r.Mul != nil:
-		return r.Mul
-	}
-
-	return nil
-}
-
-var _ Calc = (*CalcOneOf)(nil)
-
-type mapCalcToOneOf struct{}
-
-func (t *mapCalcToOneOf) VisitLit(v *Lit) any { return &CalcOneOf{Lit: v} }
-func (t *mapCalcToOneOf) VisitSum(v *Sum) any { return &CalcOneOf{Sum: v} }
-func (t *mapCalcToOneOf) VisitMul(v *Mul) any { return &CalcOneOf{Mul: v} }
-
-var defaultMapCalcToOneOf CalcVisitor = &mapCalcToOneOf{}
-
-func MapCalcToOneOf(v Calc) *CalcOneOf {
-	return v.Accept(defaultMapCalcToOneOf).(*CalcOneOf)
-}
-
 func MustMatchCalc[TOut any](
 	x Calc,
 	f1 func(x *Lit) TOut,

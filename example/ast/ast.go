@@ -7,6 +7,8 @@
 // Much more advance parser is also possible, but it's not implemented here
 package ast
 
+import "github.com/widmogrod/mkunion/x/schema"
+
 // Value represents how value can be represented in AST
 // Lit - literal value like int or string
 // Accessor represents field access like "a.b.c"
@@ -29,7 +31,51 @@ type (
 type (
 	Eq  struct{ L, R Value }
 	Gt  struct{ L, R Value }
-	And []Operator
-	Or  []Operator
+	And struct{ List []Operator }
+	Or  struct{ List []Operator }
 	Not struct{ Operator }
 )
+
+func init() {
+	// Value transformations
+	//schema.RegisterTransformations(CustomValueSchemaTransformations())
+	//schema.RegisterRules(CustomValueSchemaRules())
+
+	// Operator
+	//schema.RegisterTransformations(CustomOperatorSchemaTransformations())
+	//schema.RegisterRules(CustomOperatorSchemaRules())
+}
+
+func CustomValueSchemaTransformations() []schema.TransformFunc {
+	return []schema.TransformFunc{
+		schema.WrapStruct(&Lit{}, "Lit"),
+		schema.WrapStruct(&Accessor{}, "Accessor"),
+	}
+}
+
+func CustomValueSchemaRules() []schema.RuleMatcher {
+	return []schema.RuleMatcher{
+		schema.UnwrapStruct(&Lit{}, "Lit"),
+		schema.UnwrapStruct(&Accessor{}, "Accessor"),
+	}
+}
+
+func CustomOperatorSchemaTransformations() []schema.TransformFunc {
+	return []schema.TransformFunc{
+		schema.WrapStruct(&Eq{}, "Eq"),
+		schema.WrapStruct(&Gt{}, "Gt"),
+		schema.WrapStruct(&And{}, "And"),
+		schema.WrapStruct(&Or{}, "Or"),
+		schema.WrapStruct(&Not{}, "Not"),
+	}
+}
+
+func CustomOperatorSchemaRules() []schema.RuleMatcher {
+	return []schema.RuleMatcher{
+		schema.UnwrapStruct(&Eq{}, "Eq"),
+		schema.UnwrapStruct(&Gt{}, "Gt"),
+		schema.UnwrapStruct(&And{}, "And"),
+		schema.UnwrapStruct(&Or{}, "Or"),
+		schema.UnwrapStruct(&Not{}, "Not"),
+	}
+}

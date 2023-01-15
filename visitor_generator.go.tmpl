@@ -24,47 +24,6 @@ var (
 	_ {{ $name }} = (*{{ . }})(nil)
 	{{- end }}
 )
-
-type {{ $name }}OneOf struct {
-{{- range .Types }}
-	{{ . }} *{{ . }} `json:",omitempty"`
-{{- end }}
-}
-
-func (r *{{ $name }}OneOf) Accept(v {{ $name }}Visitor) any {
-	switch {
-{{- range .Types }}
-	case r.{{ . }} != nil:
-		return v.Visit{{ . }}(r.{{ . }})
-{{- end }}
-	default:
-		panic("unexpected")
-	}
-}
-
-func (r *{{ $name }}OneOf) Unwrap() {{ $name }} {
-	switch {
-{{- range .Types }}
-	case r.{{ . }} != nil:
-		return r.{{ . }}
-{{- end }}
-	}
-
-	return nil
-}
-
-var _ {{ $name }} = (*{{ $name }}OneOf)(nil)
-
-type map{{ $name }}ToOneOf struct{}
-{{ range .Types }}
-func (t *map{{ $name }}ToOneOf) Visit{{ . }}(v *{{ . }}) any { return &{{ $name }}OneOf{ {{- . }}: v} }
-{{- end }}
-
-var defaultMap{{ $name }}ToOneOf {{ $name }}Visitor = &map{{ $name }}ToOneOf{}
-
-func Map{{ $name }}ToOneOf(v {{ $name }}) *{{ $name }}OneOf {
-	return v.Accept(defaultMap{{ $name }}ToOneOf).(*{{ $name }}OneOf)
-}
 {{ $i := len .Types}}
 func MustMatch{{ $name }}[TOut any](
 	x {{ $name }},
