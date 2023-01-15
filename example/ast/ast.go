@@ -36,6 +36,16 @@ type (
 	Not struct{ Operator }
 )
 
+func init() {
+	// Value transformations
+	schema.RegisterTransformations(ValueSchemaTransformations())
+	schema.RegisterRules(ValueSchemaRules())
+
+	// Operator
+	schema.RegisterTransformations(OperatorSchemaTransformations())
+	schema.RegisterRules(OperatorSchemaRules())
+}
+
 func ValueSchemaTransformations() []schema.TransformFunc {
 	return []schema.TransformFunc{
 		schema.WrapStruct[*Lit]("Lit"),

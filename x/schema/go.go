@@ -7,6 +7,11 @@ import (
 )
 
 func GoToSchema(x any, transformations ...TransformFunc) Schema {
+	finalTransformations := append(defaultRegistry.transformations, transformations...)
+	return goToSchema(x, finalTransformations...)
+}
+
+func goToSchema(x any, transformations ...TransformFunc) Schema {
 	switch y := x.(type) {
 	case nil:
 		return &None{}
@@ -57,7 +62,7 @@ func GoToSchema(x any, transformations ...TransformFunc) Schema {
 	case []interface{}:
 		var r = &List{}
 		for _, v := range y {
-			r.Items = append(r.Items, GoToSchema(v, transformations...))
+			r.Items = append(r.Items, goToSchema(v, transformations...))
 		}
 		return r
 
@@ -66,7 +71,7 @@ func GoToSchema(x any, transformations ...TransformFunc) Schema {
 		for k, v := range y {
 			r.Field = append(r.Field, Field{
 				Name:  k,
-				Value: GoToSchema(v, transformations...),
+				Value: goToSchema(v, transformations...),
 			})
 		}
 		return r
@@ -82,7 +87,7 @@ func GoToSchema(x any, transformations ...TransformFunc) Schema {
 			for _, k := range v.MapKeys() {
 				r.Field = append(r.Field, Field{
 					Name:  k.String(),
-					Value: GoToSchema(v.MapIndex(k).Interface(), transformations...),
+					Value: goToSchema(v.MapIndex(k).Interface(), transformations...),
 				})
 			}
 			return r
@@ -98,7 +103,7 @@ func GoToSchema(x any, transformations ...TransformFunc) Schema {
 
 				r.Field = append(r.Field, Field{
 					Name:  name,
-					Value: GoToSchema(v.Field(i).Interface(), transformations...),
+					Value: goToSchema(v.Field(i).Interface(), transformations...),
 				})
 			}
 
@@ -115,20 +120,21 @@ func GoToSchema(x any, transformations ...TransformFunc) Schema {
 		if v.Kind() == reflect.Slice {
 			var r = &List{}
 			for i := 0; i < v.Len(); i++ {
-				r.Items = append(r.Items, GoToSchema(v.Index(i).Interface(), transformations...))
+				r.Items = append(r.Items, goToSchema(v.Index(i).Interface(), transformations...))
 			}
 			return r
 		}
 	}
 
-	panic(fmt.Errorf("GoToSchema: unsupported type: %T", x))
+	panic(fmt.Errorf("goToSchema: unsupported type: %T", x))
 }
 
 func SchemaToGo(x Schema, rules ...RuleMatcher) any {
-	return SchemaToGoWithPath(x, rules, nil)
+	finalRules := append(defaultRegistry.matchingRules, rules...)
+	return schemaToGo(x, finalRules, nil)
 }
 
-func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
+func schemaToGo(x Schema, rules []RuleMatcher, path []any) any {
 	return MustMatchSchema(
 		x,
 		func(x *None) any {
@@ -146,7 +152,7 @@ func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
 		func(x *List) any {
 			var setter Setter = &NativeList{l: []any{}}
 			for _, v := range x.Items {
-				_ = setter.Set("value is ignored", SchemaToGoWithPath(v, rules, append(path, "[*]")))
+				_ = setter.Set("value is ignored", schemaToGo(v, rules, append(path, "[*]")))
 			}
 
 			return setter.Get()
@@ -155,7 +161,7 @@ func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
 			var setters []Setter
 			for _, rule := range rules {
 				if y, ok, field := rule.UnwrapField(x); ok {
-					return SchemaToGoWithPath(y, rules, append(path, field))
+					return schemaToGo(y, rules, append(path, field))
 				}
 
 				newSetter, ok := rule.MatchPath(path, x)
@@ -172,14 +178,14 @@ func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
 				for i := range x.Field {
 					key := x.Field[i].Name
 					value := x.Field[i].Value
-					err = setter.Set(key, SchemaToGoWithPath(value, rules, append(path, key)))
+					err = setter.Set(key, schemaToGo(value, rules, append(path, key)))
 					if err != nil {
 						break
 					}
 				}
 
 				if err != nil {
-					log.Println("SchemaToGoWithPath: setter err. next looop. err:", err)
+					log.Println("schemaToGo: setter err. next looop. err:", err)
 					continue
 				}
 
