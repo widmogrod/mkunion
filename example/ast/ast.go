@@ -48,34 +48,34 @@ func init() {
 
 func ValueSchemaTransformations() []schema.TransformFunc {
 	return []schema.TransformFunc{
-		schema.WrapStruct[*Lit]("Lit"),
-		schema.WrapStruct[*Accessor]("Accessor"),
+		schema.WrapStruct(&Lit{}, "Lit"),
+		schema.WrapStruct(&Accessor{}, "Accessor"),
 	}
 }
 
 func ValueSchemaRules() []schema.RuleMatcher {
 	return []schema.RuleMatcher{
-		schema.UnwrapStruct[*Lit]("Lit"),
-		schema.UnwrapStruct[*Accessor]("Accessor"),
+		schema.UnwrapStruct(&Lit{}, "Lit"),
+		schema.UnwrapStruct(&Accessor{}, "Accessor"),
 	}
 }
 
 func OperatorSchemaTransformations() []schema.TransformFunc {
 	return []schema.TransformFunc{
-		schema.WrapStruct[*Eq]("Eq"),
-		schema.WrapStruct[*Gt]("Gt"),
-		schema.WrapStruct[*And]("And"),
-		schema.WrapStruct[*Or]("Or"),
-		schema.WrapStruct[*Not]("Not"),
+		schema.WrapStruct(&Eq{}, "Eq"),
+		schema.WrapStruct(&Gt{}, "Gt"),
+		schema.WrapStruct(&And{}, "And"),
+		schema.WrapStruct(&Or{}, "Or"),
+		schema.WrapStruct(&Not{}, "Not"),
 	}
 }
 
 func OperatorSchemaRules() []schema.RuleMatcher {
 	return []schema.RuleMatcher{
-		schema.UnwrapStruct[*Eq]("Eq"),
-		schema.UnwrapStruct[*Gt]("Gt"),
-		//schema.UnwrapStruct[*And]("And"),
-		//schema.UnwrapStruct[*Or]("Or"),
-		schema.UnwrapStruct[*Not]("Not"),
+		schema.UnwrapStruct(&Eq{}, "Eq"),
+		schema.UnwrapStruct(&Gt{}, "Gt"),
+		//schema.UnwrapStruct(&And{}, "And"),
+		//schema.UnwrapStruct(&Or{}, "Or"),
+		schema.UnwrapStruct(&Not{}, "Not"),
 	}
 }

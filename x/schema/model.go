@@ -26,12 +26,11 @@ type Field struct {
 	Value Schema
 }
 
-func UnwrapStruct[A any](field string) *WhenField {
-	var a A
+func UnwrapStruct[A any](structt A, fromField string) *WhenField {
 	return &WhenField{
-		path:        []string{"*", field},
-		unwrapField: field,
-		setter:      UseStruct(a),
+		path:        []string{"*", fromField},
+		unwrapField: fromField,
+		setter:      UseStruct(structt),
 	}
 }
 
@@ -294,7 +293,7 @@ func MkString(s string) *String {
 
 type TransformFunc = func(x any, schema Schema) (Schema, bool)
 
-func WrapStruct[A any](field string) TransformFunc {
+func WrapStruct[A any](structt A, inField string) TransformFunc {
 	return func(x any, schema Schema) (Schema, bool) {
 		_, ok := x.(A)
 		if !ok {
@@ -304,7 +303,7 @@ func WrapStruct[A any](field string) TransformFunc {
 		return &Map{
 			Field: []Field{
 				{
-					Name:  field,
+					Name:  inField,
 					Value: schema,
 				},
 			},
