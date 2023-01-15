@@ -97,7 +97,7 @@ func main() {
 				PackageName: inferred.PackageName,
 			}
 
-			schema := mkunion.DeSerJsonGenerator{
+			schema := mkunion.SchemaGenerator{
 				Header:      mkunion.Header,
 				Name:        visitor.Name,
 				Types:       visitor.Types,

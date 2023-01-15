@@ -6,7 +6,7 @@ import (
 )
 
 func TestDeSerJsonGeneration(t *testing.T) {
-	g := DeSerJsonGenerator{
+	g := SchemaGenerator{
 		Header:      Header,
 		Name:        "Vehicle",
 		Types:       []string{"Plane", "Car", "Boat"},
