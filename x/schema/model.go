@@ -60,14 +60,14 @@ func WhenPath(path []string, setter func() Setter) *WhenField {
 }
 
 type RuleMatcher interface {
-	Match(path []any, x Schema) (Setter, bool)
+	MatchPath(path []any, x Schema) (Setter, bool)
 }
 
 var (
 	_ RuleMatcher = (*WhenField)(nil)
 )
 
-func (r *WhenField) Match(path []any, x Schema) (Setter, bool) {
+func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
 	if len(path) != len(r.path) {
 		return nil, false
 	}
@@ -220,4 +220,24 @@ func MkInt(x int) *Number {
 
 func MkString(s string) *String {
 	return (*String)(&s)
+}
+
+type TransformFunc = func(x any, schema Schema) (Schema, bool)
+
+func WhenStruct[A any](field string) TransformFunc {
+	return func(x any, schema Schema) (Schema, bool) {
+		_, ok := x.(A)
+		if !ok {
+			return nil, false
+		}
+
+		return &Map{
+			Field: []Field{
+				{
+					Name:  field,
+					Value: schema,
+				},
+			},
+		}, true
+	}
 }

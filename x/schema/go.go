@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func GoToSchema(x any) Schema {
+func GoToSchema(x any, transformations ...TransformFunc) Schema {
 	switch y := x.(type) {
 	case nil:
 		return &None{}
@@ -57,7 +57,7 @@ func GoToSchema(x any) Schema {
 	case []interface{}:
 		var r = &List{}
 		for _, v := range y {
-			r.Items = append(r.Items, GoToSchema(v))
+			r.Items = append(r.Items, GoToSchema(v, transformations...))
 		}
 		return r
 
@@ -66,7 +66,7 @@ func GoToSchema(x any) Schema {
 		for k, v := range y {
 			r.Field = append(r.Field, Field{
 				Name:  k,
-				Value: GoToSchema(v),
+				Value: GoToSchema(v, transformations...),
 			})
 		}
 		return r
@@ -78,29 +78,44 @@ func GoToSchema(x any) Schema {
 		}
 
 		if v.Kind() == reflect.Map {
-			m := make(map[string]any)
+			var r = &Map{}
 			for _, k := range v.MapKeys() {
-				m[k.String()] = v.MapIndex(k).Interface()
+				r.Field = append(r.Field, Field{
+					Name:  k.String(),
+					Value: GoToSchema(v.MapIndex(k).Interface(), transformations...),
+				})
 			}
-			return GoToSchema(m)
+			return r
 		}
 
 		if v.Kind() == reflect.Struct {
-			m := make(map[string]any)
+			var r = &Map{}
 			for i := 0; i < v.NumField(); i++ {
 				name, ok := v.Type().Field(i).Tag.Lookup("name")
 				if !ok {
 					name = v.Type().Field(i).Name
 				}
-				m[name] = v.Field(i).Interface()
+
+				r.Field = append(r.Field, Field{
+					Name:  name,
+					Value: GoToSchema(v.Field(i).Interface(), transformations...),
+				})
 			}
-			return GoToSchema(m)
+
+			for _, transformation := range transformations {
+				v, ok := transformation(x, r)
+				if ok {
+					return v
+				}
+			}
+
+			return r
 		}
 
 		if v.Kind() == reflect.Slice {
 			var r = &List{}
 			for i := 0; i < v.Len(); i++ {
-				r.Items = append(r.Items, GoToSchema(v.Index(i).Interface()))
+				r.Items = append(r.Items, GoToSchema(v.Index(i).Interface(), transformations...))
 			}
 			return r
 		}
@@ -139,7 +154,7 @@ func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
 		func(x *Map) any {
 			var setters []Setter
 			for _, rule := range rules {
-				newSetter, ok := rule.Match(path, x)
+				newSetter, ok := rule.MatchPath(path, x)
 				if ok {
 					setters = append(setters, newSetter)
 				}
