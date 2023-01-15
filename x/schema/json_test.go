@@ -36,6 +36,11 @@ type AStruct struct {
 	Bar float64 `json:"bar"`
 }
 
+type BStruct struct {
+	Foo  float64 `json:"foo"`
+	Bars []string
+}
+
 func TestJsonToSchema(t *testing.T) {
 	json := []byte(`{"Foo": 1, "Bar": 2}`)
 	schema, err := JsonToSchema(json)

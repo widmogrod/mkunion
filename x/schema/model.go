@@ -26,12 +26,42 @@ type Field struct {
 	Value Schema
 }
 
+func UnwrapStruct[A any](field string) *WhenField {
+	var a A
+	return &WhenField{
+		path:        []string{"*", field},
+		unwrapField: field,
+		setter:      UseStruct(a),
+	}
+}
+
 type (
 	WhenField struct {
-		path   []string
-		setter func() Setter
+		path        []string
+		setter      func() Setter
+		unwrapField string
 	}
 )
+
+func (r *WhenField) UnwrapFieldName() string {
+	return r.unwrapField
+}
+
+func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
+	if r.unwrapField == "" {
+		return nil, false, ""
+	}
+
+	if len(x.Field) != 1 {
+		return nil, false, ""
+	}
+
+	if x.Field[0].Name == r.unwrapField {
+		return x.Field[0].Value, true, r.unwrapField
+	}
+
+	return nil, false, ""
+}
 
 func UseStruct(t any) func() Setter {
 	rt := reflect.TypeOf(t)
@@ -54,13 +84,15 @@ func UseStruct(t any) func() Setter {
 
 func WhenPath(path []string, setter func() Setter) *WhenField {
 	return &WhenField{
-		path:   path,
-		setter: setter,
+		path:        path,
+		unwrapField: "",
+		setter:      setter,
 	}
 }
 
 type RuleMatcher interface {
 	MatchPath(path []any, x Schema) (Setter, bool)
+	UnwrapField(x *Map) (Schema, bool, string)
 }
 
 var (
@@ -68,6 +100,19 @@ var (
 )
 
 func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
+	if len(r.path) == 2 {
+		isAnyPath := r.path[0] == "*"
+		if isAnyPath {
+			parts := strings.Split(r.path[1], "?.")
+			for i := range path {
+				if parts[0] == path[i] {
+					return r.setter(), true
+				}
+			}
+			return nil, false
+		}
+	}
+
 	if len(path) != len(r.path) {
 		return nil, false
 	}
@@ -131,6 +176,7 @@ func (s *StructSetter) Set(key string, value any) error {
 	if value == nil {
 		return nil
 	}
+
 	var f reflect.Value
 	e := s.r.Elem()
 	if e.Kind() == reflect.Ptr {
@@ -181,6 +227,30 @@ func (s *StructSetter) Set(key string, value any) error {
 			case float64:
 				f.SetFloat(v)
 			}
+
+		case reflect.Slice:
+			// when struct field has type like []string
+			// and value that should be set is []interface{} but element inside is string
+			// do conversion!
+			v := reflect.ValueOf(value)
+			if v.Kind() == reflect.Slice && v.Len() > 0 {
+				destinationSliceType := f.Type().Elem().Kind()
+				inputSliceType := v.Index(0).Elem().Kind()
+
+				if destinationSliceType == inputSliceType {
+					st := reflect.SliceOf(f.Type().Elem())
+					ss := reflect.MakeSlice(st, v.Len(), v.Len())
+
+					for i := 0; i < v.Len(); i++ {
+						ss.Index(i).Set(v.Index(i).Elem())
+					}
+
+					f.Set(ss)
+				}
+			} else {
+				f.Set(v)
+			}
+
 		default:
 			f.Set(reflect.ValueOf(value))
 		}
@@ -224,7 +294,7 @@ func MkString(s string) *String {
 
 type TransformFunc = func(x any, schema Schema) (Schema, bool)
 
-func WhenStruct[A any](field string) TransformFunc {
+func WrapStruct[A any](field string) TransformFunc {
 	return func(x any, schema Schema) (Schema, bool) {
 		_, ok := x.(A)
 		if !ok {
@@ -240,4 +310,20 @@ func WhenStruct[A any](field string) TransformFunc {
 			},
 		}, true
 	}
+}
+
+func FewTransformations(xs ...[]TransformFunc) []TransformFunc {
+	var out []TransformFunc
+	for _, x := range xs {
+		out = append(out, x...)
+	}
+	return out
+}
+
+func FewRules(xs ...[]RuleMatcher) []RuleMatcher {
+	var out []RuleMatcher
+	for _, x := range xs {
+		out = append(out, x...)
+	}
+	return out
 }

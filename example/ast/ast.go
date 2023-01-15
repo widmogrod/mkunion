@@ -7,6 +7,8 @@
 // Much more advance parser is also possible, but it's not implemented here
 package ast
 
+import "github.com/widmogrod/mkunion/x/schema"
+
 // Value represents how value can be represented in AST
 // Lit - literal value like int or string
 // Accessor represents field access like "a.b.c"
@@ -33,3 +35,37 @@ type (
 	Or  []Operator
 	Not struct{ Operator }
 )
+
+func ValueSchemaTransformations() []schema.TransformFunc {
+	return []schema.TransformFunc{
+		schema.WrapStruct[*Lit]("Lit"),
+		schema.WrapStruct[*Accessor]("Accessor"),
+	}
+}
+
+func ValueSchemaRules() []schema.RuleMatcher {
+	return []schema.RuleMatcher{
+		schema.UnwrapStruct[*Lit]("Lit"),
+		schema.UnwrapStruct[*Accessor]("Accessor"),
+	}
+}
+
+func OperatorSchemaTransformations() []schema.TransformFunc {
+	return []schema.TransformFunc{
+		schema.WrapStruct[*Eq]("Eq"),
+		schema.WrapStruct[*Gt]("Gt"),
+		schema.WrapStruct[*And]("And"),
+		schema.WrapStruct[*Or]("Or"),
+		schema.WrapStruct[*Not]("Not"),
+	}
+}
+
+func OperatorSchemaRules() []schema.RuleMatcher {
+	return []schema.RuleMatcher{
+		schema.UnwrapStruct[*Eq]("Eq"),
+		schema.UnwrapStruct[*Gt]("Gt"),
+		//schema.UnwrapStruct[*And]("And"),
+		//schema.UnwrapStruct[*Or]("Or"),
+		schema.UnwrapStruct[*Not]("Not"),
+	}
+}

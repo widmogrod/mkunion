@@ -154,9 +154,14 @@ func SchemaToGoWithPath(x Schema, rules []RuleMatcher, path []any) any {
 		func(x *Map) any {
 			var setters []Setter
 			for _, rule := range rules {
+				if y, ok, field := rule.UnwrapField(x); ok {
+					return SchemaToGoWithPath(y, rules, append(path, field))
+				}
+
 				newSetter, ok := rule.MatchPath(path, x)
 				if ok {
 					setters = append(setters, newSetter)
+					break
 				}
 			}
 

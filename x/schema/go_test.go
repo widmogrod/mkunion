@@ -53,11 +53,49 @@ func TestGoToSchema2(t *testing.T) {
 			},
 		},
 	}
-	schema := GoToSchema(data, WhenStruct[AStruct]("AStruct"))
+	schema := GoToSchema(data, WrapStruct[AStruct]("AStruct"))
 
 	assert.Equal(
 		t,
 		expected,
 		schema,
 	)
+}
+
+func TestGoToSchema3(t *testing.T) {
+	data := BStruct{
+		Foo: 123,
+		Bars: []string{
+			"bar",
+			"baz",
+		},
+	}
+	expected := &Map{
+		Field: []Field{
+			{
+				Name: "BStruct",
+				Value: &Map{
+					Field: []Field{
+						{
+							Name:  "Foo",
+							Value: MkInt(123),
+						}, {
+							Name: "Bars",
+							Value: &List{
+								Items: []Schema{
+									MkString("bar"),
+									MkString("baz"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	schema := GoToSchema(data, WrapStruct[BStruct]("BStruct"))
+	assert.Equal(t, expected, schema)
+
+	result := SchemaToGo(schema, UnwrapStruct[BStruct]("BStruct"))
+	assert.Equal(t, data, result)
 }

@@ -115,7 +115,7 @@ func TestMaxScalars(t *testing.T) {
 	}
 
 	t.Run("max scalars for respective values contain correct value", func(t *testing.T) {
-		if runtime.GOARCH != "arm" {
+		if runtime.GOARCH != "arm64" {
 			t.Skip("skipping test that are for ARM64")
 		}
 
@@ -124,7 +124,7 @@ func TestMaxScalars(t *testing.T) {
 		assert.Equal(t, max, r)
 	})
 	t.Run("test lossy conversion from Max float 64 to respective scalars", func(t *testing.T) {
-		if runtime.GOARCH != "arm" {
+		if runtime.GOARCH != "arm64" {
 			t.Skip("skipping test that are for ARM64")
 		}
 
