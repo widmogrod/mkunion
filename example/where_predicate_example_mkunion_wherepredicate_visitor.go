@@ -28,58 +28,6 @@ var (
 	_ WherePredicate = (*Path)(nil)
 )
 
-type WherePredicateOneOf struct {
-	Eq   *Eq   `json:",omitempty"`
-	And  *And  `json:",omitempty"`
-	Or   *Or   `json:",omitempty"`
-	Path *Path `json:",omitempty"`
-}
-
-func (r *WherePredicateOneOf) Accept(v WherePredicateVisitor) any {
-	switch {
-	case r.Eq != nil:
-		return v.VisitEq(r.Eq)
-	case r.And != nil:
-		return v.VisitAnd(r.And)
-	case r.Or != nil:
-		return v.VisitOr(r.Or)
-	case r.Path != nil:
-		return v.VisitPath(r.Path)
-	default:
-		panic("unexpected")
-	}
-}
-
-func (r *WherePredicateOneOf) Unwrap() WherePredicate {
-	switch {
-	case r.Eq != nil:
-		return r.Eq
-	case r.And != nil:
-		return r.And
-	case r.Or != nil:
-		return r.Or
-	case r.Path != nil:
-		return r.Path
-	}
-
-	return nil
-}
-
-var _ WherePredicate = (*WherePredicateOneOf)(nil)
-
-type mapWherePredicateToOneOf struct{}
-
-func (t *mapWherePredicateToOneOf) VisitEq(v *Eq) any     { return &WherePredicateOneOf{Eq: v} }
-func (t *mapWherePredicateToOneOf) VisitAnd(v *And) any   { return &WherePredicateOneOf{And: v} }
-func (t *mapWherePredicateToOneOf) VisitOr(v *Or) any     { return &WherePredicateOneOf{Or: v} }
-func (t *mapWherePredicateToOneOf) VisitPath(v *Path) any { return &WherePredicateOneOf{Path: v} }
-
-var defaultMapWherePredicateToOneOf WherePredicateVisitor = &mapWherePredicateToOneOf{}
-
-func MapWherePredicateToOneOf(v WherePredicate) *WherePredicateOneOf {
-	return v.Accept(defaultMapWherePredicateToOneOf).(*WherePredicateOneOf)
-}
-
 func MustMatchWherePredicate[TOut any](
 	x WherePredicate,
 	f1 func(x *Eq) TOut,

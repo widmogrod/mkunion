@@ -43,52 +43,6 @@ var (
 	_ Vehicle = (*Boat)(nil)
 )
 
-type VehicleOneOf struct {
-	Plane *Plane `+"`json:\",omitempty\"`"+`
-	Car *Car `+"`json:\",omitempty\"`"+`
-	Boat *Boat `+"`json:\",omitempty\"`"+`
-}
-
-func (r *VehicleOneOf) Accept(v VehicleVisitor) any {
-	switch {
-	case r.Plane != nil:
-		return v.VisitPlane(r.Plane)
-	case r.Car != nil:
-		return v.VisitCar(r.Car)
-	case r.Boat != nil:
-		return v.VisitBoat(r.Boat)
-	default:
-		panic("unexpected")
-	}
-}
-
-func (r *VehicleOneOf) Unwrap() Vehicle {
-	switch {
-	case r.Plane != nil:
-		return r.Plane
-	case r.Car != nil:
-		return r.Car
-	case r.Boat != nil:
-		return r.Boat
-	}
-
-	return nil
-}
-
-var _ Vehicle = (*VehicleOneOf)(nil)
-
-type mapVehicleToOneOf struct{}
-
-func (t *mapVehicleToOneOf) VisitPlane(v *Plane) any { return &VehicleOneOf{Plane: v} }
-func (t *mapVehicleToOneOf) VisitCar(v *Car) any { return &VehicleOneOf{Car: v} }
-func (t *mapVehicleToOneOf) VisitBoat(v *Boat) any { return &VehicleOneOf{Boat: v} }
-
-var defaultMapVehicleToOneOf VehicleVisitor = &mapVehicleToOneOf{}
-
-func MapVehicleToOneOf(v Vehicle) *VehicleOneOf {
-	return v.Accept(defaultMapVehicleToOneOf).(*VehicleOneOf)
-}
-
 func MustMatchVehicle[TOut any](
 	x Vehicle,
 	f1 func(x *Plane) TOut,
