@@ -88,6 +88,13 @@ func TestOneOfJSON(t *testing.T) {
 	sch, err := FromJSON(data)
 	assert.NoError(t, err)
 
+	backToJSON, err := ToJSON(sch)
+	assert.NoError(t, err)
+
+	assert.JSONEq(t,
+		`{"A":{"Foo":0,"Bar":"bar","Other":null},"B":{"Baz":"baz","Count":0}}`,
+		string(backToJSON))
+
 	out := ToGo(sch,
 		WhenPath([]string{}, UseStruct(&SomeOneOf{})),
 		WhenPath([]string{"A"}, UseStruct(&TestStruct1{})),

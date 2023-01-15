@@ -30,6 +30,10 @@ func TestAstJsonConversionOnSimpleType(t *testing.T) {
 
 	var data = schema.ToGo(s)
 	assert.Equal(t, in, data)
+
+	jsonData, err := schema.ToJSON(s)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{"Lit":{"Value":12}}`, string(jsonData))
 }
 func TestAstToJSONOnSumTypes(t *testing.T) {
 	in := &Eq{
@@ -95,4 +99,9 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 
 	var data = schema.ToGo(s)
 	assert.Equal(t, in, data, "back to original golang structs")
+
+	jsonData, err := schema.ToJSON(s)
+	assert.NoError(t, err)
+	t.Log(string(jsonData))
+	assert.JSONEq(t, `{"Eq":{"L":{"Accessor":{"Path":["foo"]}},"R":{"Lit":{"Value":"baz"}}}}`, string(jsonData))
 }
