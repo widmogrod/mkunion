@@ -75,8 +75,8 @@ func TestGeneratedDataConversion(t *testing.T) {
 	data := GenerateData{}
 	faker.FakeData(&data)
 
-	godata := GoToSchema(data)
-	gonative := SchemaToGo(godata, WhenPath(nil, UseStruct(GenerateData{})))
+	godata := FromGo(data)
+	gonative := ToGo(godata, WhenPath(nil, UseStruct(GenerateData{})))
 
 	assert.Equal(t, data, gonative)
 }
@@ -119,8 +119,8 @@ func TestMaxScalars(t *testing.T) {
 			t.Skip("skipping test that are for ARM64")
 		}
 
-		s := GoToSchema(max)
-		r := SchemaToGo(s, WhenPath(nil, UseStruct(Max{})))
+		s := FromGo(max)
+		r := ToGo(s, WhenPath(nil, UseStruct(Max{})))
 		assert.Equal(t, max, r)
 	})
 	t.Run("test lossy conversion from Max float 64 to respective scalars", func(t *testing.T) {
@@ -146,7 +146,7 @@ func TestMaxScalars(t *testing.T) {
 				{Name: "Uint64", Value: &m},
 			},
 		}
-		r := SchemaToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
+		r := ToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
 		// Ints
 		assert.Equal(t, int(math.Inf(1)), r.Int)
 		assert.Equal(t, int8(math.Inf(1)), r.Int8)
@@ -183,7 +183,7 @@ func TestMaxScalars(t *testing.T) {
 				{Name: "Uint64", Value: &m},
 			},
 		}
-		r := SchemaToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
+		r := ToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
 		// Ints
 		assert.Equal(t, int(3), r.Int)
 		assert.Equal(t, int8(3), r.Int8)
@@ -219,7 +219,7 @@ func TestSchemaConversions(t *testing.T) {
 				},
 			},
 			// Yes, back conversion always normalise to floats and []any
-			// To map back to correct type use SchemaToGo(_, WhenPath(nil, UseSlice(int)))
+			// To map back to correct type use ToGo(_, WhenPath(nil, UseSlice(int)))
 			back: []interface{}{
 				float64(1),
 				float64(2),
@@ -251,9 +251,9 @@ func TestSchemaConversions(t *testing.T) {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			got := GoToSchema(uc.in)
+			got := FromGo(uc.in)
 			if assert.Equal(t, uc.out, got, "forward conversion issue") {
-				assert.Equal(t, uc.back, SchemaToGo(got), "back conversion issue")
+				assert.Equal(t, uc.back, ToGo(got), "back conversion issue")
 			}
 		})
 	}
@@ -467,7 +467,7 @@ func TestSchemaToGoStructs(t *testing.T) {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, uc.out, SchemaToGo(uc.in, uc.rules...))
+			assert.Equal(t, uc.out, ToGo(uc.in, uc.rules...))
 		})
 	}
 }

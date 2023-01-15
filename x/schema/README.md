@@ -8,8 +8,8 @@ Most benefits
 ## How to convert between json <-> go
 ```go
 data := `{"name": "John", "cars": [{"name":"Ford"}]}`
-schema := JsonToSchema(data)
-nativego := SchemaToGo(schema)
+schema := schema.FromJSON(data)
+nativego := schema.ToGo(schema)
 
 expected := map[string]any{
     "name": "John",
@@ -29,7 +29,7 @@ List of cars will have type `Car` when parent `Person` object will be `map[strin
 type Car struct {
     Name string
 }
-nativego := SchemaToGo(schema, WhenPath([]string{"cars", "[*]"}, UseStruct(Car{})))
+nativego := schema.ToGo(schema, WhenPath([]string{"cars", "[*]"}, UseStruct(Car{})))
 
 expected := map[string]any{
     "name": "John",
@@ -43,10 +43,13 @@ assert.Equal(t, expected, nativego)
 ```
 
 ## Roadmap
-### V1.0.0
+### V0.1.0
+- [x] Json <-> Schema <-> Go (with structs mapping)
 - [x] Write test with wrong type conversions
 - [x] Value are split into Number(Int, Float), String, Bool, and Null
+- [x] Default schema registry + mkunion make union serialization/deserialization work transperently
 
-### V1.1.x
+### V0.2.x
 - [ ] Support json tags in golang to map field names to schema
 - [ ] Add cata, ana, and hylo morphisms
+- [ ] Schema registry to support collision on types

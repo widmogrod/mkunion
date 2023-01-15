@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 )
 
-func JsonToSchema(data []byte) (Schema, error) {
+func FromJSON(data []byte) (Schema, error) {
 	var x any
 	if err := json.Unmarshal(data, &x); err != nil {
 		return nil, err
 	}
 
-	return GoToSchema(x), nil
+	return FromGo(x), nil
 }
 
-func SchemaToJson(schema Schema, rules ...RuleMatcher) ([]byte, error) {
-	return json.Marshal(SchemaToGo(schema, rules...))
+func ToJSON(schema Schema, rules ...RuleMatcher) ([]byte, error) {
+	return json.Marshal(ToGo(schema, rules...))
 }

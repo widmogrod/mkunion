@@ -9,7 +9,7 @@ import (
 func TestAstJsonConversionOnSimpleType(t *testing.T) {
 	in := &Lit{Value: float64(12)}
 
-	s := schema.GoToSchema(in)
+	s := schema.FromGo(in)
 
 	out := &schema.Map{
 		Field: []schema.Field{
@@ -28,7 +28,7 @@ func TestAstJsonConversionOnSimpleType(t *testing.T) {
 	}
 	assert.Equal(t, out, s)
 
-	var data = schema.SchemaToGo(s)
+	var data = schema.ToGo(s)
 	assert.Equal(t, in, data)
 }
 func TestAstToJSONOnSumTypes(t *testing.T) {
@@ -37,7 +37,7 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 		R: &Lit{"baz"},
 	}
 
-	s := schema.GoToSchema(in)
+	s := schema.FromGo(in)
 
 	out := &schema.Map{
 		Field: []schema.Field{
@@ -93,6 +93,6 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 
 	assert.Equal(t, out, s, "schema transformation")
 
-	var data = schema.SchemaToGo(s)
+	var data = schema.ToGo(s)
 	assert.Equal(t, in, data, "back to original golang structs")
 }

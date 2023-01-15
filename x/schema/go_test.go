@@ -21,7 +21,7 @@ func TestGoToSchema(t *testing.T) {
 			},
 		},
 	}
-	schema := GoToSchema(data)
+	schema := FromGo(data)
 
 	assert.Equal(
 		t,
@@ -53,7 +53,7 @@ func TestGoToSchema2(t *testing.T) {
 			},
 		},
 	}
-	schema := GoToSchema(data, WrapStruct[AStruct]("AStruct"))
+	schema := FromGo(data, WrapStruct[AStruct]("AStruct"))
 
 	assert.Equal(
 		t,
@@ -93,9 +93,9 @@ func TestGoToSchema3(t *testing.T) {
 			},
 		},
 	}
-	schema := GoToSchema(data, WrapStruct[BStruct]("BStruct"))
+	schema := FromGo(data, WrapStruct[BStruct]("BStruct"))
 	assert.Equal(t, expected, schema)
 
-	result := SchemaToGo(schema, UnwrapStruct[BStruct]("BStruct"))
+	result := ToGo(schema, UnwrapStruct[BStruct]("BStruct"))
 	assert.Equal(t, data, result)
 }

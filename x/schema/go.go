@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func GoToSchema(x any, transformations ...TransformFunc) Schema {
+func FromGo(x any, transformations ...TransformFunc) Schema {
 	finalTransformations := append(defaultRegistry.transformations, transformations...)
 	return goToSchema(x, finalTransformations...)
 }
@@ -129,7 +129,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 	panic(fmt.Errorf("goToSchema: unsupported type: %T", x))
 }
 
-func SchemaToGo(x Schema, rules ...RuleMatcher) any {
+func ToGo(x Schema, rules ...RuleMatcher) any {
 	finalRules := append(defaultRegistry.matchingRules, rules...)
 	return schemaToGo(x, finalRules, nil)
 }

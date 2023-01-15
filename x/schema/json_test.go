@@ -22,9 +22,9 @@ func TestJsonSchema(t *testing.T) {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			schema, err := JsonToSchema(uc.in)
+			schema, err := FromJSON(uc.in)
 			assert.NoError(t, err)
-			data, err := SchemaToJson(schema)
+			data, err := ToJSON(schema)
 			assert.NoError(t, err)
 			assert.JSONEq(t, string(uc.in), string(data))
 		})
@@ -43,16 +43,16 @@ type BStruct struct {
 
 func TestJsonToSchema(t *testing.T) {
 	json := []byte(`{"Foo": 1, "Bar": 2}`)
-	schema, err := JsonToSchema(json)
+	schema, err := FromJSON(json)
 	assert.NoError(t, err)
 
-	gonative := SchemaToGo(schema)
+	gonative := ToGo(schema)
 	assert.Equal(t, map[string]interface{}{
 		"Foo": float64(1),
 		"Bar": float64(2),
 	}, gonative)
 
-	gostruct := SchemaToGo(
+	gostruct := ToGo(
 		schema,
 		WhenPath([]string{}, UseStruct(AStruct{})),
 	)
@@ -85,10 +85,10 @@ func TestOneOfJSON(t *testing.T) {
 		`{"A":{"Foo":0,"Bar":"bar","Other":null},"B":{"Baz":"baz","Count":0}}`,
 		string(data))
 
-	sch, err := JsonToSchema(data)
+	sch, err := FromJSON(data)
 	assert.NoError(t, err)
 
-	out := SchemaToGo(sch,
+	out := ToGo(sch,
 		WhenPath([]string{}, UseStruct(&SomeOneOf{})),
 		WhenPath([]string{"A"}, UseStruct(&TestStruct1{})),
 		WhenPath([]string{"B"}, UseStruct(&TestStruct2{})),
