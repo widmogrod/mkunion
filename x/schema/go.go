@@ -18,46 +18,154 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 
 	case bool:
 		return (*Bool)(&y)
+	case *bool:
+		if y == nil {
+			return &None{}
+		} else {
+			return (*Bool)(y)
+		}
 
 	case string:
 		return MkString(y)
+	case *string:
+		if y == nil {
+			return &None{}
+		} else {
+			return MkString(*y)
+		}
 
 	case float64:
 		v := Number(y)
 		return &v
+	case *float64:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case float32:
 		v := Number(y)
 		return &v
+	case *float32:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case int:
 		v := Number(y)
 		return &v
+	case *int:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case int8:
 		v := Number(y)
 		return &v
+	case *int8:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case int16:
 		v := Number(y)
 		return &v
+	case *int16:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case int32:
 		v := Number(y)
 		return &v
+	case *int32:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case int64:
 		v := Number(y)
 		return &v
+	case *int64:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case uint:
 		v := Number(y)
 		return &v
+	case *uint:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case uint8:
 		v := Number(y)
 		return &v
+	case *uint8:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case uint16:
 		v := Number(y)
 		return &v
+	case *uint16:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case uint32:
 		v := Number(y)
 		return &v
+
+	case *uint32:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
+
 	case uint64:
 		v := Number(y)
 		return &v
+	case *uint64:
+		if y == nil {
+			return &None{}
+		} else {
+			v := Number(*y)
+			return &v
+		}
 
 	case []interface{}:
 		var r = &List{}
