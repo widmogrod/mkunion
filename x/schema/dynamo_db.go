@@ -10,7 +10,9 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 	return MustMatchSchema(
 		x,
 		func(x *None) types.AttributeValue {
-			return &types.AttributeValueMemberNULL{}
+			return &types.AttributeValueMemberNULL{
+				Value: true,
+			}
 		},
 		func(x *Bool) types.AttributeValue {
 			return &types.AttributeValueMemberBOOL{
