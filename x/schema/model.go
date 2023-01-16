@@ -231,7 +231,11 @@ func (s *StructSetter) Set(key string, value any) error {
 			// and value that should be set is []interface{} but element inside is string
 			// do conversion!
 			v := reflect.ValueOf(value)
-			if v.Kind() == reflect.Slice && v.Len() > 0 {
+			if v.Len() == 0 {
+				return nil
+			}
+
+			if v.Kind() == reflect.Slice {
 				destinationSliceType := f.Type().Elem().Kind()
 				inputSliceType := v.Index(0).Elem().Kind()
 
