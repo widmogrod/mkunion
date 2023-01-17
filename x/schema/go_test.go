@@ -69,6 +69,9 @@ func TestGoToSchema3(t *testing.T) {
 			"bar",
 			"baz",
 		},
+		Taz: map[string]string{
+			"taz1": "taz2",
+		},
 	}
 	expected := &Map{
 		Field: []Field{
@@ -85,6 +88,16 @@ func TestGoToSchema3(t *testing.T) {
 								Items: []Schema{
 									MkString("bar"),
 									MkString("baz"),
+								},
+							},
+						}, {
+							Name: "Taz",
+							Value: &Map{
+								Field: []Field{
+									{
+										Name:  "taz1",
+										Value: MkString("taz2"),
+									},
 								},
 							},
 						},
