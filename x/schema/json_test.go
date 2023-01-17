@@ -39,6 +39,7 @@ type AStruct struct {
 type BStruct struct {
 	Foo  float64 `json:"foo"`
 	Bars []string
+	Taz  map[string]string
 }
 
 func TestJsonToSchema(t *testing.T) {

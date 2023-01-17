@@ -253,6 +253,33 @@ func (s *StructSetter) Set(key string, value any) error {
 				f.Set(v)
 			}
 
+		case reflect.Map:
+			// when struct field has type like map[string]string
+			// and value that should be set is map[string]interface{} but element inside is string
+			// do conversion!
+			v := reflect.ValueOf(value)
+			if v.Len() == 0 {
+				return nil
+			}
+
+			if v.Kind() == reflect.Map {
+				destinationMapType := f.Type().Elem().Kind()
+				inputMapType := v.MapKeys()[0].Kind()
+
+				if destinationMapType == inputMapType {
+					st := reflect.MapOf(f.Type().Key(), f.Type().Elem())
+					ss := reflect.MakeMap(st)
+
+					for _, key := range v.MapKeys() {
+						ss.SetMapIndex(key, v.MapIndex(key).Elem())
+					}
+
+					f.Set(ss)
+				}
+			} else {
+				f.Set(v)
+			}
+
 		default:
 			f.Set(reflect.ValueOf(value))
 		}
