@@ -50,6 +50,8 @@ assert.Equal(t, expected, nativego)
 - [x] Default schema registry + mkunion make union serialization/deserialization work transperently
 - [x] Support pointers *string, etc.
 - [x] Support DynamoDB (FromDynamoDB, ToDynamoDB)
+- [x] Support for pointer to types like *string, *int, etc.
+- [x] ]
 
 ### V0.2.x
 - [ ] Support json tags in golang to map field names to schema

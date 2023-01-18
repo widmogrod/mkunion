@@ -36,10 +36,21 @@ type AStruct struct {
 	Bar float64 `json:"bar"`
 }
 
+type BaseStruct struct {
+	Age int
+}
+
 type BStruct struct {
 	Foo  float64 `json:"foo"`
 	Bars []string
 	Taz  map[string]string
+
+	*BaseStruct
+
+	// ignore unexported fields
+	s *string
+
+	S *string
 }
 
 func TestJsonToSchema(t *testing.T) {

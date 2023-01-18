@@ -72,7 +72,8 @@ func UseStruct(t any) func() Setter {
 
 	return func() Setter {
 		return &StructSetter{
-			r: reflect.New(rt),
+			orginal: t,
+			r:       reflect.New(rt),
 		}
 	}
 }
@@ -148,8 +149,9 @@ func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
 
 type (
 	StructSetter struct {
-		r     reflect.Value
-		deref *reflect.Value
+		orginal any
+		r       reflect.Value
+		deref   *reflect.Value
 	}
 	NativeMap struct {
 		m map[string]any
@@ -281,7 +283,66 @@ func (s *StructSetter) Set(key string, value any) error {
 			}
 
 		default:
-			f.Set(reflect.ValueOf(value))
+			v := reflect.ValueOf(value)
+			if v.Type().AssignableTo(f.Type()) {
+				f.Set(v)
+			} else if v.Type().ConvertibleTo(f.Type()) {
+				f.Set(v.Convert(f.Type()))
+			} else {
+				destinationType := f.Type().Elem().Kind()
+				inputType := v.Type().Kind()
+
+				if destinationType == inputType &&
+					f.Kind() == reflect.Ptr {
+					switch v2 := value.(type) {
+					case string:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case int:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case int8:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case int16:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case int32:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case int64:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case uint:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case uint8:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case uint16:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case uint32:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case uint64:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case float32:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case float64:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					case bool:
+						f.Set(reflect.ValueOf(&v2))
+						return nil
+					}
+				}
+			}
+
+			f.Set(v)
+			return nil
 		}
 
 		return nil
