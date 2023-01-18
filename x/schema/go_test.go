@@ -100,6 +100,13 @@ func TestGoToSchema3(t *testing.T) {
 									},
 								},
 							},
+						}, {
+							Name:  "BaseStruct",
+							Value: &None{},
+						},
+						{
+							Name:  "S",
+							Value: &None{},
 						},
 					},
 				},
@@ -110,5 +117,80 @@ func TestGoToSchema3(t *testing.T) {
 	assert.Equal(t, expected, schema)
 
 	result := ToGo(schema, UnwrapStruct(BStruct{}, "BStruct"))
+	assert.Equal(t, data, result)
+}
+
+func TestGoToSchema4(t *testing.T) {
+	someStr := "some string"
+
+	data := BStruct{
+		Foo: 123,
+		Bars: []string{
+			"bar",
+			"baz",
+		},
+		Taz: map[string]string{
+			"taz1": "taz2",
+		},
+		BaseStruct: &BaseStruct{
+			Age: 123,
+		},
+		S: &someStr,
+	}
+	expected := &Map{
+		Field: []Field{
+			{
+				Name: "BStruct",
+				Value: &Map{
+					Field: []Field{
+						{
+							Name:  "Foo",
+							Value: MkInt(123),
+						}, {
+							Name: "Bars",
+							Value: &List{
+								Items: []Schema{
+									MkString("bar"),
+									MkString("baz"),
+								},
+							},
+						}, {
+							Name: "Taz",
+							Value: &Map{
+								Field: []Field{
+									{
+										Name:  "taz1",
+										Value: MkString("taz2"),
+									},
+								},
+							},
+						}, {
+							Name: "BaseStruct",
+							Value: &Map{
+								Field: []Field{
+									{
+										Name:  "Age",
+										Value: MkInt(123),
+									},
+								},
+							},
+						}, {
+							Name:  "S",
+							Value: MkString("some string"),
+						},
+					},
+				},
+			},
+		},
+	}
+	schema := FromGo(data,
+		WrapStruct(BStruct{}, "BStruct"),
+	)
+	assert.Equal(t, expected, schema)
+
+	result := ToGo(schema,
+		UnwrapStruct(BStruct{}, "BStruct"),
+		WhenPath([]string{"BStruct", "BaseStruct"}, UseStruct(&BaseStruct{})),
+	)
 	assert.Equal(t, data, result)
 }

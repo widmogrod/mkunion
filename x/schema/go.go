@@ -184,9 +184,16 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 		}
 		return r
 
+	case reflect.Value:
+		return goToSchema(y.Interface(), transformations...)
+
 	default:
 		v := reflect.ValueOf(x)
+
 		if v.Kind() == reflect.Ptr {
+			if v.IsNil() {
+				return &None{}
+			}
 			v = v.Elem()
 		}
 
@@ -195,7 +202,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 			for _, k := range v.MapKeys() {
 				r.Field = append(r.Field, Field{
 					Name:  k.String(),
-					Value: goToSchema(v.MapIndex(k).Interface(), transformations...),
+					Value: goToSchema(v.MapIndex(k), transformations...),
 				})
 			}
 			return r
@@ -204,6 +211,10 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 		if v.Kind() == reflect.Struct {
 			var r = &Map{}
 			for i := 0; i < v.NumField(); i++ {
+				if !v.Type().Field(i).IsExported() {
+					continue
+				}
+
 				name, ok := v.Type().Field(i).Tag.Lookup("name")
 				if !ok {
 					name = v.Type().Field(i).Name
@@ -211,7 +222,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 
 				r.Field = append(r.Field, Field{
 					Name:  name,
-					Value: goToSchema(v.Field(i).Interface(), transformations...),
+					Value: goToSchema(v.Field(i), transformations...),
 				})
 			}
 
@@ -228,7 +239,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 		if v.Kind() == reflect.Slice {
 			var r = &List{}
 			for i := 0; i < v.Len(); i++ {
-				r.Items = append(r.Items, goToSchema(v.Index(i).Interface(), transformations...))
+				r.Items = append(r.Items, goToSchema(v.Index(i), transformations...))
 			}
 			return r
 		}
