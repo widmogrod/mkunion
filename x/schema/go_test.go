@@ -112,6 +112,10 @@ func TestGoToSchema3(t *testing.T) {
 							Name:  "List",
 							Value: &List{},
 						},
+						{
+							Name:  "Ma",
+							Value: &Map{},
+						},
 					},
 				},
 			},
@@ -143,6 +147,12 @@ func TestGoToSchema4(t *testing.T) {
 		List: []AStruct{
 			{
 				Foo: 444,
+			},
+		},
+		Ma: map[string]AStruct{
+			"key": {
+				Foo: 666,
+				Bar: 555,
 			},
 		},
 	}
@@ -206,6 +216,28 @@ func TestGoToSchema4(t *testing.T) {
 								},
 							},
 						},
+						{
+							Name: "Ma",
+							Value: &Map{
+								Field: []Field{
+									{
+										Name: "key",
+										Value: &Map{
+											Field: []Field{
+												{
+													Name:  "Foo",
+													Value: MkInt(666),
+												},
+												{
+													Name:  "Bar",
+													Value: MkInt(555),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -218,8 +250,9 @@ func TestGoToSchema4(t *testing.T) {
 
 	result := ToGo(schema,
 		UnwrapStruct(BStruct{}, "BStruct"),
-		WhenPath([]string{"BStruct", "BaseStruct"}, UseStruct(&BaseStruct{})),
-		WhenPath([]string{"BStruct", "List", "[*]"}, UseStruct(AStruct{})),
+		WhenPath([]string{"*", "BStruct", "BaseStruct"}, UseStruct(&BaseStruct{})),
+		WhenPath([]string{"*", "BStruct", "List", "[*]"}, UseStruct(AStruct{})),
+		WhenPath([]string{"*", "BStruct", "Ma", "key"}, UseStruct(AStruct{})),
 	)
 	assert.Equal(t, data, result)
 }

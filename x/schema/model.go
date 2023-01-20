@@ -34,30 +34,6 @@ func UnwrapStruct[A any](structt A, fromField string) *WhenField {
 	}
 }
 
-type (
-	WhenField struct {
-		path        []string
-		setter      func() Setter
-		unwrapField string
-	}
-)
-
-func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
-	if r.unwrapField == "" {
-		return nil, false, ""
-	}
-
-	if len(x.Field) != 1 {
-		return nil, false, ""
-	}
-
-	if x.Field[0].Name == r.unwrapField {
-		return x.Field[0].Value, true, r.unwrapField
-	}
-
-	return nil, false, ""
-}
-
 func UseStruct(t any) func() Setter {
 	rt := reflect.TypeOf(t)
 
@@ -95,20 +71,47 @@ var (
 	_ RuleMatcher = (*WhenField)(nil)
 )
 
+type (
+	WhenField struct {
+		path        []string
+		setter      func() Setter
+		unwrapField string
+	}
+)
+
+func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
+	if r.unwrapField == "" {
+		return nil, false, ""
+	}
+
+	if len(x.Field) != 1 {
+		return nil, false, ""
+	}
+
+	if x.Field[0].Name == r.unwrapField {
+		return x.Field[0].Value, true, r.unwrapField
+	}
+
+	return nil, false, ""
+}
+
 func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
-	if len(r.path) == 2 {
-		if len(path) < 1 {
+	if len(r.path) > 1 && r.path[0] == "*" {
+		if len(path) < len(r.path)-1 {
 			return nil, false
 		}
 
 		isAnyPath := r.path[0] == "*"
 		if isAnyPath {
-			//parts := strings.Split(r.path[1], "?.")
-			lastPathItem := path[len(path)-1]
-			if r.path[1] == lastPathItem {
-				return r.setter(), true
+			pathLen := len(r.path)
+			for i := 1; i < pathLen; i++ {
+				//parts := strings.Split(r.path[1], "?.")
+				// compare from the end
+				if r.path[len(r.path)-i] != path[len(path)-i] {
+					return nil, false
+				}
 			}
-			return nil, false
+			return r.setter(), true
 		}
 	}
 
@@ -260,19 +263,14 @@ func (s *StructSetter) Set(key string, value any) error {
 			}
 
 			if v.Kind() == reflect.Map {
-				destinationMapType := f.Type().Elem().Kind()
-				inputMapType := v.MapKeys()[0].Kind()
+				st := reflect.MapOf(f.Type().Key(), f.Type().Elem())
+				ss := reflect.MakeMap(st)
 
-				if destinationMapType == inputMapType {
-					st := reflect.MapOf(f.Type().Key(), f.Type().Elem())
-					ss := reflect.MakeMap(st)
-
-					for _, key := range v.MapKeys() {
-						ss.SetMapIndex(key, v.MapIndex(key).Elem())
-					}
-
-					f.Set(ss)
+				for _, key := range v.MapKeys() {
+					ss.SetMapIndex(key, v.MapIndex(key).Elem())
 				}
+
+				f.Set(ss)
 			} else {
 				f.Set(v)
 			}

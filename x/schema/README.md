@@ -51,7 +51,8 @@ assert.Equal(t, expected, nativego)
 - [x] Support pointers *string, etc.
 - [x] Support DynamoDB (FromDynamoDB, ToDynamoDB)
 - [x] Support for pointer to types like *string, *int, etc.
-- [x] ]
+- [x] Support for relative paths like `WhenPath([]string{"*", "ListOfCars", "Car"}, UseStruct(Car{}))`. 
+      Absolute paths are without `*` at the beginning.
 
 ### V0.2.x
 - [ ] Support json tags in golang to map field names to schema
