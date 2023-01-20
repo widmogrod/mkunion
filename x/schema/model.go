@@ -260,19 +260,14 @@ func (s *StructSetter) Set(key string, value any) error {
 			}
 
 			if v.Kind() == reflect.Map {
-				destinationMapType := f.Type().Elem().Kind()
-				inputMapType := v.MapKeys()[0].Kind()
+				st := reflect.MapOf(f.Type().Key(), f.Type().Elem())
+				ss := reflect.MakeMap(st)
 
-				if destinationMapType == inputMapType {
-					st := reflect.MapOf(f.Type().Key(), f.Type().Elem())
-					ss := reflect.MakeMap(st)
-
-					for _, key := range v.MapKeys() {
-						ss.SetMapIndex(key, v.MapIndex(key).Elem())
-					}
-
-					f.Set(ss)
+				for _, key := range v.MapKeys() {
+					ss.SetMapIndex(key, v.MapIndex(key).Elem())
 				}
+
+				f.Set(ss)
 			} else {
 				f.Set(v)
 			}

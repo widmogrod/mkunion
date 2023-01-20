@@ -53,6 +53,7 @@ type BStruct struct {
 	S *string
 
 	List []AStruct
+	Ma   map[string]AStruct
 }
 
 func TestJsonToSchema(t *testing.T) {
