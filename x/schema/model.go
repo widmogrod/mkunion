@@ -238,19 +238,14 @@ func (s *StructSetter) Set(key string, value any) error {
 			}
 
 			if v.Kind() == reflect.Slice {
-				destinationSliceType := f.Type().Elem().Kind()
-				inputSliceType := v.Index(0).Elem().Kind()
+				st := reflect.SliceOf(f.Type().Elem())
+				ss := reflect.MakeSlice(st, v.Len(), v.Len())
 
-				if destinationSliceType == inputSliceType {
-					st := reflect.SliceOf(f.Type().Elem())
-					ss := reflect.MakeSlice(st, v.Len(), v.Len())
-
-					for i := 0; i < v.Len(); i++ {
-						ss.Index(i).Set(v.Index(i).Elem())
-					}
-
-					f.Set(ss)
+				for i := 0; i < v.Len(); i++ {
+					ss.Index(i).Set(v.Index(i).Elem())
 				}
+
+				f.Set(ss)
 			} else {
 				f.Set(v)
 			}

@@ -108,6 +108,10 @@ func TestGoToSchema3(t *testing.T) {
 							Name:  "S",
 							Value: &None{},
 						},
+						{
+							Name:  "List",
+							Value: &List{},
+						},
 					},
 				},
 			},
@@ -136,6 +140,11 @@ func TestGoToSchema4(t *testing.T) {
 			Age: 123,
 		},
 		S: &someStr,
+		List: []AStruct{
+			{
+				Foo: 444,
+			},
+		},
 	}
 	expected := &Map{
 		Field: []Field{
@@ -178,6 +187,25 @@ func TestGoToSchema4(t *testing.T) {
 							Name:  "S",
 							Value: MkString("some string"),
 						},
+						{
+							Name: "List",
+							Value: &List{
+								Items: []Schema{
+									&Map{
+										Field: []Field{
+											{
+												Name:  "Foo",
+												Value: MkInt(444),
+											},
+											{
+												Name:  "Bar",
+												Value: MkInt(0),
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -191,6 +219,7 @@ func TestGoToSchema4(t *testing.T) {
 	result := ToGo(schema,
 		UnwrapStruct(BStruct{}, "BStruct"),
 		WhenPath([]string{"BStruct", "BaseStruct"}, UseStruct(&BaseStruct{})),
+		WhenPath([]string{"BStruct", "List", "[*]"}, UseStruct(AStruct{})),
 	)
 	assert.Equal(t, data, result)
 }

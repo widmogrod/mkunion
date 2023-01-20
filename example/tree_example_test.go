@@ -2,6 +2,7 @@ package example
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/schema"
 	"testing"
 )
 
@@ -105,6 +106,23 @@ func TestTreeNonExhaustive(t *testing.T) {
 	}
 
 	assert.Equal(t, 10, tree.Accept(&n))
+}
+
+func TestTreeSchema(t *testing.T) {
+	tree := &Branch{
+		L: &Leaf{Value: 1},
+		R: &Branch{
+			L: &Branch{
+				L: &Leaf{Value: 2},
+				R: &Leaf{Value: 3},
+			},
+			R: &Leaf{Value: 4},
+		},
+	}
+
+	sch := schema.FromGo(tree)
+	result := schema.ToGo(sch)
+	assert.Equal(t, tree, result)
 }
 
 /*
