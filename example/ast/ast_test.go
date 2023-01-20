@@ -105,3 +105,17 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 	t.Log(string(jsonData))
 	assert.JSONEq(t, `{"Eq":{"L":{"Accessor":{"Path":["foo"]}},"R":{"Lit":{"Value":"baz"}}}}`, string(jsonData))
 }
+
+func TestASTSchema(t *testing.T) {
+	v := &And{
+		List: []Operator{
+			&Eq{
+				L: &Accessor{[]string{"foo"}},
+				R: &Lit{"baz"},
+			},
+		},
+	}
+	s := schema.FromGo(v)
+	result := schema.ToGo(s)
+	assert.Equal(t, v, result)
+}
