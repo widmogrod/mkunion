@@ -5,7 +5,17 @@ type (
 	Attr = map[string]any
 )
 
-//go:generate go run ../../cmd/mkunion/main.go --name=State --types=Candidate,Canonical,Duplicate,Unique
+//go:generate go run ../../cmd/mkunion/main.go --name=Command
+type (
+	CreateCandidateCMD struct {
+		ID ID
+	}
+	MarkAsCanonicalCMD struct{}
+	MarkAsDuplicateCMD struct{ CanonicalID ID }
+	MarkAsUniqueCMD    struct{}
+)
+
+//go:generate go run ../../cmd/mkunion/main.go --name=State
 type (
 	Candidate struct {
 		ID         ID
@@ -21,14 +31,4 @@ type (
 	Unique struct {
 		ID ID
 	}
-)
-
-//go:generate go run ../../cmd/mkunion/main.go --name=Transition --types=CreateCandidate,MarkAsCanonical,MarkAsDuplicate,MarkAsUnique
-type (
-	CreateCandidate struct {
-		ID ID
-	}
-	MarkAsCanonical struct{}
-	MarkAsDuplicate struct{ CanonicalID ID }
-	MarkAsUnique    struct{}
 )
