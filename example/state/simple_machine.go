@@ -1,81 +1,62 @@
 package state
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/widmogrod/mkunion/x/machine"
+)
 
-var _ TransitionVisitor = (*Machine)(nil)
+var (
+	ErrInvalidTransition = fmt.Errorf("invalid cmds")
+)
 
-var ErrInvalidTransition = fmt.Errorf("invalid transition")
-
-func NewMachine() *Machine {
-	return &Machine{}
+func NewMachine() *machine.Machine[Command, State] {
+	return machine.NewSimpleMachine(Transition)
 }
 
-type Machine struct {
-	state State
-	err   error
-}
+func Transition(cmd Command, state State) (State, error) {
+	return MustMatchCommandR2(
+		cmd,
+		func(x *CreateCandidateCMD) (State, error) {
+			if state != nil {
+				return nil, fmt.Errorf("candidate already created, state: %T; %w", state, ErrInvalidTransition)
+			}
 
-func (m *Machine) LastError() error {
-	return m.err
-}
+			newState := &Candidate{
+				ID:         x.ID,
+				Attributes: nil,
+			}
 
-func (m *Machine) Apply(s Transition) error {
-	if m.err != nil {
-		return fmt.Errorf("cannot apply %T on state with error: %w", s, m.err)
-	}
-	res := s.Accept(m)
-	if res != nil {
-		if err, ok := res.(error); ok {
-			m.err = err
-		} else {
-			m.err = fmt.Errorf("unexpected result %T. Expecting error ", res)
-		}
-	}
+			return newState, nil
+		},
+		func(x *MarkAsCanonicalCMD) (State, error) {
+			stateCandidate, ok := state.(*Candidate)
+			if !ok {
+				return nil, fmt.Errorf("state is not candidate, state: %T; %w", state, ErrInvalidTransition)
+			}
 
-	return m.err
-}
+			return &Canonical{
+				ID: stateCandidate.ID,
+			}, nil
+		},
+		func(x *MarkAsDuplicateCMD) (State, error) {
+			stateCandidate, ok := state.(*Candidate)
+			if !ok {
+				return nil, fmt.Errorf("state is not candidate, state: %T; %w", state, ErrInvalidTransition)
+			}
 
-func (m *Machine) VisitCreateCandidate(v *CreateCandidate) any {
-	if m.state != nil {
-		return fmt.Errorf("%w VisitCreateCandidate: candidate can be created on new state only %T", ErrInvalidTransition, m.state)
-	}
-
-	m.state = &Candidate{
-		ID:         v.ID,
-		Attributes: nil,
-	}
-
-	return nil
-}
-
-func (m *Machine) VisitMarkAsCanonical(v *MarkAsCanonical) any {
-	if candidate, ok := m.state.(*Candidate); ok {
-		m.state = &Canonical{
-			ID: candidate.ID,
-		}
-		return nil
-	}
-
-	return fmt.Errorf("%w VisitMarkAsCanonical: state %T cannot be marked as canonical", ErrInvalidTransition, m.state)
-}
-
-func (m *Machine) VisitMarkAsDuplicate(v *MarkAsDuplicate) any {
-	if candidate, ok := m.state.(*Candidate); ok {
-		m.state = &Duplicate{
-			ID:          candidate.ID,
-			CanonicalID: v.CanonicalID,
-		}
-		return nil
-	}
-	return fmt.Errorf("%w VisitMarkAsDuplicate: state %T cannot be marked as duplicate", ErrInvalidTransition, m.state)
-}
-
-func (m *Machine) VisitMarkAsUnique(v *MarkAsUnique) any {
-	if candidate, ok := m.state.(*Candidate); ok {
-		m.state = &Unique{
-			ID: candidate.ID,
-		}
-		return nil
-	}
-	return fmt.Errorf("%w VisitMarkAsUnique: state %T cannot be marked as unique", ErrInvalidTransition, m.state)
+			return &Duplicate{
+				ID:          stateCandidate.ID,
+				CanonicalID: x.CanonicalID,
+			}, nil
+		},
+		func(x *MarkAsUniqueCMD) (State, error) {
+			stateCandidate, ok := state.(*Candidate)
+			if !ok {
+				return nil, fmt.Errorf("state is not candidate, state: %T; %w", state, ErrInvalidTransition)
+			}
+			return &Unique{
+				ID: stateCandidate.ID,
+			}, nil
+		},
+	)
 }

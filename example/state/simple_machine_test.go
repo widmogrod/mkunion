@@ -7,86 +7,86 @@ import (
 
 func TestStateTransition(t *testing.T) {
 	useCases := map[string]struct {
-		transition    []Transition
-		expectedState []State
-		expectedError []error
+		cmds   []Command
+		state  []State
+		errors []error
 	}{
 		"create candidate (valid)": {
-			transition: []Transition{
-				&CreateCandidate{ID: "123"},
+			cmds: []Command{
+				&CreateCandidateCMD{ID: "123"},
 			},
-			expectedState: []State{
+			state: []State{
 				&Candidate{ID: "123"},
 			},
-			expectedError: []error{
+			errors: []error{
 				nil,
 			},
 		},
 		"candidate state and transit to duplicate  (valid)": {
-			transition: []Transition{
-				&CreateCandidate{ID: "123"},
-				&MarkAsDuplicate{CanonicalID: "456"},
+			cmds: []Command{
+				&CreateCandidateCMD{ID: "123"},
+				&MarkAsDuplicateCMD{CanonicalID: "456"},
 			},
-			expectedState: []State{
+			state: []State{
 				&Candidate{ID: "123"},
 				&Duplicate{ID: "123", CanonicalID: "456"},
 			},
-			expectedError: []error{
+			errors: []error{
 				nil,
 				nil,
 			},
 		},
 		"candidate state and transit to canonical  (valid)": {
-			transition: []Transition{
-				&CreateCandidate{ID: "123"},
-				&MarkAsCanonical{},
+			cmds: []Command{
+				&CreateCandidateCMD{ID: "123"},
+				&MarkAsCanonicalCMD{},
 			},
-			expectedState: []State{
+			state: []State{
 				&Candidate{ID: "123"},
 				&Canonical{ID: "123"},
 			},
-			expectedError: []error{
+			errors: []error{
 				nil,
 				nil,
 			},
 		},
 		"candidate state and transit to unique  (valid)": {
-			transition: []Transition{
-				&CreateCandidate{ID: "123"},
-				&MarkAsUnique{},
+			cmds: []Command{
+				&CreateCandidateCMD{ID: "123"},
+				&MarkAsUniqueCMD{},
 			},
-			expectedState: []State{
+			state: []State{
 				&Candidate{ID: "123"},
 				&Unique{ID: "123"},
 			},
-			expectedError: []error{
+			errors: []error{
 				nil,
 				nil,
 			},
 		},
 		"initial state cannot be market as duplicate (invalid)": {
-			transition: []Transition{
-				&MarkAsDuplicate{CanonicalID: "456"},
+			cmds: []Command{
+				&MarkAsDuplicateCMD{CanonicalID: "456"},
 			},
-			expectedState: []State{
+			state: []State{
 				nil,
 			},
-			expectedError: []error{
+			errors: []error{
 				ErrInvalidTransition,
 			},
 		},
 		"candidate state and transit to canonical and duplicate  (invalid)": {
-			transition: []Transition{
-				&CreateCandidate{ID: "123"},
-				&MarkAsCanonical{},
-				&MarkAsDuplicate{CanonicalID: "456"},
+			cmds: []Command{
+				&CreateCandidateCMD{ID: "123"},
+				&MarkAsCanonicalCMD{},
+				&MarkAsDuplicateCMD{CanonicalID: "456"},
 			},
-			expectedState: []State{
+			state: []State{
 				&Candidate{ID: "123"},
 				&Canonical{ID: "123"},
 				&Canonical{ID: "123"},
 			},
-			expectedError: []error{
+			errors: []error{
 				nil,
 				nil,
 				ErrInvalidTransition,
@@ -97,16 +97,15 @@ func TestStateTransition(t *testing.T) {
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
 			m := NewMachine()
-			for i, tr := range uc.transition {
-				err := m.Apply(tr)
-				if uc.expectedError[i] == nil {
+			for i, tr := range uc.cmds {
+				err := m.Handle(tr)
+				if uc.errors[i] == nil {
 					assert.NoError(t, err)
 				} else {
-					assert.Error(t, uc.expectedError[i], err)
+					assert.Error(t, uc.errors[i], err)
 				}
-				assert.Equal(t, uc.expectedState[i], m.state)
+				assert.Equal(t, uc.state[i], m.State())
 			}
 		})
 	}
-
 }
