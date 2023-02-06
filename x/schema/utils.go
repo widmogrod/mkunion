@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-func As[A int | float64 | bool | string](x Schema, def A) A {
+func As[A int | int8 | int16 | int32 | int64 |
+	uint | uint8 | uint16 | uint32 | uint64 |
+	float32 | float64 |
+	bool | string](x Schema, def A) A {
 	if x == nil {
 		return def
 	}
@@ -25,12 +28,31 @@ func As[A int | float64 | bool | string](x Schema, def A) A {
 		},
 		func(x *Number) A {
 			switch any(def).(type) {
+			case float32:
+				return any(float32(*x)).(A)
 			case float64:
 				return any(float64(*x)).(A)
 			case int:
 				return any(int(*x)).(A)
+			case int8:
+				return any(int8(*x)).(A)
+			case int16:
+				return any(int16(*x)).(A)
+			case int32:
+				return any(int32(*x)).(A)
+			case int64:
+				return any(int64(*x)).(A)
+			case uint:
+				return any(uint(*x)).(A)
+			case uint8:
+				return any(uint8(*x)).(A)
+			case uint16:
+				return any(uint16(*x)).(A)
+			case uint32:
+				return any(uint32(*x)).(A)
+			case uint64:
+				return any(uint64(*x)).(A)
 			}
-
 			return def
 		},
 		func(x *String) A {
