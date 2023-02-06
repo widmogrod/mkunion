@@ -427,6 +427,7 @@ go test ./...
 
 ### V1.9.x
 - [x] Introduce schema helper functions like Get(schema, location), As[int](schema, default), Reduce[A](schema, init, func(schema, A) A) A
+- [x] Allow to have union with one element, this is useful for domain model that is not yet fully defined
 
 ### V1.10.x
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
@@ -435,7 +436,6 @@ go test ./...
 - [ ] Add configurable behaviour how schema should act when field is missing, but schema has a value for it
 - [ ] Add type conversion for int,float in map values !!!
 - [ ] Schema to include type definitions, and then any WithPath etc would provide type information for schemas that don't have it, or want to override it
-- [ ] Allow to have union with one element, this is useful for domain model that is not yet fully defined
 
 ### V2.x.x
 - [ ] Add support for generic union types
