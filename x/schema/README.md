@@ -9,7 +9,7 @@ Most benefits
 ```go
 data := `{"name": "John", "cars": [{"name":"Ford"}]}`
 schema := schema.FromJSON(data)
-nativego := schema.ToGo(schema)
+nativego, err := schema.ToGo(schema)
 
 expected := map[string]any{
     "name": "John",
@@ -29,7 +29,8 @@ List of cars will have type `Car` when parent `Person` object will be `map[strin
 type Car struct {
     Name string
 }
-nativego := schema.ToGo(schema, WhenPath([]string{"cars", "[*]"}, UseStruct(Car{})))
+nativego := schema.MustToGo(schema, WithOnlyTheseRules(
+	WhenPath([]string{"cars", "[*]"}, UseStruct(Car{}))))
 
 expected := map[string]any{
     "name": "John",
@@ -53,6 +54,10 @@ assert.Equal(t, expected, nativego)
 - [x] Support for pointer to types like *string, *int, etc.
 - [x] Support for relative paths like `WhenPath([]string{"*", "ListOfCars", "Car"}, UseStruct(Car{}))`. 
       Absolute paths are without `*` at the beginning.
+- [x] Support options for `ToGo` like `WithOnlyTheseRules`, `WithExtraRules`, `WithDefaultMaoDef`, etc. 
+      Gives better control on how schema is converted to golang.
+      It's especially important from security reasons, whey you want to allow rules only whitelisted rules, for user generated json input.
+- [x] Support for `FromGo` now accepts options like `WithTransformationsFromRegistry`, etc. for similar reason as stated above
 
 ### V0.2.x
 - [ ] Support json tags in golang to map field names to schema

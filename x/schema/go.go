@@ -6,12 +6,46 @@ import (
 	"strings"
 )
 
-func FromGo(x any, transformations ...TransformFunc) Schema {
-	finalTransformations := append(defaultRegistry.transformations, transformations...)
-	return goToSchema(x, finalTransformations...)
+type fromGoConfig struct {
+	transformations    []TransformFunc
+	useDefaultRegistry bool
 }
 
-func goToSchema(x any, transformations ...TransformFunc) Schema {
+type fromGoConfigFunc func(*fromGoConfig)
+
+func WithTransformationsFromRegistry(r *Registry) fromGoConfigFunc {
+	return WithOnlyTheseTransformations(r.transformations...)
+}
+
+func WithOnlyTheseTransformations(transformations ...TransformFunc) fromGoConfigFunc {
+	return func(c *fromGoConfig) {
+		c.useDefaultRegistry = false
+		c.transformations = transformations
+	}
+}
+
+func WithExtraTransformations(transformations ...TransformFunc) fromGoConfigFunc {
+	return func(c *fromGoConfig) {
+		c.transformations = append(c.transformations, transformations...)
+	}
+}
+
+func FromGo(x any, options ...fromGoConfigFunc) Schema {
+	c := fromGoConfig{
+		useDefaultRegistry: true,
+	}
+	for _, option := range options {
+		option(&c)
+	}
+
+	if c.useDefaultRegistry {
+		c.transformations = append(c.transformations, defaultRegistry.transformations...)
+	}
+
+	return goToSchema(x, &c)
+}
+
+func goToSchema(x any, c *fromGoConfig) Schema {
 	switch y := x.(type) {
 	case nil:
 		return &None{}
@@ -170,7 +204,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 	case []any:
 		var r = &List{}
 		for _, v := range y {
-			r.Items = append(r.Items, goToSchema(v, transformations...))
+			r.Items = append(r.Items, goToSchema(v, c))
 		}
 		return r
 
@@ -179,13 +213,13 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 		for k, v := range y {
 			r.Field = append(r.Field, Field{
 				Name:  k,
-				Value: goToSchema(v, transformations...),
+				Value: goToSchema(v, c),
 			})
 		}
 		return r
 
 	case reflect.Value:
-		return goToSchema(y.Interface(), transformations...)
+		return goToSchema(y.Interface(), c)
 
 	default:
 		v := reflect.ValueOf(x)
@@ -202,7 +236,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 			for _, k := range v.MapKeys() {
 				r.Field = append(r.Field, Field{
 					Name:  k.String(),
-					Value: goToSchema(v.MapIndex(k), transformations...),
+					Value: goToSchema(v.MapIndex(k), c),
 				})
 			}
 			return r
@@ -222,11 +256,11 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 
 				r.Field = append(r.Field, Field{
 					Name:  name,
-					Value: goToSchema(v.Field(i), transformations...),
+					Value: goToSchema(v.Field(i), c),
 				})
 			}
 
-			for _, transformation := range transformations {
+			for _, transformation := range c.transformations {
 				v, ok := transformation(x, r)
 				if ok {
 					return v
@@ -239,7 +273,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 		if v.Kind() == reflect.Slice {
 			var r = &List{}
 			for i := 0; i < v.Len(); i++ {
-				r.Items = append(r.Items, goToSchema(v.Index(i), transformations...))
+				r.Items = append(r.Items, goToSchema(v.Index(i), c))
 			}
 			return r
 		}
@@ -258,7 +292,7 @@ func MustToGo(x Schema, options ...toGoConfigFunc) any {
 
 type toGoConfigFunc func(c *toGoConfig)
 
-func WithRegistry(registry *Registry) toGoConfigFunc {
+func WithRulesFromRegistry(registry *Registry) toGoConfigFunc {
 	return WithOnlyTheseRules(registry.matchingRules...)
 }
 func WithoutDefaultRegistry() toGoConfigFunc {
