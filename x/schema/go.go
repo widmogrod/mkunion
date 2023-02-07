@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 func FromGo(x any, transformations ...TransformFunc) Schema {
@@ -247,7 +248,15 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 	panic(fmt.Errorf("goToSchema: unsupported type: %T", x))
 }
 
-func ToGo(x Schema, rules ...RuleMatcher) any {
+func MustToGo(x Schema, rules ...RuleMatcher) any {
+	v, err := ToGo(x, rules...)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func ToGo(x Schema, rules ...RuleMatcher) (any, error) {
 	finalRules := append(defaultRegistry.matchingRules, rules...)
 
 	var c = &Config{
@@ -292,41 +301,51 @@ func (c *Config) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	return c.defaultMapDef
 }
 
-func schemaToGo(x Schema, c *Config, path []string) any {
-	return MustMatchSchema(
+func schemaToGo(x Schema, c *Config, path []string) (any, error) {
+	return MustMatchSchemaR2(
 		x,
-		func(x *None) any {
-			return nil
+		func(x *None) (any, error) {
+			return nil, nil
 		},
-		func(x *Bool) any {
-			return bool(*x)
+		func(x *Bool) (any, error) {
+			return bool(*x), nil
 		},
-		func(x *Number) any {
-			return float64(*x)
+		func(x *Number) (any, error) {
+			return float64(*x), nil
 		},
-		func(x *String) any {
-			return string(*x)
+		func(x *String) (any, error) {
+			return string(*x), nil
 		},
-		func(x *List) any {
+		func(x *List) (any, error) {
 			build := c.ListDefFor(x, path).NewListBuilder()
 			for _, v := range x.Items {
-				err := build.Append(schemaToGo(v, c, append(path, "[*]")))
+				value, err := schemaToGo(v, c, append(path, "[*]"))
 				if err != nil {
-					panic(err)
+					return nil, err
+				}
+
+				err = build.Append(value)
+				if err != nil {
+					return nil, fmt.Errorf("schemaToGo: at path %s, at type %T, cause %w", strings.Join(path, "."), x, err)
 				}
 			}
 
-			return build.Build()
+			return build.Build(), nil
 		},
-		func(x *Map) any {
+		func(x *Map) (any, error) {
 			build := c.MapDefFor(x, path).NewMapBuilder()
 			for _, field := range x.Field {
-				err := build.Set(field.Name, schemaToGo(field.Value, c, append(path, field.Name)))
+				value, err := schemaToGo(field.Value, c, append(path, field.Name))
 				if err != nil {
-					panic(err)
+					return nil, err
+				}
+
+				err = build.Set(field.Name, value)
+				if err != nil {
+					return nil, fmt.Errorf("schemaToGo: at path %s, at type %T, cause %w", strings.Join(path, "."), x, err)
 				}
 			}
 
-			return build.Build()
+			return build.Build(), nil
 		})
 }

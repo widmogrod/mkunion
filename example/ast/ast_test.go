@@ -28,7 +28,7 @@ func TestAstJsonConversionOnSimpleType(t *testing.T) {
 	}
 	assert.Equal(t, out, s)
 
-	var data = schema.ToGo(s)
+	var data = schema.MustToGo(s)
 	assert.Equal(t, in, data)
 
 	jsonData, err := schema.ToJSON(s)
@@ -97,7 +97,7 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 
 	assert.Equal(t, out, s, "schema transformation")
 
-	var data = schema.ToGo(s)
+	var data = schema.MustToGo(s)
 	assert.Equal(t, in, data, "back to original golang structs")
 
 	jsonData, err := schema.ToJSON(s)
@@ -116,6 +116,6 @@ func TestASTSchema(t *testing.T) {
 		},
 	}
 	s := schema.FromGo(v)
-	result := schema.ToGo(s)
+	result := schema.MustToGo(s)
 	assert.Equal(t, v, result)
 }

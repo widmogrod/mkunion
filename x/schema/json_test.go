@@ -61,13 +61,13 @@ func TestJsonToSchema(t *testing.T) {
 	schema, err := FromJSON(json)
 	assert.NoError(t, err)
 
-	gonative := ToGo(schema)
+	gonative := MustToGo(schema)
 	assert.Equal(t, map[string]interface{}{
 		"Foo": float64(1),
 		"Bar": float64(2),
 	}, gonative)
 
-	gostruct := ToGo(
+	gostruct := MustToGo(
 		schema,
 		WhenPath([]string{}, UseStruct(AStruct{})),
 	)
@@ -110,7 +110,7 @@ func TestOneOfJSON(t *testing.T) {
 		`{"A":{"Foo":0,"Bar":"bar","Other":null},"B":{"Baz":"baz","Count":0}}`,
 		string(backToJSON))
 
-	out := ToGo(sch,
+	out := MustToGo(sch,
 		WhenPath([]string{}, UseStruct(&SomeOneOf{})),
 		WhenPath([]string{"A"}, UseStruct(&TestStruct1{})),
 		WhenPath([]string{"B"}, UseStruct(&TestStruct2{})),

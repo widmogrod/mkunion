@@ -428,6 +428,7 @@ go test ./...
 ### V1.9.x
 - [x] Introduce schema helper functions like Get(schema, location), As[int](schema, default), Reduce[A](schema, init, func(schema, A) A) A
 - [x] Allow to have union with one element, this is useful for domain model that is not yet fully defined
+- [x] `x/schema` breaking change. `ToGo` returns any and error. Use `MustToGo` to get panic on error
 
 ### V1.10.x
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
