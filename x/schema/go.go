@@ -248,33 +248,76 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 	panic(fmt.Errorf("goToSchema: unsupported type: %T", x))
 }
 
-func MustToGo(x Schema, rules ...RuleMatcher) any {
-	v, err := ToGo(x, rules...)
+func MustToGo(x Schema, options ...toGoConfigFunc) any {
+	v, err := ToGo(x, options...)
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
 
-func ToGo(x Schema, rules ...RuleMatcher) (any, error) {
-	finalRules := append(defaultRegistry.matchingRules, rules...)
+type toGoConfigFunc func(c *toGoConfig)
 
-	var c = &toGoConfig{
-		defaultListDef: &NativeList{},
-		defaultMapDef:  &NativeMap{},
-		rules:          finalRules,
+func WithRegistry(registry *Registry) toGoConfigFunc {
+	return WithOnlyTheseRules(registry.matchingRules...)
+}
+func WithoutDefaultRegistry() toGoConfigFunc {
+	return func(c *toGoConfig) {
+		c.useDefaultRegistry = false
+	}
+}
+
+func WithExtraRules(rules ...RuleMatcher) toGoConfigFunc {
+	return func(c *toGoConfig) {
+		c.rules = append(c.rules, rules...)
+	}
+}
+
+func WithOnlyTheseRules(rules ...RuleMatcher) toGoConfigFunc {
+	return func(c *toGoConfig) {
+		c.useDefaultRegistry = false
+		c.rules = rules
+	}
+}
+
+func WithDefaultMaoDef(def TypeMapDefinition) toGoConfigFunc {
+	return func(c *toGoConfig) {
+		c.defaultMapDef = def
+	}
+}
+
+func WithDefaultListDef(def TypeListDefinition) toGoConfigFunc {
+	return func(c *toGoConfig) {
+		c.defaultListDef = def
+	}
+}
+
+var defaultToGoConfig = toGoConfig{
+	defaultListDef:     &NativeList{},
+	defaultMapDef:      &NativeMap{},
+	useDefaultRegistry: true,
+}
+
+func ToGo(x Schema, options ...toGoConfigFunc) (any, error) {
+	c := defaultToGoConfig
+	for _, option := range options {
+		option(&c)
 	}
 
-	return schemaToGo(x, c, nil)
+	if c.useDefaultRegistry {
+		c.rules = append(c.rules, defaultRegistry.matchingRules...)
+	}
+
+	return schemaToGo(x, &c, nil)
 }
 
 var unionMap = &UnionMap{}
 
 type toGoConfig struct {
-	defaultListDef TypeListDefinition
-	defaultMapDef  TypeMapDefinition
-
-	rules []RuleMatcher
+	defaultListDef     TypeListDefinition
+	defaultMapDef      TypeMapDefinition
+	rules              []RuleMatcher
+	useDefaultRegistry bool
 }
 
 func (c *toGoConfig) ListDefFor(x *List, path []string) TypeListDefinition {

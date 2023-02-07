@@ -151,7 +151,9 @@ func TestGoToSchema3(t *testing.T) {
 	schema := FromGo(data, WrapStruct(BStruct{}, "BStruct"))
 	assert.Equal(t, expected, schema)
 
-	result := MustToGo(schema, UnwrapStruct(BStruct{}, "BStruct"))
+	result := MustToGo(schema, WithOnlyTheseRules(
+		UnwrapStruct(BStruct{}, "BStruct")),
+	)
 	assert.Equal(t, data, result)
 }
 
@@ -275,11 +277,11 @@ func TestGoToSchema4(t *testing.T) {
 	)
 	assert.Equal(t, expected, schema)
 
-	result := MustToGo(schema,
+	result := MustToGo(schema, WithOnlyTheseRules(
 		UnwrapStruct(BStruct{}, "BStruct"),
 		WhenPath([]string{"*", "BStruct", "BaseStruct"}, UseStruct(&BaseStruct{})),
 		WhenPath([]string{"*", "BStruct", "List", "[*]"}, UseStruct(AStruct{})),
 		WhenPath([]string{"*", "BStruct", "Ma", "key"}, UseStruct(AStruct{})),
-	)
+	))
 	assert.Equal(t, data, result)
 }

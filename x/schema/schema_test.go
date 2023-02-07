@@ -87,7 +87,7 @@ func TestGeneratedDataConversion(t *testing.T) {
 	faker.FakeData(&data)
 
 	godata := FromGo(data)
-	gonative := MustToGo(godata, WhenPath(nil, UseStruct(GenerateData{})))
+	gonative := MustToGo(godata, WithOnlyTheseRules(WhenPath(nil, UseStruct(GenerateData{}))))
 
 	assert.Equal(t, data, gonative)
 }
@@ -131,7 +131,7 @@ func TestMaxScalars(t *testing.T) {
 		}
 
 		s := FromGo(max)
-		r := MustToGo(s, WhenPath(nil, UseStruct(Max{})))
+		r := MustToGo(s, WithOnlyTheseRules(WhenPath(nil, UseStruct(Max{}))))
 		assert.Equal(t, max, r)
 	})
 	t.Run("test lossy conversion from Max float 64 to respective scalars", func(t *testing.T) {
@@ -157,7 +157,7 @@ func TestMaxScalars(t *testing.T) {
 				{Name: "Uint64", Value: &m},
 			},
 		}
-		r := MustToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
+		r := MustToGo(s, WithOnlyTheseRules(WhenPath(nil, UseStruct(Max{})))).(Max)
 		// Ints
 		assert.Equal(t, int(math.Inf(1)), r.Int)
 		assert.Equal(t, int8(math.Inf(1)), r.Int8)
@@ -194,7 +194,7 @@ func TestMaxScalars(t *testing.T) {
 				{Name: "Uint64", Value: &m},
 			},
 		}
-		r := MustToGo(s, WhenPath(nil, UseStruct(Max{}))).(Max)
+		r := MustToGo(s, WithOnlyTheseRules(WhenPath(nil, UseStruct(Max{})))).(Max)
 		// Ints
 		assert.Equal(t, int(3), r.Int)
 		assert.Equal(t, int8(3), r.Int8)
@@ -478,7 +478,7 @@ func TestSchemaToGoStructs(t *testing.T) {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, uc.out, MustToGo(uc.in, uc.rules...))
+			assert.Equal(t, uc.out, MustToGo(uc.in, WithOnlyTheseRules(uc.rules...)))
 		})
 	}
 }
