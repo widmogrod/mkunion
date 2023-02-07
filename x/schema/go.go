@@ -259,7 +259,7 @@ func MustToGo(x Schema, rules ...RuleMatcher) any {
 func ToGo(x Schema, rules ...RuleMatcher) (any, error) {
 	finalRules := append(defaultRegistry.matchingRules, rules...)
 
-	var c = &Config{
+	var c = &toGoConfig{
 		defaultListDef: &NativeList{},
 		defaultMapDef:  &NativeMap{},
 		rules:          finalRules,
@@ -270,21 +270,21 @@ func ToGo(x Schema, rules ...RuleMatcher) (any, error) {
 
 var unionMap = &UnionMap{}
 
-type Config struct {
+type toGoConfig struct {
 	defaultListDef TypeListDefinition
 	defaultMapDef  TypeMapDefinition
 
 	rules []RuleMatcher
 }
 
-func (c *Config) ListDefFor(x *List, path []string) TypeListDefinition {
+func (c *toGoConfig) ListDefFor(x *List, path []string) TypeListDefinition {
 	if x.TypeDef != nil {
 		return x.TypeDef
 	}
 
 	return c.defaultListDef
 }
-func (c *Config) MapDefFor(x *Map, path []string) TypeMapDefinition {
+func (c *toGoConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	for _, rule := range c.rules {
 		if _, ok, _ := rule.UnwrapField(x); ok {
 			return unionMap
@@ -301,7 +301,7 @@ func (c *Config) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	return c.defaultMapDef
 }
 
-func schemaToGo(x Schema, c *Config, path []string) (any, error) {
+func schemaToGo(x Schema, c *toGoConfig, path []string) (any, error) {
 	return MustMatchSchemaR2(
 		x,
 		func(x *None) (any, error) {
