@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 )
 
@@ -167,7 +166,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 			return &v
 		}
 
-	case []interface{}:
+	case []any:
 		var r = &List{}
 		for _, v := range y {
 			r.Items = append(r.Items, goToSchema(v, transformations...))
@@ -250,10 +249,50 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 
 func ToGo(x Schema, rules ...RuleMatcher) any {
 	finalRules := append(defaultRegistry.matchingRules, rules...)
-	return schemaToGo(x, finalRules, nil)
+
+	var c = &Config{
+		defaultListDef: &NativeList{},
+		defaultMapDef:  &NativeMap{},
+		rules:          finalRules,
+	}
+
+	return schemaToGo(x, c, nil)
 }
 
-func schemaToGo(x Schema, rules []RuleMatcher, path []any) any {
+var unionMap = &UnionMap{}
+
+type Config struct {
+	defaultListDef TypeListDefinition
+	defaultMapDef  TypeMapDefinition
+
+	rules []RuleMatcher
+}
+
+func (c *Config) ListDefFor(x *List, path []string) TypeListDefinition {
+	if x.TypeDef != nil {
+		return x.TypeDef
+	}
+
+	return c.defaultListDef
+}
+func (c *Config) MapDefFor(x *Map, path []string) TypeMapDefinition {
+	for _, rule := range c.rules {
+		if _, ok, _ := rule.UnwrapField(x); ok {
+			return unionMap
+		}
+		if typeDef, ok := rule.MatchPath(path, x); ok {
+			return typeDef
+		}
+	}
+
+	if x.TypeDef != nil {
+		return x.TypeDef
+	}
+
+	return c.defaultMapDef
+}
+
+func schemaToGo(x Schema, c *Config, path []string) any {
 	return MustMatchSchema(
 		x,
 		func(x *None) any {
@@ -269,48 +308,25 @@ func schemaToGo(x Schema, rules []RuleMatcher, path []any) any {
 			return string(*x)
 		},
 		func(x *List) any {
-			var setter Setter = &NativeList{l: []any{}}
+			build := c.ListDefFor(x, path).NewListBuilder()
 			for _, v := range x.Items {
-				_ = setter.Set("value is ignored", schemaToGo(v, rules, append(path, "[*]")))
+				err := build.Append(schemaToGo(v, c, append(path, "[*]")))
+				if err != nil {
+					panic(err)
+				}
 			}
 
-			return setter.Get()
+			return build.Build()
 		},
 		func(x *Map) any {
-			var setters []Setter
-			for _, rule := range rules {
-				if y, ok, field := rule.UnwrapField(x); ok {
-					return schemaToGo(y, rules, append(path, field))
-				}
-
-				newSetter, ok := rule.MatchPath(path, x)
-				if ok {
-					setters = append(setters, newSetter)
-					break
-				}
-			}
-
-			setters = append(setters, &NativeMap{m: map[string]interface{}{}})
-
-			for _, setter := range setters {
-				var err error
-				for i := range x.Field {
-					key := x.Field[i].Name
-					value := x.Field[i].Value
-					err = setter.Set(key, schemaToGo(value, rules, append(path, key)))
-					if err != nil {
-						break
-					}
-				}
-
+			build := c.MapDefFor(x, path).NewMapBuilder()
+			for _, field := range x.Field {
+				err := build.Set(field.Name, schemaToGo(field.Value, c, append(path, field.Name)))
 				if err != nil {
-					log.Println("schemaToGo: setter err. next looop. err:", err)
-					continue
+					panic(err)
 				}
-
-				return setter.Get()
 			}
 
-			panic("reach unreachable!")
+			return build.Build()
 		})
 }

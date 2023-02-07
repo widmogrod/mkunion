@@ -7,6 +7,27 @@ import (
 	"strings"
 )
 
+type (
+	TypeListDefinition interface {
+		NewListBuilder() ListBuilder
+	}
+	TypeMapDefinition interface {
+		NewMapBuilder() MapBuilder
+	}
+)
+
+type (
+	ListBuilder interface {
+		Append(value any) error
+		Build() any
+	}
+
+	MapBuilder interface {
+		Set(key string, value any) error
+		Build() any
+	}
+)
+
 //go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema
 type (
 	None   struct{}
@@ -14,10 +35,12 @@ type (
 	Number float64
 	String string
 	List   struct {
-		Items []Schema
+		TypeDef TypeListDefinition
+		Items   []Schema
 	}
 	Map struct {
-		Field []Field
+		TypeDef TypeMapDefinition
+		Field   []Field
 	}
 )
 
@@ -34,27 +57,13 @@ func UnwrapStruct[A any](structt A, fromField string) *WhenField {
 	}
 }
 
-func UseStruct(t any) func() Setter {
-	rt := reflect.TypeOf(t)
-
-	isNotStruct := rt.Kind() != reflect.Struct
-	isNotPointerToStruct :=
-		rt.Kind() == reflect.Pointer &&
-			rt.Elem().Kind() != reflect.Struct
-
-	if isNotStruct && isNotPointerToStruct {
-		panic(fmt.Sprintf("UseStruct: not a struct, but %T", t))
-	}
-
-	return func() Setter {
-		return &StructSetter{
-			orginal: t,
-			r:       reflect.New(rt),
-		}
+func UseStruct(t any) TypeMapDefinition {
+	return &StructDefinition{
+		t: t,
 	}
 }
 
-func WhenPath(path []string, setter func() Setter) *WhenField {
+func WhenPath(path []string, setter TypeMapDefinition) *WhenField {
 	return &WhenField{
 		path:        path,
 		unwrapField: "",
@@ -63,7 +72,7 @@ func WhenPath(path []string, setter func() Setter) *WhenField {
 }
 
 type RuleMatcher interface {
-	MatchPath(path []any, x Schema) (Setter, bool)
+	MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
 	UnwrapField(x *Map) (Schema, bool, string)
 }
 
@@ -74,7 +83,7 @@ var (
 type (
 	WhenField struct {
 		path        []string
-		setter      func() Setter
+		setter      TypeMapDefinition
 		unwrapField string
 	}
 )
@@ -95,7 +104,7 @@ func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
 	return nil, false, ""
 }
 
-func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
+func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool) {
 	if len(r.path) > 1 && r.path[0] == "*" {
 		if len(path) < len(r.path)-1 {
 			return nil, false
@@ -111,7 +120,7 @@ func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
 					return nil, false
 				}
 			}
-			return r.setter(), true
+			return r.setter, true
 		}
 	}
 
@@ -147,7 +156,7 @@ func (r *WhenField) MatchPath(path []any, x Schema) (Setter, bool) {
 		}
 	}
 
-	return r.setter(), true
+	return r.setter, true
 }
 
 type (
@@ -163,6 +172,35 @@ type (
 		l []any
 	}
 )
+
+func (s *NativeList) Append(value any) error {
+	s.l = append(s.l, value)
+	return nil
+}
+
+func (s *NativeList) Build() any {
+	return s.Get()
+}
+
+var _ ListBuilder = (*NativeList)(nil)
+
+var _ MapBuilder = (*NativeMap)(nil)
+
+func (s *NativeList) NewListBuilder() ListBuilder {
+	return &NativeList{
+		l: nil,
+	}
+}
+
+func (s *NativeMap) NewMapBuilder() MapBuilder {
+	return &NativeMap{
+		m: make(map[string]any),
+	}
+}
+
+func (s *NativeMap) Build() any {
+	return s.Get()
+}
 
 type Setter interface {
 	Set(k string, value any) error
@@ -346,6 +384,10 @@ func (s *StructSetter) Set(key string, value any) error {
 
 func (s *StructSetter) Get() any {
 	return s.r.Elem().Interface()
+}
+
+func (s *StructSetter) Build() any {
+	return s.Get()
 }
 
 func (s *NativeMap) Set(k string, value any) error {

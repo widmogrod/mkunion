@@ -5,6 +5,33 @@ import (
 	"testing"
 )
 
+func TestGoToSchemaTypeDef(t *testing.T) {
+	expected := AStruct{
+		Foo: 123,
+		Bar: 333,
+	}
+
+	schema := &Map{
+		TypeDef: NewStructDef[AStruct](),
+		Field: []Field{
+			{
+				Name:  "Foo",
+				Value: MkInt(123),
+			}, {
+				Name:  "Bar",
+				Value: MkInt(333),
+			},
+		},
+	}
+	result := ToGo(schema)
+
+	assert.Equal(
+		t,
+		expected,
+		result,
+	)
+}
+
 func TestGoToSchema(t *testing.T) {
 	data := AStruct{
 		Foo: 123,
