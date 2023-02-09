@@ -30,6 +30,12 @@ func WithExtraTransformations(transformations ...TransformFunc) fromGoConfigFunc
 	}
 }
 
+//func WithUnionsWrappedAsPkgName() fromGoConfigFunc {
+//	return func(c *fromGoConfig) {
+//		c.transformations = append(c.transformations, UnionAsPkgName)
+//	}
+//}
+
 func FromGo(x any, options ...fromGoConfigFunc) Schema {
 	c := fromGoConfig{
 		useDefaultRegistry: true,
@@ -355,10 +361,6 @@ type toGoConfig struct {
 }
 
 func (c *toGoConfig) ListDefFor(x *List, path []string) TypeListDefinition {
-	if x.TypeDef != nil {
-		return x.TypeDef
-	}
-
 	return c.defaultListDef
 }
 func (c *toGoConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
@@ -369,10 +371,6 @@ func (c *toGoConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 		if typeDef, ok := rule.MatchPath(path, x); ok {
 			return typeDef
 		}
-	}
-
-	if x.TypeDef != nil {
-		return x.TypeDef
 	}
 
 	return c.defaultMapDef

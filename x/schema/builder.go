@@ -5,14 +5,6 @@ import (
 	"reflect"
 )
 
-func NewStructDef[A any]() *StructDefinition {
-	var r A
-
-	return &StructDefinition{
-		t: r,
-	}
-}
-
 var _ TypeMapDefinition = &StructDefinition{}
 
 type StructDefinition struct {

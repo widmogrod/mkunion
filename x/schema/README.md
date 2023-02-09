@@ -58,6 +58,7 @@ assert.Equal(t, expected, nativego)
       Gives better control on how schema is converted to golang.
       It's especially important from security reasons, whey you want to allow rules only whitelisted rules, for user generated json input.
 - [x] Support for `FromGo` now accepts options like `WithTransformationsFromRegistry`, etc. for similar reason as stated above
+- [x] Schema support interface for custom type setters, that don't require reflection, and mkunion can leverage them. Use `UseTypeDef` eg. `WhenPath([]string{}, UseTypeDef(&someTypeDef{})),`
 
 ### V0.2.x
 - [ ] Support json tags in golang to map field names to schema

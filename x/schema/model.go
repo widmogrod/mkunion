@@ -35,12 +35,10 @@ type (
 	Number float64
 	String string
 	List   struct {
-		TypeDef TypeListDefinition
-		Items   []Schema
+		Items []Schema
 	}
 	Map struct {
-		TypeDef TypeMapDefinition
-		Field   []Field
+		Field []Field
 	}
 )
 
@@ -61,6 +59,10 @@ func UseStruct(t any) TypeMapDefinition {
 	return &StructDefinition{
 		t: t,
 	}
+}
+
+func UseTypeDef(definition TypeMapDefinition) TypeMapDefinition {
+	return definition
 }
 
 func WhenPath(path []string, setter TypeMapDefinition) *WhenField {
@@ -105,6 +107,10 @@ func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
 }
 
 func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool) {
+	if len(r.path) == 1 && r.path[0] == "*" {
+		return r.setter, true
+	}
+
 	if len(r.path) > 1 && r.path[0] == "*" {
 		if len(path) < len(r.path)-1 {
 			return nil, false
@@ -116,7 +122,7 @@ func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
 			for i := 1; i < pathLen; i++ {
 				//parts := strings.Split(r.path[1], "?.")
 				// compare from the end
-				if r.path[len(r.path)-i] != path[len(path)-i] {
+				if r.path[len(r.path)-i] != path[len(path)-i] && r.path[len(r.path)-i] != "*" {
 					return nil, false
 				}
 			}
@@ -130,7 +136,7 @@ func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
 
 	for i := range r.path {
 		parts := strings.Split(r.path[i], "?.")
-		if path[i] != parts[0] {
+		if path[i] != parts[0] && parts[0] != "*" {
 			return nil, false
 		}
 
@@ -256,7 +262,7 @@ func (s *StructSetter) set(f reflect.Value, value any) error {
 			vv := reflect.New(f.Type().Elem())
 			err := s.set(vv, value)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			f.Set(vv)
 
