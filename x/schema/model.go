@@ -232,154 +232,158 @@ func (s *StructSetter) Set(key string, value any) error {
 	}
 
 	if f.IsValid() && f.CanSet() {
-		// Try to do graceful conversion of types
-		// This is LOSS-FULL conversion for some types
-		switch f.Type().Kind() {
-		case reflect.Int,
-			reflect.Int8,
-			reflect.Int16,
-			reflect.Int32,
-			reflect.Int64:
-			switch v := value.(type) {
-			case float32:
-				f.SetInt(int64(v))
-			case float64:
-				f.SetInt(int64(v))
-			}
-			return nil
+		// Try to do graceful conversion of reflections
+		// This is LOSS-FULL conversion for some reflections
+		return s.set(f, value)
+	}
 
-		case reflect.Uint,
-			reflect.Uint8,
-			reflect.Uint16,
-			reflect.Uint32,
-			reflect.Uint64:
-			switch v := value.(type) {
-			case float32:
-				f.SetUint(uint64(v))
-			case float64:
-				f.SetUint(uint64(v))
-			}
+	return errors.New(fmt.Sprintf("schema.StructSetter.Set can't set value of type %T for key %s", value, key))
+}
 
-		case reflect.Float32,
-			reflect.Float64:
-			switch v := value.(type) {
-			case float32:
-				f.SetFloat(float64(v))
-			case float64:
-				f.SetFloat(v)
-			}
-
-		case reflect.Slice:
-			// when struct field has type like []string
-			// and value that should be set is []interface{} but element inside is string
-			// do conversion!
-			v := reflect.ValueOf(value)
-			if v.Len() == 0 {
-				return nil
-			}
-
-			if v.Kind() == reflect.Slice {
-				st := reflect.SliceOf(f.Type().Elem())
-				ss := reflect.MakeSlice(st, v.Len(), v.Len())
-
-				for i := 0; i < v.Len(); i++ {
-					ss.Index(i).Set(v.Index(i).Elem())
-				}
-
-				f.Set(ss)
-			} else {
-				f.Set(v)
-			}
-
-		case reflect.Map:
-			// when struct field has type like map[string]string
-			// and value that should be set is map[string]interface{} but element inside is string
-			// do conversion!
-			v := reflect.ValueOf(value)
-			if v.Len() == 0 {
-				return nil
-			}
-
-			if v.Kind() == reflect.Map {
-				st := reflect.MapOf(f.Type().Key(), f.Type().Elem())
-				ss := reflect.MakeMap(st)
-
-				for _, key := range v.MapKeys() {
-					ss.SetMapIndex(key, v.MapIndex(key).Elem())
-				}
-
-				f.Set(ss)
-			} else {
-				f.Set(v)
-			}
-
-		default:
-			v := reflect.ValueOf(value)
-			if v.Type().AssignableTo(f.Type()) {
-				f.Set(v)
-			} else if v.Type().ConvertibleTo(f.Type()) {
-				f.Set(v.Convert(f.Type()))
-			} else {
-				destinationType := f.Type().Elem().Kind()
-				inputType := v.Type().Kind()
-
-				if destinationType == inputType &&
-					f.Kind() == reflect.Ptr {
-					switch v2 := value.(type) {
-					case string:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case int:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case int8:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case int16:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case int32:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case int64:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case uint:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case uint8:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case uint16:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case uint32:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case uint64:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case float32:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case float64:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					case bool:
-						f.Set(reflect.ValueOf(&v2))
-						return nil
-					}
-				}
-			}
-
+func (s *StructSetter) set(f reflect.Value, value any) error {
+	switch f.Type().Kind() {
+	case reflect.Pointer:
+		v := reflect.ValueOf(value)
+		if v.Type().AssignableTo(f.Type()) {
 			f.Set(v)
+			return nil
+		} else if v.Type().ConvertibleTo(f.Type()) {
+			f.Set(v.Convert(f.Type()))
 			return nil
 		}
 
-		return nil
+		if f.IsNil() {
+			vv := reflect.New(f.Type().Elem())
+			err := s.set(vv, value)
+			if err != nil {
+				panic(err)
+			}
+			f.Set(vv)
+
+			return nil
+		} else {
+			return s.set(f.Elem(), value)
+		}
+
+	case reflect.Interface,
+		reflect.Struct:
+		v := reflect.ValueOf(value)
+		if v.Type().AssignableTo(f.Type()) {
+			f.Set(v)
+			return nil
+		} else if v.Type().ConvertibleTo(f.Type()) {
+			f.Set(v.Convert(f.Type()))
+			return nil
+		}
+
+	// Try to do graceful conversion of reflections
+	// This is LOSS-FULL conversion for some reflections
+	case reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64:
+		switch v := value.(type) {
+		case float32:
+			f.SetInt(int64(v))
+			return nil
+		case float64:
+			f.SetInt(int64(v))
+			return nil
+		}
+
+	case reflect.Uint,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64:
+		switch v := value.(type) {
+		case float32:
+			f.SetUint(uint64(v))
+			return nil
+		case float64:
+			f.SetUint(uint64(v))
+			return nil
+		}
+
+	case reflect.Float32,
+		reflect.Float64:
+		switch v := value.(type) {
+		case float32:
+			f.SetFloat(float64(v))
+			return nil
+		case float64:
+			f.SetFloat(v)
+			return nil
+		}
+
+	case reflect.String:
+		switch v := value.(type) {
+		case string:
+			f.SetString(v)
+			return nil
+		}
+
+	case reflect.Bool:
+		switch v := value.(type) {
+		case bool:
+			f.SetBool(v)
+			return nil
+		}
+
+	case reflect.Slice:
+		// when struct field has type like []string
+		// and value that should be set is []interface{} but element inside is string
+		// do conversion!
+		v := reflect.ValueOf(value)
+		if v.Len() == 0 {
+			return nil
+		}
+
+		if v.Kind() == reflect.Slice {
+			st := reflect.SliceOf(f.Type().Elem())
+			ss := reflect.MakeSlice(st, v.Len(), v.Len())
+
+			for i := 0; i < v.Len(); i++ {
+				err := s.set(ss.Index(i), v.Index(i).Interface())
+				if err != nil {
+					return err
+				}
+			}
+
+			f.Set(ss)
+			return nil
+		}
+
+	case reflect.Map:
+		// when struct field has type like map[string]string
+		// and value that should be set is map[string]interface{} but element inside is string
+		// do conversion!
+		v := reflect.ValueOf(value)
+		if v.Len() == 0 {
+			return nil
+		}
+
+		if v.Kind() == reflect.Map {
+			st := reflect.MapOf(f.Type().Key(), f.Type().Elem())
+			ss := reflect.MakeMap(st)
+
+			destinationType := f.Type().Elem()
+			for _, key := range v.MapKeys() {
+				newValue := reflect.New(destinationType).Elem()
+				err := s.set(newValue, v.MapIndex(key).Interface())
+				if err != nil {
+					return err
+				}
+				ss.SetMapIndex(key, newValue)
+			}
+
+			f.Set(ss)
+			return nil
+		}
 	}
 
-	return errors.New(fmt.Sprintf("StructSetter:Set can't set value of type %T for key %s", value, key))
+	return errors.New(fmt.Sprintf("schema.StructSetter.set can't set value of type %T for key %s", value, f.String()))
 }
 
 func (s *StructSetter) Get() any {
@@ -420,6 +424,7 @@ func MkString(s string) *String {
 type TransformFunc = func(x any, schema Schema) (Schema, bool)
 
 func WrapStruct[A any](structt A, inField string) TransformFunc {
+
 	return func(x any, schema Schema) (Schema, bool) {
 		_, ok := x.(A)
 		if !ok {
@@ -435,20 +440,4 @@ func WrapStruct[A any](structt A, inField string) TransformFunc {
 			},
 		}, true
 	}
-}
-
-func FewTransformations(xs ...[]TransformFunc) []TransformFunc {
-	var out []TransformFunc
-	for _, x := range xs {
-		out = append(out, x...)
-	}
-	return out
-}
-
-func FewRules(xs ...[]RuleMatcher) []RuleMatcher {
-	var out []RuleMatcher
-	for _, x := range xs {
-		out = append(out, x...)
-	}
-	return out
 }
