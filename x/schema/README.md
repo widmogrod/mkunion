@@ -59,8 +59,8 @@ assert.Equal(t, expected, nativego)
       It's especially important from security reasons, whey you want to allow rules only whitelisted rules, for user generated json input.
 - [x] Support for `FromGo` now accepts options like `WithTransformationsFromRegistry`, etc. for similar reason as stated above
 - [x] Schema support interface for custom type setters, that don't require reflection, and mkunion can leverage them. Use `UseTypeDef` eg. `WhenPath([]string{}, UseTypeDef(&someTypeDef{})),`
+- [x] Schema registry to support collision on types
 
 ### V0.2.x
 - [ ] Support json tags in golang to map field names to schema
 - [ ] Add cata, ana, and hylo morphisms
-- [ ] Schema registry to support collision on types
