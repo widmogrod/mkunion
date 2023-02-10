@@ -53,7 +53,7 @@ func TestGoToSchema2(t *testing.T) {
 			},
 		},
 	}
-	schema := FromGo(data, WithOnlyTheseTransformations(WrapStruct(AStruct{}, "AStruct")))
+	schema := FromGo(data, WithOnlyTheseRules(WrapStruct(AStruct{}, "AStruct")))
 
 	assert.Equal(
 		t,
@@ -121,7 +121,7 @@ func TestGoToSchema3(t *testing.T) {
 			},
 		},
 	}
-	schema := FromGo(data, WithOnlyTheseTransformations(WrapStruct(BStruct{}, "BStruct")))
+	schema := FromGo(data, WithOnlyTheseRules(WrapStruct(BStruct{}, "BStruct")))
 	assert.Equal(t, expected, schema)
 
 	result := MustToGo(schema, WithOnlyTheseRules(
@@ -245,7 +245,7 @@ func TestGoToSchema4(t *testing.T) {
 			},
 		},
 	}
-	schema := FromGo(data, WithOnlyTheseTransformations(
+	schema := FromGo(data, WithOnlyTheseRules(
 		WrapStruct(BStruct{}, "BStruct"),
 	))
 	assert.Equal(t, expected, schema)

@@ -6,13 +6,49 @@ import (
 	"strings"
 )
 
-type fromGoConfig struct {
-	localRules  []GoRuleMatcher
-	registry    *Registry
-	useRegistry bool
+var (
+	defaultListDef = &NativeList{}
+	defaultMapDef  = &NativeMap{}
+	unionMap       = &UnionMap{}
+)
+
+type goConfig struct {
+	defaultListDef TypeListDefinition
+	defaultMapDef  TypeMapDefinition
+	localRules     []GoRuleMatcher
+	registry       *Registry
+	useRegistry    bool
 }
 
-func (c *fromGoConfig) Transform(x any, r *Map) Schema {
+func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
+	return c.defaultListDef
+}
+
+func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
+	for _, rule := range c.localRules {
+		if _, ok, _ := rule.UnwrapField(x); ok {
+			return unionMap
+		}
+		if typeDef, ok := rule.MatchPath(path, x); ok {
+			return typeDef
+		}
+	}
+
+	if c.useRegistry && c.registry != nil {
+		for _, rule := range c.registry.matchingRules {
+			if _, ok, _ := rule.UnwrapField(x); ok {
+				return unionMap
+			}
+			if typeDef, ok := rule.MatchPath(path, x); ok {
+				return typeDef
+			}
+		}
+	}
+
+	return c.defaultMapDef
+}
+
+func (c *goConfig) Transform(x any, r *Map) Schema {
 	for _, rule := range c.localRules {
 		v, ok := rule.Transform(x, r)
 		if ok {
@@ -32,30 +68,48 @@ func (c *fromGoConfig) Transform(x any, r *Map) Schema {
 	return r
 }
 
-type fromGoConfigFunc func(*fromGoConfig)
+type goConfigFunc func(c *goConfig)
 
-func WithTransformationsFromRegistry(r *Registry) fromGoConfigFunc {
-	return func(c *fromGoConfig) {
+func WithRulesFromRegistry(registry *Registry) goConfigFunc {
+	return func(c *goConfig) {
 		c.useRegistry = true
-		c.registry = r
+		c.registry = registry
 	}
 }
 
-func WithOnlyTheseTransformations(transformations ...GoRuleMatcher) fromGoConfigFunc {
-	return func(c *fromGoConfig) {
+func WithoutDefaultRegistry() goConfigFunc {
+	return func(c *goConfig) {
 		c.useRegistry = false
-		c.localRules = transformations
 	}
 }
 
-func WithExtraTransformations(transformations ...GoRuleMatcher) fromGoConfigFunc {
-	return func(c *fromGoConfig) {
-		c.localRules = append(c.localRules, transformations...)
+func WithExtraRules(rules ...GoRuleMatcher) goConfigFunc {
+	return func(c *goConfig) {
+		c.localRules = append(c.localRules, rules...)
 	}
 }
 
-func FromGo(x any, options ...fromGoConfigFunc) Schema {
-	c := fromGoConfig{
+func WithOnlyTheseRules(rules ...GoRuleMatcher) goConfigFunc {
+	return func(c *goConfig) {
+		c.useRegistry = false
+		c.localRules = rules
+	}
+}
+
+func WithDefaultMaoDef(def TypeMapDefinition) goConfigFunc {
+	return func(c *goConfig) {
+		c.defaultMapDef = def
+	}
+}
+
+func WithDefaultListDef(def TypeListDefinition) goConfigFunc {
+	return func(c *goConfig) {
+		c.defaultListDef = def
+	}
+}
+
+func FromGo(x any, options ...goConfigFunc) Schema {
+	c := goConfig{
 		useRegistry: true,
 		registry:    defaultRegistry,
 	}
@@ -66,7 +120,7 @@ func FromGo(x any, options ...fromGoConfigFunc) Schema {
 	return goToSchema(x, &c)
 }
 
-func goToSchema(x any, c *fromGoConfig) Schema {
+func goToSchema(x any, c *goConfig) Schema {
 	switch y := x.(type) {
 	case nil:
 		return &None{}
@@ -296,7 +350,7 @@ func goToSchema(x any, c *fromGoConfig) Schema {
 	panic(fmt.Errorf("goToSchema: unsupported type: %T", x))
 }
 
-func MustToGo(x Schema, options ...toGoConfigFunc) any {
+func MustToGo(x Schema, options ...goConfigFunc) any {
 	v, err := ToGo(x, options...)
 	if err != nil {
 		panic(err)
@@ -304,54 +358,8 @@ func MustToGo(x Schema, options ...toGoConfigFunc) any {
 	return v
 }
 
-type toGoConfigFunc func(c *toGoConfig)
-
-func WithRulesFromRegistry(registry *Registry) toGoConfigFunc {
-	return func(c *toGoConfig) {
-		c.useRegistry = true
-		c.registry = registry
-	}
-}
-func WithoutDefaultRegistry() toGoConfigFunc {
-	return func(c *toGoConfig) {
-		c.useRegistry = false
-	}
-}
-
-func WithExtraRules(rules ...GoRuleMatcher) toGoConfigFunc {
-	return func(c *toGoConfig) {
-		c.localRules = append(c.localRules, rules...)
-	}
-}
-
-func WithOnlyTheseRules(rules ...GoRuleMatcher) toGoConfigFunc {
-	return func(c *toGoConfig) {
-		c.useRegistry = false
-		c.localRules = rules
-	}
-}
-
-func WithDefaultMaoDef(def TypeMapDefinition) toGoConfigFunc {
-	return func(c *toGoConfig) {
-		c.defaultMapDef = def
-	}
-}
-
-func WithDefaultListDef(def TypeListDefinition) toGoConfigFunc {
-	return func(c *toGoConfig) {
-		c.defaultListDef = def
-	}
-}
-
-var (
-	defaultListDef = &NativeList{}
-	defaultMapDef  = &NativeMap{}
-
-	unionMap = &UnionMap{}
-)
-
-func ToGo(x Schema, options ...toGoConfigFunc) (any, error) {
-	c := toGoConfig{
+func ToGo(x Schema, options ...goConfigFunc) (any, error) {
+	c := goConfig{
 		defaultListDef: defaultListDef,
 		defaultMapDef:  defaultMapDef,
 		useRegistry:    true,
@@ -364,42 +372,7 @@ func ToGo(x Schema, options ...toGoConfigFunc) (any, error) {
 	return schemaToGo(x, &c, nil)
 }
 
-type toGoConfig struct {
-	defaultListDef TypeListDefinition
-	defaultMapDef  TypeMapDefinition
-	localRules     []GoRuleMatcher
-	registry       *Registry
-	useRegistry    bool
-}
-
-func (c *toGoConfig) ListDefFor(x *List, path []string) TypeListDefinition {
-	return c.defaultListDef
-}
-func (c *toGoConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
-	for _, rule := range c.localRules {
-		if _, ok, _ := rule.UnwrapField(x); ok {
-			return unionMap
-		}
-		if typeDef, ok := rule.MatchPath(path, x); ok {
-			return typeDef
-		}
-	}
-
-	if c.useRegistry && c.registry != nil {
-		for _, rule := range c.registry.matchingRules {
-			if _, ok, _ := rule.UnwrapField(x); ok {
-				return unionMap
-			}
-			if typeDef, ok := rule.MatchPath(path, x); ok {
-				return typeDef
-			}
-		}
-	}
-
-	return c.defaultMapDef
-}
-
-func schemaToGo(x Schema, c *toGoConfig, path []string) (any, error) {
+func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 	return MustMatchSchemaR2(
 		x,
 		func(x *None) (any, error) {
