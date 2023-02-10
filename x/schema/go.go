@@ -63,6 +63,9 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 
 func (c *goConfig) Transform(x any, r *Map) Schema {
 	for _, rule := range c.localRules {
+		if ruleSet, ok := rule.(unionFormatterAware); ok {
+			ruleSet.UseUnionFormatter(c.formatter())
+		}
 		v, ok := rule.SchemaToUnionType(x, r)
 		if ok {
 			return v
@@ -71,6 +74,9 @@ func (c *goConfig) Transform(x any, r *Map) Schema {
 
 	if c.useRegistry {
 		for _, rule := range c.registry.rules {
+			if ruleSet, ok := rule.(unionFormatterAware); ok {
+				ruleSet.UseUnionFormatter(c.formatter())
+			}
 			v, ok := rule.SchemaToUnionType(x, r)
 			if ok {
 				return v

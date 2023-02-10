@@ -46,7 +46,7 @@ func RegisterUnionTypes[A any](x *UnionVariants[A]) {
 func NewRegistry() *Registry {
 	return &Registry{
 		rules:          nil,
-		unionFormatter: FormatUnionNameUsingTypeName,
+		unionFormatter: FormatUnionNameUsingTypeNameWithPackage,
 	}
 }
 
