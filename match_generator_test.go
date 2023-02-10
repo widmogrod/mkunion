@@ -22,6 +22,29 @@ import (
 	"fmt"
 )
 
+func Match1[TIn, TOut, T1 any](
+	x TIn,
+	f1 func(x T1) TOut,
+	df func(x TIn) TOut,
+) TOut {
+	switch y := any(x).(type) {
+	case T1:
+		return f1(y)
+	}
+
+	return df(x)
+}
+
+func MustMatch1[TIn, TOut, T1 any](
+	x TIn,
+	f1 func(x T1) TOut,
+) TOut {
+	return Match1(x, f1, func(x TIn) TOut {
+		var t1 T1
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T)", x, t1)))
+	})
+}
+
 func Match2[TIn, TOut, T1, T2 any](
 	x TIn,
 	f1 func(x T1) TOut,
@@ -80,6 +103,29 @@ func MustMatch3[TIn, TOut, T1, T2, T3 any](
 		var t2 T2
 		var t3 T3
 		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T)", x, t1, t2, t3)))
+	})
+}
+
+func Match1R2[TIn, TOut1, TOut2, T1 any](
+	x TIn,
+	f1 func(x T1) (TOut1, TOut2),
+	df func(x TIn) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	switch y := any(x).(type) {
+	case T1:
+		return f1(y)
+	}
+
+	return df(x)
+}
+
+func MustMatch1R2[TIn, TOut1, TOut2, T1 any](
+	x TIn,
+	f1 func(x T1) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return Match1R2(x, f1, func(x TIn) (TOut1, TOut2) {
+		var t1 T1
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T)", x, t1)))
 	})
 }
 

@@ -2,16 +2,149 @@ package schema
 
 import (
 	"fmt"
-	"log"
 	"reflect"
+	"strings"
 )
 
-func FromGo(x any, transformations ...TransformFunc) Schema {
-	finalTransformations := append(defaultRegistry.transformations, transformations...)
-	return goToSchema(x, finalTransformations...)
+var (
+	defaultListDef = &NativeList{}
+	defaultMapDef  = &NativeMap{}
+	unionMap       = &UnionMap{}
+)
+
+type unionFormatterAware interface {
+	UseUnionFormatter(f UnionFormatFunc)
 }
 
-func goToSchema(x any, transformations ...TransformFunc) Schema {
+type goConfig struct {
+	defaultListDef TypeListDefinition
+	defaultMapDef  TypeMapDefinition
+	localRules     []RuleMatcher
+	registry       *Registry
+	useRegistry    bool
+	unionFormatter UnionFormatFunc
+}
+
+func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
+	return c.defaultListDef
+}
+
+func (c *goConfig) formatter() UnionFormatFunc {
+	if c.unionFormatter == nil {
+		return c.registry.unionFormatter
+	}
+
+	return c.unionFormatter
+}
+
+func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
+	for _, rule := range c.localRules {
+		if ruleSet, ok := rule.(unionFormatterAware); ok {
+			ruleSet.UseUnionFormatter(c.formatter())
+		}
+		if typeDef, ok := rule.MapDefFor(x, path); ok {
+			return typeDef
+		}
+	}
+
+	if c.useRegistry && c.registry != nil {
+		for _, rule := range c.registry.rules {
+			if ruleSet, ok := rule.(unionFormatterAware); ok {
+				ruleSet.UseUnionFormatter(c.formatter())
+			}
+			if typeDef, ok := rule.MapDefFor(x, path); ok {
+				return typeDef
+			}
+		}
+	}
+
+	return c.defaultMapDef
+}
+
+func (c *goConfig) Transform(x any, r *Map) Schema {
+	for _, rule := range c.localRules {
+		if ruleSet, ok := rule.(unionFormatterAware); ok {
+			ruleSet.UseUnionFormatter(c.formatter())
+		}
+		v, ok := rule.SchemaToUnionType(x, r)
+		if ok {
+			return v
+		}
+	}
+
+	if c.useRegistry {
+		for _, rule := range c.registry.rules {
+			if ruleSet, ok := rule.(unionFormatterAware); ok {
+				ruleSet.UseUnionFormatter(c.formatter())
+			}
+			v, ok := rule.SchemaToUnionType(x, r)
+			if ok {
+				return v
+			}
+		}
+	}
+
+	return r
+}
+
+type goConfigFunc func(c *goConfig)
+
+func WithRulesFromRegistry(registry *Registry) goConfigFunc {
+	return func(c *goConfig) {
+		c.useRegistry = true
+		c.registry = registry
+	}
+}
+
+func WithoutDefaultRegistry() goConfigFunc {
+	return func(c *goConfig) {
+		c.useRegistry = false
+	}
+}
+
+func WithExtraRules(rules ...RuleMatcher) goConfigFunc {
+	return func(c *goConfig) {
+		c.localRules = append(c.localRules, rules...)
+	}
+}
+
+func WithOnlyTheseRules(rules ...RuleMatcher) goConfigFunc {
+	return func(c *goConfig) {
+		c.useRegistry = false
+		c.localRules = rules
+	}
+}
+
+func WithDefaultMaoDef(def TypeMapDefinition) goConfigFunc {
+	return func(c *goConfig) {
+		c.defaultMapDef = def
+	}
+}
+
+func WithDefaultListDef(def TypeListDefinition) goConfigFunc {
+	return func(c *goConfig) {
+		c.defaultListDef = def
+	}
+}
+func WithUnionFormatter(f UnionFormatFunc) goConfigFunc {
+	return func(c *goConfig) {
+		c.unionFormatter = f
+	}
+}
+
+func FromGo(x any, options ...goConfigFunc) Schema {
+	c := goConfig{
+		useRegistry: true,
+		registry:    defaultRegistry,
+	}
+	for _, option := range options {
+		option(&c)
+	}
+
+	return goToSchema(x, &c)
+}
+
+func goToSchema(x any, c *goConfig) Schema {
 	switch y := x.(type) {
 	case nil:
 		return &None{}
@@ -167,10 +300,10 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 			return &v
 		}
 
-	case []interface{}:
+	case []any:
 		var r = &List{}
 		for _, v := range y {
-			r.Items = append(r.Items, goToSchema(v, transformations...))
+			r.Items = append(r.Items, goToSchema(v, c))
 		}
 		return r
 
@@ -179,13 +312,13 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 		for k, v := range y {
 			r.Field = append(r.Field, Field{
 				Name:  k,
-				Value: goToSchema(v, transformations...),
+				Value: goToSchema(v, c),
 			})
 		}
 		return r
 
 	case reflect.Value:
-		return goToSchema(y.Interface(), transformations...)
+		return goToSchema(y.Interface(), c)
 
 	default:
 		v := reflect.ValueOf(x)
@@ -202,7 +335,7 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 			for _, k := range v.MapKeys() {
 				r.Field = append(r.Field, Field{
 					Name:  k.String(),
-					Value: goToSchema(v.MapIndex(k), transformations...),
+					Value: goToSchema(v.MapIndex(k), c),
 				})
 			}
 			return r
@@ -222,24 +355,17 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 
 				r.Field = append(r.Field, Field{
 					Name:  name,
-					Value: goToSchema(v.Field(i), transformations...),
+					Value: goToSchema(v.Field(i), c),
 				})
 			}
 
-			for _, transformation := range transformations {
-				v, ok := transformation(x, r)
-				if ok {
-					return v
-				}
-			}
-
-			return r
+			return c.Transform(x, r)
 		}
 
 		if v.Kind() == reflect.Slice {
 			var r = &List{}
 			for i := 0; i < v.Len(); i++ {
-				r.Items = append(r.Items, goToSchema(v.Index(i), transformations...))
+				r.Items = append(r.Items, goToSchema(v.Index(i), c))
 			}
 			return r
 		}
@@ -248,69 +374,73 @@ func goToSchema(x any, transformations ...TransformFunc) Schema {
 	panic(fmt.Errorf("goToSchema: unsupported type: %T", x))
 }
 
-func ToGo(x Schema, rules ...RuleMatcher) any {
-	finalRules := append(defaultRegistry.matchingRules, rules...)
-	return schemaToGo(x, finalRules, nil)
+func MustToGo(x Schema, options ...goConfigFunc) any {
+	v, err := ToGo(x, options...)
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
-func schemaToGo(x Schema, rules []RuleMatcher, path []any) any {
-	return MustMatchSchema(
+func ToGo(x Schema, options ...goConfigFunc) (any, error) {
+	c := goConfig{
+		defaultListDef: defaultListDef,
+		defaultMapDef:  defaultMapDef,
+		useRegistry:    true,
+		registry:       defaultRegistry,
+	}
+	for _, option := range options {
+		option(&c)
+	}
+
+	return schemaToGo(x, &c, nil)
+}
+
+func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
+	return MustMatchSchemaR2(
 		x,
-		func(x *None) any {
-			return nil
+		func(x *None) (any, error) {
+			return nil, nil
 		},
-		func(x *Bool) any {
-			return bool(*x)
+		func(x *Bool) (any, error) {
+			return bool(*x), nil
 		},
-		func(x *Number) any {
-			return float64(*x)
+		func(x *Number) (any, error) {
+			return float64(*x), nil
 		},
-		func(x *String) any {
-			return string(*x)
+		func(x *String) (any, error) {
+			return string(*x), nil
 		},
-		func(x *List) any {
-			var setter Setter = &NativeList{l: []any{}}
+		func(x *List) (any, error) {
+			build := c.ListDefFor(x, path).NewListBuilder()
 			for _, v := range x.Items {
-				_ = setter.Set("value is ignored", schemaToGo(v, rules, append(path, "[*]")))
-			}
-
-			return setter.Get()
-		},
-		func(x *Map) any {
-			var setters []Setter
-			for _, rule := range rules {
-				if y, ok, field := rule.UnwrapField(x); ok {
-					return schemaToGo(y, rules, append(path, field))
-				}
-
-				newSetter, ok := rule.MatchPath(path, x)
-				if ok {
-					setters = append(setters, newSetter)
-					break
-				}
-			}
-
-			setters = append(setters, &NativeMap{m: map[string]interface{}{}})
-
-			for _, setter := range setters {
-				var err error
-				for i := range x.Field {
-					key := x.Field[i].Name
-					value := x.Field[i].Value
-					err = setter.Set(key, schemaToGo(value, rules, append(path, key)))
-					if err != nil {
-						break
-					}
-				}
-
+				value, err := schemaToGo(v, c, append(path, "[*]"))
 				if err != nil {
-					log.Println("schemaToGo: setter err. next looop. err:", err)
-					continue
+					return nil, err
 				}
 
-				return setter.Get()
+				err = build.Append(value)
+				if err != nil {
+					return nil, fmt.Errorf("schema.schemaToGo: at path %s, at type %T, cause %w", strings.Join(path, "."), x, err)
+				}
 			}
 
-			panic("reach unreachable!")
+			return build.Build(), nil
+		},
+		func(x *Map) (any, error) {
+			build := c.MapDefFor(x, path).NewMapBuilder()
+			for _, field := range x.Field {
+				value, err := schemaToGo(field.Value, c, append(path, field.Name))
+				if err != nil {
+					return nil, err
+				}
+
+				err = build.Set(field.Name, value)
+				if err != nil {
+					return nil, fmt.Errorf("schema.schemaToGo: at path %s, at type %T, cause %w", strings.Join(path, "."), x, err)
+				}
+			}
+
+			return build.Build(), nil
 		})
 }

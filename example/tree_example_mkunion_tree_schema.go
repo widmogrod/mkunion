@@ -6,20 +6,12 @@ import (
 )
 
 func init() {
-	schema.RegisterTransformations(TreeSchemaTransformations())
-	schema.RegisterRules(TreeSchemaRules())
+	schema.RegisterUnionTypes(TreeSchemaDef())
 }
 
-func TreeSchemaTransformations() []schema.TransformFunc {
-	return []schema.TransformFunc{
-		schema.WrapStruct(&Branch{}, "Branch"),
-		schema.WrapStruct(&Leaf{}, "Leaf"),
-	}
-}
-
-func TreeSchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
-		schema.UnwrapStruct(&Branch{}, "Branch"),
-		schema.UnwrapStruct(&Leaf{}, "Leaf"),
-	}
+func TreeSchemaDef() *schema.UnionVariants[Tree] {
+	return schema.MustDefineUnion[Tree](
+		&Branch{},
+		&Leaf{},
+	)
 }

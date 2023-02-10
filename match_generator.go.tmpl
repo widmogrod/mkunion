@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 )
-{{ range $i := GenIntSlice 2 .MaxSize }}
+{{ range $i := GenIntSlice 1 .MaxSize }}
 func Match{{$i}}[TIn, TOut
 	{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} any](
 	x TIn,
@@ -39,7 +39,7 @@ func MustMatch{{$i}}[TIn, TOut{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- 
 }
 {{ end -}}
 
-{{- range $i := GenIntSlice 2 .MaxSize }}
+{{- range $i := GenIntSlice 1 .MaxSize }}
 func Match{{$i}}R2[TIn, TOut1, TOut2
 	{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} any](
 	x TIn,

@@ -23,24 +23,15 @@ import (
 )
 
 func init() {
-	schema.RegisterTransformations(VehicleSchemaTransformations())
-	schema.RegisterRules(VehicleSchemaRules())
+	schema.RegisterUnionTypes(VehicleSchemaDef())
 }
 
-func VehicleSchemaTransformations() []schema.TransformFunc {
-	return []schema.TransformFunc{
-		schema.WrapStruct(&Plane{}, "Plane"),
-		schema.WrapStruct(&Car{}, "Car"),
-		schema.WrapStruct(&Boat{}, "Boat"),
-	}
-}
-
-func VehicleSchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
-        schema.UnwrapStruct(&Plane{}, "Plane"),
-        schema.UnwrapStruct(&Car{}, "Car"),
-        schema.UnwrapStruct(&Boat{}, "Boat"),
-	}
+func VehicleSchemaDef() *schema.UnionVariants[Vehicle] {
+	return schema.MustDefineUnion[Vehicle](
+		&Plane{},
+		&Car{},
+		&Boat{},
+	)
 }
 `, string(result))
 }
