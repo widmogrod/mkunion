@@ -1,6 +1,6 @@
 package schema
 
-var _ MapBuilder = &StructSetter{}
+var _ MapBuilder = &StructBuilder{}
 
 type UnionMap struct {
 	last any

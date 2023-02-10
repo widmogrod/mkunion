@@ -17,8 +17,8 @@ func TreeSchemaTransformations() []schema.TransformFunc {
 	}
 }
 
-func TreeSchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
+func TreeSchemaRules() []schema.GoRuleMatcher {
+	return []schema.GoRuleMatcher{
 		schema.UnwrapStruct(&Branch{}, "Branch"),
 		schema.UnwrapStruct(&Leaf{}, "Leaf"),
 	}

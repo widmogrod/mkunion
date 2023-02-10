@@ -18,8 +18,8 @@ func VehicleSchemaTransformations() []schema.TransformFunc {
 	}
 }
 
-func VehicleSchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
+func VehicleSchemaRules() []schema.GoRuleMatcher {
+	return []schema.GoRuleMatcher{
 		schema.UnwrapStruct(&Car{}, "Car"),
 		schema.UnwrapStruct(&Plane{}, "Plane"),
 		schema.UnwrapStruct(&Boat{}, "Boat"),

@@ -56,11 +56,21 @@ type Field struct {
 	Value Schema
 }
 
-func UnwrapStruct[A any](structt A, fromField string) *WhenField {
-	return &WhenField{
+func UnwrapStruct[A any](x A, fromField string) *WhenField[A] {
+	return &WhenField[A]{
+		t:           x,
 		path:        []string{"*", fromField},
 		unwrapField: fromField,
-		setter:      UseStruct(structt),
+		typeMapDef:  UseStruct(x),
+	}
+}
+
+func WrapStruct[A any](x A, inField string) GoRuleMatcher {
+	return &WhenField[A]{
+		t:           x,
+		path:        []string{"*", inField},
+		unwrapField: inField,
+		typeMapDef:  UseStruct(x),
 	}
 }
 
@@ -72,7 +82,7 @@ func UseStruct(t any) *StructDefinition {
 			rt.Elem().Kind() != reflect.Struct
 
 	if isNotStruct && isNotPointerToStruct {
-		panic(fmt.Sprintf("UseStruct: not a struct, but %T", t))
+		panic(fmt.Sprintf("schema.UseStruct: not a struct, but %T", t))
 	}
 
 	return &StructDefinition{
@@ -85,32 +95,52 @@ func UseTypeDef(definition TypeMapDefinition) TypeMapDefinition {
 	return definition
 }
 
-func WhenPath(path []string, setter TypeMapDefinition) *WhenField {
-	return &WhenField{
+func WhenPath(path []string, setter TypeMapDefinition) *WhenField[struct{}] {
+	return &WhenField[struct{}]{
 		path:        path,
 		unwrapField: "",
-		setter:      setter,
+		typeMapDef:  setter,
 	}
 }
 
-type RuleMatcher interface {
+type TransformFunc = GoRuleMatcher
+
+type GoRuleMatcher interface {
 	MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
 	UnwrapField(x *Map) (Schema, bool, string)
+	Transform(x any, schema Schema) (Schema, bool)
 }
 
 var (
-	_ RuleMatcher = (*WhenField)(nil)
+	_ GoRuleMatcher = (*WhenField[any])(nil)
 )
 
 type (
-	WhenField struct {
+	WhenField[A any] struct {
+		t           A
 		path        []string
-		setter      TypeMapDefinition
+		typeMapDef  TypeMapDefinition
 		unwrapField string
 	}
 )
 
-func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
+func (r *WhenField[A]) Transform(x any, schema Schema) (Schema, bool) {
+	_, ok := x.(A)
+	if !ok {
+		return nil, false
+	}
+
+	return &Map{
+		Field: []Field{
+			{
+				Name:  r.unwrapField,
+				Value: schema,
+			},
+		},
+	}, true
+}
+
+func (r *WhenField[A]) UnwrapField(x *Map) (Schema, bool, string) {
 	if r.unwrapField == "" {
 		return nil, false, ""
 	}
@@ -126,9 +156,9 @@ func (r *WhenField) UnwrapField(x *Map) (Schema, bool, string) {
 	return nil, false, ""
 }
 
-func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool) {
+func (r *WhenField[A]) MatchPath(path []string, x Schema) (TypeMapDefinition, bool) {
 	if len(r.path) == 1 && r.path[0] == "*" {
-		return r.setter, true
+		return r.typeMapDef, true
 	}
 
 	if len(r.path) > 1 && r.path[0] == "*" {
@@ -146,7 +176,7 @@ func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
 					return nil, false
 				}
 			}
-			return r.setter, true
+			return r.typeMapDef, true
 		}
 	}
 
@@ -182,7 +212,7 @@ func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
 		}
 	}
 
-	return r.setter, true
+	return r.typeMapDef, true
 }
 
 var _ ListBuilder = (*NativeList)(nil)
@@ -240,19 +270,19 @@ func (s *StructDefinition) NewMapBuilder() MapBuilder {
 		return builder
 	}
 
-	return &StructSetter{
-		orginal: s.t,
-		r:       reflect.New(s.rt),
+	return &StructBuilder{
+		original: s.t,
+		r:        reflect.New(s.rt),
 	}
 }
 
-type StructSetter struct {
-	orginal any
-	r       reflect.Value
-	deref   *reflect.Value
+type StructBuilder struct {
+	original any
+	r        reflect.Value
+	deref    *reflect.Value
 }
 
-func (s *StructSetter) Set(key string, value any) error {
+func (s *StructBuilder) Set(key string, value any) error {
 	if value == nil {
 		return nil
 	}
@@ -276,10 +306,10 @@ func (s *StructSetter) Set(key string, value any) error {
 		return s.set(f, value)
 	}
 
-	return errors.New(fmt.Sprintf("schema.StructSetter.Set can't set value of type %T for key %s", value, key))
+	return errors.New(fmt.Sprintf("schema.StructBuilder.Set can't set value of type %T for key %s", value, key))
 }
 
-func (s *StructSetter) set(f reflect.Value, value any) error {
+func (s *StructBuilder) set(f reflect.Value, value any) error {
 	switch f.Type().Kind() {
 	case reflect.Pointer:
 		v := reflect.ValueOf(value)
@@ -422,29 +452,9 @@ func (s *StructSetter) set(f reflect.Value, value any) error {
 		}
 	}
 
-	return errors.New(fmt.Sprintf("schema.StructSetter.set can't set value of type %T for key %s", value, f.String()))
+	return errors.New(fmt.Sprintf("schema.StructBuilder.set can't set value of type %T for key %s", value, f.String()))
 }
 
-func (s *StructSetter) Build() any {
+func (s *StructBuilder) Build() any {
 	return s.r.Elem().Interface()
-}
-
-type TransformFunc = func(x any, schema Schema) (Schema, bool)
-
-func WrapStruct[A any](_ A, inField string) TransformFunc {
-	return func(x any, schema Schema) (Schema, bool) {
-		_, ok := x.(A)
-		if !ok {
-			return nil, false
-		}
-
-		return &Map{
-			Field: []Field{
-				{
-					Name:  inField,
-					Value: schema,
-				},
-			},
-		}, true
-	}
 }

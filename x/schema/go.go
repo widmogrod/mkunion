@@ -7,24 +7,24 @@ import (
 )
 
 type fromGoConfig struct {
-	transformations    []TransformFunc
+	transformations    []GoRuleMatcher
 	useDefaultRegistry bool
 }
 
 type fromGoConfigFunc func(*fromGoConfig)
 
 func WithTransformationsFromRegistry(r *Registry) fromGoConfigFunc {
-	return WithOnlyTheseTransformations(r.transformations...)
+	return WithOnlyTheseTransformations(r.matchingRules...)
 }
 
-func WithOnlyTheseTransformations(transformations ...TransformFunc) fromGoConfigFunc {
+func WithOnlyTheseTransformations(transformations ...GoRuleMatcher) fromGoConfigFunc {
 	return func(c *fromGoConfig) {
 		c.useDefaultRegistry = false
 		c.transformations = transformations
 	}
 }
 
-func WithExtraTransformations(transformations ...TransformFunc) fromGoConfigFunc {
+func WithExtraTransformations(transformations ...GoRuleMatcher) fromGoConfigFunc {
 	return func(c *fromGoConfig) {
 		c.transformations = append(c.transformations, transformations...)
 	}
@@ -45,7 +45,7 @@ func FromGo(x any, options ...fromGoConfigFunc) Schema {
 	}
 
 	if c.useDefaultRegistry {
-		c.transformations = append(c.transformations, defaultRegistry.transformations...)
+		c.transformations = append(c.transformations, defaultRegistry.matchingRules...)
 	}
 
 	return goToSchema(x, &c)
@@ -266,8 +266,8 @@ func goToSchema(x any, c *fromGoConfig) Schema {
 				})
 			}
 
-			for _, transformation := range c.transformations {
-				v, ok := transformation(x, r)
+			for _, rule := range c.transformations {
+				v, ok := rule.Transform(x, r)
 				if ok {
 					return v
 				}
@@ -307,13 +307,13 @@ func WithoutDefaultRegistry() toGoConfigFunc {
 	}
 }
 
-func WithExtraRules(rules ...RuleMatcher) toGoConfigFunc {
+func WithExtraRules(rules ...GoRuleMatcher) toGoConfigFunc {
 	return func(c *toGoConfig) {
 		c.rules = append(c.rules, rules...)
 	}
 }
 
-func WithOnlyTheseRules(rules ...RuleMatcher) toGoConfigFunc {
+func WithOnlyTheseRules(rules ...GoRuleMatcher) toGoConfigFunc {
 	return func(c *toGoConfig) {
 		c.useDefaultRegistry = false
 		c.rules = rules
@@ -356,7 +356,7 @@ var unionMap = &UnionMap{}
 type toGoConfig struct {
 	defaultListDef     TypeListDefinition
 	defaultMapDef      TypeMapDefinition
-	rules              []RuleMatcher
+	rules              []GoRuleMatcher
 	useDefaultRegistry bool
 }
 

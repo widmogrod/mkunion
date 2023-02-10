@@ -18,8 +18,8 @@ func CalcSchemaTransformations() []schema.TransformFunc {
 	}
 }
 
-func CalcSchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
+func CalcSchemaRules() []schema.GoRuleMatcher {
+	return []schema.GoRuleMatcher{
 		schema.UnwrapStruct(&Lit{}, "Lit"),
 		schema.UnwrapStruct(&Sum{}, "Sum"),
 		schema.UnwrapStruct(&Mul{}, "Mul"),

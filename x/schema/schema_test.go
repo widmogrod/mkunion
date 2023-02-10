@@ -296,7 +296,7 @@ func (t *TestStruct2) shared() {}
 func TestSchemaToGoStructs(t *testing.T) {
 	useCases := map[string]struct {
 		in    Schema
-		rules []RuleMatcher
+		rules []GoRuleMatcher
 		out   interface{}
 	}{
 		"schema struct to go struct": {
@@ -312,7 +312,7 @@ func TestSchemaToGoStructs(t *testing.T) {
 					},
 				},
 			},
-			rules: []RuleMatcher{
+			rules: []GoRuleMatcher{
 				WhenPath([]string{}, UseStruct(TestStruct1{})),
 			},
 			out: TestStruct1{
@@ -349,7 +349,7 @@ func TestSchemaToGoStructs(t *testing.T) {
 					},
 				},
 			},
-			rules: []RuleMatcher{
+			rules: []GoRuleMatcher{
 				WhenPath([]string{"[*]"}, UseStruct(TestStruct1{})),
 			},
 			out: []any{
@@ -384,7 +384,7 @@ func TestSchemaToGoStructs(t *testing.T) {
 					},
 				},
 			},
-			rules: []RuleMatcher{
+			rules: []GoRuleMatcher{
 				WhenPath([]string{}, UseStruct(TestStruct1{})),
 				WhenPath([]string{"Other"}, UseStruct(&TestStruct2{})),
 			},
@@ -452,7 +452,7 @@ func TestSchemaToGoStructs(t *testing.T) {
 					},
 				},
 			},
-			rules: []RuleMatcher{
+			rules: []GoRuleMatcher{
 				WhenPath([]string{"[*]"}, UseStruct(TestStruct1{})),
 				WhenPath([]string{"[*]", "Other?.Foo"}, UseStruct(&TestStruct1{})),
 				WhenPath([]string{"[*]", "Other?.Baz"}, UseStruct(&TestStruct2{})),
