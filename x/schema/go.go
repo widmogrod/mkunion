@@ -26,20 +26,20 @@ func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
 
 func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	for _, rule := range c.localRules {
-		if _, ok, _ := rule.UnwrapField(x); ok {
+		if _, ok, _ := rule.SchemaFromUnionType(x); ok {
 			return unionMap
 		}
-		if typeDef, ok := rule.MatchPath(path, x); ok {
+		if typeDef, ok := rule.MapDefFor(x, path); ok {
 			return typeDef
 		}
 	}
 
 	if c.useRegistry && c.registry != nil {
-		for _, rule := range c.registry.matchingRules {
-			if _, ok, _ := rule.UnwrapField(x); ok {
+		for _, rule := range c.registry.rules {
+			if _, ok, _ := rule.SchemaFromUnionType(x); ok {
 				return unionMap
 			}
-			if typeDef, ok := rule.MatchPath(path, x); ok {
+			if typeDef, ok := rule.MapDefFor(x, path); ok {
 				return typeDef
 			}
 		}
@@ -50,15 +50,15 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 
 func (c *goConfig) Transform(x any, r *Map) Schema {
 	for _, rule := range c.localRules {
-		v, ok := rule.Transform(x, r)
+		v, ok := rule.SchemaToUnionType(x, r)
 		if ok {
 			return v
 		}
 	}
 
 	if c.useRegistry {
-		for _, rule := range c.registry.matchingRules {
-			v, ok := rule.Transform(x, r)
+		for _, rule := range c.registry.rules {
+			v, ok := rule.SchemaToUnionType(x, r)
 			if ok {
 				return v
 			}

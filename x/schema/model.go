@@ -106,9 +106,9 @@ func WhenPath(path []string, setter TypeMapDefinition) *WhenField[struct{}] {
 type TransformFunc = GoRuleMatcher
 
 type GoRuleMatcher interface {
-	MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
-	UnwrapField(x *Map) (Schema, bool, string)
-	Transform(x any, schema Schema) (Schema, bool)
+	MapDefFor(x Schema, path []string) (TypeMapDefinition, bool)
+	SchemaFromUnionType(x *Map) (Schema, bool, string)
+	SchemaToUnionType(x any, schema Schema) (Schema, bool)
 }
 
 var (
@@ -124,7 +124,7 @@ type (
 	}
 )
 
-func (r *WhenField[A]) Transform(x any, schema Schema) (Schema, bool) {
+func (r *WhenField[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool) {
 	_, ok := x.(A)
 	if !ok {
 		return nil, false
@@ -140,7 +140,7 @@ func (r *WhenField[A]) Transform(x any, schema Schema) (Schema, bool) {
 	}, true
 }
 
-func (r *WhenField[A]) UnwrapField(x *Map) (Schema, bool, string) {
+func (r *WhenField[A]) SchemaFromUnionType(x *Map) (Schema, bool, string) {
 	if r.unwrapField == "" {
 		return nil, false, ""
 	}
@@ -156,7 +156,7 @@ func (r *WhenField[A]) UnwrapField(x *Map) (Schema, bool, string) {
 	return nil, false, ""
 }
 
-func (r *WhenField[A]) MatchPath(path []string, x Schema) (TypeMapDefinition, bool) {
+func (r *WhenField[A]) MapDefFor(x Schema, path []string) (TypeMapDefinition, bool) {
 	if len(r.path) == 1 && r.path[0] == "*" {
 		return r.typeMapDef, true
 	}
