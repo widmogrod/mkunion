@@ -1,43 +1,6 @@
 package schema
 
-import (
-	"fmt"
-	"reflect"
-)
-
-var _ TypeMapDefinition = &StructDefinition{}
-
-type StructDefinition struct {
-	t any
-}
-
-func (s *StructDefinition) NewMapBuilder() MapBuilder {
-	if builder, ok := s.t.(MapBuilder); ok {
-		return builder
-	}
-
-	// TODO: fix this, reflection is done on every call
-	return NewStructBuilder(s.t)
-}
-
 var _ MapBuilder = &StructSetter{}
-
-func NewStructBuilder(t any) *StructSetter {
-	rt := reflect.TypeOf(t)
-	isNotStruct := rt.Kind() != reflect.Struct
-	isNotPointerToStruct :=
-		rt.Kind() == reflect.Pointer &&
-			rt.Elem().Kind() != reflect.Struct
-
-	if isNotStruct && isNotPointerToStruct {
-		panic(fmt.Sprintf("UseStruct: not a struct, but %T", t))
-	}
-
-	return &StructSetter{
-		orginal: t,
-		r:       reflect.New(rt),
-	}
-}
 
 type UnionMap struct {
 	last any

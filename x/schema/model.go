@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+func MkInt(x int) *Number {
+	v := Number(x)
+	return &v
+}
+
+func MkString(s string) *String {
+	return (*String)(&s)
+}
+
 type (
 	TypeListDefinition interface {
 		NewListBuilder() ListBuilder
@@ -55,9 +64,20 @@ func UnwrapStruct[A any](structt A, fromField string) *WhenField {
 	}
 }
 
-func UseStruct(t any) TypeMapDefinition {
+func UseStruct(t any) *StructDefinition {
+	rt := reflect.TypeOf(t)
+	isNotStruct := rt.Kind() != reflect.Struct
+	isNotPointerToStruct :=
+		rt.Kind() == reflect.Pointer &&
+			rt.Elem().Kind() != reflect.Struct
+
+	if isNotStruct && isNotPointerToStruct {
+		panic(fmt.Sprintf("UseStruct: not a struct, but %T", t))
+	}
+
 	return &StructDefinition{
-		t: t,
+		t:  t,
+		rt: rt,
 	}
 }
 
@@ -165,19 +185,17 @@ func (r *WhenField) MatchPath(path []string, x Schema) (TypeMapDefinition, bool)
 	return r.setter, true
 }
 
-type (
-	StructSetter struct {
-		orginal any
-		r       reflect.Value
-		deref   *reflect.Value
+var _ ListBuilder = (*NativeList)(nil)
+
+type NativeList struct {
+	l []any
+}
+
+func (s *NativeList) NewListBuilder() ListBuilder {
+	return &NativeList{
+		l: nil,
 	}
-	NativeMap struct {
-		m map[string]any
-	}
-	NativeList struct {
-		l []any
-	}
-)
+}
 
 func (s *NativeList) Append(value any) error {
 	s.l = append(s.l, value)
@@ -185,17 +203,13 @@ func (s *NativeList) Append(value any) error {
 }
 
 func (s *NativeList) Build() any {
-	return s.Get()
+	return s.l
 }
-
-var _ ListBuilder = (*NativeList)(nil)
 
 var _ MapBuilder = (*NativeMap)(nil)
 
-func (s *NativeList) NewListBuilder() ListBuilder {
-	return &NativeList{
-		l: nil,
-	}
+type NativeMap struct {
+	m map[string]any
 }
 
 func (s *NativeMap) NewMapBuilder() MapBuilder {
@@ -205,19 +219,38 @@ func (s *NativeMap) NewMapBuilder() MapBuilder {
 }
 
 func (s *NativeMap) Build() any {
-	return s.Get()
+	return s.m
 }
 
-type Setter interface {
-	Set(k string, value any) error
-	Get() any
+func (s *NativeMap) Set(k string, value any) error {
+	s.m[k] = value
+	return nil
 }
 
-var (
-	_ Setter = (*StructSetter)(nil)
-	_ Setter = (*NativeMap)(nil)
-	_ Setter = (*NativeList)(nil)
-)
+var _ TypeMapDefinition = &StructDefinition{}
+
+type StructDefinition struct {
+	t any
+
+	rt reflect.Type
+}
+
+func (s *StructDefinition) NewMapBuilder() MapBuilder {
+	if builder, ok := s.t.(MapBuilder); ok {
+		return builder
+	}
+
+	return &StructSetter{
+		orginal: s.t,
+		r:       reflect.New(s.rt),
+	}
+}
+
+type StructSetter struct {
+	orginal any
+	r       reflect.Value
+	deref   *reflect.Value
+}
 
 func (s *StructSetter) Set(key string, value any) error {
 	if value == nil {
@@ -392,45 +425,13 @@ func (s *StructSetter) set(f reflect.Value, value any) error {
 	return errors.New(fmt.Sprintf("schema.StructSetter.set can't set value of type %T for key %s", value, f.String()))
 }
 
-func (s *StructSetter) Get() any {
-	return s.r.Elem().Interface()
-}
-
 func (s *StructSetter) Build() any {
-	return s.Get()
-}
-
-func (s *NativeMap) Set(k string, value any) error {
-	s.m[k] = value
-	return nil
-}
-
-func (s *NativeMap) Get() any {
-	return s.m
-}
-
-func (s *NativeList) Set(k string, value any) error {
-	s.l = append(s.l, value)
-	return nil
-}
-
-func (s *NativeList) Get() any {
-	return s.l
-}
-
-func MkInt(x int) *Number {
-	v := Number(x)
-	return &v
-}
-
-func MkString(s string) *String {
-	return (*String)(&s)
+	return s.r.Elem().Interface()
 }
 
 type TransformFunc = func(x any, schema Schema) (Schema, bool)
 
-func WrapStruct[A any](structt A, inField string) TransformFunc {
-
+func WrapStruct[A any](_ A, inField string) TransformFunc {
 	return func(x any, schema Schema) (Schema, bool) {
 		_, ok := x.(A)
 		if !ok {
