@@ -6,22 +6,13 @@ import (
 )
 
 func init() {
-	schema.RegisterTransformations(CalcSchemaTransformations())
-	schema.RegisterRules(CalcSchemaRules())
+	schema.RegisterUnionTypes(CalcSchemaDef())
 }
 
-func CalcSchemaTransformations() []schema.TransformFunc {
-	return []schema.TransformFunc{
-		schema.WrapStruct(&Lit{}, "Lit"),
-		schema.WrapStruct(&Sum{}, "Sum"),
-		schema.WrapStruct(&Mul{}, "Mul"),
-	}
-}
-
-func CalcSchemaRules() []schema.GoRuleMatcher {
-	return []schema.GoRuleMatcher{
-		schema.UnwrapStruct(&Lit{}, "Lit"),
-		schema.UnwrapStruct(&Sum{}, "Sum"),
-		schema.UnwrapStruct(&Mul{}, "Mul"),
-	}
+func CalcSchemaDef() *schema.UnionVariants[Calc] {
+	return schema.MustDefineUnion[Calc](
+		&Lit{},
+		&Sum{},
+		&Mul{},
+	)
 }

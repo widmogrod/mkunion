@@ -26,9 +26,6 @@ func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
 
 func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	for _, rule := range c.localRules {
-		if _, ok, _ := rule.SchemaFromUnionType(x); ok {
-			return unionMap
-		}
 		if typeDef, ok := rule.MapDefFor(x, path); ok {
 			return typeDef
 		}
@@ -36,9 +33,6 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 
 	if c.useRegistry && c.registry != nil {
 		for _, rule := range c.registry.rules {
-			if _, ok, _ := rule.SchemaFromUnionType(x); ok {
-				return unionMap
-			}
 			if typeDef, ok := rule.MapDefFor(x, path); ok {
 				return typeDef
 			}

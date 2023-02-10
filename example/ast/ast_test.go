@@ -41,7 +41,10 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 		R: &Lit{"baz"},
 	}
 
-	s := schema.FromGo(in)
+	s := schema.FromGo(in, schema.WithOnlyTheseRules(
+		CustomValueSchemaDef(),
+		CustomOperationSchemaDef(),
+	))
 
 	out := &schema.Map{
 		Field: []schema.Field{
@@ -97,7 +100,10 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 
 	assert.Equal(t, out, s, "schema transformation")
 
-	var data = schema.MustToGo(s)
+	var data = schema.MustToGo(s, schema.WithOnlyTheseRules(
+		CustomValueSchemaDef(),
+		CustomOperationSchemaDef(),
+	))
 	assert.Equal(t, in, data, "back to original golang structs")
 
 	jsonData, err := schema.ToJSON(s)

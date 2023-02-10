@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 var defaultRegistry *Registry
@@ -11,6 +12,7 @@ func init() {
 	defaultRegistry = NewRegistry()
 }
 
+// TODO: to remove
 func RegisterTransformations(xs []GoRuleMatcher) {
 	defaultRegistry.RegisterRules(xs)
 }
@@ -21,81 +23,90 @@ func RegisterRules(xs []GoRuleMatcher) {
 
 func MustDefineUnion[A any](xs ...A) *UnionVariants[A] {
 	result := UnionVariants[A]{
-		unique: make(map[string]struct{}),
+		unique:      make(map[string]struct{}),
+		pathToUnion: make(map[string]*StructDefinition),
 	}
 	for _, x := range xs {
 		t := reflect.TypeOf(x)
-		if _, ok := result.unique[t.Name()]; ok {
-			panic(fmt.Sprintf("union variant %s already defined", t.Name()))
+		if _, ok := result.unique[t.Elem().Name()]; ok {
+			panic(fmt.Errorf("union variant %s already defined %T", t.Elem().Name(), x))
 		}
 		result.variants = append(result.variants, x)
 		result.reflections = append(result.reflections, t)
-		result.unique[t.Name()] = struct{}{}
+		result.unique[t.Elem().Name()] = struct{}{}
 	}
 	return &result
 }
 
 func RegisterUnionTypes[A any](x *UnionVariants[A]) {
-	defaultRegistry.RegisterUnionType(x)
+	defaultRegistry.RegisterRules([]GoRuleMatcher{x})
 }
+
+var _ GoRuleMatcher = (*UnionVariants[any])(nil)
 
 type UnionVariants[A any] struct {
 	variants    []A
 	reflections []reflect.Type
 	unique      map[string]struct{}
+	pathToUnion map[string]*StructDefinition
 }
 
-func (u *UnionVariants[A]) IsPartOf(x any) bool {
+func (u *UnionVariants[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool) {
 	_, ok := x.(A)
-	return ok
-}
-
-//func (u *UnionVariants[A]) TransformFunc() []TransformFunc {
-//	var result []TransformFunc
-//	for i, variant := range u.variants {
-//		result = append(result, WrapStruct(variant, u.reflections[i].Name()))
-//	}
-//	return result
-//}
-
-func (u *UnionVariants[A]) Rules() []GoRuleMatcher {
-	var result []GoRuleMatcher
-	for i, variant := range u.variants {
-		result = append(result, UnwrapStruct(variant, u.reflections[i].Name()))
+	if !ok {
+		return nil, false
 	}
-	return result
+
+	for i, variant := range u.variants {
+		if reflect.TypeOf(variant) == reflect.TypeOf(x) {
+			return &Map{
+				Field: []Field{
+					{
+						Name:  u.reflections[i].Elem().Name(),
+						Value: schema,
+					},
+				},
+			}, true
+		}
+	}
+
+	panic("schema.UnionVariants.SchemaToUnionType: unreachable")
 }
 
-type Unioner interface {
-	IsPartOf(x any) bool
-	Rules() []GoRuleMatcher
-	//TransformFunc() []TransformFunc
+func (u *UnionVariants[A]) MapDefFor(x *Map, path []string) (TypeMapDefinition, bool) {
+	k := strings.Join(path, ".")
+	if mapDef, ok := u.pathToUnion[k]; ok {
+		return mapDef, true
+	}
+
+	if len(x.Field) != 1 {
+		return nil, false
+	}
+
+	for i, _ := range u.variants {
+		if x.Field[0].Name == u.reflections[i].Elem().Name() {
+			ss := make([]string, len(path)+1)
+			copy(ss, path)
+			ss[len(path)] = u.reflections[i].Elem().Name()
+
+			u.pathToUnion[strings.Join(ss, ".")] = UseStruct(u.variants[i])
+			return unionMap, true
+		}
+	}
+
+	return nil, false
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		//transformations: nil,
-		matchingRules: nil,
+		rules: nil,
 	}
 }
 
 type Registry struct {
-	//transformations []TransformFunc
-	matchingRules []GoRuleMatcher
-	unionTypes    []Unioner
+	rules []GoRuleMatcher
 }
-
-//func (r *Registry) RegisterTransformations(xs []TransformFunc) {
-//	r.transformations = append(r.transformations, xs...)
-//}
 
 func (r *Registry) RegisterRules(xs []GoRuleMatcher) {
-	r.matchingRules = append(r.matchingRules, xs...)
-}
-
-func (r *Registry) RegisterUnionType(u Unioner) {
-	r.unionTypes = append(r.unionTypes, u)
-
-	//r.RegisterTransformations(u.TransformFunc())
-	r.RegisterRules(u.Rules())
+	r.rules = append(r.rules, xs...)
 }

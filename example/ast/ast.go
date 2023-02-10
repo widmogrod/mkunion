@@ -36,46 +36,9 @@ type (
 	Not struct{ Operator }
 )
 
-func init() {
-	// Value transformations
-	//schema.RegisterTransformations(CustomValueSchemaTransformations())
-	//schema.RegisterRules(CustomValueSchemaRules())
-
-	// Operator
-	//schema.RegisterTransformations(CustomOperatorSchemaTransformations())
-	//schema.RegisterRules(CustomOperatorSchemaRules())
+func CustomValueSchemaDef() *schema.UnionVariants[Value] {
+	return schema.MustDefineUnion[Value](&Lit{}, &Accessor{})
 }
-
-func CustomValueSchemaTransformations() []schema.TransformFunc {
-	return []schema.TransformFunc{
-		schema.WrapStruct(&Lit{}, "Lit"),
-		schema.WrapStruct(&Accessor{}, "Accessor"),
-	}
-}
-
-func CustomValueSchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
-		schema.UnwrapStruct(&Lit{}, "Lit"),
-		schema.UnwrapStruct(&Accessor{}, "Accessor"),
-	}
-}
-
-func CustomOperatorSchemaTransformations() []schema.TransformFunc {
-	return []schema.TransformFunc{
-		schema.WrapStruct(&Eq{}, "Eq"),
-		schema.WrapStruct(&Gt{}, "Gt"),
-		schema.WrapStruct(&And{}, "And"),
-		schema.WrapStruct(&Or{}, "Or"),
-		schema.WrapStruct(&Not{}, "Not"),
-	}
-}
-
-func CustomOperatorSchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
-		schema.UnwrapStruct(&Eq{}, "Eq"),
-		schema.UnwrapStruct(&Gt{}, "Gt"),
-		schema.UnwrapStruct(&And{}, "And"),
-		schema.UnwrapStruct(&Or{}, "Or"),
-		schema.UnwrapStruct(&Not{}, "Not"),
-	}
+func CustomOperationSchemaDef() *schema.UnionVariants[Operator] {
+	return schema.MustDefineUnion[Operator](&Eq{}, &Gt{}, &And{}, &Or{}, &Not{})
 }

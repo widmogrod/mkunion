@@ -53,7 +53,9 @@ func TestGoToSchema2(t *testing.T) {
 			},
 		},
 	}
-	schema := FromGo(data, WithOnlyTheseRules(WrapStruct(AStruct{}, "AStruct")))
+	schema := FromGo(data, WithOnlyTheseRules(
+		&WrapInMap[AStruct]{InField: "AStruct"},
+	))
 
 	assert.Equal(
 		t,
@@ -121,12 +123,15 @@ func TestGoToSchema3(t *testing.T) {
 			},
 		},
 	}
-	schema := FromGo(data, WithOnlyTheseRules(WrapStruct(BStruct{}, "BStruct")))
+	schema := FromGo(data, WithOnlyTheseRules(
+		&WrapInMap[BStruct]{InField: "BStruct"},
+	))
 	assert.Equal(t, expected, schema)
 
 	result := MustToGo(schema, WithOnlyTheseRules(
-		UnwrapStruct(BStruct{}, "BStruct")),
-	)
+		WhenPath([]string{}, UseTypeDef(&UnionMap{})),
+		WhenPath([]string{"BStruct"}, UseStruct(BStruct{})),
+	))
 	assert.Equal(t, data, result)
 }
 
@@ -246,12 +251,13 @@ func TestGoToSchema4(t *testing.T) {
 		},
 	}
 	schema := FromGo(data, WithOnlyTheseRules(
-		WrapStruct(BStruct{}, "BStruct"),
+		&WrapInMap[BStruct]{InField: "BStruct"},
 	))
 	assert.Equal(t, expected, schema)
 
 	result := MustToGo(schema, WithOnlyTheseRules(
-		UnwrapStruct(BStruct{}, "BStruct"),
+		WhenPath([]string{}, UseTypeDef(&UnionMap{})),
+		WhenPath([]string{"BStruct"}, UseStruct(BStruct{})),
 		WhenPath([]string{"*", "BStruct", "BaseStruct"}, UseStruct(&BaseStruct{})),
 		WhenPath([]string{"*", "BStruct", "List", "[*]"}, UseStruct(AStruct{})),
 		WhenPath([]string{"*", "BStruct", "Ma", "key"}, UseStruct(AStruct{})),

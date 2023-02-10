@@ -8,22 +8,13 @@ import (
 {{- $name := .Name }}
 
 func init() {
-	schema.RegisterTransformations({{ $name }}SchemaTransformations())
-	schema.RegisterRules({{ $name }}SchemaRules())
+	schema.RegisterUnionTypes({{ $name }}SchemaDef())
 }
 
-func {{ $name }}SchemaTransformations() []schema.TransformFunc {
-	return []schema.TransformFunc{
-        {{- range $i, $type := .Types }}
-		schema.WrapStruct(&{{ $type }}{}, "{{ $type }}"),
-        {{- end }}
-	}
-}
-
-func {{ $name }}SchemaRules() []schema.RuleMatcher {
-	return []schema.RuleMatcher{
-        {{- range $i, $type := .Types }}
-        schema.UnwrapStruct(&{{ $type }}{}, "{{ $type }}"),
-        {{- end }}
-	}
+func {{ $name }}SchemaDef() *schema.UnionVariants[{{ $name }}] {
+	return schema.MustDefineUnion[{{ $name }}](
+	{{- range $i, $type := .Types }}
+		&{{ $type }}{},
+	{{- end }}
+	)
 }

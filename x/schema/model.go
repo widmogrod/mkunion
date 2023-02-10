@@ -56,24 +56,6 @@ type Field struct {
 	Value Schema
 }
 
-func UnwrapStruct[A any](x A, fromField string) *WhenField[A] {
-	return &WhenField[A]{
-		t:           x,
-		path:        []string{"*", fromField},
-		unwrapField: fromField,
-		typeMapDef:  UseStruct(x),
-	}
-}
-
-func WrapStruct[A any](x A, inField string) GoRuleMatcher {
-	return &WhenField[A]{
-		t:           x,
-		path:        []string{"*", inField},
-		unwrapField: inField,
-		typeMapDef:  UseStruct(x),
-	}
-}
-
 func UseStruct(t any) *StructDefinition {
 	rt := reflect.TypeOf(t)
 	isNotStruct := rt.Kind() != reflect.Struct
@@ -97,17 +79,15 @@ func UseTypeDef(definition TypeMapDefinition) TypeMapDefinition {
 
 func WhenPath(path []string, setter TypeMapDefinition) *WhenField[struct{}] {
 	return &WhenField[struct{}]{
-		path:        path,
-		unwrapField: "",
-		typeMapDef:  setter,
+		path:       path,
+		typeMapDef: setter,
 	}
 }
 
 type TransformFunc = GoRuleMatcher
 
 type GoRuleMatcher interface {
-	MapDefFor(x Schema, path []string) (TypeMapDefinition, bool)
-	SchemaFromUnionType(x *Map) (Schema, bool, string)
+	MapDefFor(x *Map, path []string) (TypeMapDefinition, bool)
 	SchemaToUnionType(x any, schema Schema) (Schema, bool)
 }
 
@@ -117,46 +97,17 @@ var (
 
 type (
 	WhenField[A any] struct {
-		t           A
-		path        []string
-		typeMapDef  TypeMapDefinition
-		unwrapField string
+		t          A
+		path       []string
+		typeMapDef TypeMapDefinition
 	}
 )
 
 func (r *WhenField[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool) {
-	_, ok := x.(A)
-	if !ok {
-		return nil, false
-	}
-
-	return &Map{
-		Field: []Field{
-			{
-				Name:  r.unwrapField,
-				Value: schema,
-			},
-		},
-	}, true
+	return nil, false
 }
 
-func (r *WhenField[A]) SchemaFromUnionType(x *Map) (Schema, bool, string) {
-	if r.unwrapField == "" {
-		return nil, false, ""
-	}
-
-	if len(x.Field) != 1 {
-		return nil, false, ""
-	}
-
-	if x.Field[0].Name == r.unwrapField {
-		return x.Field[0].Value, true, r.unwrapField
-	}
-
-	return nil, false, ""
-}
-
-func (r *WhenField[A]) MapDefFor(x Schema, path []string) (TypeMapDefinition, bool) {
+func (r *WhenField[A]) MapDefFor(x *Map, path []string) (TypeMapDefinition, bool) {
 	if len(r.path) == 1 && r.path[0] == "*" {
 		return r.typeMapDef, true
 	}
@@ -194,13 +145,8 @@ func (r *WhenField[A]) MapDefFor(x Schema, path []string) (TypeMapDefinition, bo
 			continue
 		}
 
-		m, ok := x.(*Map)
-		if !ok {
-			return nil, false
-		}
-
 		found := false
-		for _, f := range m.Field {
+		for _, f := range x.Field {
 			if f.Name == parts[1] {
 				found = true
 				break
@@ -457,4 +403,30 @@ func (s *StructBuilder) set(f reflect.Value, value any) error {
 
 func (s *StructBuilder) Build() any {
 	return s.r.Elem().Interface()
+}
+
+var _ GoRuleMatcher = (*WrapInMap[any])(nil)
+
+type WrapInMap[A any] struct {
+	ForType A
+	InField string
+}
+
+func (w *WrapInMap[A]) MapDefFor(x *Map, path []string) (TypeMapDefinition, bool) {
+	return nil, false
+}
+
+func (w *WrapInMap[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool) {
+	if _, ok := x.(A); !ok {
+		return nil, false
+	}
+
+	return &Map{
+		Field: []Field{
+			{
+				Name:  w.InField,
+				Value: schema,
+			},
+		},
+	}, true
 }
