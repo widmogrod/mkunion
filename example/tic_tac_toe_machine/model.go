@@ -3,7 +3,7 @@ package tictacstatemachine
 import "github.com/widmogrod/mkunion/x/schema"
 
 func init() {
-	schema.RegisterRules([]schema.GoRuleMatcher{
+	schema.RegisterRules([]schema.RuleMatcher{
 		schema.WhenPath([]string{"*", "TicTacToeBaseState"}, schema.UseStruct(TicTacToeBaseState{})),
 	})
 }

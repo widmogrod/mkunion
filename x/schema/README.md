@@ -54,13 +54,14 @@ assert.Equal(t, expected, nativego)
 - [x] Support for pointer to types like *string, *int, etc.
 - [x] Support for relative paths like `WhenPath([]string{"*", "ListOfCars", "Car"}, UseStruct(Car{}))`. 
       Absolute paths are without `*` at the beginning.
-- [x] Support options for `ToGo` like `WithOnlyTheseRules`, `WithExtraRules`, `WithDefaultMaoDef`, etc. 
+ 
+### V0.2.x
+- [x] Support options for `ToGo` & `FromGo` like `WithOnlyTheseRules`, `WithExtraRules`, `WithDefaultMapDef`, etc. 
       Gives better control on how schema is converted to golang.
       It's especially important from security reasons, whey you want to allow rules only whitelisted rules, for user generated json input.
-- [x] Support for `FromGo` now accepts options like `WithTransformationsFromRegistry`, etc. for similar reason as stated above
-- [x] Schema support interface for custom type setters, that don't require reflection, and mkunion can leverage them. Use `UseTypeDef` eg. `WhenPath([]string{}, UseTypeDef(&someTypeDef{})),`
-- [x] Schema registry to support collision on types
+- [x] Schema support interface for custom type-setters, that don't require reflection, and mkunion can leverage them. Use `UseTypeDef` eg. `WhenPath([]string{}, UseTypeDef(&someTypeDef{})),`
+- [x] Support for how union names should be expressed in schema `WithUnionFormatter(func(t reflect.Type) string)`
 
-### V0.2.x
+### V0.3.x
 - [ ] Support json tags in golang to map field names to schema
 - [ ] Add cata, ana, and hylo morphisms

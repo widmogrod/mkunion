@@ -2,7 +2,7 @@ package schema
 
 import "strings"
 
-var _ GoRuleMatcher = (*WhenField[any])(nil)
+var _ RuleMatcher = (*WhenField[any])(nil)
 
 type WhenField[A any] struct {
 	t          A

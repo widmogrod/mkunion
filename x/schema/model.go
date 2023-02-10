@@ -101,12 +101,12 @@ func WhenPath(path []string, setter TypeMapDefinition) *WhenField[struct{}] {
 	}
 }
 
-type GoRuleMatcher interface {
+type RuleMatcher interface {
 	MapDefFor(x *Map, path []string) (TypeMapDefinition, bool)
 	SchemaToUnionType(x any, schema Schema) (Schema, bool)
 }
 
-var _ GoRuleMatcher = (*WrapInMap[any])(nil)
+var _ RuleMatcher = (*WrapInMap[any])(nil)
 
 type WrapInMap[A any] struct {
 	ForType A

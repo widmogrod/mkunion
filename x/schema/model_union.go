@@ -1,17 +1,47 @@
 package schema
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
 
-var _ GoRuleMatcher = (*UnionVariants[any])(nil)
+func MustDefineUnion[A any](xs ...A) *UnionVariants[A] {
+	result := UnionVariants[A]{
+		unique:         make(map[string]struct{}),
+		pathToUnion:    make(map[string]*StructDefinition),
+		unionFormatter: FormatUnionNameUsingTypeName,
+	}
+
+	for _, x := range xs {
+		t := reflect.TypeOf(x)
+		if _, ok := result.unique[t.String()]; ok {
+			panic(fmt.Errorf("schema.MustDefineUnion: union variant %s already defined %T", t.String(), x))
+		}
+		result.variants = append(result.variants, x)
+		result.reflections = append(result.reflections, t)
+		result.unique[t.String()] = struct{}{}
+	}
+
+	return &result
+}
+
+var _ RuleMatcher = (*UnionVariants[any])(nil)
 
 type UnionVariants[A any] struct {
-	variants    []A
-	reflections []reflect.Type
-	unique      map[string]struct{}
-	pathToUnion map[string]*StructDefinition
+	variants       []A
+	reflections    []reflect.Type
+	unique         map[string]struct{}
+	pathToUnion    map[string]*StructDefinition
+	unionFormatter UnionFormatFunc
+}
+
+func (u *UnionVariants[A]) UseUnionFormatter(f UnionFormatFunc) {
+	u.unionFormatter = f
+}
+
+func (u *UnionVariants[A]) variantName(t reflect.Type) string {
+	return u.unionFormatter(t)
 }
 
 func (u *UnionVariants[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool) {
@@ -20,12 +50,13 @@ func (u *UnionVariants[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool
 		return nil, false
 	}
 
-	for i, variant := range u.variants {
-		if reflect.TypeOf(variant) == reflect.TypeOf(x) {
+	for i := range u.variants {
+		// TODO: fix reflection!
+		if u.reflections[i] == reflect.TypeOf(x) {
 			return &Map{
 				Field: []Field{
 					{
-						Name:  u.reflections[i].Elem().Name(),
+						Name:  u.variantName(u.reflections[i]),
 						Value: schema,
 					},
 				},
@@ -37,6 +68,11 @@ func (u *UnionVariants[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool
 }
 
 func (u *UnionVariants[A]) MapDefFor(x *Map, path []string) (TypeMapDefinition, bool) {
+	// Since union type is a map with only one field
+	// this functions when it detects a map with only one field
+	// needs to unwrap it and then build the union type
+	// to build correct type, it needs to be cached, and this is done
+	// by using the path as a key, that's why this is first operation
 	k := strings.Join(path, ".")
 	if mapDef, ok := u.pathToUnion[k]; ok {
 		return mapDef, true
@@ -46,11 +82,11 @@ func (u *UnionVariants[A]) MapDefFor(x *Map, path []string) (TypeMapDefinition, 
 		return nil, false
 	}
 
-	for i, _ := range u.variants {
-		if x.Field[0].Name == u.reflections[i].Elem().Name() {
+	for i := range u.variants {
+		if x.Field[0].Name == u.variantName(u.reflections[i]) {
 			ss := make([]string, len(path)+1)
 			copy(ss, path)
-			ss[len(path)] = u.reflections[i].Elem().Name()
+			ss[len(path)] = u.variantName(u.reflections[i])
 
 			u.pathToUnion[strings.Join(ss, ".")] = UseStruct(u.variants[i])
 			return unionMap, true

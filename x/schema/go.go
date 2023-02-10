@@ -12,20 +12,36 @@ var (
 	unionMap       = &UnionMap{}
 )
 
+type unionFormatterAware interface {
+	UseUnionFormatter(f UnionFormatFunc)
+}
+
 type goConfig struct {
 	defaultListDef TypeListDefinition
 	defaultMapDef  TypeMapDefinition
-	localRules     []GoRuleMatcher
+	localRules     []RuleMatcher
 	registry       *Registry
 	useRegistry    bool
+	unionFormatter UnionFormatFunc
 }
 
 func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
 	return c.defaultListDef
 }
 
+func (c *goConfig) formatter() UnionFormatFunc {
+	if c.unionFormatter == nil {
+		return c.registry.unionFormatter
+	}
+
+	return c.unionFormatter
+}
+
 func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	for _, rule := range c.localRules {
+		if ruleSet, ok := rule.(unionFormatterAware); ok {
+			ruleSet.UseUnionFormatter(c.formatter())
+		}
 		if typeDef, ok := rule.MapDefFor(x, path); ok {
 			return typeDef
 		}
@@ -33,6 +49,9 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 
 	if c.useRegistry && c.registry != nil {
 		for _, rule := range c.registry.rules {
+			if ruleSet, ok := rule.(unionFormatterAware); ok {
+				ruleSet.UseUnionFormatter(c.formatter())
+			}
 			if typeDef, ok := rule.MapDefFor(x, path); ok {
 				return typeDef
 			}
@@ -77,13 +96,13 @@ func WithoutDefaultRegistry() goConfigFunc {
 	}
 }
 
-func WithExtraRules(rules ...GoRuleMatcher) goConfigFunc {
+func WithExtraRules(rules ...RuleMatcher) goConfigFunc {
 	return func(c *goConfig) {
 		c.localRules = append(c.localRules, rules...)
 	}
 }
 
-func WithOnlyTheseRules(rules ...GoRuleMatcher) goConfigFunc {
+func WithOnlyTheseRules(rules ...RuleMatcher) goConfigFunc {
 	return func(c *goConfig) {
 		c.useRegistry = false
 		c.localRules = rules
@@ -99,6 +118,11 @@ func WithDefaultMaoDef(def TypeMapDefinition) goConfigFunc {
 func WithDefaultListDef(def TypeListDefinition) goConfigFunc {
 	return func(c *goConfig) {
 		c.defaultListDef = def
+	}
+}
+func WithUnionFormatter(f UnionFormatFunc) goConfigFunc {
+	return func(c *goConfig) {
+		c.unionFormatter = f
 	}
 }
 

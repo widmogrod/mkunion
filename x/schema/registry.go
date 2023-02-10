@@ -1,8 +1,8 @@
 package schema
 
 import (
-	"fmt"
 	"reflect"
+	"strings"
 )
 
 var defaultRegistry *Registry
@@ -11,41 +11,54 @@ func init() {
 	defaultRegistry = NewRegistry()
 }
 
-func RegisterRules(xs []GoRuleMatcher) {
+func RegisterRules(xs []RuleMatcher) {
 	defaultRegistry.RegisterRules(xs)
 }
 
-func MustDefineUnion[A any](xs ...A) *UnionVariants[A] {
-	result := UnionVariants[A]{
-		unique:      make(map[string]struct{}),
-		pathToUnion: make(map[string]*StructDefinition),
+type UnionFormatFunc func(t reflect.Type) string
+
+func FormatUnionNameUsingFullName(t reflect.Type) string {
+	if t.Kind() == reflect.Ptr {
+		return t.Elem().PkgPath() + "." + t.Elem().Name()
 	}
-	for _, x := range xs {
-		t := reflect.TypeOf(x)
-		if _, ok := result.unique[t.Elem().Name()]; ok {
-			panic(fmt.Errorf("union variant %s already defined %T", t.Elem().Name(), x))
-		}
-		result.variants = append(result.variants, x)
-		result.reflections = append(result.reflections, t)
-		result.unique[t.Elem().Name()] = struct{}{}
+	return t.PkgPath() + "." + t.Name()
+}
+
+func FormatUnionNameUsingTypeName(t reflect.Type) string {
+	if t.Kind() == reflect.Ptr {
+		return t.Elem().Name()
 	}
-	return &result
+	return t.Name()
+}
+func FormatUnionNameUsingTypeNameWithPackage(t reflect.Type) string {
+	// remove information about pointer types, eg. *ast.Ast -> ast.Ast
+	return strings.TrimLeft(t.String(), "*")
+}
+
+func SetDefaultUnionTypeFormatter(f UnionFormatFunc) {
+	defaultRegistry.SetUnionTypeFormatter(f)
 }
 
 func RegisterUnionTypes[A any](x *UnionVariants[A]) {
-	defaultRegistry.RegisterRules([]GoRuleMatcher{x})
+	defaultRegistry.RegisterRules([]RuleMatcher{x})
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		rules: nil,
+		rules:          nil,
+		unionFormatter: FormatUnionNameUsingTypeName,
 	}
 }
 
 type Registry struct {
-	rules []GoRuleMatcher
+	rules          []RuleMatcher
+	unionFormatter func(t reflect.Type) string
 }
 
-func (r *Registry) RegisterRules(xs []GoRuleMatcher) {
+func (r *Registry) RegisterRules(xs []RuleMatcher) {
 	r.rules = append(r.rules, xs...)
+}
+
+func (r *Registry) SetUnionTypeFormatter(f UnionFormatFunc) {
+	r.unionFormatter = f
 }
