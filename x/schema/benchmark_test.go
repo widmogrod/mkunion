@@ -220,6 +220,41 @@ func Benchmark_Json_Unmarshal_Struct_TypeDef_Schema(b *testing.B) {
 	benchmarkToGo = r
 }
 
+func Benchmark_Json_Marshal_Native(b *testing.B) {
+	var r any
+	var err error
+	var out any
+	err = json.Unmarshal(unmarshalJSON, &out)
+	if err != nil {
+		b.Fatalf("failed: %v", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		r, err = json.Marshal(out)
+		if err != nil {
+			b.Fatalf("failed: %v", err)
+		}
+	}
+	benchmarkToGo = r
+}
+
+func Benchmark_Json_Marshal_Schema(b *testing.B) {
+	var r any
+	var err error
+	var schema Schema
+	schema, err = FromJSON(unmarshalJSON)
+	if err != nil {
+		b.Fatalf("failed: %v", err)
+	}
+	for i := 0; i < b.N; i++ {
+		r, err = ToJSON(schema)
+		if err != nil {
+			b.Fatalf("failed: %v", err)
+		}
+	}
+	benchmarkToGo = r
+}
+
 func TestSomeTypeUseTypeDef(t *testing.T) {
 	var r any
 	var schema Schema
