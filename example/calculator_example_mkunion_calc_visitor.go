@@ -25,6 +25,26 @@ var (
 	_ Calc = (*Mul)(nil)
 )
 
+func MatchCalc[TOut any](
+	x Calc,
+	f1 func(x *Lit) TOut,
+	f2 func(x *Sum) TOut,
+	f3 func(x *Mul) TOut,
+	df func(x Calc) TOut,
+) TOut {
+	return f.Match3(x, f1, f2, f3, df)
+}
+
+func MatchCalcR2[TOut1, TOut2 any](
+	x Calc,
+	f1 func(x *Lit) (TOut1, TOut2),
+	f2 func(x *Sum) (TOut1, TOut2),
+	f3 func(x *Mul) (TOut1, TOut2),
+	df func(x Calc) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.Match3R2(x, f1, f2, f3, df)
+}
+
 func MustMatchCalc[TOut any](
 	x Calc,
 	f1 func(x *Lit) TOut,

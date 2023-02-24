@@ -34,6 +34,32 @@ var (
 	_ Schema = (*Map)(nil)
 )
 
+func MatchSchema[TOut any](
+	x Schema,
+	f1 func(x *None) TOut,
+	f2 func(x *Bool) TOut,
+	f3 func(x *Number) TOut,
+	f4 func(x *String) TOut,
+	f5 func(x *List) TOut,
+	f6 func(x *Map) TOut,
+	df func(x Schema) TOut,
+) TOut {
+	return f.Match6(x, f1, f2, f3, f4, f5, f6, df)
+}
+
+func MatchSchemaR2[TOut1, TOut2 any](
+	x Schema,
+	f1 func(x *None) (TOut1, TOut2),
+	f2 func(x *Bool) (TOut1, TOut2),
+	f3 func(x *Number) (TOut1, TOut2),
+	f4 func(x *String) (TOut1, TOut2),
+	f5 func(x *List) (TOut1, TOut2),
+	f6 func(x *Map) (TOut1, TOut2),
+	df func(x Schema) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.Match6R2(x, f1, f2, f3, f4, f5, f6, df)
+}
+
 func MustMatchSchema[TOut any](
 	x Schema,
 	f1 func(x *None) TOut,

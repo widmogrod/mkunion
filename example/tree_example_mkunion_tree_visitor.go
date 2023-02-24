@@ -22,6 +22,24 @@ var (
 	_ Tree = (*Leaf)(nil)
 )
 
+func MatchTree[TOut any](
+	x Tree,
+	f1 func(x *Branch) TOut,
+	f2 func(x *Leaf) TOut,
+	df func(x Tree) TOut,
+) TOut {
+	return f.Match2(x, f1, f2, df)
+}
+
+func MatchTreeR2[TOut1, TOut2 any](
+	x Tree,
+	f1 func(x *Branch) (TOut1, TOut2),
+	f2 func(x *Leaf) (TOut1, TOut2),
+	df func(x Tree) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.Match2R2(x, f1, f2, df)
+}
+
 func MustMatchTree[TOut any](
 	x Tree,
 	f1 func(x *Branch) TOut,

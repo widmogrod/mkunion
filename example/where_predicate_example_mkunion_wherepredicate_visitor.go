@@ -28,6 +28,28 @@ var (
 	_ WherePredicate = (*Path)(nil)
 )
 
+func MatchWherePredicate[TOut any](
+	x WherePredicate,
+	f1 func(x *Eq) TOut,
+	f2 func(x *And) TOut,
+	f3 func(x *Or) TOut,
+	f4 func(x *Path) TOut,
+	df func(x WherePredicate) TOut,
+) TOut {
+	return f.Match4(x, f1, f2, f3, f4, df)
+}
+
+func MatchWherePredicateR2[TOut1, TOut2 any](
+	x WherePredicate,
+	f1 func(x *Eq) (TOut1, TOut2),
+	f2 func(x *And) (TOut1, TOut2),
+	f3 func(x *Or) (TOut1, TOut2),
+	f4 func(x *Path) (TOut1, TOut2),
+	df func(x WherePredicate) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.Match4R2(x, f1, f2, f3, f4, df)
+}
+
 func MustMatchWherePredicate[TOut any](
 	x WherePredicate,
 	f1 func(x *Eq) TOut,

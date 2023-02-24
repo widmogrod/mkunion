@@ -25,6 +25,26 @@ var (
 	{{- end }}
 )
 {{ $i := len .Types}}
+func Match{{ $name }}[TOut any](
+	x {{ $name }},
+	{{- range $k, $t := .Types }}
+	f{{ Add $k 1}} func(x *{{ $t }}) TOut,
+    {{- end }}
+	df func(x {{ $name }}) TOut,
+) TOut {
+	return f.Match{{ $i }}(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }}, df)
+}
+{{ $i := len .Types}}
+func Match{{ $name }}R2[TOut1, TOut2 any](
+	x {{ $name }},
+	{{- range $k, $t := .Types }}
+	f{{ Add $k 1}} func(x *{{ $t }}) (TOut1, TOut2),
+    {{- end }}
+	df func(x {{ $name }}) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.Match{{ $i }}R2(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }}, df)
+}
+{{ $i := len .Types}}
 func MustMatch{{ $name }}[TOut any](
 	x {{ $name }},
 	{{- range $k, $t := .Types }}

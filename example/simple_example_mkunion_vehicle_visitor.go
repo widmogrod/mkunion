@@ -25,6 +25,26 @@ var (
 	_ Vehicle = (*Boat)(nil)
 )
 
+func MatchVehicle[TOut any](
+	x Vehicle,
+	f1 func(x *Car) TOut,
+	f2 func(x *Plane) TOut,
+	f3 func(x *Boat) TOut,
+	df func(x Vehicle) TOut,
+) TOut {
+	return f.Match3(x, f1, f2, f3, df)
+}
+
+func MatchVehicleR2[TOut1, TOut2 any](
+	x Vehicle,
+	f1 func(x *Car) (TOut1, TOut2),
+	f2 func(x *Plane) (TOut1, TOut2),
+	f3 func(x *Boat) (TOut1, TOut2),
+	df func(x Vehicle) (TOut1, TOut2),
+) (TOut1, TOut2) {
+	return f.Match3R2(x, f1, f2, f3, df)
+}
+
 func MustMatchVehicle[TOut any](
 	x Vehicle,
 	f1 func(x *Car) TOut,

@@ -430,6 +430,9 @@ go test ./...
 - [x] Allow to have union with one element, this is useful for domain model that is not yet fully defined
 - [x] `x/schema` breaking change. `ToGo` returns any and error. Use `MustToGo` to get panic on error
 
+### 1.10.x
+- [x] Introduce `Match*` and `Match*R2` functions, that offer possibility to specif behaviour when value is `nil`
+
 ### V1.10.x
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
 - [ ] Allow extending (embedding) base Visitor interface with external interface
