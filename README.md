@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.8
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.10
 ```
 
 ### Create your first union
@@ -433,13 +433,11 @@ go test ./...
 ### 1.10.x
 - [x] Introduce `Match*` and `Match*R2` functions, that offer possibility to specif behaviour when value is `nil`
 
-### V1.10.x
+### V1.11.x
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!
 - [ ] Add configurable behaviour how schema should act when field is missing, but schema has a value for it
-- [ ] Add type conversion for int,float in map values !!!
-- [ ] Schema to include type definitions, and then any WithPath etc would provide type information for schemas that don't have it, or want to override it
 
 ### V2.x.x
 - [ ] Add support for generic union types
