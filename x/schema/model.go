@@ -14,6 +14,28 @@ func MkString(s string) *String {
 	return (*String)(&s)
 }
 
+func MkBool(b bool) *Bool {
+	return (*Bool)(&b)
+}
+
+func MkList(items ...Schema) *List {
+	return &List{
+		Items: items,
+	}
+}
+
+func MkMap(fields ...Field) *Map {
+	return &Map{
+		Field: fields,
+	}
+}
+func MkField(name string, value Schema) Field {
+	return Field{
+		Name:  name,
+		Value: value,
+	}
+}
+
 type (
 	TypeListDefinition interface {
 		NewListBuilder() ListBuilder

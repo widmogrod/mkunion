@@ -63,5 +63,8 @@ assert.Equal(t, expected, nativego)
 - [x] Support for how union names should be expressed in schema `WithUnionFormatter(func(t reflect.Type) string)`
 
 ### V0.3.x
+ - [x] schema.Compare method to compare two schemas
+
+### V0.4.x
 - [ ] Support json tags in golang to map field names to schema
 - [ ] Add cata, ana, and hylo morphisms

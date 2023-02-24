@@ -152,3 +152,111 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 		},
 	)
 }
+
+func Compare(a, b Schema) int {
+	return MustMatchSchema(
+		a,
+		func(x *None) int {
+			switch b.(type) {
+			case *None:
+				return 0
+			}
+
+			return -1
+		},
+		func(x *Bool) int {
+			switch y := b.(type) {
+			case *None:
+				return 1
+			case *Bool:
+				if *x == *y {
+					return 0
+				}
+				if *x {
+					return 1
+				}
+				return -1
+			}
+
+			return -1
+		},
+		func(x *Number) int {
+			switch y := b.(type) {
+			case *None, *Bool:
+				return 1
+			case *Number:
+				return int(*x - *y)
+			}
+
+			return -1
+		},
+		func(x *String) int {
+			switch y := b.(type) {
+			case *None, *Bool, *Number:
+				return 1
+			case *String:
+				return strings.Compare(string(*x), string(*y))
+			}
+
+			return -1
+		},
+		func(x *List) int {
+			switch y := b.(type) {
+			case *None, *Bool, *Number, *String:
+				return 1
+			case *List:
+				if len(x.Items) == len(y.Items) {
+					for i := range x.Items {
+						cmp := Compare(x.Items[i], y.Items[i])
+						if cmp != 0 {
+							return cmp
+						}
+					}
+					return 0
+				}
+				if len(x.Items) > len(y.Items) {
+					return 1
+				}
+
+				return -1
+			}
+
+			return -1
+
+		},
+		func(x *Map) int {
+			switch y := b.(type) {
+			case *None, *Bool, *Number, *String, *List:
+				return 1
+			case *Map:
+				if len(x.Field) == len(y.Field) {
+					for _, xField := range x.Field {
+						var found bool
+						for _, yField := range y.Field {
+							if yField.Name == xField.Name {
+								found = true
+								cmp := Compare(xField.Value, yField.Value)
+								if cmp != 0 {
+									return cmp
+								}
+								break
+							}
+						}
+						if !found {
+							return -1
+						}
+					}
+					return 0
+				}
+
+				if len(x.Field) > len(y.Field) {
+					return 1
+				}
+
+				return -1
+			}
+
+			return -1
+		},
+	)
+}
