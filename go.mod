@@ -3,7 +3,7 @@ module github.com/widmogrod/mkunion
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.18.1
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.18.5
 	github.com/bxcodec/faker/v3 v3.8.1
 	github.com/fatih/structtag v1.2.0
 	github.com/stretchr/testify v1.8.1
