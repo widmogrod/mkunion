@@ -7,6 +7,21 @@ func TestCompare(t *testing.T) {
 		a, b Schema
 		cmp  int
 	}{
+		"nil and nil = 0": {
+			a:   nil,
+			b:   nil,
+			cmp: 0,
+		},
+		"nil and none = 0": {
+			a:   nil,
+			b:   &None{},
+			cmp: 0,
+		},
+		"none and nil = 0": {
+			a:   &None{},
+			b:   nil,
+			cmp: 0,
+		},
 		"none and none = 0": {
 			a:   &None{},
 			b:   &None{},

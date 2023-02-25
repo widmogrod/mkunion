@@ -153,7 +153,16 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 	)
 }
 
+var none = &None{}
+
 func Compare(a, b Schema) int {
+	if a == nil {
+		a = none
+	}
+	if b == nil {
+		b = none
+	}
+
 	return MustMatchSchema(
 		a,
 		func(x *None) int {
