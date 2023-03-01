@@ -167,6 +167,15 @@ func goToSchema(x any, c *goConfig) Schema {
 			return MkString(*y)
 		}
 
+	case []byte:
+		return &Binary{B: y}
+	case *[]byte:
+		if y == nil {
+			return &None{}
+		} else {
+			return &Binary{B: *y}
+		}
+
 	case float64:
 		v := Number(y)
 		return &v
@@ -210,7 +219,6 @@ func goToSchema(x any, c *goConfig) Schema {
 			v := Number(*y)
 			return &v
 		}
-
 	case int16:
 		v := Number(y)
 		return &v
@@ -221,7 +229,6 @@ func goToSchema(x any, c *goConfig) Schema {
 			v := Number(*y)
 			return &v
 		}
-
 	case int32:
 		v := Number(y)
 		return &v
@@ -280,7 +287,6 @@ func goToSchema(x any, c *goConfig) Schema {
 	case uint32:
 		v := Number(y)
 		return &v
-
 	case *uint32:
 		if y == nil {
 			return &None{}
@@ -410,6 +416,9 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 		},
 		func(x *String) (any, error) {
 			return string(*x), nil
+		},
+		func(x *Binary) (any, error) {
+			return x.B, nil
 		},
 		func(x *List) (any, error) {
 			build := c.ListDefFor(x, path).NewListBuilder()

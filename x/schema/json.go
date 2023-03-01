@@ -2,6 +2,7 @@ package schema
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 )
@@ -53,6 +54,13 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 			}
 			return nil
 
+		},
+		func(x *Binary) error {
+			_, err := fmt.Fprintf(res, "%q", base64.StdEncoding.EncodeToString(x.B))
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 		func(x *List) error {
 			res.WriteString("[")

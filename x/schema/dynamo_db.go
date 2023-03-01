@@ -29,6 +29,11 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 				Value: string(*x),
 			}
 		},
+		func(x *Binary) types.AttributeValue {
+			return &types.AttributeValueMemberB{
+				Value: x.B,
+			}
+		},
 		func(x *List) types.AttributeValue {
 			result := &types.AttributeValueMemberL{
 				Value: []types.AttributeValue{},
@@ -53,7 +58,7 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 	switch y := x.(type) {
 	case *types.AttributeValueMemberB:
-		return nil, fmt.Errorf("FromDynamoDB: unsupported type: %T", x)
+		return &Binary{B: y.Value}, nil
 
 	case *types.AttributeValueMemberBS:
 		return nil, fmt.Errorf("FromDynamoDB: unsupported type: %T", x)

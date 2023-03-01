@@ -11,6 +11,7 @@ type (
 		OnBool               func(x *Bool, agg A) (result A, stop bool)
 		OnNumber             func(x *Number, agg A) (result A, stop bool)
 		OnString             func(x *String, agg A) (result A, stop bool)
+		OnBinary             func(x *Binary, agg A) (result A, stop bool)
 		OnList               func(x *List, agg A) (result A, stop bool)
 		OnMap                func(x *Map, agg A) (result A, stop bool)
 	}
@@ -49,6 +50,16 @@ func (t *SchemaDefaultReduction[A]) ReduceNumber(x *Number, agg A) (result A, st
 func (t *SchemaDefaultReduction[A]) ReduceString(x *String, agg A) (result A, stop bool) {
 	if t.OnString != nil {
 		return t.OnString(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceBinary(x *Binary, agg A) (result A, stop bool) {
+	if t.OnBinary != nil {
+		return t.OnBinary(x, agg)
 	}
 	if t.PanicOnFallback {
 		panic("no fallback allowed on undefined ReduceBranch")

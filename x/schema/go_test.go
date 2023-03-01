@@ -57,6 +57,10 @@ func TestGoToSchemaComplex(t *testing.T) {
 				Bar: 555,
 			},
 		},
+		Bi: []byte("some bytes"),
+		Bip: &[]byte{
+			1, 2, 3, 4, 5,
+		},
 	}
 	expected := &Map{
 		Field: []Field{
@@ -139,6 +143,14 @@ func TestGoToSchemaComplex(t *testing.T) {
 									},
 								},
 							},
+						},
+						{
+							Name:  "Bi",
+							Value: MkBinary([]byte("some bytes")),
+						},
+						{
+							Name:  "Bip",
+							Value: MkBinary([]byte{1, 2, 3, 4, 5}),
 						},
 					},
 				},

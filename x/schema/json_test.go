@@ -54,6 +54,9 @@ type BStruct struct {
 
 	List []AStruct
 	Ma   map[string]AStruct
+
+	Bi  []byte
+	Bip *[]byte
 }
 
 func TestJsonToSchema(t *testing.T) {
