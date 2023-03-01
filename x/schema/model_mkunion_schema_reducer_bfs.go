@@ -61,6 +61,18 @@ func (d *SchemaBreadthFirstVisitor[A]) VisitString(v *String) any {
 	return nil
 }
 
+func (d *SchemaBreadthFirstVisitor[A]) VisitBinary(v *Binary) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceBinary(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
 func (d *SchemaBreadthFirstVisitor[A]) VisitList(v *List) any {
 	d.queue = append(d.queue, v)
 	for idx := range v.Items {

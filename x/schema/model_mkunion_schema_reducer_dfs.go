@@ -7,6 +7,7 @@ type (
 		ReduceBool(x *Bool, agg A) (result A, stop bool)
 		ReduceNumber(x *Number, agg A) (result A, stop bool)
 		ReduceString(x *String, agg A) (result A, stop bool)
+		ReduceBinary(x *Binary, agg A) (result A, stop bool)
 		ReduceList(x *List, agg A) (result A, stop bool)
 		ReduceMap(x *Map, agg A) (result A, stop bool)
 	}
@@ -49,6 +50,15 @@ func (d *SchemaDepthFirstVisitor[A]) VisitNumber(v *Number) any {
 
 func (d *SchemaDepthFirstVisitor[A]) VisitString(v *String) any {
 	d.result, d.stop = d.reduce.ReduceString(v, d.result)
+	if d.stop {
+		return nil
+	}
+
+	return nil
+}
+
+func (d *SchemaDepthFirstVisitor[A]) VisitBinary(v *Binary) any {
+	d.result, d.stop = d.reduce.ReduceBinary(v, d.result)
 	if d.stop {
 		return nil
 	}

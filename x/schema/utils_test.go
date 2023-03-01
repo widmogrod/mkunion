@@ -47,6 +47,11 @@ func TestCompare(t *testing.T) {
 			b:   MkString("some cool string"),
 			cmp: -1,
 		},
+		"none and binary = -1": {
+			a:   &None{},
+			b:   MkBinary([]byte("some cool string")),
+			cmp: -1,
+		},
 		"none and list = -1": {
 			a:   &None{},
 			b:   &List{},
@@ -80,6 +85,11 @@ func TestCompare(t *testing.T) {
 		"true and string = -1": {
 			a:   MkBool(true),
 			b:   MkString("some cool string"),
+			cmp: -1,
+		},
+		"true and binary = -1": {
+			a:   MkBool(true),
+			b:   MkBinary([]byte("some cool string")),
 			cmp: -1,
 		},
 		"true and list = -1": {
@@ -117,6 +127,11 @@ func TestCompare(t *testing.T) {
 			b:   MkString("some cool string"),
 			cmp: 0,
 		},
+		"string and binary = -1": {
+			a:   MkString("some cool string"),
+			b:   MkBinary([]byte("some cool string")),
+			cmp: -1,
+		},
 		"string and list = -1": {
 			a:   MkString("some cool string"),
 			b:   &List{},
@@ -152,6 +167,11 @@ func TestCompare(t *testing.T) {
 			b:   MkString("some cool string"),
 			cmp: 1,
 		},
+		"list and binary = 1": {
+			a:   &List{},
+			b:   MkBinary([]byte("some cool string")),
+			cmp: 1,
+		},
 		"list and list = 0": {
 			a: MkList(MkInt(1), MkInt(2), MkInt(3)),
 			b: MkList(MkInt(1), MkInt(2), MkInt(3)),
@@ -184,6 +204,11 @@ func TestCompare(t *testing.T) {
 		"map and string = 1": {
 			a:   &Map{},
 			b:   MkString("some cool string"),
+			cmp: 1,
+		},
+		"map and binary = 1": {
+			a:   &Map{},
+			b:   MkBinary([]byte("some cool string")),
 			cmp: 1,
 		},
 		"map and list = 1": {

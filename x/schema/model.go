@@ -5,17 +5,32 @@ import (
 	"reflect"
 )
 
+var none = &None{}
+
+func MkNone() *None {
+	return none
+}
+
+func MkBool(b bool) *Bool {
+	return (*Bool)(&b)
+}
+
 func MkInt(x int) *Number {
 	v := Number(x)
 	return &v
 }
 
-func MkString(s string) *String {
-	return (*String)(&s)
+func MkFloat(x float64) *Number {
+	v := Number(x)
+	return &v
 }
 
-func MkBool(b bool) *Bool {
-	return (*Bool)(&b)
+func MkBinary(b []byte) *Binary {
+	return &Binary{B: b}
+}
+
+func MkString(s string) *String {
+	return (*String)(&s)
 }
 
 func MkList(items ...Schema) *List {
@@ -23,12 +38,12 @@ func MkList(items ...Schema) *List {
 		Items: items,
 	}
 }
-
 func MkMap(fields ...Field) *Map {
 	return &Map{
 		Field: fields,
 	}
 }
+
 func MkField(name string, value Schema) Field {
 	return Field{
 		Name:  name,
@@ -63,6 +78,7 @@ type (
 	Bool   bool
 	Number float64
 	String string
+	Binary struct{ B []byte }
 	List   struct {
 		Items []Schema
 	}

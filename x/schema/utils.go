@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"bytes"
 	"strconv"
 	"strings"
 )
@@ -8,7 +9,7 @@ import (
 func As[A int | int8 | int16 | int32 | int64 |
 	uint | uint8 | uint16 | uint32 | uint64 |
 	float32 | float64 |
-	bool | string](x Schema, def A) A {
+	bool | string | []byte](x Schema, def A) A {
 	if x == nil {
 		return def
 	}
@@ -59,6 +60,18 @@ func As[A int | int8 | int16 | int32 | int64 |
 			switch any(def).(type) {
 			case string:
 				return any(string(*x)).(A)
+			case []byte:
+				return any([]byte(*x)).(A)
+			}
+
+			return def
+		},
+		func(x *Binary) A {
+			switch any(def).(type) {
+			case []byte:
+				return any(x.B).(A)
+			case string:
+				return any(string(x.B)).(A)
 			}
 
 			return def
@@ -136,6 +149,9 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 		func(x *String) A {
 			return fn(x, init)
 		},
+		func(x *Binary) A {
+			return fn(x, init)
+		},
 		func(x *List) A {
 			for _, y := range x.Items {
 				init = fn(y, init)
@@ -152,8 +168,6 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 		},
 	)
 }
-
-var none = &None{}
 
 func Compare(a, b Schema) int {
 	if a == nil {
@@ -209,9 +223,19 @@ func Compare(a, b Schema) int {
 
 			return -1
 		},
-		func(x *List) int {
+		func(x *Binary) int {
 			switch y := b.(type) {
 			case *None, *Bool, *Number, *String:
+				return 1
+			case *Binary:
+				return bytes.Compare(x.B, y.B)
+			}
+
+			return -1
+		},
+		func(x *List) int {
+			switch y := b.(type) {
+			case *None, *Bool, *Number, *String, *Binary:
 				return 1
 			case *List:
 				if len(x.Items) == len(y.Items) {
@@ -235,7 +259,7 @@ func Compare(a, b Schema) int {
 		},
 		func(x *Map) int {
 			switch y := b.(type) {
-			case *None, *Bool, *Number, *String, *List:
+			case *None, *Bool, *Number, *String, *Binary, *List:
 				return 1
 			case *Map:
 				if len(x.Field) == len(y.Field) {

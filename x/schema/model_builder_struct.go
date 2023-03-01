@@ -133,6 +133,12 @@ func (s *StructBuilder) set(f reflect.Value, value any) error {
 		}
 
 	case reflect.Slice:
+		switch v := value.(type) {
+		case []byte:
+			f.SetBytes(v)
+			return nil
+		}
+
 		// when struct field has type like []string
 		// and value that should be set is []interface{} but element inside is string
 		// do conversion!

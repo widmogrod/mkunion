@@ -7,6 +7,7 @@ type SchemaDefaultVisitor[A any] struct {
 	OnBool   func(x *Bool) A
 	OnNumber func(x *Number) A
 	OnString func(x *String) A
+	OnBinary func(x *Binary) A
 	OnList   func(x *List) A
 	OnMap    func(x *Map) A
 }
@@ -32,6 +33,12 @@ func (t *SchemaDefaultVisitor[A]) VisitNumber(v *Number) any {
 func (t *SchemaDefaultVisitor[A]) VisitString(v *String) any {
 	if t.OnString != nil {
 		return t.OnString(v)
+	}
+	return t.Default
+}
+func (t *SchemaDefaultVisitor[A]) VisitBinary(v *Binary) any {
+	if t.OnBinary != nil {
+		return t.OnBinary(v)
 	}
 	return t.Default
 }

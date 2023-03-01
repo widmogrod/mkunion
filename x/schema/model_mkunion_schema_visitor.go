@@ -10,6 +10,7 @@ type SchemaVisitor interface {
 	VisitBool(v *Bool) any
 	VisitNumber(v *Number) any
 	VisitString(v *String) any
+	VisitBinary(v *Binary) any
 	VisitList(v *List) any
 	VisitMap(v *Map) any
 }
@@ -22,6 +23,7 @@ func (r *None) Accept(v SchemaVisitor) any   { return v.VisitNone(r) }
 func (r *Bool) Accept(v SchemaVisitor) any   { return v.VisitBool(r) }
 func (r *Number) Accept(v SchemaVisitor) any { return v.VisitNumber(r) }
 func (r *String) Accept(v SchemaVisitor) any { return v.VisitString(r) }
+func (r *Binary) Accept(v SchemaVisitor) any { return v.VisitBinary(r) }
 func (r *List) Accept(v SchemaVisitor) any   { return v.VisitList(r) }
 func (r *Map) Accept(v SchemaVisitor) any    { return v.VisitMap(r) }
 
@@ -30,6 +32,7 @@ var (
 	_ Schema = (*Bool)(nil)
 	_ Schema = (*Number)(nil)
 	_ Schema = (*String)(nil)
+	_ Schema = (*Binary)(nil)
 	_ Schema = (*List)(nil)
 	_ Schema = (*Map)(nil)
 )
@@ -40,11 +43,12 @@ func MatchSchema[TOut any](
 	f2 func(x *Bool) TOut,
 	f3 func(x *Number) TOut,
 	f4 func(x *String) TOut,
-	f5 func(x *List) TOut,
-	f6 func(x *Map) TOut,
+	f5 func(x *Binary) TOut,
+	f6 func(x *List) TOut,
+	f7 func(x *Map) TOut,
 	df func(x Schema) TOut,
 ) TOut {
-	return f.Match6(x, f1, f2, f3, f4, f5, f6, df)
+	return f.Match7(x, f1, f2, f3, f4, f5, f6, f7, df)
 }
 
 func MatchSchemaR2[TOut1, TOut2 any](
@@ -53,11 +57,12 @@ func MatchSchemaR2[TOut1, TOut2 any](
 	f2 func(x *Bool) (TOut1, TOut2),
 	f3 func(x *Number) (TOut1, TOut2),
 	f4 func(x *String) (TOut1, TOut2),
-	f5 func(x *List) (TOut1, TOut2),
-	f6 func(x *Map) (TOut1, TOut2),
+	f5 func(x *Binary) (TOut1, TOut2),
+	f6 func(x *List) (TOut1, TOut2),
+	f7 func(x *Map) (TOut1, TOut2),
 	df func(x Schema) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.Match6R2(x, f1, f2, f3, f4, f5, f6, df)
+	return f.Match7R2(x, f1, f2, f3, f4, f5, f6, f7, df)
 }
 
 func MustMatchSchema[TOut any](
@@ -66,10 +71,11 @@ func MustMatchSchema[TOut any](
 	f2 func(x *Bool) TOut,
 	f3 func(x *Number) TOut,
 	f4 func(x *String) TOut,
-	f5 func(x *List) TOut,
-	f6 func(x *Map) TOut,
+	f5 func(x *Binary) TOut,
+	f6 func(x *List) TOut,
+	f7 func(x *Map) TOut,
 ) TOut {
-	return f.MustMatch6(x, f1, f2, f3, f4, f5, f6)
+	return f.MustMatch7(x, f1, f2, f3, f4, f5, f6, f7)
 }
 
 func MustMatchSchemaR2[TOut1, TOut2 any](
@@ -78,8 +84,9 @@ func MustMatchSchemaR2[TOut1, TOut2 any](
 	f2 func(x *Bool) (TOut1, TOut2),
 	f3 func(x *Number) (TOut1, TOut2),
 	f4 func(x *String) (TOut1, TOut2),
-	f5 func(x *List) (TOut1, TOut2),
-	f6 func(x *Map) (TOut1, TOut2),
+	f5 func(x *Binary) (TOut1, TOut2),
+	f6 func(x *List) (TOut1, TOut2),
+	f7 func(x *Map) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.MustMatch6R2(x, f1, f2, f3, f4, f5, f6)
+	return f.MustMatch7R2(x, f1, f2, f3, f4, f5, f6, f7)
 }
