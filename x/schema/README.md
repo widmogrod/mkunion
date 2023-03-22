@@ -72,12 +72,12 @@ assert.Equal(t, expected, nativego)
 ### V0.5.x
 - [x] `schema.UnwrapDynamoDB` takes DynamoDB specific nesting and removes it.
 - [x] Eliminate data races in `*UnionVariants[A] -> MapDefFor` & `UseUnionFormatter` data race
+- [x] Introduce `ToGoG[T any]` function, that makes ToGo with type assertion and tries to convert to T
 
 ### V0.6.x
-- [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information
-- [ ] Introduce `ConvertAs` function, that makes ToGo with type assertion
-- [ ] Support serialization of schema.Schema to schema.Schema
 - [ ] Rename `schema.As` to `schema.AsDefault` and make `schema.As` as variant that returns false, if type is not supported
+- [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information
+- [ ] Support serialization of schema.Schema to schema.Schema
 
 ### V0.7.x
 - [ ] Support json tags in golang to map field names to schema

@@ -448,3 +448,61 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 			return build.Build(), nil
 		})
 }
+
+func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
+	var a A
+	var result any
+	var err error
+
+	switch any(a).(type) {
+	case int:
+		result = As[int](x, any(a).(int))
+	case int8:
+		result = As[int8](x, any(a).(int8))
+	case int16:
+		result = As[int16](x, any(a).(int16))
+	case int32:
+		result = As[int32](x, any(a).(int32))
+	case int64:
+		result = As[int64](x, any(a).(int64))
+	case uint:
+		result = As[uint](x, any(a).(uint))
+	case uint8:
+		result = As[uint8](x, any(a).(uint8))
+	case uint16:
+		result = As[uint16](x, any(a).(uint16))
+	case uint32:
+		result = As[uint32](x, any(a).(uint32))
+	case uint64:
+		result = As[uint64](x, any(a).(uint64))
+	case float32:
+		result = As[float32](x, any(a).(float32))
+	case float64:
+		result = As[float64](x, any(a).(float64))
+	case string:
+		result = As[string](x, any(a).(string))
+	case bool:
+		result = As[bool](x, any(a).(bool))
+	case []byte:
+		result = As[[]byte](x, any(a).([]byte))
+	default:
+		if any(a) == nil {
+			result, err = ToGo(x, options...)
+		} else {
+			result, err = ToGo(x, WithExtraRules(WhenPath(nil, UseStruct(a))))
+		}
+
+		if err != nil {
+			var a A
+			return a, fmt.Errorf("schema.ToGoG[%T] schema conversion failed. %w", a, err)
+		}
+	}
+
+	typed, ok := result.(A)
+	if !ok {
+		var a A
+		return a, fmt.Errorf("schema.ToGoG[%T] type assertion failed. %w", a, err)
+	}
+
+	return typed, nil
+}
