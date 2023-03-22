@@ -61,7 +61,13 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 		return &Binary{B: y.Value}, nil
 
 	case *types.AttributeValueMemberBS:
-		return nil, fmt.Errorf("FromDynamoDB: unsupported type: %T", x)
+		result := &List{
+			Items: []Schema{},
+		}
+		for _, item := range y.Value {
+			result.Items = append(result.Items, &Binary{B: item})
+		}
+		return result, nil
 
 	case *types.AttributeValueMemberNS:
 		result := &List{
@@ -139,4 +145,121 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 	}
 
 	panic("unreachable")
+}
+
+func UnwrapDynamoDB(data Schema) (Schema, error) {
+	switch x := data.(type) {
+	case *Map:
+		if len(x.Field) == 1 {
+			for _, field := range x.Field {
+				switch field.Name {
+				case "S":
+					value := AsDefault[string](field.Value, "")
+					return FromDynamoDB(&types.AttributeValueMemberS{
+						Value: value,
+					})
+				case "SS":
+					switch y := field.Value.(type) {
+					case *List:
+						result := &List{}
+						for _, item := range y.Items {
+							result.Items = append(result.Items, MkString(AsDefault[string](item, "")))
+						}
+						return result, nil
+					default:
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+					}
+				case "N":
+					value := AsDefault[string](field.Value, "")
+					return FromDynamoDB(&types.AttributeValueMemberN{
+						Value: value,
+					})
+				case "NS":
+					switch y := field.Value.(type) {
+					case *List:
+						result := &List{}
+						for _, item := range y.Items {
+							result.Items = append(result.Items, MkFloat(AsDefault[float64](item, 0)))
+						}
+						return result, nil
+					default:
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+					}
+				case "B":
+					// Assumption is that here we have base64 encoded string from DynamoDB
+					// and not a binary value, so to not do double encoding we just
+					// pas it as is. This assumption, makse only sence, when it's used on values that
+					// require unwrapping DynamoDB format.
+					//Which may imply, that those values are ie from other medium than DynamoDB.
+					return field.Value, nil
+
+				case "BS":
+					switch y := field.Value.(type) {
+					case *List:
+						result := &List{}
+						for _, item := range y.Items {
+							result.Items = append(result.Items, item)
+						}
+						return result, nil
+					default:
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+					}
+
+				case "BOOL":
+					value := AsDefault[bool](field.Value, false)
+					return FromDynamoDB(&types.AttributeValueMemberBOOL{
+						Value: value,
+					})
+				case "NULL":
+					return &None{}, nil
+
+				case "M":
+					switch y := field.Value.(type) {
+					case *Map:
+						return assumeMap(y)
+					default:
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (1): %s=%T", field.Name, field.Value)
+					}
+
+				case "L":
+					switch y := field.Value.(type) {
+					case *List:
+						result := &List{}
+						for _, item := range y.Items {
+							unwrapped, err := UnwrapDynamoDB(item)
+							if err != nil {
+								return nil, err
+							}
+							result.Items = append(result.Items, unwrapped)
+						}
+						return result, nil
+					default:
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+					}
+
+				default:
+					return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (3): %s=%T", field.Name, field.Value)
+				}
+			}
+		} else {
+			return assumeMap(x)
+		}
+	}
+
+	return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (4): %T", data)
+}
+
+func assumeMap(x *Map) (Schema, error) {
+	result := &Map{}
+	for _, field := range x.Field {
+		value, err := UnwrapDynamoDB(field.Value)
+		if err != nil {
+			return nil, err
+		}
+		result.Field = append(result.Field, Field{
+			Name:  field.Name,
+			Value: value,
+		})
+	}
+	return result, nil
 }

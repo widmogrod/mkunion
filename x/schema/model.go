@@ -140,8 +140,8 @@ func WhenPath(path []string, setter TypeMapDefinition) *WhenField[struct{}] {
 }
 
 type RuleMatcher interface {
-	MapDefFor(x *Map, path []string) (TypeMapDefinition, bool)
-	SchemaToUnionType(x any, schema Schema) (Schema, bool)
+	MapDefFor(x *Map, path []string, config *goConfig) (TypeMapDefinition, bool)
+	SchemaToUnionType(x any, schema Schema, config *goConfig) (Schema, bool)
 }
 
 var _ RuleMatcher = (*WrapInMap[any])(nil)
@@ -151,11 +151,11 @@ type WrapInMap[A any] struct {
 	InField string
 }
 
-func (w *WrapInMap[A]) MapDefFor(x *Map, path []string) (TypeMapDefinition, bool) {
+func (w *WrapInMap[A]) MapDefFor(x *Map, path []string, config *goConfig) (TypeMapDefinition, bool) {
 	return nil, false
 }
 
-func (w *WrapInMap[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool) {
+func (w *WrapInMap[A]) SchemaToUnionType(x any, schema Schema, config *goConfig) (Schema, bool) {
 	if _, ok := x.(A); !ok {
 		return nil, false
 	}

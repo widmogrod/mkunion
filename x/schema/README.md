@@ -69,6 +69,17 @@ assert.Equal(t, expected, nativego)
 - [x] Support for Binary type
 - [x] Add missing function for MkBinary, MkFloat, MkNone
 
-### V0.4.x
+### V0.5.x
+- [x] `schema.UnwrapDynamoDB` takes DynamoDB specific nesting and removes it.
+- [x] Eliminate data races in `*UnionVariants[A] -> MapDefFor` & `UseUnionFormatter` data race
+- [x] Introduce `ToGoG[T any]` function, that makes ToGo with type assertion and tries to convert to T
+- [x] Rename `schema.As` to `schema.AsDefault` and make `schema.As` as variant that returns false, if type is not supported
+
+### V0.6.x
+- [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information
+- [ ] Support serialization of schema.Schema to schema.Schema
+
+### V0.7.x
 - [ ] Support json tags in golang to map field names to schema
 - [ ] Add cata, ana, and hylo morphisms
+- [ ] Open `goConfigFunc` to allow customizing how golang types are converted to schema, passed from external code.

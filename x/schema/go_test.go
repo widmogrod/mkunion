@@ -171,3 +171,50 @@ func TestGoToSchemaComplex(t *testing.T) {
 	))
 	assert.Equal(t, data, result)
 }
+
+func TestToGenericGo(t *testing.T) {
+	t.Run("convert with struct", func(t *testing.T) {
+		data := AStruct{
+			Foo: 123,
+			Bar: 333,
+		}
+		schema := FromGo(data)
+		result, err := ToGoG[AStruct](schema)
+		assert.NoError(t, err)
+		assert.Equal(t, data, result)
+	})
+
+	t.Run("convert with pointer", func(t *testing.T) {
+		data := &AStruct{
+			Foo: 123,
+			Bar: 333,
+		}
+		schema := FromGo(data)
+		result, err := ToGoG[*AStruct](schema)
+		assert.NoError(t, err)
+		assert.Equal(t, data, result)
+	})
+
+	t.Run("convert with interface", func(t *testing.T) {
+		data := &AStruct{
+			Foo: 123,
+			Bar: 333,
+		}
+		expected := map[string]any{
+			"Foo": float64(123),
+			"Bar": float64(333),
+		}
+		schema := FromGo(data)
+		result, err := ToGoG[any](schema)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("convert primitive type", func(t *testing.T) {
+		data := 123
+		schema := FromGo(data)
+		result, err := ToGoG[int](schema)
+		assert.NoError(t, err)
+		assert.Equal(t, data, result)
+	})
+}

@@ -39,20 +39,14 @@ func (c *goConfig) formatter() UnionFormatFunc {
 
 func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	for _, rule := range c.localRules {
-		if ruleSet, ok := rule.(unionFormatterAware); ok {
-			ruleSet.UseUnionFormatter(c.formatter())
-		}
-		if typeDef, ok := rule.MapDefFor(x, path); ok {
+		if typeDef, ok := rule.MapDefFor(x, path, c); ok {
 			return typeDef
 		}
 	}
 
 	if c.useRegistry && c.registry != nil {
 		for _, rule := range c.registry.rules {
-			if ruleSet, ok := rule.(unionFormatterAware); ok {
-				ruleSet.UseUnionFormatter(c.formatter())
-			}
-			if typeDef, ok := rule.MapDefFor(x, path); ok {
+			if typeDef, ok := rule.MapDefFor(x, path, c); ok {
 				return typeDef
 			}
 		}
@@ -63,10 +57,7 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 
 func (c *goConfig) Transform(x any, r *Map) Schema {
 	for _, rule := range c.localRules {
-		if ruleSet, ok := rule.(unionFormatterAware); ok {
-			ruleSet.UseUnionFormatter(c.formatter())
-		}
-		v, ok := rule.SchemaToUnionType(x, r)
+		v, ok := rule.SchemaToUnionType(x, r, c)
 		if ok {
 			return v
 		}
@@ -74,10 +65,7 @@ func (c *goConfig) Transform(x any, r *Map) Schema {
 
 	if c.useRegistry {
 		for _, rule := range c.registry.rules {
-			if ruleSet, ok := rule.(unionFormatterAware); ok {
-				ruleSet.UseUnionFormatter(c.formatter())
-			}
-			v, ok := rule.SchemaToUnionType(x, r)
+			v, ok := rule.SchemaToUnionType(x, r, c)
 			if ok {
 				return v
 			}
@@ -85,6 +73,13 @@ func (c *goConfig) Transform(x any, r *Map) Schema {
 	}
 
 	return r
+}
+
+func (c *goConfig) variantName(r reflect.Type) string {
+	if c == nil || c.unionFormatter == nil {
+		return FormatUnionNameUsingTypeNameWithPackage(r)
+	}
+	return c.unionFormatter(r)
 }
 
 type goConfigFunc func(c *goConfig)
@@ -452,4 +447,62 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 
 			return build.Build(), nil
 		})
+}
+
+func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
+	var a A
+	var result any
+	var err error
+
+	switch any(a).(type) {
+	case int:
+		result = AsDefault[int](x, any(a).(int))
+	case int8:
+		result = AsDefault[int8](x, any(a).(int8))
+	case int16:
+		result = AsDefault[int16](x, any(a).(int16))
+	case int32:
+		result = AsDefault[int32](x, any(a).(int32))
+	case int64:
+		result = AsDefault[int64](x, any(a).(int64))
+	case uint:
+		result = AsDefault[uint](x, any(a).(uint))
+	case uint8:
+		result = AsDefault[uint8](x, any(a).(uint8))
+	case uint16:
+		result = AsDefault[uint16](x, any(a).(uint16))
+	case uint32:
+		result = AsDefault[uint32](x, any(a).(uint32))
+	case uint64:
+		result = AsDefault[uint64](x, any(a).(uint64))
+	case float32:
+		result = AsDefault[float32](x, any(a).(float32))
+	case float64:
+		result = AsDefault[float64](x, any(a).(float64))
+	case string:
+		result = AsDefault[string](x, any(a).(string))
+	case bool:
+		result = AsDefault[bool](x, any(a).(bool))
+	case []byte:
+		result = AsDefault[[]byte](x, any(a).([]byte))
+	default:
+		if any(a) == nil {
+			result, err = ToGo(x, options...)
+		} else {
+			result, err = ToGo(x, WithExtraRules(WhenPath(nil, UseStruct(a))))
+		}
+
+		if err != nil {
+			var a A
+			return a, fmt.Errorf("schema.ToGoG[%T] schema conversion failed. %w", a, err)
+		}
+	}
+
+	typed, ok := result.(A)
+	if !ok {
+		var a A
+		return a, fmt.Errorf("schema.ToGoG[%T] type assertion failed. %w", a, err)
+	}
+
+	return typed, nil
 }

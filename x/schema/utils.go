@@ -9,79 +9,141 @@ import (
 func As[A int | int8 | int16 | int32 | int64 |
 	uint | uint8 | uint16 | uint32 | uint64 |
 	float32 | float64 |
-	bool | string | []byte](x Schema, def A) A {
+	bool | string | []byte](x Schema) (A, bool) {
+	var def A
 	if x == nil {
-		return def
+		if any(def) == nil {
+			return def, true
+		}
+		return def, false
 	}
 
-	return MustMatchSchema(
+	return MustMatchSchemaR2(
 		x,
-		func(x *None) A {
-			return def
+		func(x *None) (A, bool) {
+			if any(def) == nil {
+				return def, true
+			}
+			return def, false
 		},
-		func(x *Bool) A {
+		func(x *Bool) (A, bool) {
 			switch any(def).(type) {
 			case bool:
-				return any(bool(*x)).(A)
+				return any(bool(*x)).(A), true
 			}
 
-			return def
+			return def, false
 		},
-		func(x *Number) A {
+		func(x *Number) (A, bool) {
 			switch any(def).(type) {
 			case float32:
-				return any(float32(*x)).(A)
+				return any(float32(*x)).(A), true
 			case float64:
-				return any(float64(*x)).(A)
+				return any(float64(*x)).(A), true
 			case int:
-				return any(int(*x)).(A)
+				return any(int(*x)).(A), true
 			case int8:
-				return any(int8(*x)).(A)
+				return any(int8(*x)).(A), true
 			case int16:
-				return any(int16(*x)).(A)
+				return any(int16(*x)).(A), true
 			case int32:
-				return any(int32(*x)).(A)
+				return any(int32(*x)).(A), true
 			case int64:
-				return any(int64(*x)).(A)
+				return any(int64(*x)).(A), true
 			case uint:
-				return any(uint(*x)).(A)
+				return any(uint(*x)).(A), true
 			case uint8:
-				return any(uint8(*x)).(A)
+				return any(uint8(*x)).(A), true
 			case uint16:
-				return any(uint16(*x)).(A)
+				return any(uint16(*x)).(A), true
 			case uint32:
-				return any(uint32(*x)).(A)
+				return any(uint32(*x)).(A), true
 			case uint64:
-				return any(uint64(*x)).(A)
+				return any(uint64(*x)).(A), true
 			}
-			return def
+			return def, false
 		},
-		func(x *String) A {
+		func(x *String) (A, bool) {
 			switch any(def).(type) {
 			case string:
-				return any(string(*x)).(A)
+				return any(string(*x)).(A), true
 			case []byte:
-				return any([]byte(*x)).(A)
+				return any([]byte(*x)).(A), true
+			case float64:
+				v, err := strconv.ParseFloat(string(*x), 64)
+				if err != nil {
+					return def, false
+				}
+				return any(v).(A), true
+			case float32:
+				v, err := strconv.ParseFloat(string(*x), 32)
+				if err != nil {
+					return def, false
+				}
+				return any(float32(v)).(A), true
+			case int:
+				v, err := strconv.Atoi(string(*x))
+				if err != nil {
+					return def, false
+				}
+				return any(v).(A), true
+			case int8:
+				v, err := strconv.ParseInt(string(*x), 10, 8)
+				if err != nil {
+					return def, false
+				}
+				return any(int8(v)).(A), true
+			case int16:
+				v, err := strconv.ParseInt(string(*x), 10, 16)
+				if err != nil {
+					return def, false
+				}
+				return any(int16(v)).(A), true
+			case int32:
+				v, err := strconv.ParseInt(string(*x), 10, 32)
+				if err != nil {
+					return def, false
+				}
+				return any(int32(v)).(A), true
+			case int64:
+				v, err := strconv.ParseInt(string(*x), 10, 64)
+				if err != nil {
+					return def, false
+				}
+				return any(int64(v)).(A), true
 			}
 
-			return def
+			return def, false
 		},
-		func(x *Binary) A {
+		func(x *Binary) (A, bool) {
 			switch any(def).(type) {
 			case []byte:
-				return any(x.B).(A)
+				return any(x.B).(A), true
 			case string:
-				return any(string(x.B)).(A)
+				return any(string(x.B)).(A), true
 			}
 
-			return def
+			return def, false
 		},
-		func(x *List) A {
-			return def
+		func(x *List) (A, bool) {
+			return def, false
 		},
-		func(x *Map) A {
-			return def
+		func(x *Map) (A, bool) {
+			return def, false
 		})
+}
+
+func AsDefault[A int | int8 | int16 | int32 | int64 |
+	uint | uint8 | uint16 | uint32 | uint64 |
+	float32 | float64 |
+	bool | string | []byte](x Schema, def A) A {
+
+	res, ok := As[A](x)
+	if ok {
+		return res
+	}
+
+	return def
 }
 
 func Get(data Schema, location string) Schema {
