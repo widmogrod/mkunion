@@ -9,6 +9,7 @@ require (
 	github.com/fatih/structtag v1.2.0
 	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli/v2 v2.24.2
+	golang.org/x/sync v0.1.0
 )
 
 require (

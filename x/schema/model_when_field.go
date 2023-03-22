@@ -10,11 +10,11 @@ type WhenField[A any] struct {
 	typeMapDef TypeMapDefinition
 }
 
-func (r *WhenField[A]) SchemaToUnionType(x any, schema Schema) (Schema, bool) {
+func (r *WhenField[A]) SchemaToUnionType(x any, schema Schema, config *goConfig) (Schema, bool) {
 	return nil, false
 }
 
-func (r *WhenField[A]) MapDefFor(x *Map, path []string) (TypeMapDefinition, bool) {
+func (r *WhenField[A]) MapDefFor(x *Map, path []string, config *goConfig) (TypeMapDefinition, bool) {
 	if len(r.path) == 1 && r.path[0] == "*" {
 		return r.typeMapDef, true
 	}

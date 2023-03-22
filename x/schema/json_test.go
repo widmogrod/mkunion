@@ -59,6 +59,13 @@ type BStruct struct {
 	Bip *[]byte
 }
 
+type ABUnion interface {
+	ABUnion()
+}
+
+func (*AStruct) ABUnion()    {}
+func (*BaseStruct) ABUnion() {}
+
 func TestJsonToSchema(t *testing.T) {
 	json := []byte(`{"Foo": 1, "Bar": 2}`)
 	schema, err := FromJSON(json)

@@ -39,20 +39,14 @@ func (c *goConfig) formatter() UnionFormatFunc {
 
 func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	for _, rule := range c.localRules {
-		if ruleSet, ok := rule.(unionFormatterAware); ok {
-			ruleSet.UseUnionFormatter(c.formatter())
-		}
-		if typeDef, ok := rule.MapDefFor(x, path); ok {
+		if typeDef, ok := rule.MapDefFor(x, path, c); ok {
 			return typeDef
 		}
 	}
 
 	if c.useRegistry && c.registry != nil {
 		for _, rule := range c.registry.rules {
-			if ruleSet, ok := rule.(unionFormatterAware); ok {
-				ruleSet.UseUnionFormatter(c.formatter())
-			}
-			if typeDef, ok := rule.MapDefFor(x, path); ok {
+			if typeDef, ok := rule.MapDefFor(x, path, c); ok {
 				return typeDef
 			}
 		}
@@ -63,10 +57,7 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 
 func (c *goConfig) Transform(x any, r *Map) Schema {
 	for _, rule := range c.localRules {
-		if ruleSet, ok := rule.(unionFormatterAware); ok {
-			ruleSet.UseUnionFormatter(c.formatter())
-		}
-		v, ok := rule.SchemaToUnionType(x, r)
+		v, ok := rule.SchemaToUnionType(x, r, c)
 		if ok {
 			return v
 		}
@@ -74,10 +65,7 @@ func (c *goConfig) Transform(x any, r *Map) Schema {
 
 	if c.useRegistry {
 		for _, rule := range c.registry.rules {
-			if ruleSet, ok := rule.(unionFormatterAware); ok {
-				ruleSet.UseUnionFormatter(c.formatter())
-			}
-			v, ok := rule.SchemaToUnionType(x, r)
+			v, ok := rule.SchemaToUnionType(x, r, c)
 			if ok {
 				return v
 			}
@@ -85,6 +73,13 @@ func (c *goConfig) Transform(x any, r *Map) Schema {
 	}
 
 	return r
+}
+
+func (c *goConfig) variantName(r reflect.Type) string {
+	if c == nil || c.unionFormatter == nil {
+		return FormatUnionNameUsingTypeNameWithPackage(r)
+	}
+	return c.unionFormatter(r)
 }
 
 type goConfigFunc func(c *goConfig)
