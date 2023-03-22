@@ -62,6 +62,48 @@ func As[A int | int8 | int16 | int32 | int64 |
 				return any(string(*x)).(A)
 			case []byte:
 				return any([]byte(*x)).(A)
+			case float64:
+				v, err := strconv.ParseFloat(string(*x), 64)
+				if err != nil {
+					return def
+				}
+				return any(v).(A)
+			case float32:
+				v, err := strconv.ParseFloat(string(*x), 32)
+				if err != nil {
+					return def
+				}
+				return any(float32(v)).(A)
+			case int:
+				v, err := strconv.Atoi(string(*x))
+				if err != nil {
+					return def
+				}
+				return any(v).(A)
+			case int8:
+				v, err := strconv.ParseInt(string(*x), 10, 8)
+				if err != nil {
+					return def
+				}
+				return any(int8(v)).(A)
+			case int16:
+				v, err := strconv.ParseInt(string(*x), 10, 16)
+				if err != nil {
+					return def
+				}
+				return any(int16(v)).(A)
+			case int32:
+				v, err := strconv.ParseInt(string(*x), 10, 32)
+				if err != nil {
+					return def
+				}
+				return any(int32(v)).(A)
+			case int64:
+				v, err := strconv.ParseInt(string(*x), 10, 64)
+				if err != nil {
+					return def
+				}
+				return any(int64(v)).(A)
 			}
 
 			return def
