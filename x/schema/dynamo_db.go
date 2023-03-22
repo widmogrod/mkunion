@@ -154,7 +154,7 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 			for _, field := range x.Field {
 				switch field.Name {
 				case "S":
-					value := As[string](field.Value, "")
+					value := AsDefault[string](field.Value, "")
 					return FromDynamoDB(&types.AttributeValueMemberS{
 						Value: value,
 					})
@@ -163,14 +163,14 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 					case *List:
 						result := &List{}
 						for _, item := range y.Items {
-							result.Items = append(result.Items, MkString(As[string](item, "")))
+							result.Items = append(result.Items, MkString(AsDefault[string](item, "")))
 						}
 						return result, nil
 					default:
 						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
 					}
 				case "N":
-					value := As[string](field.Value, "")
+					value := AsDefault[string](field.Value, "")
 					return FromDynamoDB(&types.AttributeValueMemberN{
 						Value: value,
 					})
@@ -179,7 +179,7 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 					case *List:
 						result := &List{}
 						for _, item := range y.Items {
-							result.Items = append(result.Items, MkFloat(As[float64](item, 0)))
+							result.Items = append(result.Items, MkFloat(AsDefault[float64](item, 0)))
 						}
 						return result, nil
 					default:
@@ -206,7 +206,7 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 					}
 
 				case "BOOL":
-					value := As[bool](field.Value, false)
+					value := AsDefault[bool](field.Value, false)
 					return FromDynamoDB(&types.AttributeValueMemberBOOL{
 						Value: value,
 					})

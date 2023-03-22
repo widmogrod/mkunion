@@ -456,35 +456,35 @@ func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
 
 	switch any(a).(type) {
 	case int:
-		result = As[int](x, any(a).(int))
+		result = AsDefault[int](x, any(a).(int))
 	case int8:
-		result = As[int8](x, any(a).(int8))
+		result = AsDefault[int8](x, any(a).(int8))
 	case int16:
-		result = As[int16](x, any(a).(int16))
+		result = AsDefault[int16](x, any(a).(int16))
 	case int32:
-		result = As[int32](x, any(a).(int32))
+		result = AsDefault[int32](x, any(a).(int32))
 	case int64:
-		result = As[int64](x, any(a).(int64))
+		result = AsDefault[int64](x, any(a).(int64))
 	case uint:
-		result = As[uint](x, any(a).(uint))
+		result = AsDefault[uint](x, any(a).(uint))
 	case uint8:
-		result = As[uint8](x, any(a).(uint8))
+		result = AsDefault[uint8](x, any(a).(uint8))
 	case uint16:
-		result = As[uint16](x, any(a).(uint16))
+		result = AsDefault[uint16](x, any(a).(uint16))
 	case uint32:
-		result = As[uint32](x, any(a).(uint32))
+		result = AsDefault[uint32](x, any(a).(uint32))
 	case uint64:
-		result = As[uint64](x, any(a).(uint64))
+		result = AsDefault[uint64](x, any(a).(uint64))
 	case float32:
-		result = As[float32](x, any(a).(float32))
+		result = AsDefault[float32](x, any(a).(float32))
 	case float64:
-		result = As[float64](x, any(a).(float64))
+		result = AsDefault[float64](x, any(a).(float64))
 	case string:
-		result = As[string](x, any(a).(string))
+		result = AsDefault[string](x, any(a).(string))
 	case bool:
-		result = As[bool](x, any(a).(bool))
+		result = AsDefault[bool](x, any(a).(bool))
 	case []byte:
-		result = As[[]byte](x, any(a).([]byte))
+		result = AsDefault[[]byte](x, any(a).([]byte))
 	default:
 		if any(a) == nil {
 			result, err = ToGo(x, options...)
