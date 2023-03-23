@@ -76,10 +76,7 @@ func (c *goConfig) Transform(x any, r *Map) Schema {
 }
 
 func (c *goConfig) variantName(r reflect.Type) string {
-	if c == nil || c.unionFormatter == nil {
-		return FormatUnionNameUsingTypeNameWithPackage(r)
-	}
-	return c.unionFormatter(r)
+	return c.formatter()(r)
 }
 
 type goConfigFunc func(c *goConfig)
