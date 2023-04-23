@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"fmt"
 	"github.com/bxcodec/faker/v3"
 	"github.com/stretchr/testify/assert"
 	"math"
@@ -481,4 +482,119 @@ func TestSchemaToGoStructs(t *testing.T) {
 			assert.Equal(t, uc.out, MustToGo(uc.in, WithOnlyTheseRules(uc.rules...)))
 		})
 	}
+}
+
+type recordInTest[T any] struct {
+	ID   string
+	Data T
+}
+
+var (
+	_ Unmarshaler = (*recordInTest[any])(nil)
+	_ Marshaler   = (*recordInTest[any])(nil)
+)
+
+func (record *recordInTest[T]) MarshalSchema() (*Map, error) {
+	var schemed Schema
+	if _, ok := any(record.Data).(Schema); ok {
+		schemed = any(record.Data).(Schema)
+	} else {
+		schemed = FromGo(record.Data)
+	}
+
+	return &Map{
+		Field: []Field{
+			{
+				Name:  "ID",
+				Value: MkString(record.ID),
+			},
+			{
+				Name:  "Data",
+				Value: schemed,
+			},
+		},
+	}, nil
+}
+
+func (record *recordInTest[T]) UnmarshalSchema(x *Map) error {
+	for _, field := range x.Field {
+		switch field.Name {
+		case "ID":
+			if value, ok := As[string](field.Value); ok {
+				record.ID = value
+			}
+		case "Data":
+			data, err := ToGoG[T](field.Value)
+			if err != nil {
+				return fmt.Errorf(`recordInTest[T] BuildFromMapSchema: failed to convert "Data" value: %w`, err)
+			}
+			record.Data = data
+		}
+	}
+
+	return nil
+}
+
+func TestSchemaMarshalSchema(t *testing.T) {
+	useCases := map[string]struct {
+		in  *recordInTest[Schema]
+		out Schema
+	}{
+		"simple example of record": {
+			in: &recordInTest[Schema]{
+				ID: "foo",
+				Data: MkMap(
+					MkField("name", MkString("Alpha")),
+					MkField("age", MkInt(42)),
+				),
+			},
+			out: MkMap(
+				MkField("ID", MkString("foo")),
+				MkField("Data", MkMap(
+					MkField("name", MkString("Alpha")),
+					MkField("age", MkInt(42)),
+				)),
+			),
+		},
+	}
+
+	for name, uc := range useCases {
+		t.Run(name, func(t *testing.T) {
+			result := FromGo(uc.in)
+			assert.Equal(t, uc.out, result)
+
+			out, err := ToGo(result, WithOnlyTheseRules(
+				WhenPath([]string{}, UseStruct(&recordInTest[Schema]{})),
+			))
+			assert.NoError(t, err)
+			assert.Equal(t, uc.in, out)
+		})
+	}
+
+	t.Run("two conversions work on copy of a struct", func(t *testing.T) {
+		r := WhenPath([]string{}, UseStruct(&recordInTest[Schema]{}))
+
+		in1 := MkMap(
+			MkField("ID", MkString("foo1")),
+			MkField("Data", MkMap(
+				MkField("name", MkString("Alpha1")),
+				MkField("age", MkInt(41)),
+			)),
+		)
+		in2 := MkMap(
+			MkField("ID", MkString("foo2")),
+			MkField("Data", MkMap(
+				MkField("name", MkString("Alpha2")),
+				MkField("age", MkInt(42)),
+			)),
+		)
+
+		out1, err := ToGo(in1, WithOnlyTheseRules(r))
+		assert.NoError(t, err)
+
+		out2, err := ToGo(in2, WithOnlyTheseRules(r))
+		assert.NoError(t, err)
+
+		assert.NotEqual(t, out1, out2)
+	})
 }

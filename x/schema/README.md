@@ -43,6 +43,41 @@ expected := map[string]any{
 assert.Equal(t, expected, nativego)
 ```
 
+## How to define custom serialization and deserilization?
+Currently, ser-deser operations are available on maps.
+This is current design decision, it might change in the future.
+
+```go
+type Car struct {
+    Name string
+}
+
+// make sure to Car implements schema.Marshaler and schema.Unmarshaler
+var (
+	_ schema.Marshaler = (*Car)(nil)
+    _ schema.Unmarshaler = (*Car)(nil)
+)
+
+func (c *Car) MarshalSchema() (schema.*Map, error) {
+    return schema.MkMap(map[string]schema.Schema{
+        "name": schema.MkString(c.Name),
+    }), nil
+}
+
+func (c *Car) UnmarshalSchema(x schema.*Map) error {
+    for _, field := range x.Field {
+        switch key {
+        case "name":
+            c.Name = s.MustToString()
+        default:
+            return fmt.Errorf("unknown key %s", key)
+        }
+    }
+	
+    return nil
+}
+```
+
 ## Roadmap
 ### V0.1.0
 - [x] Json <-> Schema <-> Go (with structs mapping)
@@ -76,10 +111,15 @@ assert.Equal(t, expected, nativego)
 - [x] Rename `schema.As` to `schema.AsDefault` and make `schema.As` as variant that returns false, if type is not supported
 
 ### V0.6.x
-- [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information
-- [ ] Support serialization of schema.Schema to schema.Schema
+- [x] Support serialization of `schema.Marchaler` to `schema.Unmarshaller`, that can dramatically improve performance in some cases.
+      Limitation of current implementation is that it works only on *Map, and don't allow custom ser-deser on other types.
+      It's not hard decision. It's just that I don't have use case for other types yet.
 
 ### V0.7.x
+- [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information
+- [ ] Generator of custom `ser-deser` that improve performance and developer experiences for free
+
+### V0.8.x
 - [ ] Support json tags in golang to map field names to schema
 - [ ] Add cata, ana, and hylo morphisms
 - [ ] Open `goConfigFunc` to allow customizing how golang types are converted to schema, passed from external code.
