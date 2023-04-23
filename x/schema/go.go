@@ -12,10 +12,6 @@ var (
 	unionMap       = &UnionMap{}
 )
 
-type unionFormatterAware interface {
-	UseUnionFormatter(f UnionFormatFunc)
-}
-
 type goConfig struct {
 	defaultListDef TypeListDefinition
 	defaultMapDef  TypeMapDefinition
@@ -137,7 +133,21 @@ func FromGo(x any, options ...goConfigFunc) Schema {
 }
 
 func goToSchema(x any, c *goConfig) Schema {
+	if to, ok := x.(Marshaler); ok {
+		schemed, err := to.MarshalSchema()
+		if err != nil {
+			panic(err)
+		}
+		return schemed
+	}
+
 	switch y := x.(type) {
+	// This is a special case, when we don't want to serialise the schema itself.
+	// Such situation can happen in composite types, like recordInTest[T any] { ID string, Data T}
+	// and instance of such type is recordInTest[Schema] { ID: "foo", Data: Schema{...} }
+	case Schema:
+		return y
+
 	case nil:
 		return &None{}
 
@@ -430,6 +440,13 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 		},
 		func(x *Map) (any, error) {
 			build := c.MapDefFor(x, path).NewMapBuilder()
+
+			// If the builder can process raw map schemas, do so.
+			// this is optional, and is only used for the Unmarshaler.
+			if b, ok := build.(mapBuilderCanProcessRawMapSchema); ok {
+				return b.BuildFromMapSchema(x)
+			}
+
 			for _, field := range x.Field {
 				value, err := schemaToGo(field.Value, c, append(path, field.Name))
 				if err != nil {
@@ -446,6 +463,7 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 		})
 }
 
+// ToGoG converts a Schema to a Go value of the given type.
 func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
 	var a A
 	var result any
@@ -483,6 +501,37 @@ func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
 	case []byte:
 		result = AsDefault[[]byte](x, any(a).([]byte))
 	default:
+		// Short circuit, if expected type is already a schema
+		// and when you wonder why such strange type assertion?
+		//
+		//		var a A
+		//		if _, ok := a.(Schema); ok {
+		//			return x.(A), nil
+		//		}
+		//
+		// above code results in error:
+		//
+		// 		invalid operation: cannot use type assertion on type parameter value a (variable of type A constrained by any)
+		//
+		// To avoid this, we need to do cast a to interface{} first.
+		//
+		//		if _, ok := any(a).(Schema) {...}
+		//
+		// But doing it that way, it removes all types that could be interfaces.
+		// For example, generic type "ToGoG" can be set as "Schema", which is interface
+		// and doing type conversion like this, will result in ok == false
+		//
+		// 		var a Schema  // in code is var a A
+		//  	_, ok := any(a).(Schema)
+		//
+		// reason is that Schema is interface, and any(a) results interface{}
+		// which is not the same as Schema.
+		//
+		// so to preserve original type, we do pointer type assertion
+		if _, ok := any((*A)(nil)).(*Schema); ok {
+			return x.(A), nil
+		}
+
 		if any(a) == nil {
 			result, err = ToGo(x, options...)
 		} else {

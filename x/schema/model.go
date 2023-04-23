@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -70,6 +69,13 @@ type (
 		Set(key string, value any) error
 		Build() any
 	}
+
+	// mapBuilderCanProcessRawMapSchema returns marks special class of MapBuilder that they can work with raw Schema value,
+	// and don't need go value that was decoded using default schemaToGo.
+	// in technical terms, it disables recursive call to schemaToGo
+	mapBuilderCanProcessRawMapSchema interface {
+		BuildFromMapSchema(x Schema) (any, error)
+	}
 )
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema
@@ -85,6 +91,19 @@ type (
 	Map struct {
 		Field []Field
 	}
+	//Wrapped struct {
+	//	Value Schema
+	//}
+)
+
+type (
+	Marshaler interface {
+		MarshalSchema() (Schema, error)
+	}
+
+	Unmarshaler interface {
+		UnmarshalSchema(x Schema) error
+	}
 )
 
 type Field struct {
@@ -92,40 +111,19 @@ type Field struct {
 	Value Schema
 }
 
-func UseStruct(t any) *StructDefinition {
-	rt := reflect.TypeOf(t)
-	isNotStruct := rt.Kind() != reflect.Struct
-	isNotPointerToStruct :=
-		rt.Kind() == reflect.Pointer &&
-			rt.Elem().Kind() != reflect.Struct
-
-	if isNotStruct && isNotPointerToStruct {
-		panic(fmt.Sprintf("schema.UseStruct: not a struct, but %T", t))
+func UseStruct(t any) TypeMapDefinition {
+	// Optimisation: When struct has its own definition how to populate it from schema,
+	// we can use it instead of costly StructDefinition, that is based on reflection.
+	if from, ok := t.(Unmarshaler); ok {
+		// here is assumption that t is pointer to struct
+		tType := reflect.ValueOf(from).Type().Elem()
+		return UseSelfUnmarshallingStruct(func() Unmarshaler {
+			// that's why here we create new emtpy type using reflection
+			return reflect.New(tType).Interface().(Unmarshaler)
+		})
 	}
 
-	return &StructDefinition{
-		t:  t,
-		rt: rt,
-	}
-}
-
-var _ TypeMapDefinition = &StructDefinition{}
-
-type StructDefinition struct {
-	t any
-
-	rt reflect.Type
-}
-
-func (s *StructDefinition) NewMapBuilder() MapBuilder {
-	if builder, ok := s.t.(MapBuilder); ok {
-		return builder
-	}
-
-	return &StructBuilder{
-		original: s.t,
-		r:        reflect.New(s.rt),
-	}
+	return UseReflectionUnmarshallingStruct(t)
 }
 
 func UseTypeDef(definition TypeMapDefinition) TypeMapDefinition {
@@ -142,30 +140,4 @@ func WhenPath(path []string, setter TypeMapDefinition) *WhenField[struct{}] {
 type RuleMatcher interface {
 	MapDefFor(x *Map, path []string, config *goConfig) (TypeMapDefinition, bool)
 	SchemaToUnionType(x any, schema Schema, config *goConfig) (Schema, bool)
-}
-
-var _ RuleMatcher = (*WrapInMap[any])(nil)
-
-type WrapInMap[A any] struct {
-	ForType A
-	InField string
-}
-
-func (w *WrapInMap[A]) MapDefFor(x *Map, path []string, config *goConfig) (TypeMapDefinition, bool) {
-	return nil, false
-}
-
-func (w *WrapInMap[A]) SchemaToUnionType(x any, schema Schema, config *goConfig) (Schema, bool) {
-	if _, ok := x.(A); !ok {
-		return nil, false
-	}
-
-	return &Map{
-		Field: []Field{
-			{
-				Name:  w.InField,
-				Value: schema,
-			},
-		},
-	}, true
 }

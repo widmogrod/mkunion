@@ -10,7 +10,7 @@ import (
 func MustDefineUnion[A any](xs ...A) *UnionVariants[A] {
 	result := UnionVariants[A]{
 		unique:      make(map[string]struct{}),
-		pathToUnion: make(map[string]*StructDefinition),
+		pathToUnion: make(map[string]TypeMapDefinition),
 	}
 
 	for _, x := range xs {
@@ -32,7 +32,7 @@ type UnionVariants[A any] struct {
 	variants    []A
 	reflections []reflect.Type
 	unique      map[string]struct{}
-	pathToUnion map[string]*StructDefinition
+	pathToUnion map[string]TypeMapDefinition
 
 	lock sync.RWMutex
 }
