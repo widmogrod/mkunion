@@ -44,6 +44,9 @@ assert.Equal(t, expected, nativego)
 ```
 
 ## How to define custom serialization and deserilization?
+Currently, ser-deser operations are available on maps.
+This is current design decision, it might change in the future.
+
 ```go
 type Car struct {
     Name string
@@ -55,19 +58,22 @@ var (
     _ schema.Unmarshaler = (*Car)(nil)
 )
 
-func (c *Car) MarshalSchema() (schema.Schema, error) {
+func (c *Car) MarshalSchema() (schema.*Map, error) {
     return schema.MkMap(map[string]schema.Schema{
         "name": schema.MkString(c.Name),
     }), nil
 }
 
-func (c *Car) UnmarshalSchema(key string, s schema.Schema) error {
-    switch key {
-    case "name":
-        c.Name = s.MustToString()
-    default:
-        return fmt.Errorf("unknown key %s", key)
+func (c *Car) UnmarshalSchema(x schema.*Map) error {
+    for _, field := range x.Field {
+        switch key {
+        case "name":
+            c.Name = s.MustToString()
+        default:
+            return fmt.Errorf("unknown key %s", key)
+        }
     }
+	
     return nil
 }
 ```
@@ -106,6 +112,8 @@ func (c *Car) UnmarshalSchema(key string, s schema.Schema) error {
 
 ### V0.6.x
 - [x] Support serialization of `schema.Marchaler` to `schema.Unmarshaller`, that can dramatically improve performance in some cases.
+      Limitation of current implementation is that it works only on *Map, and don't allow custom ser-deser on other types.
+      It's not hard decision. It's just that I don't have use case for other types yet.
 
 ### V0.7.x
 - [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information

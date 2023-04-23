@@ -494,7 +494,7 @@ var (
 	_ Marshaler   = (*recordInTest[any])(nil)
 )
 
-func (record *recordInTest[T]) MarshalSchema() (Schema, error) {
+func (record *recordInTest[T]) MarshalSchema() (*Map, error) {
 	var schemed Schema
 	if _, ok := any(record.Data).(Schema); ok {
 		schemed = any(record.Data).(Schema)
@@ -516,25 +516,20 @@ func (record *recordInTest[T]) MarshalSchema() (Schema, error) {
 	}, nil
 }
 
-func (record *recordInTest[T]) UnmarshalSchema(x Schema) error {
-	switch value := x.(type) {
-	case *Map:
-		for _, field := range value.Field {
-			switch field.Name {
-			case "ID":
-				if value, ok := As[string](field.Value); ok {
-					record.ID = value
-				}
-			case "Data":
-				data, err := ToGoG[T](field.Value)
-				if err != nil {
-					return fmt.Errorf(`recordInTest[T] BuildFromMapSchema: failed to convert "Data" value: %w`, err)
-				}
-				record.Data = data
+func (record *recordInTest[T]) UnmarshalSchema(x *Map) error {
+	for _, field := range x.Field {
+		switch field.Name {
+		case "ID":
+			if value, ok := As[string](field.Value); ok {
+				record.ID = value
 			}
+		case "Data":
+			data, err := ToGoG[T](field.Value)
+			if err != nil {
+				return fmt.Errorf(`recordInTest[T] BuildFromMapSchema: failed to convert "Data" value: %w`, err)
+			}
+			record.Data = data
 		}
-	default:
-		return fmt.Errorf(`recordInTest[T] BuildFromMapSchema: expected *Map, got %T`, x)
 	}
 
 	return nil

@@ -24,7 +24,7 @@ type selfUnmarshalTypeMapBuilder struct {
 	fs Unmarshaler
 }
 
-func (c *selfUnmarshalTypeMapBuilder) BuildFromMapSchema(x Schema) (any, error) {
+func (c *selfUnmarshalTypeMapBuilder) BuildFromMapSchema(x *Map) (any, error) {
 	err := c.fs.UnmarshalSchema(x)
 	if err != nil {
 		return nil, err

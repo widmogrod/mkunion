@@ -74,7 +74,7 @@ type (
 	// and don't need go value that was decoded using default schemaToGo.
 	// in technical terms, it disables recursive call to schemaToGo
 	mapBuilderCanProcessRawMapSchema interface {
-		BuildFromMapSchema(x Schema) (any, error)
+		BuildFromMapSchema(x *Map) (any, error)
 	}
 )
 
@@ -98,11 +98,11 @@ type (
 
 type (
 	Marshaler interface {
-		MarshalSchema() (Schema, error)
+		MarshalSchema() (*Map, error)
 	}
 
 	Unmarshaler interface {
-		UnmarshalSchema(x Schema) error
+		UnmarshalSchema(x *Map) error
 	}
 )
 
