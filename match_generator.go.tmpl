@@ -52,6 +52,7 @@ func Match{{$i}}R0[TIn{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} a
 	{{- range $k := GenIntSlice 1 $i }}
 	case T{{ $k }}:
 		f{{ $k }}(y)
+		return
     {{- end }}
 	}
 
