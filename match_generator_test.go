@@ -114,6 +114,7 @@ func Match1R0[TIn, T1 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	}
 
 	df(x)
@@ -138,8 +139,10 @@ func Match2R0[TIn, T1, T2 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	}
 
 	df(x)
@@ -167,10 +170,13 @@ func Match3R0[TIn, T1, T2, T3 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	}
 
 	df(x)

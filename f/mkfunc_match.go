@@ -1424,6 +1424,7 @@ func Match1R0[TIn, T1 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	}
 
 	df(x)
@@ -1448,8 +1449,10 @@ func Match2R0[TIn, T1, T2 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	}
 
 	df(x)
@@ -1477,10 +1480,13 @@ func Match3R0[TIn, T1, T2, T3 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	}
 
 	df(x)
@@ -1511,12 +1517,16 @@ func Match4R0[TIn, T1, T2, T3, T4 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	}
 
 	df(x)
@@ -1550,14 +1560,19 @@ func Match5R0[TIn, T1, T2, T3, T4, T5 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	}
 
 	df(x)
@@ -1594,16 +1609,22 @@ func Match6R0[TIn, T1, T2, T3, T4, T5, T6 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	}
 
 	df(x)
@@ -1643,18 +1664,25 @@ func Match7R0[TIn, T1, T2, T3, T4, T5, T6, T7 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	}
 
 	df(x)
@@ -1697,20 +1725,28 @@ func Match8R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	}
 
 	df(x)
@@ -1756,22 +1792,31 @@ func Match9R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	}
 
 	df(x)
@@ -1820,24 +1865,34 @@ func Match10R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	}
 
 	df(x)
@@ -1889,26 +1944,37 @@ func Match11R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	}
 
 	df(x)
@@ -1963,28 +2029,40 @@ func Match12R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	}
 
 	df(x)
@@ -2042,30 +2120,43 @@ func Match13R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13 any](
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	}
 
 	df(x)
@@ -2126,32 +2217,46 @@ func Match14R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14 
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	case T14:
 		f14(y)
+		return
 	}
 
 	df(x)
@@ -2215,34 +2320,49 @@ func Match15R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	case T14:
 		f14(y)
+		return
 	case T15:
 		f15(y)
+		return
 	}
 
 	df(x)
@@ -2309,36 +2429,52 @@ func Match16R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	case T14:
 		f14(y)
+		return
 	case T15:
 		f15(y)
+		return
 	case T16:
 		f16(y)
+		return
 	}
 
 	df(x)
@@ -2408,38 +2544,55 @@ func Match17R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	case T14:
 		f14(y)
+		return
 	case T15:
 		f15(y)
+		return
 	case T16:
 		f16(y)
+		return
 	case T17:
 		f17(y)
+		return
 	}
 
 	df(x)
@@ -2512,40 +2665,58 @@ func Match18R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	case T14:
 		f14(y)
+		return
 	case T15:
 		f15(y)
+		return
 	case T16:
 		f16(y)
+		return
 	case T17:
 		f17(y)
+		return
 	case T18:
 		f18(y)
+		return
 	}
 
 	df(x)
@@ -2621,42 +2792,61 @@ func Match19R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	case T14:
 		f14(y)
+		return
 	case T15:
 		f15(y)
+		return
 	case T16:
 		f16(y)
+		return
 	case T17:
 		f17(y)
+		return
 	case T18:
 		f18(y)
+		return
 	case T19:
 		f19(y)
+		return
 	}
 
 	df(x)
@@ -2735,44 +2925,64 @@ func Match20R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 	switch y := any(x).(type) {
 	case T1:
 		f1(y)
+		return
 	case T2:
 		f2(y)
+		return
 	case T3:
 		f3(y)
+		return
 	case T4:
 		f4(y)
+		return
 	case T5:
 		f5(y)
+		return
 	case T6:
 		f6(y)
+		return
 	case T7:
 		f7(y)
+		return
 	case T8:
 		f8(y)
+		return
 	case T9:
 		f9(y)
+		return
 	case T10:
 		f10(y)
+		return
 	case T11:
 		f11(y)
+		return
 	case T12:
 		f12(y)
+		return
 	case T13:
 		f13(y)
+		return
 	case T14:
 		f14(y)
+		return
 	case T15:
 		f15(y)
+		return
 	case T16:
 		f16(y)
+		return
 	case T17:
 		f17(y)
+		return
 	case T18:
 		f18(y)
+		return
 	case T19:
 		f19(y)
+		return
 	case T20:
 		f20(y)
+		return
 	}
 
 	df(x)

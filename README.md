@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.14.1
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.14.2
 ```
 
 ### Create your first union
