@@ -106,6 +106,90 @@ func MustMatch3[TIn, TOut, T1, T2, T3 any](
 	})
 }
 
+func Match1R0[TIn, T1 any](
+	x TIn,
+	f1 func(x T1),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	}
+
+	df(x)
+}
+
+func MustMatch1R0[TIn, T1 any](
+	x TIn,
+	f1 func(x T1),
+) {
+	Match1R0(x, f1, func(x TIn) {
+		var t1 T1
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T)", x, t1)))
+	})
+}
+
+func Match2R0[TIn, T1, T2 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	}
+
+	df(x)
+}
+
+func MustMatch2R0[TIn, T1, T2 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+) {
+	Match2R0(x, f1, f2, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T)", x, t1, t2)))
+	})
+}
+
+func Match3R0[TIn, T1, T2, T3 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	}
+
+	df(x)
+}
+
+func MustMatch3R0[TIn, T1, T2, T3 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+) {
+	Match3R0(x, f1, f2, f3, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T)", x, t1, t2, t3)))
+	})
+}
+
 func Match1R2[TIn, TOut1, TOut2, T1 any](
 	x TIn,
 	f1 func(x T1) (TOut1, TOut2),
