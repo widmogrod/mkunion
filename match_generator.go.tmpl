@@ -39,6 +39,40 @@ func MustMatch{{$i}}[TIn, TOut{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- 
 }
 {{ end -}}
 
+
+{{- range $i := GenIntSlice 1 .MaxSize }}
+func Match{{$i}}R0[TIn{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} any](
+	x TIn,
+	{{- range $k := GenIntSlice 1 $i }}
+	f{{ $k }} func(x T{{ $k }}),
+	{{- end }}
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	{{- range $k := GenIntSlice 1 $i }}
+	case T{{ $k }}:
+		f{{ $k }}(y)
+    {{- end }}
+	}
+
+	df(x)
+}
+
+func MustMatch{{$i}}R0[TIn{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} any](
+	x TIn,
+    {{- range $k := GenIntSlice 1 $i }}
+	f{{ $k }} func(x T{{ $k }}),
+	{{- end }}
+) {
+	return Match{{$i}}R0(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }}{{- end }}, func(x TIn) {
+	    {{- range $k := GenIntSlice 1 $i }}
+		var t{{ $k }} T{{ $k }}
+		{{- end }}
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected ({{ Join (Repeat "%T" $i) " or " }})", x {{- range $k := GenIntSlice 1 $i }}, t{{ $k }}{{- end }})))
+	})
+}
+{{ end }}
+
 {{- range $i := GenIntSlice 1 .MaxSize }}
 func Match{{$i}}R2[TIn, TOut1, TOut2
 	{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end }} any](

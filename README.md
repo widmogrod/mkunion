@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.10
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.14
 ```
 
 ### Create your first union
@@ -433,7 +433,10 @@ go test ./...
 ### 1.10.x
 - [x] Introduce `Match*` and `Match*R2` functions, that offer possibility to specif behaviour when value is `nil`
 
-### V1.11.x
+### 1.14.x
+- [x] Introduce `Match*R0` and `MustMatch*R0` functions, that allow matching but don't return any value
+
+### V1.12.x
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!
