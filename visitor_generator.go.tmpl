@@ -54,6 +54,15 @@ func MustMatch{{ $name }}[TOut any](
 	return f.MustMatch{{ $i }}(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }})
 }
 {{ $i := len .Types}}
+func MustMatch{{ $name }}R0(
+	x {{ $name }},
+	{{- range $k, $t := .Types }}
+	f{{ Add $k 1}} func(x *{{ $t }}),
+    {{- end }}
+) {
+	f.MustMatch{{ $i }}R0(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }})
+}
+{{ $i := len .Types}}
 func MustMatch{{ $name }}R2[TOut1, TOut2 any](
 	x {{ $name }},
 	{{- range $k, $t := .Types }}

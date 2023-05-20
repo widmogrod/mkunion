@@ -78,6 +78,19 @@ func MustMatchSchema[TOut any](
 	return f.MustMatch7(x, f1, f2, f3, f4, f5, f6, f7)
 }
 
+func MustMatchSchemaR0(
+	x Schema,
+	f1 func(x *None),
+	f2 func(x *Bool),
+	f3 func(x *Number),
+	f4 func(x *String),
+	f5 func(x *Binary),
+	f6 func(x *List),
+	f7 func(x *Map),
+) {
+	f.MustMatch7R0(x, f1, f2, f3, f4, f5, f6, f7)
+}
+
 func MustMatchSchemaR2[TOut1, TOut2 any](
 	x Schema,
 	f1 func(x *None) (TOut1, TOut2),
