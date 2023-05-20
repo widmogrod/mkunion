@@ -430,10 +430,10 @@ go test ./...
 - [x] Allow to have union with one element, this is useful for domain model that is not yet fully defined
 - [x] `x/schema` breaking change. `ToGo` returns any and error. Use `MustToGo` to get panic on error
 
-### 1.10.x
+### V1.10.x
 - [x] Introduce `Match*` and `Match*R2` functions, that offer possibility to specif behaviour when value is `nil`
 
-### 1.14.x
+### V1.14.x
 - [x] Introduce `Match*R0` and `MustMatch*R0` functions, that allow matching but don't return any value
 
 ### V1.12.x
