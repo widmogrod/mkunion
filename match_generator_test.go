@@ -123,7 +123,7 @@ func MustMatch1R0[TIn, T1 any](
 	x TIn,
 	f1 func(x T1),
 ) {
-	return Match1R0(x, f1, func(x TIn) {
+	Match1R0(x, f1, func(x TIn) {
 		var t1 T1
 		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T)", x, t1)))
 	})
@@ -150,7 +150,7 @@ func MustMatch2R0[TIn, T1, T2 any](
 	f1 func(x T1),
 	f2 func(x T2),
 ) {
-	return Match2R0(x, f1, f2, func(x TIn) {
+	Match2R0(x, f1, f2, func(x TIn) {
 		var t1 T1
 		var t2 T2
 		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T)", x, t1, t2)))
@@ -182,7 +182,7 @@ func MustMatch3R0[TIn, T1, T2, T3 any](
 	f2 func(x T2),
 	f3 func(x T3),
 ) {
-	return Match3R0(x, f1, f2, f3, func(x TIn) {
+	Match3R0(x, f1, f2, f3, func(x TIn) {
 		var t1 T1
 		var t2 T2
 		var t3 T3

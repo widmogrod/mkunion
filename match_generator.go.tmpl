@@ -64,7 +64,7 @@ func MustMatch{{$i}}R0[TIn{{- range $k := GenIntSlice 1 $i }}, T{{ $k }}{{- end 
 	f{{ $k }} func(x T{{ $k }}),
 	{{- end }}
 ) {
-	return Match{{$i}}R0(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }}{{- end }}, func(x TIn) {
+	Match{{$i}}R0(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }}{{- end }}, func(x TIn) {
 	    {{- range $k := GenIntSlice 1 $i }}
 		var t{{ $k }} T{{ $k }}
 		{{- end }}

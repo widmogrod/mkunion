@@ -1416,6 +1416,1416 @@ func MustMatch20[TIn, TOut, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T
 	})
 }
 
+func Match1R0[TIn, T1 any](
+	x TIn,
+	f1 func(x T1),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	}
+
+	df(x)
+}
+
+func MustMatch1R0[TIn, T1 any](
+	x TIn,
+	f1 func(x T1),
+) {
+	Match1R0(x, f1, func(x TIn) {
+		var t1 T1
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T)", x, t1)))
+	})
+}
+
+func Match2R0[TIn, T1, T2 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	}
+
+	df(x)
+}
+
+func MustMatch2R0[TIn, T1, T2 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+) {
+	Match2R0(x, f1, f2, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T)", x, t1, t2)))
+	})
+}
+
+func Match3R0[TIn, T1, T2, T3 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	}
+
+	df(x)
+}
+
+func MustMatch3R0[TIn, T1, T2, T3 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+) {
+	Match3R0(x, f1, f2, f3, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T)", x, t1, t2, t3)))
+	})
+}
+
+func Match4R0[TIn, T1, T2, T3, T4 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	}
+
+	df(x)
+}
+
+func MustMatch4R0[TIn, T1, T2, T3, T4 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+) {
+	Match4R0(x, f1, f2, f3, f4, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T)", x, t1, t2, t3, t4)))
+	})
+}
+
+func Match5R0[TIn, T1, T2, T3, T4, T5 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	}
+
+	df(x)
+}
+
+func MustMatch5R0[TIn, T1, T2, T3, T4, T5 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+) {
+	Match5R0(x, f1, f2, f3, f4, f5, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5)))
+	})
+}
+
+func Match6R0[TIn, T1, T2, T3, T4, T5, T6 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	}
+
+	df(x)
+}
+
+func MustMatch6R0[TIn, T1, T2, T3, T4, T5, T6 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+) {
+	Match6R0(x, f1, f2, f3, f4, f5, f6, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6)))
+	})
+}
+
+func Match7R0[TIn, T1, T2, T3, T4, T5, T6, T7 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	}
+
+	df(x)
+}
+
+func MustMatch7R0[TIn, T1, T2, T3, T4, T5, T6, T7 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+) {
+	Match7R0(x, f1, f2, f3, f4, f5, f6, f7, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7)))
+	})
+}
+
+func Match8R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	}
+
+	df(x)
+}
+
+func MustMatch8R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+) {
+	Match8R0(x, f1, f2, f3, f4, f5, f6, f7, f8, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8)))
+	})
+}
+
+func Match9R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	}
+
+	df(x)
+}
+
+func MustMatch9R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+) {
+	Match9R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9)))
+	})
+}
+
+func Match10R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	}
+
+	df(x)
+}
+
+func MustMatch10R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+) {
+	Match10R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10)))
+	})
+}
+
+func Match11R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	}
+
+	df(x)
+}
+
+func MustMatch11R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+) {
+	Match11R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11)))
+	})
+}
+
+func Match12R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	}
+
+	df(x)
+}
+
+func MustMatch12R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+) {
+	Match12R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12)))
+	})
+}
+
+func Match13R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	}
+
+	df(x)
+}
+
+func MustMatch13R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+) {
+	Match13R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13)))
+	})
+}
+
+func Match14R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	case T14:
+		f14(y)
+	}
+
+	df(x)
+}
+
+func MustMatch14R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+) {
+	Match14R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		var t14 T14
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14)))
+	})
+}
+
+func Match15R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	case T14:
+		f14(y)
+	case T15:
+		f15(y)
+	}
+
+	df(x)
+}
+
+func MustMatch15R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+) {
+	Match15R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		var t14 T14
+		var t15 T15
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15)))
+	})
+}
+
+func Match16R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	case T14:
+		f14(y)
+	case T15:
+		f15(y)
+	case T16:
+		f16(y)
+	}
+
+	df(x)
+}
+
+func MustMatch16R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+) {
+	Match16R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		var t14 T14
+		var t15 T15
+		var t16 T16
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16)))
+	})
+}
+
+func Match17R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	case T14:
+		f14(y)
+	case T15:
+		f15(y)
+	case T16:
+		f16(y)
+	case T17:
+		f17(y)
+	}
+
+	df(x)
+}
+
+func MustMatch17R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+) {
+	Match17R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		var t14 T14
+		var t15 T15
+		var t16 T16
+		var t17 T17
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17)))
+	})
+}
+
+func Match18R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+	f18 func(x T18),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	case T14:
+		f14(y)
+	case T15:
+		f15(y)
+	case T16:
+		f16(y)
+	case T17:
+		f17(y)
+	case T18:
+		f18(y)
+	}
+
+	df(x)
+}
+
+func MustMatch18R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+	f18 func(x T18),
+) {
+	Match18R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		var t14 T14
+		var t15 T15
+		var t16 T16
+		var t17 T17
+		var t18 T18
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18)))
+	})
+}
+
+func Match19R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+	f18 func(x T18),
+	f19 func(x T19),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	case T14:
+		f14(y)
+	case T15:
+		f15(y)
+	case T16:
+		f16(y)
+	case T17:
+		f17(y)
+	case T18:
+		f18(y)
+	case T19:
+		f19(y)
+	}
+
+	df(x)
+}
+
+func MustMatch19R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+	f18 func(x T18),
+	f19 func(x T19),
+) {
+	Match19R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		var t14 T14
+		var t15 T15
+		var t16 T16
+		var t17 T17
+		var t18 T18
+		var t19 T19
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19)))
+	})
+}
+
+func Match20R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+	f18 func(x T18),
+	f19 func(x T19),
+	f20 func(x T20),
+	df func(x TIn),
+) {
+	switch y := any(x).(type) {
+	case T1:
+		f1(y)
+	case T2:
+		f2(y)
+	case T3:
+		f3(y)
+	case T4:
+		f4(y)
+	case T5:
+		f5(y)
+	case T6:
+		f6(y)
+	case T7:
+		f7(y)
+	case T8:
+		f8(y)
+	case T9:
+		f9(y)
+	case T10:
+		f10(y)
+	case T11:
+		f11(y)
+	case T12:
+		f12(y)
+	case T13:
+		f13(y)
+	case T14:
+		f14(y)
+	case T15:
+		f15(y)
+	case T16:
+		f16(y)
+	case T17:
+		f17(y)
+	case T18:
+		f18(y)
+	case T19:
+		f19(y)
+	case T20:
+		f20(y)
+	}
+
+	df(x)
+}
+
+func MustMatch20R0[TIn, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20 any](
+	x TIn,
+	f1 func(x T1),
+	f2 func(x T2),
+	f3 func(x T3),
+	f4 func(x T4),
+	f5 func(x T5),
+	f6 func(x T6),
+	f7 func(x T7),
+	f8 func(x T8),
+	f9 func(x T9),
+	f10 func(x T10),
+	f11 func(x T11),
+	f12 func(x T12),
+	f13 func(x T13),
+	f14 func(x T14),
+	f15 func(x T15),
+	f16 func(x T16),
+	f17 func(x T17),
+	f18 func(x T18),
+	f19 func(x T19),
+	f20 func(x T20),
+) {
+	Match20R0(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, func(x TIn) {
+		var t1 T1
+		var t2 T2
+		var t3 T3
+		var t4 T4
+		var t5 T5
+		var t6 T6
+		var t7 T7
+		var t8 T8
+		var t9 T9
+		var t10 T10
+		var t11 T11
+		var t12 T12
+		var t13 T13
+		var t14 T14
+		var t15 T15
+		var t16 T16
+		var t17 T17
+		var t18 T18
+		var t19 T19
+		var t20 T20
+		panic(errors.New(fmt.Sprintf("unexpected match type %T. expected (%T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T or %T)", x, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20)))
+	})
+}
+
 func Match1R2[TIn, TOut1, TOut2, T1 any](
 	x TIn,
 	f1 func(x T1) (TOut1, TOut2),
