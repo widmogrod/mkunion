@@ -46,8 +46,8 @@ type IntrprateOperatorAST struct {
 }
 
 func (e *IntrprateOperatorAST) VisitEq(v *Eq) any {
-	l := v.L.Accept(e.valueExtractor)
-	r := v.R.Accept(e.valueExtractor)
+	l := v.L.AcceptValue(e.valueExtractor)
+	r := v.R.AcceptValue(e.valueExtractor)
 	if l == noResult || r == noResult {
 		return false
 	}
@@ -56,8 +56,8 @@ func (e *IntrprateOperatorAST) VisitEq(v *Eq) any {
 }
 
 func (e *IntrprateOperatorAST) VisitGt(v *Gt) any {
-	l := v.L.Accept(e.valueExtractor)
-	r := v.R.Accept(e.valueExtractor)
+	l := v.L.AcceptValue(e.valueExtractor)
+	r := v.R.AcceptValue(e.valueExtractor)
 	if l == noResult || r == noResult {
 		return false
 	}
@@ -87,7 +87,7 @@ func (e *IntrprateOperatorAST) VisitGt(v *Gt) any {
 
 func (e *IntrprateOperatorAST) VisitOr(v *Or) any {
 	for _, p := range v.List {
-		if p.Accept(e).(bool) {
+		if p.AcceptOperator(e).(bool) {
 			return true
 		}
 	}
@@ -96,7 +96,7 @@ func (e *IntrprateOperatorAST) VisitOr(v *Or) any {
 
 func (e *IntrprateOperatorAST) VisitAnd(v *And) any {
 	for _, p := range v.List {
-		if !p.Accept(e).(bool) {
+		if !p.AcceptOperator(e).(bool) {
 			return false
 		}
 	}
@@ -104,16 +104,16 @@ func (e *IntrprateOperatorAST) VisitAnd(v *And) any {
 }
 
 func (e *IntrprateOperatorAST) VisitNot(v *Not) any {
-	return !v.Operator.Accept(e).(bool)
+	return !v.Operator.AcceptOperator(e).(bool)
 }
 
 func (e *IntrprateOperatorAST) Eval(ast Operator, data MapAny) bool {
 	e.valueExtractor.V = data
-	return ast.Accept(e).(bool)
+	return ast.AcceptOperator(e).(bool)
 }
 
 func (e *IntrprateOperatorAST) Value(v Value, data MapAny) (value interface{}, found bool) {
 	e.valueExtractor.V = data
-	val := v.Accept(e.valueExtractor)
+	val := v.AcceptValue(e.valueExtractor)
 	return val, val != noResult
 }

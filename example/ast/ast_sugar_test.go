@@ -33,7 +33,7 @@ func TestAstSyntaxSugar(t *testing.T) {
 		},
 	}
 
-	translatedAST := sugarAST.Accept(&TranslateSyntaxASTtoOperatorAST{}).(Operator)
+	translatedAST := sugarAST.AcceptSyntaxSugar(&TranslateSyntaxASTtoOperatorAST{}).(Operator)
 
 	interpreter := NewInterpreter()
 
