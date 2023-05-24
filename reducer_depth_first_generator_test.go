@@ -45,16 +45,16 @@ func (d *TreeDepthFirstVisitor[A]) VisitBranch(v *Branch) any {
 	if d.stop {
 		return nil
 	}
-	if _ = v.Lit.Accept(d); d.stop {
+	if _ = v.Lit.AcceptTree(d); d.stop {
 		return nil
 	}
 	for idx := range v.List {
-		if _ = v.List[idx].Accept(d); d.stop {
+		if _ = v.List[idx].AcceptTree(d); d.stop {
 			return nil
 		}
 	}
 	for idx, _ := range v.Map {
-		if _ = v.Map[idx].Accept(d); d.stop {
+		if _ = v.Map[idx].AcceptTree(d); d.stop {
 			return nil
 		}
 	}
@@ -77,7 +77,7 @@ func ReduceTreeDepthFirst[A any](r TreeReducer[A], v Tree, init A) A {
 		reduce: r,
 	}
 
-	_ = v.Accept(reducer)
+	_ = v.AcceptTree(reducer)
 
 	return reducer.result
 }`, string(result))

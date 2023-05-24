@@ -30,12 +30,12 @@ type VehicleVisitor interface {
 }
 
 type Vehicle interface {
-	Accept(g VehicleVisitor) any
+	AcceptVehicle(g VehicleVisitor) any
 }
 
-func (r *Plane) Accept(v VehicleVisitor) any { return v.VisitPlane(r) }
-func (r *Car) Accept(v VehicleVisitor) any { return v.VisitCar(r) }
-func (r *Boat) Accept(v VehicleVisitor) any { return v.VisitBoat(r) }
+func (r *Plane) AcceptVehicle(v VehicleVisitor) any { return v.VisitPlane(r) }
+func (r *Car) AcceptVehicle(v VehicleVisitor) any { return v.VisitCar(r) }
+func (r *Boat) AcceptVehicle(v VehicleVisitor) any { return v.VisitBoat(r) }
 
 var (
 	_ Vehicle = (*Plane)(nil)

@@ -13,10 +13,10 @@ type {{ $name }}Visitor interface {
 }
 
 type {{ $name }} interface {
-	Accept(g {{ $name }}Visitor) any
+	Accept{{ $name }}(g {{ $name }}Visitor) any
 }
 {{ range .Types }}
-func (r *{{ . }}) Accept(v {{ $name }}Visitor) any { return v.Visit{{ . }}(r) }
+func (r *{{ . }}) Accept{{ $name }}(v {{ $name }}Visitor) any { return v.Visit{{ . }}(r) }
 {{- end }}
 
 var (

@@ -91,9 +91,6 @@ type (
 	Map struct {
 		Field []Field
 	}
-	//Wrapped struct {
-	//	Value Schema
-	//}
 )
 
 type (

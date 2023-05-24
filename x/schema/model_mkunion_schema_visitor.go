@@ -16,16 +16,16 @@ type SchemaVisitor interface {
 }
 
 type Schema interface {
-	Accept(g SchemaVisitor) any
+	AcceptSchema(g SchemaVisitor) any
 }
 
-func (r *None) Accept(v SchemaVisitor) any   { return v.VisitNone(r) }
-func (r *Bool) Accept(v SchemaVisitor) any   { return v.VisitBool(r) }
-func (r *Number) Accept(v SchemaVisitor) any { return v.VisitNumber(r) }
-func (r *String) Accept(v SchemaVisitor) any { return v.VisitString(r) }
-func (r *Binary) Accept(v SchemaVisitor) any { return v.VisitBinary(r) }
-func (r *List) Accept(v SchemaVisitor) any   { return v.VisitList(r) }
-func (r *Map) Accept(v SchemaVisitor) any    { return v.VisitMap(r) }
+func (r *None) AcceptSchema(v SchemaVisitor) any   { return v.VisitNone(r) }
+func (r *Bool) AcceptSchema(v SchemaVisitor) any   { return v.VisitBool(r) }
+func (r *Number) AcceptSchema(v SchemaVisitor) any { return v.VisitNumber(r) }
+func (r *String) AcceptSchema(v SchemaVisitor) any { return v.VisitString(r) }
+func (r *Binary) AcceptSchema(v SchemaVisitor) any { return v.VisitBinary(r) }
+func (r *List) AcceptSchema(v SchemaVisitor) any   { return v.VisitList(r) }
+func (r *Map) AcceptSchema(v SchemaVisitor) any    { return v.VisitMap(r) }
 
 var (
 	_ Schema = (*None)(nil)

@@ -112,7 +112,7 @@ func (d *SchemaBreadthFirstVisitor[A]) execute() {
 		}
 		d.visited[i] = true
 		d.shouldExecute[i] = true
-		i.Accept(d)
+		i.AcceptSchema(d)
 	}
 
 	return
@@ -133,7 +133,7 @@ func ReduceSchemaBreadthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
 		shouldExecute: make(map[Schema]bool),
 	}
 
-	_ = v.Accept(reducer)
+	_ = v.AcceptSchema(reducer)
 
 	return reducer.result
 }
