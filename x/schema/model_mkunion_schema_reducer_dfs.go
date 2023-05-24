@@ -72,7 +72,7 @@ func (d *SchemaDepthFirstVisitor[A]) VisitList(v *List) any {
 		return nil
 	}
 	for idx := range v.Items {
-		if _ = v.Items[idx].Accept(d); d.stop {
+		if _ = v.Items[idx].AcceptSchema(d); d.stop {
 			return nil
 		}
 	}
@@ -95,7 +95,7 @@ func ReduceSchemaDepthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
 		reduce: r,
 	}
 
-	_ = v.Accept(reducer)
+	_ = v.AcceptSchema(reducer)
 
 	return reducer.result
 }

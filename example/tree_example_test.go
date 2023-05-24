@@ -11,7 +11,7 @@ var _ TreeVisitor = (*sumVisitor)(nil)
 type sumVisitor struct{}
 
 func (s sumVisitor) VisitBranch(v *Branch) any {
-	return v.L.Accept(s).(int) + v.R.Accept(s).(int)
+	return v.L.AcceptTree(s).(int) + v.R.AcceptTree(s).(int)
 }
 
 func (s sumVisitor) VisitLeaf(v *Leaf) any {
@@ -27,7 +27,7 @@ func TestTreeSumValues(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, 6, tree.Accept(&sumVisitor{}))
+	assert.Equal(t, 6, tree.AcceptTree(&sumVisitor{}))
 }
 
 type orderAgg struct {
@@ -105,7 +105,7 @@ func TestTreeNonExhaustive(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, 10, tree.Accept(&n))
+	assert.Equal(t, 10, tree.AcceptTree(&n))
 }
 
 func TestTreeSchema(t *testing.T) {

@@ -24,7 +24,7 @@ func (a *TranslateSyntaxASTtoOperatorAST) VisitOrFields(v *OrFields) any {
 	var result []Operator
 	for field, value := range *v {
 		a.currentField = append(a.currentField, field)
-		result = append(result, value.Accept(a).(Operator))
+		result = append(result, value.AcceptSyntaxSugar(a).(Operator))
 		a.currentField = a.currentField[:len(a.currentField)-1]
 	}
 

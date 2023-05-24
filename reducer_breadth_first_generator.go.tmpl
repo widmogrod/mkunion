@@ -51,7 +51,7 @@ func (d *{{ $name }}BreadthFirstVisitor[A]) execute() {
 		}
 		d.visited[i] = true
 		d.shouldExecute[i] = true
-		i.Accept(d)
+		i.Accept{{ $name }}(d)
 	}
 
 	return
@@ -72,7 +72,7 @@ func Reduce{{ $name }}BreadthFirst[A any](r {{ $name }}Reducer[A], v {{ $name }}
 		shouldExecute: make(map[{{ $name }}]bool),
 	}
 
-	_ = v.Accept(reducer)
+	_ = v.Accept{{ $name }}(reducer)
 
 	return reducer.result
 }

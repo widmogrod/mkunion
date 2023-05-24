@@ -19,20 +19,11 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.14.2
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.15
 ```
 
 ### Create your first union
 Create your first union. In our example it's a simple tree with Branch and Leaf nodes
-```go
-package example
-
-//go:generate mkunion -name=Tree -types=Branch,Leaf
-type Branch struct{ L, R Tree }
-type Leaf   struct{ Value int }
-```
-
-With version `1.6` you can generate union types without specifying variant types names, like so:
 ```go
 package example
 
@@ -42,8 +33,6 @@ type (
     Leaf   struct{ Value int }
 )
 ```
-
-This is now recomended way of generating unions.
 
 ### Generate code
 Run 
@@ -182,7 +171,7 @@ var _ TreeVisitor = (*sumVisitor)(nil)
 type sumVisitor struct{}
 
 func (s sumVisitor) VisitBranch(v *Branch) any {
-    return v.L.Accept(s).(int) + v.R.Accept(s).(int)
+    return v.L.AcceptTree(s).(int) + v.R.AcceptTree(s).(int)
 }
 
 func (s sumVisitor) VisitLeaf(v *Leaf) any {
@@ -192,7 +181,7 @@ func (s sumVisitor) VisitLeaf(v *Leaf) any {
 
 You can use `sumVisitor` like this:
 ```go
-assert.Equal(t, 10, tree.Accept(&sumVisitor{}))
+assert.Equal(t, 10, tree.AcceptTree(&sumVisitor{}))
 ```
 
 ### Use `mkunion` to simplify state management
@@ -436,7 +425,11 @@ go test ./...
 ### V1.14.x
 - [x] Introduce `Match*R0` and `MustMatch*R0` functions, that allow matching but don't return any value
 
-### V1.12.x
+### V1.15.x
+- [x] Union interface has method `Accept{Varian}` instead of just `Accept`. Thanks to that is possible to use the same type in multiple unions. Such feature is beneficial for domain modelling.
+- [x] CLI `mkunion` change flag `-types` to `-variants`
+
+### V1.16.x
 - [ ] Allow to change visitor name form Visit* to i.e Handle*
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!

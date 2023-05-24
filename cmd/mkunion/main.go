@@ -25,12 +25,12 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "name",
-				Aliases:  []string{"n", "variant"},
+				Aliases:  []string{"n"},
 				Required: true,
 			},
 			&cli.StringFlag{
-				Name:     "types",
-				Aliases:  []string{"t"},
+				Name:     "variants",
+				Aliases:  []string{"var"},
 				Required: false,
 			},
 			&cli.StringFlag{

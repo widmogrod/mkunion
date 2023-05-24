@@ -80,7 +80,7 @@ func (d *TreeBreadthFirstVisitor[A]) execute() {
 		}
 		d.visited[i] = true
 		d.shouldExecute[i] = true
-		i.Accept(d)
+		i.AcceptTree(d)
 	}
 
 	return
@@ -101,7 +101,7 @@ func ReduceTreeBreadthFirst[A any](r TreeReducer[A], v Tree, init A) A {
 		shouldExecute: make(map[Tree]bool),
 	}
 
-	_ = v.Accept(reducer)
+	_ = v.AcceptTree(reducer)
 
 	return reducer.result
 }

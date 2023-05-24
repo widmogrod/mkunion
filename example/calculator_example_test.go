@@ -17,10 +17,10 @@ func TestCalculatorExample(t *testing.T) {
 		},
 	}
 
-	result := calculation.Accept(&calculator{}).(int)
+	result := calculation.AcceptCalc(&calculator{}).(int)
 	assert.Equal(t, 8, result)
 
-	str := calculation.Accept(&calculatorPrint{}).(string)
+	str := calculation.AcceptCalc(&calculatorPrint{}).(string)
 	fmt.Println(str)
 
 	result = Cal(calculation)
@@ -41,9 +41,9 @@ func TestCalculatorDynamicExample(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expect := rand.Intn(1000)
 		calculation := GenerateCalcExpressions(expect)
-		str := calculation.Accept(&calculatorPrint{}).(string)
+		str := calculation.AcceptCalc(&calculatorPrint{}).(string)
 		t.Logf("expressions: %d = %s", expect, str)
-		result := calculation.Accept(&calculator{}).(int)
+		result := calculation.AcceptCalc(&calculator{}).(int)
 		assert.Equal(t, expect, result)
 		result = Cal(calculation)
 		assert.Equal(t, expect, result)
@@ -82,11 +82,11 @@ func (c *calculator) VisitLit(v *Lit) any {
 }
 
 func (c *calculator) VisitSum(v *Sum) any {
-	return v.Left.Accept(c).(int) + v.Right.Accept(c).(int)
+	return v.Left.AcceptCalc(c).(int) + v.Right.AcceptCalc(c).(int)
 }
 
 func (c *calculator) VisitMul(v *Mul) any {
-	return v.Left.Accept(c).(int) * v.Right.Accept(c).(int)
+	return v.Left.AcceptCalc(c).(int) * v.Right.AcceptCalc(c).(int)
 }
 
 var _ CalcVisitor = (*calculatorPrint)(nil)
@@ -98,11 +98,11 @@ func (c *calculatorPrint) VisitLit(v *Lit) any {
 }
 
 func (c *calculatorPrint) VisitSum(v *Sum) any {
-	return fmt.Sprintf("(%s + %s)", v.Left.Accept(c).(string), v.Right.Accept(c).(string))
+	return fmt.Sprintf("(%s + %s)", v.Left.AcceptCalc(c).(string), v.Right.AcceptCalc(c).(string))
 }
 
 func (c *calculatorPrint) VisitMul(v *Mul) any {
-	return fmt.Sprintf("(%s * %s)", v.Left.Accept(c).(string), v.Right.Accept(c).(string))
+	return fmt.Sprintf("(%s * %s)", v.Left.AcceptCalc(c).(string), v.Right.AcceptCalc(c).(string))
 }
 
 /*
@@ -127,7 +127,7 @@ var (
 func BenchmarkCalcVisitor(b *testing.B) {
 	var r int
 	for i := 0; i < b.N; i++ {
-		r = benchCalcCalculation.Accept(&calculator{}).(int)
+		r = benchCalcCalculation.AcceptCalc(&calculator{}).(int)
 		if r != benchCalcExpect {
 			b.Fatalf("expect %d, got %d", benchCalcExpect, r)
 		}
