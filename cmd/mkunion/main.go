@@ -54,8 +54,8 @@ func main() {
 
 			unionName := c.String("name")
 			var types []string
-			if c.String("types") != "" {
-				types = strings.Split(c.String("types"), ",")
+			if c.String("variants") != "" {
+				types = strings.Split(c.String("variants"), ",")
 			} else {
 				types = inferred.PossibleVariantsTypes(unionName)
 			}
