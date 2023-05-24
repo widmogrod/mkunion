@@ -171,7 +171,7 @@ var _ TreeVisitor = (*sumVisitor)(nil)
 type sumVisitor struct{}
 
 func (s sumVisitor) VisitBranch(v *Branch) any {
-    return v.L.Accept(s).(int) + v.R.Accept(s).(int)
+    return v.L.AcceptTree(s).(int) + v.R.AcceptTree(s).(int)
 }
 
 func (s sumVisitor) VisitLeaf(v *Leaf) any {
@@ -181,7 +181,7 @@ func (s sumVisitor) VisitLeaf(v *Leaf) any {
 
 You can use `sumVisitor` like this:
 ```go
-assert.Equal(t, 10, tree.Accept(&sumVisitor{}))
+assert.Equal(t, 10, tree.AcceptTree(&sumVisitor{}))
 ```
 
 ### Use `mkunion` to simplify state management
