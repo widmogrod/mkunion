@@ -58,7 +58,7 @@ func TestPredicate(t *testing.T) {
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
 			isTrue := &evaluatePredicate{V: uc.Value}
-			result := uc.Predicate.Accept(isTrue).(bool)
+			result := uc.Predicate.AcceptWherePredicate(isTrue).(bool)
 			assert.Equal(t, uc.Expected, result)
 		})
 	}
@@ -76,7 +76,7 @@ func (e *evaluatePredicate) VisitEq(v *Eq) any {
 
 func (e *evaluatePredicate) VisitAnd(v *And) any {
 	for _, p := range *v {
-		if !p.Accept(e).(bool) {
+		if !p.AcceptWherePredicate(e).(bool) {
 			return false
 		}
 	}
@@ -85,7 +85,7 @@ func (e *evaluatePredicate) VisitAnd(v *And) any {
 
 func (e *evaluatePredicate) VisitOr(v *Or) any {
 	for _, p := range *v {
-		if p.Accept(e).(bool) {
+		if p.AcceptWherePredicate(e).(bool) {
 			return true
 		}
 	}
@@ -106,5 +106,5 @@ func (e *evaluatePredicate) VisitPath(v *Path) any {
 		}
 	}
 
-	return v.Condition.Accept(&evaluatePredicate{V: val}).(bool)
+	return v.Condition.AcceptWherePredicate(&evaluatePredicate{V: val}).(bool)
 }

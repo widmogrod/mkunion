@@ -20,7 +20,7 @@ func TestGeneratedVisitor(t *testing.T) {
 	boat := &Boat{}
 
 	visitor := &vehiclePrinter{}
-	assert.Equal(t, "Car", car.Accept(visitor))
-	assert.Equal(t, "Plane", plane.Accept(visitor))
-	assert.Equal(t, "Boat", boat.Accept(visitor))
+	assert.Equal(t, "Car", car.AcceptVehicle(visitor))
+	assert.Equal(t, "Plane", plane.AcceptVehicle(visitor))
+	assert.Equal(t, "Boat", boat.AcceptVehicle(visitor))
 }
