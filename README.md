@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.15
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.16
 ```
 
 ### Create your first union
@@ -359,6 +359,43 @@ data, err := schema.ToJSON(schemaState)
 
 This is all. I hope you will find this useful.
 
+## Pattern matching
+`mkunion` can generate pattern matching code for few diverse tuples, triples etc for you.
+Tou just need to define interface with methods that you want to pattern match:
+
+```go
+//go:generate mkunion match -name=MyTriesMatch
+type MyTriesMatch[T0, T1 Tree] interface {
+    MatchLeafs(*Leaf, *Leaf)
+    MatchBranches(*Branch, any)
+    MatchMixed(any, any)
+}
+```
+
+Example interface definition will be used to generate matching functions.
+Function will have name starting with interface name, and will have suffixes like R0, R1, R2, that indicate number of return values.
+
+Below is example of generated code for `MyTriesMatchR1` function:
+```go
+MyTriesMatchR1(
+    &Leaf{Value: 1}, &Leaf{Value: 3},
+    func(x0 *Leaf, x1 *Leaf) int {
+		// your matching code goes here
+    },
+    func(x0 *Branch, x1 any) int {
+        // your matching code goes here
+    },
+    func(x0 any, x1 any) int {
+        // your matching code goes here
+    },
+)
+```
+
+Note: Current implementation don't test if pattern matchers are exhaustive.
+You can easily create pattern matchers that will never be called, just make (any, any) case a first invocation, and none fo the other cases will be ever called.
+
+In future version, you can expect that this will change.
+
 
 ## More examples 
 Please take a look at `./example` directory. It contains more examples of generated code.
@@ -430,11 +467,20 @@ go test ./...
 - [x] CLI `mkunion` change flag `-types` to `-variants`
 
 ### V1.16.x
-- [ ] Allow to change visitor name form Visit* to i.e Handle*
+- [x] Pattern matching. Use `munion match -name=MyMatcher` where MyMather is interface. Function will generate functions that can pattern match and have return types MyMatcherR0, MyMatcherR1, MyMatcherR2
+
+### V1.17.x
+- [ ] Exhaustive pattern matching checks during generation
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!
 - [ ] Add configurable behaviour how schema should act when field is missing, but schema has a value for it
 
 ### V2.x.x
 - [ ] Add support for generic union types
+
+### Removed from roadmap
+- [-] Allow to change visitor name form Visit* to i.e Handle*. 
+      Matcher functions are elastic enough that rename is not needed.
+
+
 

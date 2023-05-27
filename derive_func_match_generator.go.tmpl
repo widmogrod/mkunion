@@ -1,0 +1,96 @@
+{{ .Header }}
+package {{ .PackageName }}
+{{ $spec :=  .MatchSpec }}
+{{- $i := len  $spec.Inputs }}
+
+func {{  $spec.Name }}R0[
+{{- range $k, $t :=  $spec.Inputs -}}
+    {{- if not (eq $k 0) }}, {{ end -}}
+    T{{$k}} {{ $t }}
+{{- end -}}
+](
+{{- range $k, $t :=  $spec.Inputs}}
+	t{{$k}} T{{$k}},
+{{- end -}}
+
+{{- range $k, $args :=  $spec.Cases}}
+	f{{$k}} func(
+    {{- range $i, $arg := $args}}
+        {{- if not (eq $i 0) }}, {{ end -}}
+	    x{{$i}} {{$arg}}
+    {{- end -}}
+    ),
+{{- end }}
+) {
+{{- range $k, $args :=  $spec.Cases}}
+	{{- range $i, $arg := $args }}
+	c{{$k}}t{{$i}}, c{{$k}}t{{$i}}ok := any(t{{$i}}).({{$arg}})
+	{{- end }}
+	if {{ range $i, $arg := $args -}}
+        {{- if not (eq $i 0) }} && {{ end -}}
+        c{{$k}}t{{$i}}ok
+        {{- end }} {
+		f{{$k}}(
+            {{- range $i, $arg := $args -}}
+            {{- if not (eq $i 0) }}, {{ end -}}
+            c{{$k}}t{{$i}}
+            {{- end -}}
+		)
+		return
+	}
+{{ end }}
+	panic("{{  $spec.Name }}R0 is not exhaustive")
+}
+
+{{ range $returnTypes := GenIntSlice 1 3 }}
+func {{  $spec.Name }}R{{ $returnTypes }}[
+{{- range $k, $t :=  $spec.Inputs -}}
+    {{- if not (eq $k 0) }}, {{ end -}}
+    T{{$k}} {{ $t }}
+{{- end -}}
+{{- range $o := GenIntSlice 1 $returnTypes -}}
+    , TOut{{$o}} any
+{{- end -}}
+](
+{{- range $k, $t :=  $spec.Inputs}}
+	t{{$k}} T{{$k}},
+{{- end -}}
+
+{{- range $k, $args :=  $spec.Cases}}
+	f{{$k}} func(
+    {{- range $i, $arg := $args}}
+        {{- if not (eq $i 0) }}, {{ end -}}
+	    x{{$i}} {{$arg}}
+    {{- end -}}
+    ) (
+    {{- range $o := GenIntSlice 1 $returnTypes -}}
+        {{- if not (eq $o 1) }}, {{ end -}}
+        TOut{{$o}}
+    {{- end -}}
+    ),
+{{- end }}
+)  (
+  {{- range $o := GenIntSlice 1 $returnTypes -}}
+      {{- if not (eq $o 1) }}, {{ end -}}
+      TOut{{$o}}
+  {{- end -}}
+) {
+{{- range $k, $args :=  $spec.Cases}}
+	{{- range $i, $arg := $args }}
+	c{{$k}}t{{$i}}, c{{$k}}t{{$i}}ok := any(t{{$i}}).({{$arg}})
+	{{- end }}
+	if {{ range $i, $arg := $args -}}
+        {{- if not (eq $i 0) }} && {{ end -}}
+        c{{$k}}t{{$i}}ok
+        {{- end }} {
+		return f{{$k}}(
+            {{- range $i, $arg := $args -}}
+            {{- if not (eq $i 0) }}, {{ end -}}
+            c{{$k}}t{{$i}}
+            {{- end -}}
+		)
+	}
+{{ end }}
+	panic("{{  $spec.Name }}R0 is not exhaustive")
+}
+{{ end -}}
