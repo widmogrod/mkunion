@@ -1,17 +1,21 @@
 package state
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/machine"
 	"testing"
 )
 
 func TestStateTransition(t *testing.T) {
-	useCases := map[string]struct {
+	useCases := []struct {
+		name   string
 		cmds   []Command
 		state  []State
 		errors []error
 	}{
-		"create candidate (valid)": {
+		{
+			name: "create candidate (valid)",
 			cmds: []Command{
 				&CreateCandidateCMD{ID: "123"},
 			},
@@ -21,8 +25,8 @@ func TestStateTransition(t *testing.T) {
 			errors: []error{
 				nil,
 			},
-		},
-		"candidate state and transit to duplicate  (valid)": {
+		}, {
+			name: "candidate state and transit to duplicate  (valid)",
 			cmds: []Command{
 				&CreateCandidateCMD{ID: "123"},
 				&MarkAsDuplicateCMD{CanonicalID: "456"},
@@ -36,7 +40,8 @@ func TestStateTransition(t *testing.T) {
 				nil,
 			},
 		},
-		"candidate state and transit to canonical  (valid)": {
+		{
+			name: "candidate state and transit to canonical  (valid)",
 			cmds: []Command{
 				&CreateCandidateCMD{ID: "123"},
 				&MarkAsCanonicalCMD{},
@@ -50,7 +55,8 @@ func TestStateTransition(t *testing.T) {
 				nil,
 			},
 		},
-		"candidate state and transit to unique  (valid)": {
+		{
+			name: "candidate state and transit to unique  (valid)",
 			cmds: []Command{
 				&CreateCandidateCMD{ID: "123"},
 				&MarkAsUniqueCMD{},
@@ -64,7 +70,8 @@ func TestStateTransition(t *testing.T) {
 				nil,
 			},
 		},
-		"initial state cannot be market as duplicate (invalid)": {
+		{
+			name: "initial state cannot be market as duplicate (invalid)",
 			cmds: []Command{
 				&MarkAsDuplicateCMD{CanonicalID: "456"},
 			},
@@ -75,7 +82,8 @@ func TestStateTransition(t *testing.T) {
 				ErrInvalidTransition,
 			},
 		},
-		"candidate state and transit to canonical and duplicate  (invalid)": {
+		{
+			name: "candidate state and transit to canonical and duplicate  (invalid)",
 			cmds: []Command{
 				&CreateCandidateCMD{ID: "123"},
 				&MarkAsCanonicalCMD{},
@@ -94,10 +102,14 @@ func TestStateTransition(t *testing.T) {
 		},
 	}
 
-	for name, uc := range useCases {
-		t.Run(name, func(t *testing.T) {
+	infer := machine.NewInferTransition[Command, State]()
+	infer.WithTitle("Canonical question transition")
+
+	for _, uc := range useCases {
+		t.Run(uc.name, func(t *testing.T) {
 			m := NewMachine()
 			for i, tr := range uc.cmds {
+				prev := m.State()
 				err := m.Handle(tr)
 				if uc.errors[i] == nil {
 					assert.NoError(t, err)
@@ -105,7 +117,23 @@ func TestStateTransition(t *testing.T) {
 					assert.Error(t, uc.errors[i], err)
 				}
 				assert.Equal(t, uc.state[i], m.State())
+				infer.Record(tr, prev, m.State(), err)
 			}
 		})
 	}
+
+	infer.WithErrorTransitions()
+	result := infer.ToMermaid()
+	fmt.Println(result)
+	assert.Equal(t, `---
+title: Canonical question transition
+---
+stateDiagram
+	[*] --> "*state.Candidate": "*state.CreateCandidateCMD"
+	"*state.Candidate" --> "*state.Duplicate": "*state.MarkAsDuplicateCMD"
+	"*state.Candidate" --> "*state.Canonical": "*state.MarkAsCanonicalCMD"
+	"*state.Candidate" --> "*state.Unique": "*state.MarkAsUniqueCMD"
+	[*] --> [*]: "❌*state.MarkAsDuplicateCMD"
+	"*state.Canonical" --> "*state.Canonical": "❌*state.MarkAsDuplicateCMD"
+`, result)
 }
