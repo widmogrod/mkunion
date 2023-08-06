@@ -1,5 +1,8 @@
 stateDiagram
 	[*] --> "*state.Candidate": "*state.CreateCandidateCMD"
+	"*state.Candidate" --> "*state.Canonical": "*state.MarkAsCanonicalCMD"
+	"*state.Candidate" --> "*state.Duplicate": "*state.MarkAsDuplicateCMD"
+	"*state.Candidate" --> "*state.Unique": "*state.MarkAsUniqueCMD"
  %% error=state is not candidate, state: *state.Canonical; invalid cmds 
 	"*state.Canonical" --> "*state.Canonical": "❌*state.MarkAsDuplicateCMD"
  %% error=state is not candidate, state: <nil>; invalid cmds 
@@ -8,14 +11,12 @@ stateDiagram
 	"*state.Canonical" --> "*state.Canonical": "❌*state.CreateCandidateCMD"
  %% error=candidate already created, state: *state.Candidate; invalid cmds 
 	"*state.Candidate" --> "*state.Candidate": "❌*state.CreateCandidateCMD"
-	"*state.Candidate" --> "*state.Unique": "*state.MarkAsUniqueCMD"
  %% error=candidate already created, state: *state.Unique; invalid cmds 
 	"*state.Unique" --> "*state.Unique": "❌*state.CreateCandidateCMD"
  %% error=state is not candidate, state: *state.Unique; invalid cmds 
 	"*state.Unique" --> "*state.Unique": "❌*state.MarkAsDuplicateCMD"
  %% error=candidate already created, state: *state.Duplicate; invalid cmds 
 	"*state.Duplicate" --> "*state.Duplicate": "❌*state.CreateCandidateCMD"
-	"*state.Candidate" --> "*state.Canonical": "*state.MarkAsCanonicalCMD"
  %% error=state is not candidate, state: *state.Unique; invalid cmds 
 	"*state.Unique" --> "*state.Unique": "❌*state.MarkAsCanonicalCMD"
  %% error=state is not candidate, state: *state.Unique; invalid cmds 
@@ -32,6 +33,5 @@ stateDiagram
 	[*] --> [*]: "❌*state.MarkAsCanonicalCMD"
  %% error=state is not candidate, state: *state.Duplicate; invalid cmds 
 	"*state.Duplicate" --> "*state.Duplicate": "❌*state.MarkAsDuplicateCMD"
-	"*state.Candidate" --> "*state.Duplicate": "*state.MarkAsDuplicateCMD"
  %% error=state is not candidate, state: *state.Duplicate; invalid cmds 
 	"*state.Duplicate" --> "*state.Duplicate": "❌*state.MarkAsUniqueCMD"

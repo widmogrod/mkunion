@@ -14,15 +14,15 @@ func TestSuite(t *testing.T) {
 		func(c *machine.Case[Command, State]) {
 			c.GivenCommand(&CreateCandidateCMD{ID: "123"}).
 				ThenState(&Candidate{ID: "123"}).
-				ThenNext("can mark as canonical", func(c *machine.Case[Command, State]) {
+				ForkCase("can mark as canonical", func(c *machine.Case[Command, State]) {
 					c.GivenCommand(&MarkAsCanonicalCMD{}).
 						ThenState(&Canonical{ID: "123"})
 				}).
-				ThenNext("can mark as duplicate", func(c *machine.Case[Command, State]) {
+				ForkCase("can mark as duplicate", func(c *machine.Case[Command, State]) {
 					c.GivenCommand(&MarkAsDuplicateCMD{CanonicalID: "456"}).
 						ThenState(&Duplicate{ID: "123", CanonicalID: "456"})
 				}).
-				ThenNext("can mark as unique", func(c *machine.Case[Command, State]) {
+				ForkCase("can mark as unique", func(c *machine.Case[Command, State]) {
 					c.GivenCommand(&MarkAsUniqueCMD{}).
 						ThenState(&Unique{ID: "123"})
 				})
