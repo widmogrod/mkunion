@@ -45,19 +45,24 @@ func (c *Case[TCommand, TState]) index() int {
 	return len(c.command) - 1
 }
 
+// GivenCommand starts building assertion that when command is applied to machine, it will result in given state or error.
+// Use this method always with ThenState or ThenStateAndError
 func (c *Case[TCommand, TState]) GivenCommand(cmd TCommand) *Case[TCommand, TState] {
 	c.next()
 	c.command[c.index()] = cmd
 	return c
 }
 
+// ThenState asserts that command applied to machine will result in given state
 func (c *Case[TCommand, TState]) ThenState(state TState) *Case[TCommand, TState] {
 	c.state[c.index()] = state
 	c.err[c.index()] = nil
 	return c
 }
 
-func (c *Case[TCommand, TState]) ThenNext(name string, definition func(c *Case[TCommand, TState])) *Case[TCommand, TState] {
+// ForkCase takes previous state of machine and allows to apply another case from this point onward
+// there can be many forks from one state
+func (c *Case[TCommand, TState]) ForkCase(name string, definition func(c *Case[TCommand, TState])) *Case[TCommand, TState] {
 	useCase := &Case[TCommand, TState]{name: name}
 	definition(useCase)
 	c.then[c.index()] = append(c.then[c.index()], useCase)
@@ -83,26 +88,37 @@ func (suite *Suite[TCommand, TState]) Run(t *testing.T) {
 	t.Helper()
 	for _, c := range suite.then {
 		m := suite.mkMachine()
-		t.Run(c.name, func(t *testing.T) {
-			for idx, cmd := range c.command {
-				state := m.State()
-				t.Run(fmt.Sprintf("Apply(cmd=%T, state=%T)", cmd, state), func(t *testing.T) {
-					err := m.Handle(cmd)
-					newState := m.State()
-
-					if c.err[idx] == nil {
-						assert.NoError(t, err)
-					} else {
-						assert.ErrorAs(t, err, &c.err[idx])
-					}
-
-					assert.Equal(t, c.state[idx], newState)
-
-					suite.infer.Record(cmd, state, newState, err)
-				})
-			}
-		})
+		suite.assert(t, c, m)
 	}
+}
+
+func (suite *Suite[TCommand, TState]) assert(t *testing.T, c *Case[TCommand, TState], m *Machine[TCommand, TState]) bool {
+	return t.Run(c.name, func(t *testing.T) {
+		for idx, cmd := range c.command {
+			state := m.State()
+			t.Run(fmt.Sprintf("Apply(cmd=%T, state=%T)", cmd, state), func(t *testing.T) {
+				err := m.Handle(cmd)
+				newState := m.State()
+
+				if c.err[idx] == nil {
+					assert.NoError(t, err)
+				} else {
+					assert.ErrorAs(t, err, &c.err[idx])
+				}
+
+				assert.Equal(t, c.state[idx], newState)
+
+				suite.infer.Record(cmd, state, newState, err)
+
+				if len(c.then[idx]) > 0 {
+					for _, then := range c.then[idx] {
+						m := *m
+						suite.assert(t, then, &m)
+					}
+				}
+			})
+		}
+	})
 }
 
 // Fuzzy takes commands and states from recorded transitions and tries to find all possible combinations of commands and states.
