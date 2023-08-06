@@ -25,8 +25,8 @@ func (t *InferTransition[Transition, State]) WithTitle(name string) *InferTransi
 	return t
 }
 
-func (t *InferTransition[Transition, State]) WithErrorTransitions() *InferTransition[Transition, State] {
-	t.showErrorTransitions = true
+func (t *InferTransition[Transition, State]) WithErrorTransitions(flag bool) *InferTransition[Transition, State] {
+	t.showErrorTransitions = flag
 	return t
 }
 
@@ -111,6 +111,7 @@ func (t *InferTransition[Transition, State]) ToMermaid() string {
 
 		name := tt.name()
 		if tt.err() != "" {
+			fmt.Fprintf(result, " %%%% error=%s \n", strings.TrimSpace(strings.ReplaceAll(tt.err(), "\n", " ")))
 			name = fmt.Sprintf("❌%s", name)
 		}
 

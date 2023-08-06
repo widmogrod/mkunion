@@ -11,7 +11,7 @@ It's a good idea to use it when you have a lot of unions in your codebase.
 
 ## What it's useful for?
 - **Custom DSL**. When you want to create your own DSL, you can use this library to create AST for it. (./examples/ast)
-- **State machine**. When you need to manage state of your application, you can use this library to create states and transitions as unions. (./examples/state)
+- **State machine**. When you need to manage state of your application, you can use this library to create states and transitions as unions and self document transitions using `mermaid` diagram format. (./examples/state)
 
 Have fun! I hope you will find it useful.
 
@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.16
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.17
 ```
 
 ### Create your first union
@@ -470,6 +470,9 @@ go test ./...
 - [x] Pattern matching. Use `munion match -name=MyMatcher` where MyMather is interface. Function will generate functions that can pattern match and have return types MyMatcherR0, MyMatcherR1, MyMatcherR2
 
 ### V1.17.x
+- [x] Introduce self documenting state machines through tests [README.md](x/machine/README.md)
+
+### V1.18.x
 - [ ] Exhaustive pattern matching checks during generation
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!

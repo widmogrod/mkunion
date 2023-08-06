@@ -7,6 +7,35 @@ import (
 	"testing"
 )
 
+func TestSuite(t *testing.T) {
+	suite := machine.NewTestSuite(NewMachine)
+	suite.Case(
+		"happy path of transitions",
+		func(c *machine.Case[Command, State]) {
+			c.GivenCommand(&CreateCandidateCMD{ID: "123"}).
+				ThenState(&Candidate{ID: "123"}).
+				ThenNext("can mark as canonical", func(c *machine.Case[Command, State]) {
+					c.GivenCommand(&MarkAsCanonicalCMD{}).
+						ThenState(&Canonical{ID: "123"})
+				}).
+				ThenNext("can mark as duplicate", func(c *machine.Case[Command, State]) {
+					c.GivenCommand(&MarkAsDuplicateCMD{CanonicalID: "456"}).
+						ThenState(&Duplicate{ID: "123", CanonicalID: "456"})
+				}).
+				ThenNext("can mark as unique", func(c *machine.Case[Command, State]) {
+					c.GivenCommand(&MarkAsUniqueCMD{}).
+						ThenState(&Unique{ID: "123"})
+				})
+		},
+	)
+	suite.Run(t)
+	suite.Fuzzy(t)
+
+	if suite.AssertSelfDocumentStateDiagram(t, "simple_machine_test.go") {
+		suite.SelfDocumentStateDiagram(t, "simple_machine_test.go")
+	}
+}
+
 func TestStateTransition(t *testing.T) {
 	useCases := []struct {
 		name   string
@@ -25,7 +54,8 @@ func TestStateTransition(t *testing.T) {
 			errors: []error{
 				nil,
 			},
-		}, {
+		},
+		{
 			name: "candidate state and transit to duplicate  (valid)",
 			cmds: []Command{
 				&CreateCandidateCMD{ID: "123"},
@@ -122,7 +152,7 @@ func TestStateTransition(t *testing.T) {
 		})
 	}
 
-	infer.WithErrorTransitions()
+	infer.WithErrorTransitions(true)
 	result := infer.ToMermaid()
 	fmt.Println(result)
 	assert.Equal(t, `---
@@ -133,7 +163,9 @@ stateDiagram
 	"*state.Candidate" --> "*state.Duplicate": "*state.MarkAsDuplicateCMD"
 	"*state.Candidate" --> "*state.Canonical": "*state.MarkAsCanonicalCMD"
 	"*state.Candidate" --> "*state.Unique": "*state.MarkAsUniqueCMD"
+ %% error=state is not candidate, state: <nil>; invalid cmds 
 	[*] --> [*]: "❌*state.MarkAsDuplicateCMD"
+ %% error=state is not candidate, state: *state.Canonical; invalid cmds 
 	"*state.Canonical" --> "*state.Canonical": "❌*state.MarkAsDuplicateCMD"
 `, result)
 }

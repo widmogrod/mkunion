@@ -15,5 +15,6 @@ func TestInferStateMachine(t *testing.T) {
 
 	assert.Equal(t, `stateDiagram
 	"int" --> "int": "string"
+ %% error=unknown cmd: unknown 
 `, result)
 }
