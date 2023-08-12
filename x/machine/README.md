@@ -2,6 +2,15 @@
 Package models state machines as a union of **states**, and transition functions as a union of **commands**.
 Package provides an inferring method to visualize state machines as a mermaid diagram.
 
+## TODO
+- [ ] explain field management
+- [ ] dependency injection
+- [ ] demonstrate process orchestration
+- [ ] demonstrate states managing states
+- [ ] visualize error state
+- [ ] describe why not to start with state diagram first? TDD, fuzzy, self documenting and context coherence vs switching context
+- [ ] describe storage with version use case as optimistic locking
+
 ## Example
 Look into [simple_machine_test.go](../../example/state/simple_machine_test.go) directory for a complete example.
 
@@ -295,3 +304,47 @@ func main()
     }
 }
 ```
+
+
+## State machines and command queues and workflows
+What if command would initiate state "to process" and save it in db
+What if task queue would take such state and process it
+Woudn't this be something like command queue?
+
+When to make a list of background processes that transition such states?
+
+### processors per state
+It's like micromanage TaskQueue, where each state has it's own state, and it knows what command to apply to given state
+This could be good starting point, when there is not a lot of good tooling
+
+### processor for state machine
+With good tooling, transition of states can be declared in one place, 
+and deployment to task queue could be done automatically.
+
+Note, that only some of the transitions needs to happen in background, other can be done in request-response manner.
+
+### processor for state machine with workflow
+State machine could be generalized to workflow.
+We can think about it as set of generic Command and State (like a turing machine).
+
+States like Pending, Completed, Failed
+Commands like Process, Retry, Cancel
+
+And workflow DSL with commands like: Invoke, Choose, Assign
+Where function is some ID string, and functions needs to be either 
+pulled from registry, or called remotely (InvokeRemote).
+some operations would require callback (InvokeAndAwait)
+
+Then background processor would be responsible for executing such workflow (using task queue)
+Program would be responsible for defining workflow, and registering functions.
+
+Such programs could be also optimised for deployment, 
+if some function would be better to run on same machine that do RPC call
+like function doing RPC call to database, and caching result in memory or in cache cluster dedicated to specific BFF
+
+
+
+
+
+
+
