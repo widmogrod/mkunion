@@ -2,6 +2,7 @@ package workflow
 
 import "github.com/widmogrod/mkunion/x/schema"
 
+//go:generate mkunion -name=State
 type (
 	Plan struct {
 		Command string
@@ -16,37 +17,42 @@ type (
 		Input   string
 		Result  string
 	}
+	Fail struct {
+		Command string
+		Input   string
+		Error   string
+	}
 )
 
-//go:generate mkunion -name=ActivityT
+//go:generate mkunion -name=ASTNode -variants=Flow,End,Assign,Apply,Choose,GetValue,SetValue
+
+//go:generate mkunion -name=Worflow
 type (
-	Start struct {
-		Var String
+	Flow struct {
+		Name string // name of the flow
+		Arg  string // name of the argument, which will hold the input to the flow
+		Body []Expr
+	}
+)
+
+//go:generate mkunion -name=Expr
+type (
+	End struct {
+		Result Reshaper
+		Fail   Reshaper
+	}
+	Assign struct {
+		Var string
+		Val Expr
+	}
+	Apply struct {
+		Name string
+		Args []Reshaper
 	}
 	Choose struct {
 		If   Predicate
-		Then Workflow
-		Else Workflow
-	}
-	Assign struct {
-		Var  String
-		Flow Workflow
-	}
-	Invocation struct {
-		T1 Fid
-		T2 Reshaper
-	}
-)
-
-//go:generate mkunion -name=Workflow
-type (
-	Activity struct {
-		Id       AID
-		Activity ActivityT
-	}
-	Transition struct {
-		From Workflow
-		To   Workflow
+		Then []Expr
+		Else []Expr
 	}
 )
 
@@ -57,7 +63,7 @@ type (
 		Right Reshaper
 	}
 	Exists struct {
-		Path Path
+		Path []string
 	}
 	And struct {
 		T1 Predicate
@@ -72,16 +78,9 @@ type (
 //go:generate mkunion -name=Reshaper
 type (
 	GetValue struct {
-		T1 Path
+		Path string
 	}
 	SetValue struct {
-		T1 schema.Schema
+		Value schema.Schema
 	}
-)
-
-type (
-	Fid    = string
-	Path   = []string
-	AID    = string
-	String = string
 )
