@@ -1,26 +1,68 @@
 package workflow
 
-import "github.com/widmogrod/mkunion/x/schema"
+import (
+	"github.com/widmogrod/mkunion/x/schema"
+	"time"
+)
 
-//go:generate mkunion -name=State
+type Execution struct {
+	FlowID    string
+	Status    Status
+	Location  string
+	StartTime int64
+	EndTime   int64
+	Variables map[string]schema.Schema
+}
+
+//go:generate mkunion -name=Command
 type (
-	Plan struct {
-		Command string
-		Input   string
+	Run struct {
+		FlowID string
+		//Flow  Worflow
+		Input schema.Schema
 	}
-	Running struct {
-		Command string
-		Input   string
+	Schedule struct {
+		FlowID string
+		Delay  time.Duration
+		//Flow  Worflow
+		Input schema.Schema
+	}
+	Callback struct {
+		StepID string
+		Result schema.Schema
+		Fail   schema.Schema
+	}
+	Retry struct {
+		StepID string
+	}
+)
+
+//go:generate mkunion -name=Status
+type (
+	Start struct {
+		FlowID string
+		Input  schema.Schema
+	}
+	Result struct {
+		StepID string
+		Result schema.Schema
 	}
 	Done struct {
-		Command string
-		Input   string
-		Result  string
+		StepID string
+		Result schema.Schema
 	}
 	Fail struct {
-		Command string
-		Input   string
-		Error   string
+		StepID string
+		Result schema.Schema
+	}
+	Error struct {
+		StepID  string
+		Code    string
+		Reason  string
+		Retried int64
+	}
+	Await struct {
+		Timeout time.Duration
 	}
 )
 
@@ -38,18 +80,22 @@ type (
 //go:generate mkunion -name=Expr
 type (
 	End struct {
+		ID     string
 		Result Reshaper
 		Fail   Reshaper
 	}
 	Assign struct {
+		ID  string
 		Var string
 		Val Expr
 	}
 	Apply struct {
+		ID   string
 		Name string
 		Args []Reshaper
 	}
 	Choose struct {
+		ID   string
 		If   Predicate
 		Then []Expr
 		Else []Expr
