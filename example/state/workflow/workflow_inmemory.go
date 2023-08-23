@@ -7,25 +7,24 @@ import (
 var _ Dependency = (*DI)(nil)
 
 type DI struct {
+	FindFunctionF func(funcID string) (Function, error)
 	FindWorkflowF func(flowID string) (*Flow, error)
 }
 
-func (di DI) FindWorkflow(flowID string) (*Flow, error) {
+func (di *DI) FindWorkflow(flowID string) (*Flow, error) {
 	return di.FindWorkflowF(flowID)
 }
 
-func (di DI) NewContext() *Context {
+func (di *DI) FindFunction(funcID string) (Function, error) {
+	return di.FindFunctionF(funcID)
+}
+
+func (di *DI) NewContext() *Context {
 	result := &Context{
-		Name:      "root",
-		Variables: map[string]schema.Schema{},
-		Functions: map[string]Function{
-			"concat": func(args []schema.Schema) (schema.Schema, error) {
-				return schema.MkString(
-					schema.AsDefault(args[0], "") +
-						schema.AsDefault(args[1], ""),
-				), nil
-			},
-		},
+		delegateFindFunction: di.FindFunction,
+
+		Name:               "root",
+		Variables:          map[string]schema.Schema{},
 		ExecutionVariables: make(map[string]string),
 	}
 

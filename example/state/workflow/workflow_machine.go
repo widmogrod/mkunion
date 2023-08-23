@@ -17,14 +17,14 @@ type Execution struct {
 //go:generate mkunion -name=Command
 type (
 	Run struct {
-		FlowID string
-		//Flow  Worflow
+		//FlowID string
+		Flow  Worflow
 		Input schema.Schema
 	}
 	Schedule struct {
-		FlowID string
-		Delay  time.Duration
-		//Flow  Worflow
+		//FlowID string
+		Flow  Worflow
+		Delay time.Duration
 		Input schema.Schema
 	}
 	Callback struct {
@@ -74,6 +74,9 @@ type (
 		Name string // name of the flow
 		Arg  string // name of the argument, which will hold the input to the flow
 		Body []Expr
+	}
+	FlowRef struct {
+		FlowID string
 	}
 )
 

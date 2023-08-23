@@ -7,7 +7,8 @@ import (
 
 type (
 	Context struct {
-		Functions map[string]Function
+		delegateFindFunction func(funcID string) (Function, error)
+
 		Variables map[string]schema.Schema // variables are immutable, once set they can't be changed
 
 		Result schema.Schema
@@ -118,6 +119,10 @@ func (c *Context) SetVariable(name string, val schema.Schema) error {
 	return nil
 }
 
+func (c *Context) FindFunction(funcID string) (Function, error) {
+	return c.Root.delegateFindFunction(funcID)
+}
+
 //func (c *Context) RecordExecutionInfo(info *ExecutionInfo) {
 //	c.ExecutionInfo[c.Name] = info
 //}
@@ -169,147 +174,6 @@ func ExprID(expr Expr) string {
 			return x.ID
 		})
 }
-
-func GetExprFromProgram(program Worflow, id string) Expr {
-	return MustMatchWorflow(
-		program,
-		func(x *Flow) Expr {
-			for _, expr := range x.Body {
-				if ExprID(expr) == id {
-					return expr
-				}
-
-				if expr := GetExprFromExpr(expr, id); expr != nil {
-					return expr
-				}
-			}
-
-			return nil
-		},
-	)
-}
-
-func GetExprFromExpr(expr Expr, id string) Expr {
-	return MustMatchExpr(
-		expr,
-		func(x *End) Expr {
-			if x.ID == id {
-				return x
-			}
-			return nil
-		},
-		func(x *Assign) Expr {
-			if x.ID == id {
-				return x
-			}
-
-			return GetExprFromExpr(x.Val, id)
-		},
-		func(x *Apply) Expr {
-			if x.ID == id {
-				return x
-			}
-
-			return nil
-
-		},
-		func(x *Choose) Expr {
-			if x.ID == id {
-				return x
-			}
-
-			for _, expr := range x.Then {
-				if expr := GetExprFromExpr(expr, id); expr != nil {
-					return expr
-				}
-			}
-
-			for _, expr := range x.Else {
-				if expr := GetExprFromExpr(expr, id); expr != nil {
-					return expr
-				}
-			}
-
-			return nil
-		},
-	)
-}
-
-//func ExecuteStatus(expr Expr, context *Context) Status {
-//	return MustMatchExpr(
-//		expr,
-//		func(x *End) Status {
-//			if x.Fail != nil {
-//				val, err := ExecuteReshaper(context, x.Result)
-//				if err != nil {
-//					return &Error{
-//						Code:   "1",
-//						Reason: fmt.Errorf("failed to execute node=%s: %w", x.ID, err).Error(),
-//					}
-//				}
-//
-//				return &Fail{
-//					Result: val,
-//				}
-//			}
-//
-//			val, err := ExecuteReshaper(context, x.Result)
-//			if err != nil {
-//				return &Error{
-//					Code:   "2",
-//					Reason: fmt.Errorf("failed to execute node=%s: %w", x.ID, err).Error(),
-//				}
-//			}
-//
-//			return &Done{
-//				Result: val,
-//			}
-//		},
-//		func(x *Assign) Status {
-//			val := ExecuteStatus(x.Val, context)
-//
-//			if err != nil {
-//				return nil, context.Errorf("failed to execute flow: %w", err)
-//			}
-//
-//			return context.SetVariable(x.Var, val)
-//		},
-//		func(x *Apply) Status {
-//			args := make([]schema.Schema, len(x.Args))
-//			for i, arg := range x.Args {
-//				val, err := ExecuteReshaper(context, arg)
-//				if err != nil {
-//					return &Error{
-//						Code:   "3",
-//						Reason: fmt.Errorf("failed to execute node=%s: %w", x.ID, err).Error(),
-//					}
-//				}
-//				args[i] = val
-//			}
-//
-//			if fn, ok := context.Root.Functions[x.Name]; ok {
-//				val, err := fn(args)
-//				if err != nil {
-//					return &Error{
-//						Code:   "4",
-//						Reason: fmt.Errorf("failed to execute node=%s: %w", x.ID, err).Error(),
-//					}
-//				}
-//				return &Finished{
-//					Result: val,
-//				}
-//			} else {
-//				return &Error{
-//					Code:   "5",
-//					Reason: fmt.Errorf("failed to execute node=%s: no function", x.ID).Error(),
-//				}
-//			}
-//		},
-//		func(x *Choose) Status {
-//			return nil, context.Errorf("not implemented")
-//		},
-//	)
-//}
 
 //func ExecuteNode(context *Context, stack *ExecutionStack, node ASTNode) ([]ASTNode, error) {
 //	return MustMatchASTNodeR2(

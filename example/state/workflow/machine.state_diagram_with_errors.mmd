@@ -1,0 +1,7 @@
+stateDiagram
+	[*] --> "*workflow.Done": "*workflow.Run"
+	[*] --> "*workflow.Error": "*workflow.Run"
+ %% error=already started 
+	"*workflow.Error" --> "*workflow.Error": "❌*workflow.Run"
+ %% error=already started 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Run"

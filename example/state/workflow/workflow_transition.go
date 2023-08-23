@@ -13,6 +13,7 @@ var (
 
 type Dependency interface {
 	FindWorkflow(flowID string) (*Flow, error)
+	FindFunction(funcID string) (Function, error)
 	NewContext() *Context
 }
 
@@ -24,9 +25,23 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 				return nil, ErrAlreadyStarted
 			}
 
-			flow, err := dep.FindWorkflow(x.FlowID)
+			// resolve flow
+			flow, err := MustMatchWorflowR2(
+				x.Flow,
+				func(x *Flow) (*Flow, error) {
+					return x, nil
+				},
+				func(x *FlowRef) (*Flow, error) {
+					flow, err := dep.FindWorkflow(x.FlowID)
+					if err != nil {
+						return nil, fmt.Errorf("fauked to find workflow %s: %w", x.FlowID, err)
+					}
+
+					return flow, nil
+				},
+			)
 			if err != nil {
-				return nil, fmt.Errorf("%w %s: %w", ErrFailFindWorkflow, x.FlowID, err)
+				return nil, err
 			}
 
 			context := dep.NewContext()
@@ -50,24 +65,19 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 	)
 }
 
-func ExecuteAll(context *Context, program Worflow) Status {
-	context = context.GetForFlow(program)
-	return MustMatchWorflow(
-		program,
-		func(x *Flow) Status {
-			for _, expr := range x.Body {
-				status := ExecuteExpr(context, expr)
-				switch status.(type) {
-				case *Done, *Fail:
-					return status
-				}
-			}
+func ExecuteAll(context *Context, x *Flow) Status {
+	context = context.GetForFlow(x)
+	for _, expr := range x.Body {
+		status := ExecuteExpr(context, expr)
+		switch status.(type) {
+		case *Done, *Fail, *Error, *Await:
+			return status
+		}
+	}
 
-			return &Done{
-				StepID: x.Name,
-			}
-		},
-	)
+	return &Done{
+		StepID: x.Name,
+	}
 }
 
 func ExecuteReshaper(context *Context, reshaper Reshaper) (schema.Schema, error) {
@@ -162,22 +172,21 @@ func ExecuteExpr(context *Context, expr Expr) Status {
 				args[i] = val
 			}
 
-			fn, ok := context.Root.Functions[x.Name]
-			if !ok {
+			fn, err := context.FindFunction(x.Name)
+			if err != nil {
 				return &Error{
 					StepID:  x.ID,
-					Code:    "function-not-found",
-					Reason:  fmt.Sprintf("function %s not found", x.Name),
+					Code:    "function-retrieve",
+					Reason:  err.Error(),
 					Retried: 0,
 				}
-
 			}
 
 			val, err := fn(args)
 			if err != nil {
 				return &Error{
 					StepID:  x.ID,
-					Code:    "execute-func",
+					Code:    "function-execution",
 					Reason:  err.Error(),
 					Retried: 0,
 				}
