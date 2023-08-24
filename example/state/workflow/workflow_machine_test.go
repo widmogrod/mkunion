@@ -10,10 +10,16 @@ import (
 
 var functions = map[string]Function{
 	"concat": func(args []schema.Schema) (schema.Schema, error) {
-		return schema.MkString(
-			schema.AsDefault(args[0], "") +
-				schema.AsDefault(args[1], ""),
-		), nil
+		a, ok := schema.As[string](args[0])
+		if !ok {
+			return nil, fmt.Errorf("expected string, got %T", args[0])
+		}
+		b, ok := schema.As[string](args[1])
+		if !ok {
+			return nil, fmt.Errorf("expected string, got %T", args[1])
+		}
+
+		return schema.MkString(a + b), nil
 	},
 }
 
@@ -83,6 +89,9 @@ func TestMachine(t *testing.T) {
 
 	di := &DI{
 		FindWorkflowF: func(flowID string) (*Flow, error) {
+			if flowID != "hello_world_flow" {
+				return nil, fmt.Errorf("flow %s not found", flowID)
+			}
 			return program, nil
 		},
 		FindFunctionF: func(funcID string) (Function, error) {
@@ -111,6 +120,25 @@ func TestMachine(t *testing.T) {
 				Result: schema.MkString("hello world"),
 			})
 	})
+	suite.Case("start execution no input variable", func(c *machine.Case[Command, Status]) {
+		c.
+			GivenCommand(&Run{
+				Flow: &FlowRef{FlowID: "hello_world_flow"},
+			}).
+			ThenState(&Error{
+				StepID: "apply1",
+				Code:   "function-execution",
+				Reason: "function concat() returned error: expected string, got <nil>",
+			})
+	})
+	suite.Case("start execution fails on non existing flowID", func(c *machine.Case[Command, Status]) {
+		c.
+			GivenCommand(&Run{
+				Flow:  &FlowRef{FlowID: "hello_world_flow_non_existing"},
+				Input: schema.MkString("world"),
+			}).
+			ThenStateAndError(nil, fmt.Errorf("flow hello_world_flow_non_existing not found"))
+	})
 	suite.Case("start execution fails on function retrival", func(c *machine.Case[Command, Status]) {
 		c.
 			GivenCommand(&Run{
@@ -131,8 +159,8 @@ func TestMachine(t *testing.T) {
 			})).
 			ThenState(&Error{
 				StepID: "apply1",
-				Code:   "function-retrieve",
-				Reason: "function funcID='concat' not found",
+				Code:   "function-missing",
+				Reason: "function concat() not found, details: function funcID='concat' not found",
 			})
 	})
 

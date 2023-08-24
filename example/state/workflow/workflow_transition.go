@@ -176,8 +176,8 @@ func ExecuteExpr(context *Context, expr Expr) Status {
 			if err != nil {
 				return &Error{
 					StepID:  x.ID,
-					Code:    "function-retrieve",
-					Reason:  err.Error(),
+					Code:    "function-missing",
+					Reason:  fmt.Sprintf("function %s() not found, details: %s", x.Name, err.Error()),
 					Retried: 0,
 				}
 			}
@@ -187,7 +187,7 @@ func ExecuteExpr(context *Context, expr Expr) Status {
 				return &Error{
 					StepID:  x.ID,
 					Code:    "function-execution",
-					Reason:  err.Error(),
+					Reason:  fmt.Sprintf("function %s() returned error: %s", x.Name, err.Error()),
 					Retried: 0,
 				}
 			}
