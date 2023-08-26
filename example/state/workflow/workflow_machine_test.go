@@ -103,6 +103,7 @@ func TestMachine(t *testing.T) {
 		},
 	}
 
+	callbackID := "callback1"
 	program_await := &Flow{
 		Name: "hello_world_flow_await",
 		Arg:  "input",
@@ -146,6 +147,10 @@ func TestMachine(t *testing.T) {
 
 			return nil, fmt.Errorf("function %s not found", funcID)
 		},
+
+		GenerateCallbackIDF: func() string {
+			return callbackID
+		},
 	}
 
 	suite := machine.NewTestSuite(func() *machine.Machine[Command, Status] {
@@ -182,7 +187,7 @@ func TestMachine(t *testing.T) {
 			ThenState(&Await{
 				StepID:     "apply1",
 				Timeout:    10 * time.Second,
-				CallbackID: "asdf",
+				CallbackID: callbackID,
 				BaseState: &BaseState{
 					Flow: &FlowRef{FlowID: "hello_world_flow_await"},
 					Variables: map[string]schema.Schema{
@@ -195,7 +200,7 @@ func TestMachine(t *testing.T) {
 				// Assuming that callback is received before timeout.
 				c.
 					GivenCommand(&Callback{
-						CallbackID: "asdf",
+						CallbackID: callbackID,
 						Result:     schema.MkString("hello + world"),
 					}).
 					ThenState(&Done{
@@ -212,6 +217,25 @@ func TestMachine(t *testing.T) {
 							},
 						},
 					})
+			}).
+			ForkCase("received invalid callbackID", func(c *machine.Case[Command, Status]) {
+				c.
+					GivenCommand(&Callback{
+						CallbackID: "invalid_callback_id",
+						Result:     schema.MkString("hello + world"),
+					}).
+					ThenStateAndError(&Await{
+						StepID:     "apply1",
+						Timeout:    10 * time.Second,
+						CallbackID: callbackID,
+						BaseState: &BaseState{
+							Flow: &FlowRef{FlowID: "hello_world_flow_await"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+							},
+							ExprResult: make(map[string]schema.Schema),
+						},
+					}, ErrCallbackNotMatch)
 			})
 	})
 	suite.Case("start execution no input variable", func(c *machine.Case[Command, Status]) {

@@ -10,11 +10,13 @@ var (
 	ErrAlreadyStarted         = errors.New("already started")
 	ErrCallbackNotMatch       = errors.New("callback not match")
 	ErrInvalidStateTransition = errors.New("invalid state transition")
+	ErrExpressionHasResult    = errors.New("expression has result")
 )
 
 type Dependency interface {
 	FindWorkflow(flowID string) (*Flow, error)
 	FindFunction(funcID string) (Function, error)
+	GenerateCallbackID() string
 }
 
 func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
@@ -32,7 +34,7 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 			}
 
 			context := &BaseState{
-				Flow: flow,
+				Flow: x.Flow,
 				Variables: map[string]schema.Schema{
 					flow.Arg: x.Input,
 				},
@@ -49,7 +51,22 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 					return nil, ErrCallbackNotMatch
 				}
 
-				context := s.BaseState
+				context := &BaseState{
+					Flow:       s.BaseState.Flow,
+					Variables:  make(map[string]schema.Schema),
+					ExprResult: make(map[string]schema.Schema),
+				}
+				for k, v := range s.BaseState.Variables {
+					context.Variables[k] = v
+				}
+				for k, v := range s.BaseState.ExprResult {
+					context.ExprResult[k] = v
+				}
+
+				if _, ok := context.ExprResult[s.StepID]; ok {
+					return nil, ErrExpressionHasResult
+				}
+
 				context.ExprResult[s.StepID] = x.Result
 
 				flow, err := getFlow(context.Flow, dep)
@@ -274,7 +291,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) Status {
 			// IF function is async, we need to generate a callback ID
 			// so that, when the function is done, it can call us back with the result
 			if x.Await != nil {
-				input.CallbackID = "asdf" // TODO generate callback ID
+				input.CallbackID = dep.GenerateCallbackID()
 			}
 
 			val, err := fn(input)
