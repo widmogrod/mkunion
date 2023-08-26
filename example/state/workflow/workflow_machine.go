@@ -14,7 +14,7 @@ type Execution struct {
 	Variables map[string]schema.Schema
 }
 
-//go:generate mkunion -name=Command
+//go:generate go run ../../../cmd/mkunion/main.go -name=Command
 type (
 	Run struct {
 		//FlowID string
@@ -32,7 +32,7 @@ type (
 	//}
 )
 
-//go:generate mkunion -name=State
+//go:generate go run ../../../cmd/mkunion/main.go -name=State
 type (
 	NextOperation struct {
 		Result    schema.Schema
@@ -62,9 +62,7 @@ type BaseState struct {
 	ExprResult map[string]schema.Schema
 }
 
-//go:generate mkunion -name=ASTNode -variants=Flow,End,Assign,Apply,Choose,GetValue,SetValue
-
-//go:generate mkunion -name=Worflow
+//go:generate go run ../../../cmd/mkunion/main.go -name=Worflow
 type (
 	Flow struct {
 		Name string // name of the flow
@@ -76,7 +74,7 @@ type (
 	}
 )
 
-//go:generate mkunion -name=Expr
+//go:generate go run ../../../cmd/mkunion/main.go -name=Expr
 type (
 	End struct {
 		ID     string
@@ -105,7 +103,7 @@ type ApplyAwaitOptions struct {
 	Timeout time.Duration
 }
 
-//go:generate mkunion -name=Reshaper
+//go:generate go run ../../../cmd/mkunion/main.go -name=Reshaper
 type (
 	GetValue struct {
 		Path string
@@ -115,7 +113,7 @@ type (
 	}
 )
 
-//go:generate mkunion -name=Predicate
+//go:generate go run ../../../cmd/mkunion/main.go -name=Predicate
 type (
 	And struct {
 		L []Predicate
