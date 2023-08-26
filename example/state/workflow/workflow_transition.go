@@ -51,30 +51,19 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 					return nil, ErrCallbackNotMatch
 				}
 
-				context := BaseState{
-					Flow:       s.BaseState.Flow,
-					Variables:  make(map[string]schema.Schema),
-					ExprResult: make(map[string]schema.Schema),
-				}
-				for k, v := range s.BaseState.Variables {
-					context.Variables[k] = v
-				}
-				for k, v := range s.BaseState.ExprResult {
-					context.ExprResult[k] = v
-				}
-
-				if _, ok := context.ExprResult[s.StepID]; ok {
+				newContext := cloneBaseState(s.BaseState)
+				if _, ok := newContext.ExprResult[s.BaseState.StepID]; ok {
 					return nil, ErrExpressionHasResult
 				}
 
-				context.ExprResult[s.StepID] = x.Result
+				newContext.ExprResult[s.BaseState.StepID] = x.Result
 
-				flow, err := getFlow(context.Flow, dep)
+				flow, err := getFlow(newContext.Flow, dep)
 				if err != nil {
 					return nil, err
 				}
 
-				newStatus := ExecuteAll(context, flow, dep)
+				newStatus := ExecuteAll(newContext, flow, dep)
 				return newStatus, nil
 			}
 
@@ -84,6 +73,22 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		//	panic("implement me")
 		//},
 	)
+}
+
+func cloneBaseState(base BaseState) BaseState {
+	result := BaseState{
+		StepID:     base.StepID,
+		Flow:       base.Flow,
+		Variables:  make(map[string]schema.Schema),
+		ExprResult: make(map[string]schema.Schema),
+	}
+	for k, v := range base.Variables {
+		result.Variables[k] = v
+	}
+	for k, v := range base.ExprResult {
+		result.ExprResult[k] = v
+	}
+	return result
 }
 
 func getFlow(x Worflow, dep Dependency) (*Flow, error) {
@@ -132,7 +137,6 @@ func ExecuteAll(context BaseState, x *Flow, dep Dependency) State {
 	}
 
 	return &Done{
-		StepID:    x.Name,
 		BaseState: context,
 	}
 }
@@ -165,11 +169,11 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				val, err := ExecuteReshaper(context, x.Result)
 				if err != nil {
 					return &Error{
-						StepID:  x.ID,
 						Code:    "execute-reshaper",
 						Reason:  "failed to execute reshaper in fail path",
 						Retried: 0,
 						BaseState: BaseState{
+							StepID:     x.ID,
 							Flow:       context.Flow,
 							Variables:  context.Variables,
 							ExprResult: context.ExprResult,
@@ -178,9 +182,9 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				}
 
 				return &Fail{
-					StepID: x.ID,
 					Result: val,
 					BaseState: BaseState{
+						StepID:     x.ID,
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -191,11 +195,11 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			val, err := ExecuteReshaper(context, x.Result)
 			if err != nil {
 				return &Error{
-					StepID:  x.ID,
 					Code:    "execute-reshaper",
 					Reason:  "failed to execute reshaper in ok path",
 					Retried: 0,
 					BaseState: BaseState{
+						StepID:     x.ID,
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -204,9 +208,9 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			}
 
 			return &Done{
-				StepID: x.ID,
 				Result: val,
 				BaseState: BaseState{
+					StepID:     x.ID,
 					Flow:       context.Flow,
 					Variables:  context.Variables,
 					ExprResult: context.ExprResult,
@@ -222,29 +226,34 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 
 			if _, ok := context.Variables[x.Var]; ok {
 				return &Error{
-					StepID:    x.ID,
-					Code:      "assign-variable",
-					Reason:    fmt.Sprintf("variable %s already exists", x.Var),
-					Retried:   0,
-					BaseState: context,
+					Code:    "assign-variable",
+					Reason:  fmt.Sprintf("variable %s already exists", x.Var),
+					Retried: 0,
+					BaseState: BaseState{
+						StepID:     x.ID,
+						Flow:       context.Flow,
+						Variables:  context.Variables,
+						ExprResult: context.ExprResult,
+					},
 				}
 			}
 
-			newContext := context
+			newContext := cloneBaseState(context)
 			newContext.Variables[x.Var] = result.Result
+			newContext.StepID = x.ID
 
 			return &NextOperation{
-				StepID:    x.ID,
 				Result:    result.Result,
 				BaseState: newContext,
 			}
 		},
 		func(x *Apply) State {
 			if val, ok := context.ExprResult[x.ID]; ok {
+				newContext := cloneBaseState(context)
+				newContext.StepID = x.ID
 				return &NextOperation{
-					StepID:    x.ID,
 					Result:    val,
-					BaseState: context,
+					BaseState: newContext,
 				}
 			}
 
@@ -253,11 +262,11 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				val, err := ExecuteReshaper(context, arg)
 				if err != nil {
 					return &Error{
-						StepID:  x.ID,
 						Code:    "execute-reshaper",
 						Reason:  "failed to execute reshaper while preparing func args",
 						Retried: 0,
 						BaseState: BaseState{
+							StepID:     x.ID,
 							Flow:       context.Flow,
 							Variables:  context.Variables,
 							ExprResult: context.ExprResult,
@@ -270,11 +279,12 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			fn, err := dep.FindFunction(x.Name)
 			if err != nil {
 				return &Error{
-					StepID:  x.ID,
+
 					Code:    "function-missing",
 					Reason:  fmt.Sprintf("function %s() not found, details: %s", x.Name, err.Error()),
 					Retried: 0,
 					BaseState: BaseState{
+						StepID:     x.ID,
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -294,11 +304,11 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			val, err := fn(input)
 			if err != nil {
 				return &Error{
-					StepID:  x.ID,
 					Code:    "function-execution",
 					Reason:  fmt.Sprintf("function %s() returned error: %s", x.Name, err.Error()),
 					Retried: 0,
 					BaseState: BaseState{
+						StepID:     x.ID,
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -308,10 +318,10 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 
 			if x.Await != nil {
 				return &Await{
-					StepID:     x.ID,
 					Timeout:    x.Await.Timeout,
 					CallbackID: input.CallbackID,
 					BaseState: BaseState{
+						StepID:     x.ID,
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -320,9 +330,9 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			}
 
 			return &NextOperation{
-				StepID: x.ID,
 				Result: val.Result,
 				BaseState: BaseState{
+					StepID:     x.ID,
 					Flow:       context.Flow,
 					Variables:  context.Variables,
 					ExprResult: context.ExprResult,

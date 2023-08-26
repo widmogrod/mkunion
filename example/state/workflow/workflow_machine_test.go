@@ -70,10 +70,10 @@ func TestExecution(t *testing.T) {
 
 	result := ExecuteAll(context, program, di)
 	assert.Equal(t, &Done{
-		StepID: "end1",
 		Result: schema.MkString("hello world"),
 		BaseState: BaseState{
-			Flow: program,
+			StepID: "end1",
+			Flow:   program,
 			Variables: map[string]schema.Schema{
 				"input": schema.MkString("world"),
 				"res":   schema.MkString("hello world"),
@@ -166,10 +166,10 @@ func TestMachine(t *testing.T) {
 				Input: schema.MkString("world"),
 			}).
 			ThenState(&Done{
-				StepID: "end1",
 				Result: schema.MkString("hello world"),
 				BaseState: BaseState{
-					Flow: &FlowRef{FlowID: "hello_world_flow"},
+					StepID: "end1",
+					Flow:   &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 						"res":   schema.MkString("hello world"),
@@ -185,11 +185,11 @@ func TestMachine(t *testing.T) {
 				Input: schema.MkString("world"),
 			}).
 			ThenState(&Await{
-				StepID:     "apply1",
 				Timeout:    10 * time.Second,
 				CallbackID: callbackID,
 				BaseState: BaseState{
-					Flow: &FlowRef{FlowID: "hello_world_flow_await"},
+					StepID: "apply1",
+					Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 					},
@@ -204,10 +204,10 @@ func TestMachine(t *testing.T) {
 						Result:     schema.MkString("hello + world"),
 					}).
 					ThenState(&Done{
-						StepID: "end1",
 						Result: schema.MkString("hello + world"),
 						BaseState: BaseState{
-							Flow: &FlowRef{FlowID: "hello_world_flow_await"},
+							StepID: "end1",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
 							Variables: map[string]schema.Schema{
 								"input": schema.MkString("world"),
 								"res":   schema.MkString("hello + world"),
@@ -225,11 +225,11 @@ func TestMachine(t *testing.T) {
 						Result:     schema.MkString("hello + world"),
 					}).
 					ThenStateAndError(&Await{
-						StepID:     "apply1",
 						Timeout:    10 * time.Second,
 						CallbackID: callbackID,
 						BaseState: BaseState{
-							Flow: &FlowRef{FlowID: "hello_world_flow_await"},
+							StepID: "apply1",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
 							Variables: map[string]schema.Schema{
 								"input": schema.MkString("world"),
 							},
@@ -244,11 +244,11 @@ func TestMachine(t *testing.T) {
 				Flow: &FlowRef{FlowID: "hello_world_flow"},
 			}).
 			ThenState(&Error{
-				StepID: "apply1",
 				Code:   "function-execution",
 				Reason: "function concat() returned error: expected string, got <nil>",
 				BaseState: BaseState{
-					Flow: &FlowRef{FlowID: "hello_world_flow"},
+					StepID: "apply1",
+					Flow:   &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": nil,
 					},
@@ -283,11 +283,11 @@ func TestMachine(t *testing.T) {
 				}
 			})).
 			ThenState(&Error{
-				StepID: "apply1",
 				Code:   "function-missing",
 				Reason: "function concat() not found, details: function funcID='concat' not found",
 				BaseState: BaseState{
-					Flow: &FlowRef{FlowID: "hello_world_flow"},
+					StepID: "apply1",
+					Flow:   &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 					},

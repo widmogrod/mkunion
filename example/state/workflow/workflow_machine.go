@@ -35,29 +35,24 @@ type (
 //go:generate mkunion -name=State
 type (
 	NextOperation struct {
-		StepID    string
 		Result    schema.Schema
 		BaseState BaseState
 	}
 	Done struct {
-		StepID    string
 		Result    schema.Schema
 		BaseState BaseState
 	}
 	Fail struct {
-		StepID    string
 		Result    schema.Schema
 		BaseState BaseState
 	}
 	Error struct {
-		StepID    string
 		Code      string
 		Reason    string
 		Retried   int64
 		BaseState BaseState
 	}
 	Await struct {
-		StepID     string
 		CallbackID string
 		Timeout    time.Duration
 		BaseState  BaseState
@@ -66,6 +61,7 @@ type (
 
 type BaseState struct {
 	Flow       Worflow
+	StepID     string
 	Variables  map[string]schema.Schema
 	ExprResult map[string]schema.Schema
 }
