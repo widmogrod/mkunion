@@ -7,7 +7,7 @@ import (
 
 type Execution struct {
 	FlowID    string
-	Status    Status
+	Status    State
 	Location  string
 	StartTime int64
 	EndTime   int64
@@ -32,7 +32,7 @@ type (
 	//}
 )
 
-//go:generate mkunion -name=Status
+//go:generate mkunion -name=State
 type (
 	NextOperation struct {
 		StepID    string

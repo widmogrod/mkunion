@@ -153,13 +153,13 @@ func TestMachine(t *testing.T) {
 		},
 	}
 
-	suite := machine.NewTestSuite(func() *machine.Machine[Command, Status] {
-		return machine.NewSimpleMachine(func(cmd Command, state Status) (Status, error) {
+	suite := machine.NewTestSuite(func() *machine.Machine[Command, State] {
+		return machine.NewSimpleMachine(func(cmd Command, state State) (State, error) {
 			return Transition(cmd, state, di)
 		})
 	})
 
-	suite.Case("start execution", func(c *machine.Case[Command, Status]) {
+	suite.Case("start execution", func(c *machine.Case[Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow"},
@@ -178,7 +178,7 @@ func TestMachine(t *testing.T) {
 				},
 			})
 	})
-	suite.Case("start execution that awaits for callback", func(c *machine.Case[Command, Status]) {
+	suite.Case("start execution that awaits for callback", func(c *machine.Case[Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow_await"},
@@ -196,7 +196,7 @@ func TestMachine(t *testing.T) {
 					ExprResult: make(map[string]schema.Schema),
 				},
 			}).
-			ForkCase("callback received", func(c *machine.Case[Command, Status]) {
+			ForkCase("callback received", func(c *machine.Case[Command, State]) {
 				// Assuming that callback is received before timeout.
 				c.
 					GivenCommand(&Callback{
@@ -218,7 +218,7 @@ func TestMachine(t *testing.T) {
 						},
 					})
 			}).
-			ForkCase("received invalid callbackID", func(c *machine.Case[Command, Status]) {
+			ForkCase("received invalid callbackID", func(c *machine.Case[Command, State]) {
 				c.
 					GivenCommand(&Callback{
 						CallbackID: "invalid_callback_id",
@@ -238,7 +238,7 @@ func TestMachine(t *testing.T) {
 					}, ErrCallbackNotMatch)
 			})
 	})
-	suite.Case("start execution no input variable", func(c *machine.Case[Command, Status]) {
+	suite.Case("start execution no input variable", func(c *machine.Case[Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow: &FlowRef{FlowID: "hello_world_flow"},
@@ -256,7 +256,7 @@ func TestMachine(t *testing.T) {
 				},
 			})
 	})
-	suite.Case("start execution fails on non existing flowID", func(c *machine.Case[Command, Status]) {
+	suite.Case("start execution fails on non existing flowID", func(c *machine.Case[Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow_non_existing"},
@@ -264,7 +264,7 @@ func TestMachine(t *testing.T) {
 			}).
 			ThenStateAndError(nil, fmt.Errorf("flow hello_world_flow_non_existing not found"))
 	})
-	suite.Case("start execution fails on function retrival", func(c *machine.Case[Command, Status]) {
+	suite.Case("start execution fails on function retrival", func(c *machine.Case[Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow"},

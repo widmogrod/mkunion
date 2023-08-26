@@ -19,10 +19,10 @@ type Dependency interface {
 	GenerateCallbackID() string
 }
 
-func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
+func Transition(cmd Command, state State, dep Dependency) (State, error) {
 	return MustMatchCommandR2(
 		cmd,
-		func(x *Run) (Status, error) {
+		func(x *Run) (State, error) {
 			if state != nil {
 				return nil, ErrAlreadyStarted
 			}
@@ -44,7 +44,7 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 			newStatus := ExecuteAll(context, flow, dep)
 			return newStatus, nil
 		},
-		func(x *Callback) (Status, error) {
+		func(x *Callback) (State, error) {
 			switch s := state.(type) {
 			case *Await:
 				if s.CallbackID != x.CallbackID {
@@ -80,7 +80,7 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 
 			return nil, ErrInvalidStateTransition
 		},
-		//func(x *Retry) (Status, error) {
+		//func(x *Retry) (State, error) {
 		//	panic("implement me")
 		//},
 	)
@@ -103,7 +103,7 @@ func getFlow(x Worflow, dep Dependency) (*Flow, error) {
 	)
 }
 
-func ExecuteAll(context *BaseState, x *Flow, dep Dependency) Status {
+func ExecuteAll(context *BaseState, x *Flow, dep Dependency) State {
 	for _, expr := range x.Body {
 		status := ExecuteExpr(context, expr, dep)
 		switch status.(type) {
@@ -111,7 +111,7 @@ func ExecuteAll(context *BaseState, x *Flow, dep Dependency) Status {
 			return status
 		}
 
-		context = MustMatchStatus(
+		context = MustMatchState(
 			status,
 			func(x *NextOperation) *BaseState {
 				return x.BaseState
@@ -157,10 +157,10 @@ func ExecuteReshaper(context *BaseState, reshaper Reshaper) (schema.Schema, erro
 	)
 }
 
-func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) Status {
+func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 	return MustMatchExpr(
 		expr,
-		func(x *End) Status {
+		func(x *End) State {
 			if x.Fail != nil {
 				val, err := ExecuteReshaper(context, x.Result)
 				if err != nil {
@@ -213,7 +213,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) Status {
 				},
 			}
 		},
-		func(x *Assign) Status {
+		func(x *Assign) State {
 			status := ExecuteExpr(context, x.Val, dep)
 			result, ok := status.(*NextOperation)
 			if !ok {
@@ -239,7 +239,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) Status {
 				BaseState: newContext,
 			}
 		},
-		func(x *Apply) Status {
+		func(x *Apply) State {
 			if val, ok := context.ExprResult[x.ID]; ok {
 				return &NextOperation{
 					StepID:    x.ID,
@@ -329,7 +329,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) Status {
 				},
 			}
 		},
-		func(x *Choose) Status {
+		func(x *Choose) State {
 			panic("implement me")
 		},
 	)
