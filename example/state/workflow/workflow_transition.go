@@ -80,9 +80,9 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 
 			return nil, ErrInvalidStateTransition
 		},
-		func(x *Retry) (Status, error) {
-			panic("implement me")
-		},
+		//func(x *Retry) (Status, error) {
+		//	panic("implement me")
+		//},
 	)
 }
 

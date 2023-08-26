@@ -21,21 +21,15 @@ type (
 		Flow  Worflow
 		Input schema.Schema
 	}
-	//Schedule struct {
-	//	//FlowID string
-	//	Flow  Worflow
-	//	Delay time.Duration
-	//	Input schema.Schema
-	//}
 	Callback struct {
 		CallbackID string
 		//Flow       Worflow
 		Result schema.Schema
 		//Fail       schema.Schema
 	}
-	Retry struct {
-		StepID string
-	}
+	//Retry struct {
+	//	StepID string
+	//}
 )
 
 //go:generate mkunion -name=Status
