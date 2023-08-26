@@ -42,12 +42,6 @@ type (
 		Result    schema.Schema
 		BaseState BaseState
 	}
-	// TODO: remove this, this semantic don't make sense?
-	// change Done -> Return.
-	Fail struct {
-		Result    schema.Schema
-		BaseState BaseState
-	}
 	Error struct {
 		Code      string
 		Reason    string
@@ -87,7 +81,6 @@ type (
 	End struct {
 		ID     string
 		Result Reshaper
-		Fail   Reshaper
 	}
 	Assign struct {
 		ID  string

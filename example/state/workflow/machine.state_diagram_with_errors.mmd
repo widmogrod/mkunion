@@ -7,11 +7,8 @@ stateDiagram
 	[*] --> "*workflow.Error": "*workflow.Run"
  %% error=failed to find workflow hello_world_flow_non_existing: flow hello_world_flow_non_existing not found 
 	[*] --> [*]: "❌*workflow.Run"
-	[*] --> "*workflow.Fail": "*workflow.Run"
  %% error=already started 
 	"*workflow.Await" --> "*workflow.Await": "❌*workflow.Run"
- %% error=already started 
-	"*workflow.Fail" --> "*workflow.Fail": "❌*workflow.Run"
  %% error=already started 
 	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Run"
  %% error=invalid state transition 
@@ -20,7 +17,5 @@ stateDiagram
 	[*] --> [*]: "❌*workflow.Callback"
  %% error=already started 
 	"*workflow.Error" --> "*workflow.Error": "❌*workflow.Run"
- %% error=invalid state transition 
-	"*workflow.Fail" --> "*workflow.Fail": "❌*workflow.Callback"
  %% error=invalid state transition 
 	"*workflow.Error" --> "*workflow.Error": "❌*workflow.Callback"

@@ -111,8 +111,7 @@ func getFlow(x Worflow, dep Dependency) (*Flow, error) {
 func ExecuteAll(context BaseState, x *Flow, dep Dependency) State {
 	for _, expr := range x.Body {
 		status := ExecuteExpr(context, expr, dep)
-		switch status.(type) {
-		case *Done, *Fail, *Error, *Await:
+		if stopExecution(status) {
 			return status
 		}
 
@@ -131,9 +130,6 @@ func getBaseState(status State) BaseState {
 			return x.BaseState
 		},
 		func(x *Done) BaseState {
-			return x.BaseState
-		},
-		func(x *Fail) BaseState {
 			return x.BaseState
 		},
 		func(x *Error) BaseState {
@@ -242,23 +238,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 		func(x *End) State {
 			newContext := cloneBaseState(context)
 			newContext.StepID = x.ID
-
-			if x.Fail != nil {
-				val, err := ExecuteReshaper(context, x.Fail)
-				if err != nil {
-					return &Error{
-						Code:      "execute-reshaper",
-						Reason:    "failed to execute reshaper in fail path",
-						Retried:   0,
-						BaseState: newContext,
-					}
-				}
-
-				return &Fail{
-					Result:    val,
-					BaseState: newContext,
-				}
-			}
 
 			val, err := ExecuteReshaper(context, x.Result)
 			if err != nil {
@@ -411,8 +390,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 
 			for _, expr2 := range evaluate {
 				status = ExecuteExpr(newContext, expr2, dep)
-				switch status.(type) {
-				case *Done, *Fail, *Error, *Await:
+				if stopExecution(status) {
 					return status
 				}
 
@@ -422,4 +400,13 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			return status
 		},
 	)
+}
+
+func stopExecution(state State) bool {
+	switch state.(type) {
+	case *Error, *Done, *Await:
+		return true
+	}
+
+	return false
 }

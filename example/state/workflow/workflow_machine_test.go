@@ -156,8 +156,8 @@ func TestMachine(t *testing.T) {
 				},
 				Else: []Expr{
 					&End{
-						ID:   "fail1",
-						Fail: &SetValue{Value: schema.MkString("only Spanish will work!")},
+						ID:     "fail1",
+						Result: &SetValue{Value: schema.MkString("only Spanish will work!")},
 					},
 				},
 			},
@@ -337,7 +337,7 @@ func TestMachine(t *testing.T) {
 				Flow:  &FlowRef{FlowID: "hello_world_flow_if"},
 				Input: schema.MkString("El Mundo"),
 			}).
-			ThenState(&Fail{
+			ThenState(&Done{
 				Result: schema.MkString("only Spanish will work!"),
 				BaseState: BaseState{
 					StepID: "fail1",
