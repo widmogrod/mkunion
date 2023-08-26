@@ -21,16 +21,17 @@ type (
 		Flow  Worflow
 		Input schema.Schema
 	}
-	Schedule struct {
-		//FlowID string
-		Flow  Worflow
-		Delay time.Duration
-		Input schema.Schema
-	}
+	//Schedule struct {
+	//	//FlowID string
+	//	Flow  Worflow
+	//	Delay time.Duration
+	//	Input schema.Schema
+	//}
 	Callback struct {
-		StepID string
+		CallbackID string
+		//Flow       Worflow
 		Result schema.Schema
-		Fail   schema.Schema
+		//Fail       schema.Schema
 	}
 	Retry struct {
 		StepID string
@@ -39,32 +40,47 @@ type (
 
 //go:generate mkunion -name=Status
 type (
-	Start struct {
-		FlowID string
-		Input  schema.Schema
-	}
-	Result struct {
+	Resume struct {
 		StepID string
 		Result schema.Schema
+		//Fail 	schema.Schema
+		BaseState *BaseState
+	}
+	NextOperation struct {
+		StepID    string
+		Result    schema.Schema
+		BaseState *BaseState
 	}
 	Done struct {
-		StepID string
-		Result schema.Schema
+		StepID    string
+		Result    schema.Schema
+		BaseState *BaseState
 	}
 	Fail struct {
-		StepID string
-		Result schema.Schema
+		StepID    string
+		Result    schema.Schema
+		BaseState *BaseState
 	}
 	Error struct {
-		StepID  string
-		Code    string
-		Reason  string
-		Retried int64
+		StepID    string
+		Code      string
+		Reason    string
+		Retried   int64
+		BaseState *BaseState
 	}
 	Await struct {
-		Timeout time.Duration
+		StepID     string
+		CallbackID string
+		Timeout    time.Duration
+		BaseState  *BaseState
 	}
 )
+
+type BaseState struct {
+	Flow       Worflow
+	Variables  map[string]schema.Schema
+	ExprResult map[string]schema.Schema
+}
 
 //go:generate mkunion -name=ASTNode -variants=Flow,End,Assign,Apply,Choose,GetValue,SetValue
 
@@ -93,9 +109,10 @@ type (
 		Val Expr
 	}
 	Apply struct {
-		ID   string
-		Name string
-		Args []Reshaper
+		ID    string
+		Name  string
+		Args  []Reshaper
+		Await *ApplyAwaitOptions
 	}
 	Choose struct {
 		ID   string
@@ -104,6 +121,10 @@ type (
 		Else []Expr
 	}
 )
+
+type ApplyAwaitOptions struct {
+	Timeout time.Duration
+}
 
 //go:generate mkunion -name=Predicate
 type (

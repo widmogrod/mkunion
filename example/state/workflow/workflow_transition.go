@@ -7,14 +7,14 @@ import (
 )
 
 var (
-	ErrAlreadyStarted   = errors.New("already started")
-	ErrFailFindWorkflow = errors.New("failed to find workflow")
+	ErrAlreadyStarted         = errors.New("already started")
+	ErrCallbackNotMatch       = errors.New("callback not match")
+	ErrInvalidStateTransition = errors.New("invalid state transition")
 )
 
 type Dependency interface {
 	FindWorkflow(flowID string) (*Flow, error)
 	FindFunction(funcID string) (Function, error)
-	NewContext() *Context
 }
 
 func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
@@ -26,38 +26,42 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 			}
 
 			// resolve flow
-			flow, err := MustMatchWorflowR2(
-				x.Flow,
-				func(x *Flow) (*Flow, error) {
-					return x, nil
-				},
-				func(x *FlowRef) (*Flow, error) {
-					flow, err := dep.FindWorkflow(x.FlowID)
-					if err != nil {
-						return nil, fmt.Errorf("fauked to find workflow %s: %w", x.FlowID, err)
-					}
-
-					return flow, nil
-				},
-			)
+			flow, err := getFlow(x.Flow, dep)
 			if err != nil {
 				return nil, err
 			}
 
-			context := dep.NewContext()
-			err = context.SetVariable(flow.Arg, x.Input)
-			if err != nil {
-				return nil, fmt.Errorf("failed to initiate context with starting variable %s: %w", flow.Arg, err)
+			context := &BaseState{
+				Flow: flow,
+				Variables: map[string]schema.Schema{
+					flow.Arg: x.Input,
+				},
+				ExprResult: make(map[string]schema.Schema),
 			}
 
-			newStatus := ExecuteAll(context, flow)
+			newStatus := ExecuteAll(context, flow, dep)
 			return newStatus, nil
 		},
-		func(x *Schedule) (Status, error) {
-			panic("implement me")
-		},
 		func(x *Callback) (Status, error) {
-			panic("implement me")
+			switch s := state.(type) {
+			case *Await:
+				if s.CallbackID != x.CallbackID {
+					return nil, ErrCallbackNotMatch
+				}
+
+				context := s.BaseState
+				context.ExprResult[s.StepID] = x.Result
+
+				flow, err := getFlow(context.Flow, dep)
+				if err != nil {
+					return nil, err
+				}
+
+				newStatus := ExecuteAll(context, flow, dep)
+				return newStatus, nil
+			}
+
+			return nil, ErrInvalidStateTransition
 		},
 		func(x *Retry) (Status, error) {
 			panic("implement me")
@@ -65,34 +69,72 @@ func Transition(cmd Command, state Status, dep Dependency) (Status, error) {
 	)
 }
 
-func ExecuteAll(context *Context, x *Flow) Status {
-	context = context.GetForFlow(x)
+func getFlow(x Worflow, dep Dependency) (*Flow, error) {
+	return MustMatchWorflowR2(
+		x,
+		func(x *Flow) (*Flow, error) {
+			return x, nil
+		},
+		func(x *FlowRef) (*Flow, error) {
+			flow, err := dep.FindWorkflow(x.FlowID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find workflow %s: %w", x.FlowID, err)
+			}
+
+			return flow, nil
+		},
+	)
+}
+
+func ExecuteAll(context *BaseState, x *Flow, dep Dependency) Status {
 	for _, expr := range x.Body {
-		status := ExecuteExpr(context, expr)
+		status := ExecuteExpr(context, expr, dep)
 		switch status.(type) {
 		case *Done, *Fail, *Error, *Await:
 			return status
 		}
+
+		context = MustMatchStatus(
+			status,
+			func(x *Resume) *BaseState {
+				return x.BaseState
+			},
+			func(x *NextOperation) *BaseState {
+				return x.BaseState
+			},
+			func(x *Done) *BaseState {
+				return x.BaseState
+			},
+			func(x *Fail) *BaseState {
+				return x.BaseState
+			},
+			func(x *Error) *BaseState {
+				return x.BaseState
+			},
+			func(x *Await) *BaseState {
+				return x.BaseState
+			},
+		)
 	}
 
 	return &Done{
-		StepID: x.Name,
+		StepID:    x.Name,
+		BaseState: context,
 	}
 }
 
-func ExecuteReshaper(context *Context, reshaper Reshaper) (schema.Schema, error) {
+func ExecuteReshaper(context *BaseState, reshaper Reshaper) (schema.Schema, error) {
 	if reshaper == nil {
 		return nil, nil
 	}
 
-	context = context.GetForReshaper(reshaper)
 	return MustMatchReshaperR2(
 		reshaper,
 		func(x *GetValue) (schema.Schema, error) {
-			if val, ok := context.GetVariable(x.Path); ok {
+			if val, ok := context.Variables[x.Path]; ok {
 				return val, nil
 			} else {
-				return nil, context.Errorf("variable %s not found", x.Path)
+				return nil, fmt.Errorf("variable %s not found", x.Path)
 			}
 		},
 		func(x *SetValue) (schema.Schema, error) {
@@ -101,8 +143,7 @@ func ExecuteReshaper(context *Context, reshaper Reshaper) (schema.Schema, error)
 	)
 }
 
-func ExecuteExpr(context *Context, expr Expr) Status {
-	context = context.GetForExpr(expr)
+func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) Status {
 	return MustMatchExpr(
 		expr,
 		func(x *End) Status {
@@ -114,12 +155,22 @@ func ExecuteExpr(context *Context, expr Expr) Status {
 						Code:    "execute-reshaper",
 						Reason:  "failed to execute reshaper in fail path",
 						Retried: 0,
+						BaseState: &BaseState{
+							Flow:       context.Flow,
+							Variables:  context.Variables,
+							ExprResult: context.ExprResult,
+						},
 					}
 				}
 
 				return &Fail{
 					StepID: x.ID,
 					Result: val,
+					BaseState: &BaseState{
+						Flow:       context.Flow,
+						Variables:  context.Variables,
+						ExprResult: context.ExprResult,
+					},
 				}
 			}
 
@@ -130,34 +181,59 @@ func ExecuteExpr(context *Context, expr Expr) Status {
 					Code:    "execute-reshaper",
 					Reason:  "failed to execute reshaper in ok path",
 					Retried: 0,
+					BaseState: &BaseState{
+						Flow:       context.Flow,
+						Variables:  context.Variables,
+						ExprResult: context.ExprResult,
+					},
 				}
 			}
 
 			return &Done{
 				StepID: x.ID,
 				Result: val,
+				BaseState: &BaseState{
+					Flow:       context.Flow,
+					Variables:  context.Variables,
+					ExprResult: context.ExprResult,
+				},
 			}
 		},
 		func(x *Assign) Status {
-			status := ExecuteExpr(context, x.Val)
-			result, ok := status.(*Result)
+			status := ExecuteExpr(context, x.Val, dep)
+			result, ok := status.(*NextOperation)
 			if !ok {
 				return status
 			}
 
-			err := context.SetVariable(x.Var, result.Result)
-			if err != nil {
+			if _, ok := context.Variables[x.Var]; ok {
 				return &Error{
-					StepID:  x.ID,
-					Code:    "assign-variable",
-					Reason:  err.Error(),
-					Retried: 0,
+					StepID:    x.ID,
+					Code:      "assign-variable",
+					Reason:    fmt.Sprintf("variable %s already exists", x.Var),
+					Retried:   0,
+					BaseState: context,
 				}
 			}
 
-			return result
+			newContext := context
+			newContext.Variables[x.Var] = result.Result
+
+			return &NextOperation{
+				StepID:    x.ID,
+				Result:    result.Result,
+				BaseState: newContext,
+			}
 		},
 		func(x *Apply) Status {
+			if val, ok := context.ExprResult[x.ID]; ok {
+				return &NextOperation{
+					StepID:    x.ID,
+					Result:    val,
+					BaseState: context,
+				}
+			}
+
 			args := make([]schema.Schema, len(x.Args))
 			for i, arg := range x.Args {
 				val, err := ExecuteReshaper(context, arg)
@@ -167,34 +243,76 @@ func ExecuteExpr(context *Context, expr Expr) Status {
 						Code:    "execute-reshaper",
 						Reason:  "failed to execute reshaper while preparing func args",
 						Retried: 0,
+						BaseState: &BaseState{
+							Flow:       context.Flow,
+							Variables:  context.Variables,
+							ExprResult: context.ExprResult,
+						},
 					}
 				}
 				args[i] = val
 			}
 
-			fn, err := context.FindFunction(x.Name)
+			fn, err := dep.FindFunction(x.Name)
 			if err != nil {
 				return &Error{
 					StepID:  x.ID,
 					Code:    "function-missing",
 					Reason:  fmt.Sprintf("function %s() not found, details: %s", x.Name, err.Error()),
 					Retried: 0,
+					BaseState: &BaseState{
+						Flow:       context.Flow,
+						Variables:  context.Variables,
+						ExprResult: context.ExprResult,
+					},
 				}
 			}
 
-			val, err := fn(args)
+			input := &FunctionInput{
+				Args: args,
+			}
+			// IF function is async, we need to generate a callback ID
+			// so that, when the function is done, it can call us back with the result
+			if x.Await != nil {
+				input.CallbackID = "asdf" // TODO generate callback ID
+			}
+
+			val, err := fn(input)
 			if err != nil {
 				return &Error{
 					StepID:  x.ID,
 					Code:    "function-execution",
 					Reason:  fmt.Sprintf("function %s() returned error: %s", x.Name, err.Error()),
 					Retried: 0,
+					BaseState: &BaseState{
+						Flow:       context.Flow,
+						Variables:  context.Variables,
+						ExprResult: context.ExprResult,
+					},
 				}
 			}
 
-			return &Result{
+			if x.Await != nil {
+				return &Await{
+					StepID:     x.ID,
+					Timeout:    x.Await.Timeout,
+					CallbackID: input.CallbackID,
+					BaseState: &BaseState{
+						Flow:       context.Flow,
+						Variables:  context.Variables,
+						ExprResult: context.ExprResult,
+					},
+				}
+			}
+
+			return &NextOperation{
 				StepID: x.ID,
-				Result: val,
+				Result: val.Result,
+				BaseState: &BaseState{
+					Flow:       context.Flow,
+					Variables:  context.Variables,
+					ExprResult: context.ExprResult,
+				},
 			}
 		},
 		func(x *Choose) Status {

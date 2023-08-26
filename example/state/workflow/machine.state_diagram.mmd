@@ -1,6 +1,13 @@
 stateDiagram
 	[*] --> "*workflow.Done": "*workflow.Run"
+	[*] --> "*workflow.Await": "*workflow.Run"
+	"*workflow.Await" --> "*workflow.Done": "*workflow.Callback"
 	[*] --> "*workflow.Error": "*workflow.Run"
- %% error=fauked to find workflow hello_world_flow_non_existing: flow hello_world_flow_non_existing not found 
+ %% error=failed to find workflow hello_world_flow_non_existing: flow hello_world_flow_non_existing not found 
  %% error=already started 
  %% error=already started 
+ %% error=invalid state transition 
+ %% error=already started 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+	"*workflow.Await" --> "*workflow.Error": "*workflow.Callback"
