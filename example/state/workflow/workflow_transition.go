@@ -33,7 +33,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 				return nil, err
 			}
 
-			context := &BaseState{
+			context := BaseState{
 				Flow: x.Flow,
 				Variables: map[string]schema.Schema{
 					flow.Arg: x.Input,
@@ -51,7 +51,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 					return nil, ErrCallbackNotMatch
 				}
 
-				context := &BaseState{
+				context := BaseState{
 					Flow:       s.BaseState.Flow,
 					Variables:  make(map[string]schema.Schema),
 					ExprResult: make(map[string]schema.Schema),
@@ -103,7 +103,7 @@ func getFlow(x Worflow, dep Dependency) (*Flow, error) {
 	)
 }
 
-func ExecuteAll(context *BaseState, x *Flow, dep Dependency) State {
+func ExecuteAll(context BaseState, x *Flow, dep Dependency) State {
 	for _, expr := range x.Body {
 		status := ExecuteExpr(context, expr, dep)
 		switch status.(type) {
@@ -113,19 +113,19 @@ func ExecuteAll(context *BaseState, x *Flow, dep Dependency) State {
 
 		context = MustMatchState(
 			status,
-			func(x *NextOperation) *BaseState {
+			func(x *NextOperation) BaseState {
 				return x.BaseState
 			},
-			func(x *Done) *BaseState {
+			func(x *Done) BaseState {
 				return x.BaseState
 			},
-			func(x *Fail) *BaseState {
+			func(x *Fail) BaseState {
 				return x.BaseState
 			},
-			func(x *Error) *BaseState {
+			func(x *Error) BaseState {
 				return x.BaseState
 			},
-			func(x *Await) *BaseState {
+			func(x *Await) BaseState {
 				return x.BaseState
 			},
 		)
@@ -137,7 +137,7 @@ func ExecuteAll(context *BaseState, x *Flow, dep Dependency) State {
 	}
 }
 
-func ExecuteReshaper(context *BaseState, reshaper Reshaper) (schema.Schema, error) {
+func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error) {
 	if reshaper == nil {
 		return nil, nil
 	}
@@ -157,7 +157,7 @@ func ExecuteReshaper(context *BaseState, reshaper Reshaper) (schema.Schema, erro
 	)
 }
 
-func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
+func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 	return MustMatchExpr(
 		expr,
 		func(x *End) State {
@@ -169,7 +169,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 						Code:    "execute-reshaper",
 						Reason:  "failed to execute reshaper in fail path",
 						Retried: 0,
-						BaseState: &BaseState{
+						BaseState: BaseState{
 							Flow:       context.Flow,
 							Variables:  context.Variables,
 							ExprResult: context.ExprResult,
@@ -180,7 +180,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 				return &Fail{
 					StepID: x.ID,
 					Result: val,
-					BaseState: &BaseState{
+					BaseState: BaseState{
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -195,7 +195,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 					Code:    "execute-reshaper",
 					Reason:  "failed to execute reshaper in ok path",
 					Retried: 0,
-					BaseState: &BaseState{
+					BaseState: BaseState{
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -206,7 +206,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 			return &Done{
 				StepID: x.ID,
 				Result: val,
-				BaseState: &BaseState{
+				BaseState: BaseState{
 					Flow:       context.Flow,
 					Variables:  context.Variables,
 					ExprResult: context.ExprResult,
@@ -257,7 +257,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 						Code:    "execute-reshaper",
 						Reason:  "failed to execute reshaper while preparing func args",
 						Retried: 0,
-						BaseState: &BaseState{
+						BaseState: BaseState{
 							Flow:       context.Flow,
 							Variables:  context.Variables,
 							ExprResult: context.ExprResult,
@@ -274,7 +274,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 					Code:    "function-missing",
 					Reason:  fmt.Sprintf("function %s() not found, details: %s", x.Name, err.Error()),
 					Retried: 0,
-					BaseState: &BaseState{
+					BaseState: BaseState{
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -298,7 +298,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 					Code:    "function-execution",
 					Reason:  fmt.Sprintf("function %s() returned error: %s", x.Name, err.Error()),
 					Retried: 0,
-					BaseState: &BaseState{
+					BaseState: BaseState{
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -311,7 +311,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 					StepID:     x.ID,
 					Timeout:    x.Await.Timeout,
 					CallbackID: input.CallbackID,
-					BaseState: &BaseState{
+					BaseState: BaseState{
 						Flow:       context.Flow,
 						Variables:  context.Variables,
 						ExprResult: context.ExprResult,
@@ -322,7 +322,7 @@ func ExecuteExpr(context *BaseState, expr Expr, dep Dependency) State {
 			return &NextOperation{
 				StepID: x.ID,
 				Result: val.Result,
-				BaseState: &BaseState{
+				BaseState: BaseState{
 					Flow:       context.Flow,
 					Variables:  context.Variables,
 					ExprResult: context.ExprResult,

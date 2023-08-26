@@ -37,30 +37,30 @@ type (
 	NextOperation struct {
 		StepID    string
 		Result    schema.Schema
-		BaseState *BaseState
+		BaseState BaseState
 	}
 	Done struct {
 		StepID    string
 		Result    schema.Schema
-		BaseState *BaseState
+		BaseState BaseState
 	}
 	Fail struct {
 		StepID    string
 		Result    schema.Schema
-		BaseState *BaseState
+		BaseState BaseState
 	}
 	Error struct {
 		StepID    string
 		Code      string
 		Reason    string
 		Retried   int64
-		BaseState *BaseState
+		BaseState BaseState
 	}
 	Await struct {
 		StepID     string
 		CallbackID string
 		Timeout    time.Duration
-		BaseState  *BaseState
+		BaseState  BaseState
 	}
 )
 
