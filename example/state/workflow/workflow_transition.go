@@ -116,29 +116,33 @@ func ExecuteAll(context BaseState, x *Flow, dep Dependency) State {
 			return status
 		}
 
-		context = MustMatchState(
-			status,
-			func(x *NextOperation) BaseState {
-				return x.BaseState
-			},
-			func(x *Done) BaseState {
-				return x.BaseState
-			},
-			func(x *Fail) BaseState {
-				return x.BaseState
-			},
-			func(x *Error) BaseState {
-				return x.BaseState
-			},
-			func(x *Await) BaseState {
-				return x.BaseState
-			},
-		)
+		context = getBaseState(status)
 	}
 
 	return &Done{
 		BaseState: context,
 	}
+}
+
+func getBaseState(status State) BaseState {
+	return MustMatchState(
+		status,
+		func(x *NextOperation) BaseState {
+			return x.BaseState
+		},
+		func(x *Done) BaseState {
+			return x.BaseState
+		},
+		func(x *Fail) BaseState {
+			return x.BaseState
+		},
+		func(x *Error) BaseState {
+			return x.BaseState
+		},
+		func(x *Await) BaseState {
+			return x.BaseState
+		},
+	)
 }
 
 func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error) {
@@ -161,6 +165,77 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 	)
 }
 
+func ExecutePredicate(context BaseState, predicate Predicate, dep Dependency) (bool, error) {
+	return MustMatchPredicateR2(
+		predicate,
+		func(x *And) (bool, error) {
+			for _, p := range x.L {
+				result, err := ExecutePredicate(context, p, dep)
+				if err != nil {
+					return false, err
+				}
+
+				if !result {
+					return false, nil
+				}
+			}
+
+			return true, nil
+		},
+		func(x *Or) (bool, error) {
+			for _, p := range x.L {
+				result, err := ExecutePredicate(context, p, dep)
+				if err != nil {
+					return false, err
+				}
+
+				if result {
+					return true, nil
+				}
+			}
+
+			return false, nil
+		},
+		func(x *Not) (bool, error) {
+			result, err := ExecutePredicate(context, x.P, dep)
+			if err != nil {
+				return false, err
+			}
+
+			return !result, nil
+		},
+		func(x *Compare) (bool, error) {
+			left, err := ExecuteReshaper(context, x.Left)
+			if err != nil {
+				return false, fmt.Errorf("left comapre failed: %w", err)
+			}
+
+			right, err := ExecuteReshaper(context, x.Right)
+			if err != nil {
+				return false, fmt.Errorf("right comapre failed: %w", err)
+			}
+
+			cmp := schema.Compare(left, right)
+			switch x.Operation {
+			case "=":
+				return cmp == 0, nil
+			case "!=":
+				return cmp != 0, nil
+			case "<":
+				return cmp < 0, nil
+			case "<=":
+				return cmp <= 0, nil
+			case ">":
+				return cmp > 0, nil
+			case ">=":
+				return cmp >= 0, nil
+			default:
+				return false, fmt.Errorf("invalid compare operator %s", x.Operation)
+			}
+		},
+	)
+}
+
 func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 	return MustMatchExpr(
 		expr,
@@ -169,7 +244,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			newContext.StepID = x.ID
 
 			if x.Fail != nil {
-				val, err := ExecuteReshaper(context, x.Result)
+				val, err := ExecuteReshaper(context, x.Fail)
 				if err != nil {
 					return &Error{
 						Code:      "execute-reshaper",
@@ -222,6 +297,8 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			newContext.Variables[x.Var] = result.Result
 			newContext.StepID = x.ID
 
+			// Since *Assign is expression, it means that it can return value
+			// by it returns value that is assigned to variable.
 			return &NextOperation{
 				Result:    result.Result,
 				BaseState: newContext,
@@ -243,7 +320,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				if err != nil {
 					return &Error{
 						Code:      "execute-reshaper",
-						Reason:    "failed to execute reshaper while preparing func args",
+						Reason:    "failed to execute reshaper while preparing func args, reason: " + err.Error(),
 						Retried:   0,
 						BaseState: newContext,
 					}
@@ -294,7 +371,55 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			}
 		},
 		func(x *Choose) State {
-			panic("implement me")
+			newContext := cloneBaseState(context)
+			newContext.StepID = x.ID
+
+			isTrue, err := ExecutePredicate(newContext, x.If, dep)
+			if err != nil {
+				return &Error{
+					Code:      "choose-evaluate-predicate",
+					Reason:    "failed to evaluate predicate, reason: " + err.Error(),
+					Retried:   0,
+					BaseState: newContext,
+				}
+			}
+
+			// THEN branch cannot be empty, ELSE can, since it is optional
+			if len(x.Then) == 0 {
+				return &Error{
+					Code:      "choose-then-empty",
+					Reason:    "then branch cannot be empty",
+					Retried:   0,
+					BaseState: newContext,
+				}
+			}
+
+			// select which branch to evaluate
+			evaluate := x.Else
+			if isTrue {
+				evaluate = x.Then
+			}
+
+			// Since *Choose is expression, it means that it can return value
+			// by default it returns result of predicate evaluation,
+			// but if there are any expressions in THEN or ELSE branches
+			// then result of last expression is returned
+			var status State = &NextOperation{
+				Result:    schema.MkBool(isTrue),
+				BaseState: newContext,
+			}
+
+			for _, expr2 := range evaluate {
+				status = ExecuteExpr(newContext, expr2, dep)
+				switch status.(type) {
+				case *Done, *Fail, *Error, *Await:
+					return status
+				}
+
+				newContext = getBaseState(status)
+			}
+
+			return status
 		},
 	)
 }

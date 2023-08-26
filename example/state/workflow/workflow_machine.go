@@ -42,6 +42,8 @@ type (
 		Result    schema.Schema
 		BaseState BaseState
 	}
+	// TODO: remove this, this semantic don't make sense?
+	// change Done -> Return.
 	Fail struct {
 		Result    schema.Schema
 		BaseState BaseState
@@ -110,25 +112,6 @@ type ApplyAwaitOptions struct {
 	Timeout time.Duration
 }
 
-//go:generate mkunion -name=Predicate
-type (
-	Eq struct {
-		Left  Reshaper
-		Right Reshaper
-	}
-	Exists struct {
-		Path []string
-	}
-	And struct {
-		T1 Predicate
-		T2 Predicate
-	}
-	Or struct {
-		T1 Predicate
-		T2 Predicate
-	}
-)
-
 //go:generate mkunion -name=Reshaper
 type (
 	GetValue struct {
@@ -136,5 +119,23 @@ type (
 	}
 	SetValue struct {
 		Value schema.Schema
+	}
+)
+
+//go:generate mkunion -name=Predicate
+type (
+	And struct {
+		L []Predicate
+	}
+	Or struct {
+		L []Predicate
+	}
+	Not struct {
+		P Predicate
+	}
+	Compare struct {
+		Operation string
+		Left      Reshaper
+		Right     Reshaper
 	}
 )

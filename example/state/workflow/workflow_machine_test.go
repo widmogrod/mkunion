@@ -130,6 +130,40 @@ func TestMachine(t *testing.T) {
 		},
 	}
 
+	program_if := &Flow{
+		Name: "hello_world_flow_if",
+		Arg:  "input",
+		Body: []Expr{
+			&Assign{
+				ID:  "assign1",
+				Var: "res",
+				Val: &Apply{ID: "apply1", Name: "concat", Args: []Reshaper{
+					&SetValue{Value: schema.MkString("hello ")},
+					&GetValue{Path: "input"},
+				}},
+			},
+			&Choose{
+				If: &Compare{
+					Operation: "=",
+					Left:      &GetValue{Path: "res"},
+					Right:     &SetValue{Value: schema.MkString("hello world")},
+				},
+				Then: []Expr{
+					&End{
+						ID:     "end1",
+						Result: &GetValue{Path: "res"},
+					},
+				},
+				Else: []Expr{
+					&End{
+						ID:   "fail1",
+						Fail: &SetValue{Value: schema.MkString("only Spanish will work!")},
+					},
+				},
+			},
+		},
+	}
+
 	di := &DI{
 		FindWorkflowF: func(flowID string) (*Flow, error) {
 			switch flowID {
@@ -137,6 +171,8 @@ func TestMachine(t *testing.T) {
 				return program, nil
 			case "hello_world_flow_await":
 				return program_await, nil
+			case "hello_world_flow_if":
+				return program_if, nil
 			}
 			return nil, fmt.Errorf("flow %s not found", flowID)
 		},
@@ -290,6 +326,25 @@ func TestMachine(t *testing.T) {
 					Flow:   &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
+					},
+					ExprResult: map[string]schema.Schema{},
+				},
+			})
+	})
+	suite.Case("execute function with if statement", func(c *machine.Case[Command, State]) {
+		c.
+			GivenCommand(&Run{
+				Flow:  &FlowRef{FlowID: "hello_world_flow_if"},
+				Input: schema.MkString("El Mundo"),
+			}).
+			ThenState(&Fail{
+				Result: schema.MkString("only Spanish will work!"),
+				BaseState: BaseState{
+					StepID: "fail1",
+					Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+					Variables: map[string]schema.Schema{
+						"input": schema.MkString("El Mundo"),
+						"res":   schema.MkString("hello El Mundo"),
 					},
 					ExprResult: map[string]schema.Schema{},
 				},
