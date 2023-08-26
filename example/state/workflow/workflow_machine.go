@@ -34,12 +34,6 @@ type (
 
 //go:generate mkunion -name=Status
 type (
-	Resume struct {
-		StepID string
-		Result schema.Schema
-		//Fail 	schema.Schema
-		BaseState *BaseState
-	}
 	NextOperation struct {
 		StepID    string
 		Result    schema.Schema

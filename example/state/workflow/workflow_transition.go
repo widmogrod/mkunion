@@ -113,9 +113,6 @@ func ExecuteAll(context *BaseState, x *Flow, dep Dependency) Status {
 
 		context = MustMatchStatus(
 			status,
-			func(x *Resume) *BaseState {
-				return x.BaseState
-			},
 			func(x *NextOperation) *BaseState {
 				return x.BaseState
 			},
