@@ -164,7 +164,7 @@ func TestMachine(t *testing.T) {
 				StepID: "end1",
 				Result: schema.MkString("hello world"),
 				BaseState: &BaseState{
-					Flow: program,
+					Flow: &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 						"res":   schema.MkString("hello world"),
@@ -184,7 +184,7 @@ func TestMachine(t *testing.T) {
 				Timeout:    10 * time.Second,
 				CallbackID: "asdf",
 				BaseState: &BaseState{
-					Flow: program_await,
+					Flow: &FlowRef{FlowID: "hello_world_flow_await"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 					},
@@ -202,7 +202,7 @@ func TestMachine(t *testing.T) {
 						StepID: "end1",
 						Result: schema.MkString("hello + world"),
 						BaseState: &BaseState{
-							Flow: program_await,
+							Flow: &FlowRef{FlowID: "hello_world_flow_await"},
 							Variables: map[string]schema.Schema{
 								"input": schema.MkString("world"),
 								"res":   schema.MkString("hello + world"),
@@ -224,7 +224,7 @@ func TestMachine(t *testing.T) {
 				Code:   "function-execution",
 				Reason: "function concat() returned error: expected string, got <nil>",
 				BaseState: &BaseState{
-					Flow: program,
+					Flow: &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": nil,
 					},
@@ -263,7 +263,7 @@ func TestMachine(t *testing.T) {
 				Code:   "function-missing",
 				Reason: "function concat() not found, details: function funcID='concat' not found",
 				BaseState: &BaseState{
-					Flow: program,
+					Flow: &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 					},
