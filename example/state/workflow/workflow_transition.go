@@ -255,15 +255,16 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			}
 		},
 		func(x *Assign) State {
+			newContext := cloneBaseState(context)
+			newContext.StepID = x.ID
+
 			status := ExecuteExpr(context, x.Val, dep)
 			result, ok := status.(*NextOperation)
 			if !ok {
 				return status
 			}
 
-			if _, ok := context.Variables[x.Var]; ok {
-				newContext := cloneBaseState(context)
-				newContext.StepID = x.ID
+			if _, ok := newContext.Variables[x.Var]; ok {
 				return &Error{
 					Code:      "assign-variable",
 					Reason:    fmt.Sprintf("variable %s already exists", x.Var),
@@ -272,9 +273,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				}
 			}
 
-			newContext := cloneBaseState(context)
 			newContext.Variables[x.Var] = result.Result
-			newContext.StepID = x.ID
 
 			// Since *Assign is expression, it means that it can return value
 			// by it returns value that is assigned to variable.
