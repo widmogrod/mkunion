@@ -264,16 +264,16 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				return status
 			}
 
-			if _, ok := newContext.Variables[x.Var]; ok {
+			if _, ok := newContext.Variables[x.VarOk]; ok {
 				return &Error{
 					Code:      "assign-variable",
-					Reason:    fmt.Sprintf("variable %s already exists", x.Var),
+					Reason:    fmt.Sprintf("variable %s already exists", x.VarOk),
 					Retried:   0,
 					BaseState: newContext,
 				}
 			}
 
-			newContext.Variables[x.Var] = result.Result
+			newContext.Variables[x.VarOk] = result.Result
 
 			// Since *Assign is expression, it means that it can return value
 			// by it returns value that is assigned to variable.

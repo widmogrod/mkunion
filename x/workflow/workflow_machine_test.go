@@ -33,8 +33,8 @@ func TestExecution(t *testing.T) {
 		Arg:  "input",
 		Body: []Expr{
 			&Assign{
-				ID:  "assign1",
-				Var: "res",
+				ID:    "assign1",
+				VarOk: "res",
 				Val: &Apply{ID: "apply1", Name: "concat", Args: []Reshaper{
 					&SetValue{Value: schema.MkString("hello ")},
 					&GetValue{Path: "input"},
@@ -89,8 +89,8 @@ func TestMachine(t *testing.T) {
 		Arg:  "input",
 		Body: []Expr{
 			&Assign{
-				ID:  "assign1",
-				Var: "res",
+				ID:    "assign1",
+				VarOk: "res",
 				Val: &Apply{ID: "apply1", Name: "concat", Args: []Reshaper{
 					&SetValue{Value: schema.MkString("hello ")},
 					&GetValue{Path: "input"},
@@ -109,8 +109,8 @@ func TestMachine(t *testing.T) {
 		Arg:  "input",
 		Body: []Expr{
 			&Assign{
-				ID:  "assign1",
-				Var: "res",
+				ID:    "assign1",
+				VarOk: "res",
 				Val: &Apply{
 					ID:   "apply1",
 					Name: "concat",
@@ -135,8 +135,8 @@ func TestMachine(t *testing.T) {
 		Arg:  "input",
 		Body: []Expr{
 			&Assign{
-				ID:  "assign1",
-				Var: "res",
+				ID:    "assign1",
+				VarOk: "res",
 				Val: &Apply{ID: "apply1", Name: "concat", Args: []Reshaper{
 					&SetValue{Value: schema.MkString("hello ")},
 					&GetValue{Path: "input"},
