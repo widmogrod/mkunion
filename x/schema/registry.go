@@ -9,6 +9,8 @@ var defaultRegistry *Registry
 
 func init() {
 	defaultRegistry = NewRegistry()
+
+	RegisterUnionTypes(SchemaSchemaDef())
 }
 
 func RegisterRules(xs []RuleMatcher) {

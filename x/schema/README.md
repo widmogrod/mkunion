@@ -116,10 +116,13 @@ func (c *Car) UnmarshalSchema(x schema.*Map) error {
       It's not hard decision. It's just that I don't have use case for other types yet.
 
 ### V0.7.x
+- [x] schema.Schema is now serializable and deserilizable
+
+### V0.8.x
 - [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information
 - [ ] Generator of custom `ser-deser` that improve performance and developer experiences for free
 
-### V0.8.x
+### V0.9.x
 - [ ] Support json tags in golang to map field names to schema
 - [ ] Add cata, ana, and hylo morphisms
 - [ ] Open `goConfigFunc` to allow customizing how golang types are converted to schema, passed from external code.

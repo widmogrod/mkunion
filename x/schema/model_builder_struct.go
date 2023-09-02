@@ -226,7 +226,7 @@ func (s *StructBuilder) set(f reflect.Value, value any) error {
 		}
 	}
 
-	return errors.New(fmt.Sprintf("schema.StructBuilder.set can't set value of type %T for key %s", value, f.String()))
+	return errors.New(fmt.Sprintf("schema.StructBuilder.set can't set value of type %T for key that expects type %s", value, f.String()))
 }
 
 func (s *StructBuilder) Build() any {

@@ -51,7 +51,7 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	return c.defaultMapDef
 }
 
-func (c *goConfig) Transform(x any, r *Map) Schema {
+func (c *goConfig) Transform(x any, r Schema) Schema {
 	for _, rule := range c.localRules {
 		v, ok := rule.SchemaToUnionType(x, r, c)
 		if ok {
@@ -142,11 +142,8 @@ func goToSchema(x any, c *goConfig) Schema {
 	}
 
 	switch y := x.(type) {
-	// This is a special case, when we don't want to serialise the schema itself.
-	// Such situation can happen in composite types, like recordInTest[T any] { ID string, Data T}
-	// and instance of such type is recordInTest[Schema] { ID: "foo", Data: Schema{...} }
 	case Schema:
-		return y
+		return c.Transform(x, y)
 
 	case nil:
 		return &None{}
