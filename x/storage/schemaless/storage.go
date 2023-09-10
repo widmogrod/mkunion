@@ -32,61 +32,9 @@ type Record[A any] struct {
 	Version uint16
 }
 
-var (
-	_ schema.Unmarshaler = &Record[schema.Schema]{}
-	_ schema.Marshaler   = &Record[schema.Schema]{}
-
-	WithOnlyRecordSchemaOptions = schema.WithOnlyTheseRules(
-		schema.WhenPath(nil, schema.UseStruct(&Record[schema.Schema]{})),
-	)
-)
-
-func (record *Record[A]) MarshalSchema() (*schema.Map, error) {
-	return schema.MkMap(
-		schema.MkField("ID", schema.MkString(record.ID)),
-		schema.MkField("Type", schema.MkString(record.Type)),
-		schema.MkField("Data", schema.FromGo(record.Data)),
-		schema.MkField("Version", schema.MkInt(int(record.Version))),
-	), nil
-}
-
-func (record *Record[A]) UnmarshalSchema(x *schema.Map) error {
-	var ok bool
-	for _, field := range x.Field {
-		switch field.Name {
-		case "ID":
-			record.ID, ok = schema.As[string](field.Value)
-			if !ok {
-				return fmt.Errorf("schemaless.Record[A].UnmarshalSchema expected string(ID), got %T", field.Value)
-			}
-
-		case "Type":
-			record.Type, ok = schema.As[string](field.Value)
-			if !ok {
-				return fmt.Errorf("schemaless.Record[A].UnmarshalSchema expected string(Type), got %T", field.Value)
-			}
-
-		case "Data":
-			var err error
-			record.Data, err = schema.ToGoG[A](field.Value)
-			if err != nil {
-				return fmt.Errorf("schemaless.Record[A].UnmarshalSchema expected A(Data), got %T; %w", field.Value, err)
-			}
-		case "Version":
-			record.Version, ok = schema.As[uint16](field.Value)
-			if !ok {
-				return fmt.Errorf("schemaless.Record[A].UnmarshalSchema expected uint16(Version), got %T", field.Value)
-			}
-
-		default:
-			return fmt.Errorf("schemaless.Record[A].UnmarshalSchema unexpected field %q", field.Name)
-		}
-	}
-
-	return nil
-}
-
 type UpdatingPolicy uint
+
+var WithOnlyRecordSchemaOptions = schema.WithExtraRules()
 
 const (
 	PolicyIfServerNotChanged UpdatingPolicy = iota

@@ -17,14 +17,14 @@ func TestNewRepository2Typed(t *testing.T) {
 
 	result, err := r.FindingRecords(FindingRecords[Record[User]]{
 		Where: predicate.MustWhere(
-			"Data.Age > :age",
+			"Data.#.Age > :age",
 			predicate.ParamBinds{
 				":age": schema.MkInt(20),
 			},
 		),
 		Sort: []SortField{
 			{
-				Field:      "Data.Name",
+				Field:      "Data.#.Name",
 				Descending: false,
 			},
 		},
