@@ -1,4 +1,4 @@
-# Golang recursive schema
+# x/schema - Golang recursive schema
 Library allows to write code that work with any type of schemas.
 Regardless if those are JSON, XML, YAML, or golang structs.
 
