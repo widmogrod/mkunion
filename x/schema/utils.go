@@ -146,8 +146,55 @@ func AsDefault[A int | int8 | int16 | int32 | int64 |
 	return def
 }
 
+func LocationToPath(location string) []string {
+	var result []string
+
+	var value []string
+	var isQuote bool = false
+	var isLit bool = false
+	for _, char := range strings.Split(location, "") {
+		switch char {
+		case "'":
+			isQuote = !isQuote
+
+		case ".":
+			if isLit && !isQuote {
+				isLit = false
+				result = append(result, strings.Join(value, ""))
+				value = nil
+
+			} else {
+				if isQuote {
+					value = append(value, char)
+				} else {
+					result = append(result, strings.Join(value, ""))
+					value = nil
+				}
+			}
+
+		default:
+			if !isLit && !isQuote {
+				isLit = true
+			}
+
+			if isQuote || isLit {
+				value = append(value, char)
+			} else {
+				result = append(result, strings.Join(value, ""))
+				value = nil
+			}
+		}
+	}
+
+	if len(value) > 0 {
+		result = append(result, strings.Join(value, ""))
+	}
+
+	return result
+}
+
 func Get(data Schema, location string) Schema {
-	path := strings.Split(location, ".")
+	path := LocationToPath(location)
 	for _, p := range path {
 		if p == "" {
 			return nil
@@ -173,6 +220,11 @@ func Get(data Schema, location string) Schema {
 		mapData, ok := data.(*Map)
 		if !ok {
 			return nil
+		}
+
+		if p == "#" && len(mapData.Field) == 1 {
+			data = mapData.Field[0].Value
+			continue
 		}
 
 		var found bool
