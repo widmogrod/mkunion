@@ -12,7 +12,7 @@ var (
 		{"Keyword", `AND|OR|NOT`},
 		{"Operator", `(<>|<=|>=|=|<|>|!=)`},
 		{"Bind", `:[a-zA-Z][a-zA-Z0-9]*`},
-		{"Ident", `[a-zA-Z][a-zA-Z0-9\.\[\]]*`},
+		{"Ident", `[a-zA-Z][a-zA-Z0-9\#\.\[\]]*`},
 	})
 	predicateParser = participle.MustBuild[Expression](
 		participle.Lexer(predicateLexer),
