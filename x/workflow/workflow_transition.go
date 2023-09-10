@@ -11,6 +11,7 @@ var (
 	ErrCallbackNotMatch       = errors.New("callback not match")
 	ErrInvalidStateTransition = errors.New("invalid state transition")
 	ErrExpressionHasResult    = errors.New("expression has result")
+	ErrStateReachEnd          = errors.New("cannot apply commands, when workflow is completed")
 )
 
 type Dependency interface {
@@ -20,6 +21,11 @@ type Dependency interface {
 }
 
 func Transition(cmd Command, state State, dep Dependency) (State, error) {
+	switch state.(type) {
+	case *Done:
+		return nil, ErrStateReachEnd
+	}
+
 	return MustMatchCommandR2(
 		cmd,
 		func(x *Run) (State, error) {

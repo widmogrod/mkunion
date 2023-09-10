@@ -5,6 +5,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"testing"
 	"time"
 )
@@ -28,6 +30,13 @@ var functions = map[string]Function{
 }
 
 func TestExecution(t *testing.T) {
+	schema.RegisterRules([]schema.RuleMatcher{
+		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(BaseState{})),
+	})
+	schema.RegisterUnionTypes(
+		StateSchemaDef(),
+	)
+
 	program := &Flow{
 		Name: "hello_world_flow",
 		Arg:  "input",
@@ -60,27 +69,54 @@ func TestExecution(t *testing.T) {
 		},
 	}
 
-	context := BaseState{
-		Flow: program,
-		Variables: map[string]schema.Schema{
-			"input": schema.MkString("world"),
-		},
-		ExprResult: make(map[string]schema.Schema),
-	}
+	store := schemaless.NewInMemoryRepository()
+	repo := typedful.NewTypedRepository[State](store)
+	state, err := repo.Get("1", "workflow")
+	assert.ErrorIs(t, err, schemaless.ErrNotFound)
 
-	result := ExecuteAll(context, program, di)
+	work := machine.NewSimpleMachineWithState(func(cmd Command, state State) (State, error) {
+		return Transition(cmd, state, di)
+	}, state.Data)
+
+	err = work.Handle(&Run{
+		Flow:  &FlowRef{FlowID: "hello_world_flow"},
+		Input: schema.MkString("world"),
+	})
+	assert.NoError(t, err)
+
+	newState := work.State()
+	err = repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
+		ID:   "1",
+		Type: "workflow",
+		Data: newState,
+	}))
+	assert.NoError(t, err)
+
 	assert.Equal(t, &Done{
 		Result: schema.MkString("hello world"),
 		BaseState: BaseState{
 			StepID: "end1",
-			Flow:   program,
+			Flow:   &FlowRef{FlowID: "hello_world_flow"},
 			Variables: map[string]schema.Schema{
 				"input": schema.MkString("world"),
 				"res":   schema.MkString("hello world"),
 			},
 			ExprResult: make(map[string]schema.Schema),
 		},
-	}, result)
+	}, newState)
+
+	state, err = repo.Get("1", "workflow")
+	assert.NoError(t, err)
+
+	work = machine.NewSimpleMachineWithState(func(cmd Command, state State) (State, error) {
+		return Transition(cmd, state, di)
+	}, state.Data)
+
+	err = work.Handle(&Run{
+		Flow:  &FlowRef{FlowID: "hello_world_flow"},
+		Input: schema.MkString("world"),
+	})
+	assert.ErrorAs(t, err, &ErrStateReachEnd)
 }
 
 func TestMachine(t *testing.T) {
