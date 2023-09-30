@@ -19,6 +19,8 @@ jobs:
       - run: go generate ./...
 
       # initiate docker-compose services
+      - run: |
+          pip install awscli-local
       - run: dev/bootstrap.sh& sleep 10
 
       # run tests
