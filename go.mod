@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.10.19
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.19.6
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.18.5
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/bxcodec/faker/v3 v3.8.1
 	github.com/fatih/structtag v1.2.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
