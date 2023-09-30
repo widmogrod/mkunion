@@ -487,3 +487,16 @@ go test ./...
 
 
 
+
+  
+## Development
+Setup containers and dependencies
+```go
+dev/bootstrap.sh
+```
+
+Run tests
+```go
+go generate ./...
+go test ./...
+```
