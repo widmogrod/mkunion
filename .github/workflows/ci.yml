@@ -17,4 +17,9 @@ jobs:
 
       - run: go get -v -t -d ./...
       - run: go generate ./...
+
+      # initiate docker-compose services
+      - run: dev/bootstrap.sh& sleep 10
+
+      # run tests
       - run: go test -v ./...
