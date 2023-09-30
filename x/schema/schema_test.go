@@ -216,13 +216,15 @@ func TestMaxScalars(t *testing.T) {
 }
 
 func TestSchemaConversions(t *testing.T) {
-	useCases := map[string]struct {
+	useCases := []struct {
+		name string
 		in   any
 		out  Schema
 		back any
 	}{
-		"go list to schema and back": {
-			in: []int{1, 2, 3},
+		{
+			name: "go list to schema and back",
+			in:   []int{1, 2, 3},
 			out: &List{
 				Items: []Schema{
 					MkInt(1),
@@ -238,7 +240,8 @@ func TestSchemaConversions(t *testing.T) {
 				float64(3),
 			},
 		},
-		"go map to schema and back": {
+		{
+			name: "go list to schema and back",
 			in: map[string]interface{}{
 				"foo": 1,
 				"bar": "str",
@@ -261,8 +264,8 @@ func TestSchemaConversions(t *testing.T) {
 			},
 		},
 	}
-	for name, uc := range useCases {
-		t.Run(name, func(t *testing.T) {
+	for _, uc := range useCases {
+		t.Run(uc.name, func(t *testing.T) {
 			got := FromGo(uc.in)
 			if assert.Equal(t, uc.out, got, "forward conversion issue") {
 				assert.Equal(t, uc.back, MustToGo(got), "back conversion issue")
