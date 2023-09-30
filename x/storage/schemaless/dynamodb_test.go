@@ -3,10 +3,10 @@ package schemaless
 import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/localstackutil"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"os"
@@ -27,17 +27,10 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 
 	tableName := "test-repo-record"
 
-	cfg, err := config.LoadDefaultConfig(
-		context.Background(),
-		config.WithRegion(GetEnvOr("AWS_REGION", "eu-east-1")),
-		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				URL:           address,
-				SigningRegion: region,
-			}, nil
-		})),
-	)
-	d := dynamodb.NewFromConfig(cfg)
+	awscfg, err := localstackutil.LoadLocalStackAwsConfig(context.Background())
+	assert.NoError(t, err, "while loading localstack config")
+
+	d := dynamodb.NewFromConfig(awscfg)
 
 	err = setupDynamoDB(d, tableName)
 	assert.NoError(t, err, "while setting up dynamodb")
@@ -55,14 +48,14 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	result, err := repo.FindingRecords(FindingRecords[Record[schema.Schema]]{
 		RecordType: "exampleRecord",
 		Where: predicate.MustWhere(
-			"Data.Age > :age AND Data.Age < :maxAge",
+			"Data.#.Age > :age AND Data.#.Age < :maxAge",
 			predicate.ParamBinds{
 				":age":    schema.MkInt(20),
 				":maxAge": schema.MkInt(40),
 			}),
 		Sort: []SortField{
 			{
-				Field:      "Data.Name",
+				Field:      "Data.#.Name",
 				Descending: false,
 			},
 		},

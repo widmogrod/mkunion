@@ -10,6 +10,7 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"io"
+	"strings"
 )
 
 func NewOpenSearchRepository(client *opensearch.Client, index string) *OpenSearchRepository {
@@ -131,7 +132,7 @@ func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schem
 			panic(err)
 		}
 
-		log.Println("OpenSearchRepository) FindingRecords ", string(body))
+		log.Println("OpenSearchRepository FindingRecords ", string(body))
 
 		request.Body = bytes.NewReader(body)
 	})
@@ -269,7 +270,7 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 			case "=":
 				return map[string]any{
 					"term": map[string]any{
-						fmt.Sprintf("%s.keyword", x.Location): params[x.BindValue],
+						fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[x.BindValue],
 					},
 				}
 
@@ -278,7 +279,7 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 					"bool": map[string]any{
 						"must_not": map[string]any{
 							"term": map[string]any{
-								fmt.Sprintf("%s.keyword", x.Location): params[x.BindValue],
+								fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[x.BindValue],
 							},
 						},
 					},
@@ -287,7 +288,7 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 			case ">", ">=", "<", "<=":
 				return map[string]any{
 					"range": map[string]any{
-						x.Location: map[string]any{
+						os.attrName(x.Location): map[string]any{
 							mapOfOperationToOpenSearchQuery[x.Operation]: params[x.BindValue],
 						},
 					},
@@ -299,18 +300,23 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 	)
 }
 
+func (os *OpenSearchRepository) attrName(location string) string {
+	// TODO(schema.Union) find better way to represent union map
+	return strings.ReplaceAll(location, "#", "schema.Map")
+}
+
 func (os *OpenSearchRepository) ToSorters(sort []SortField) []any {
 	var sorters []any
 	for _, s := range sort {
 		if s.Descending {
 			sorters = append(sorters, map[string]any{
-				fmt.Sprintf("%s.keyword", s.Field): map[string]any{
+				fmt.Sprintf("%s.keyword", os.attrName(s.Field)): map[string]any{
 					"order": "desc",
 				},
 			})
 		} else {
 			sorters = append(sorters, map[string]any{
-				fmt.Sprintf("%s.keyword", s.Field): map[string]any{
+				fmt.Sprintf("%s.keyword", os.attrName(s.Field)): map[string]any{
 					"order": "asc",
 				},
 			})

@@ -17,6 +17,10 @@ func (w *WherePredicates) Evaluate(data schema.Schema) bool {
 }
 
 func Where(query string, params ParamBinds) (*WherePredicates, error) {
+	if query == "" {
+		return nil, nil
+	}
+
 	predicates, err := Parse(query)
 	if err != nil {
 		return nil, err
@@ -86,7 +90,11 @@ func bindValuesFromPredicate(predicate Predicate, params []string) []string {
 			return bindValuesFromPredicate(x.P, params)
 		},
 		func(x *Compare) []string {
-			return append(params, x.BindValue)
+			if strings.HasPrefix(x.BindValue, ":") {
+				return append(params, x.BindValue)
+			}
+
+			return params
 		},
 	)
 }

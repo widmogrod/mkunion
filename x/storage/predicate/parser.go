@@ -35,7 +35,7 @@ func Parse(input string) (Predicate, error) {
 type Comparable struct {
 	Location string `( @Ident`
 	Operator string `  @( "<>" | "<=" | ">=" | "=" | "<" | ">" | "!=" )`
-	BindName string `  @Bind )`
+	BindName string `  @Bind | @Ident)`
 }
 
 func (a Comparable) ToPredicate() (Predicate, error) {

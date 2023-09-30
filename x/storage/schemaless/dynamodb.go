@@ -313,7 +313,14 @@ func toExpression(where predicate.Predicate, names map[string]string) string {
 
 			for _, part := range parts {
 				if _, ok := names[part]; !ok {
-					names[part] = "#" + part
+					// TODO(schema.Union) find a better way to handle # union separator
+					// for example insteaf hard coded schema.Map use schema.UnionType....
+					if part == "#" {
+						part = "schema.Map"
+						names[part] = "#hash"
+					} else {
+						names[part] = "#" + part
+					}
 				}
 				named = append(named, names[part])
 			}
