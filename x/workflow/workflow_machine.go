@@ -43,10 +43,11 @@ type (
 		BaseState BaseState
 	}
 	Error struct {
-		Code      string
-		Reason    string
-		Retried   int64
-		BaseState BaseState
+		Code       string
+		Reason     string
+		Retried    int64
+		MaxRetries int64
+		BaseState  BaseState
 	}
 	Await struct {
 		CallbackID string

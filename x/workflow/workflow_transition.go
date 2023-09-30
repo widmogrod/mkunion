@@ -3,6 +3,7 @@ package workflow
 import (
 	"errors"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
@@ -18,6 +19,12 @@ type Dependency interface {
 	FindWorkflow(flowID string) (*Flow, error)
 	FindFunction(funcID string) (Function, error)
 	GenerateCallbackID() string
+}
+
+func NewMachine(di Dependency, state State) *machine.Machine[Command, State] {
+	return machine.NewSimpleMachineWithState(func(cmd Command, state State) (State, error) {
+		return Transition(cmd, state, di)
+	}, state)
 }
 
 func Transition(cmd Command, state State, dep Dependency) (State, error) {

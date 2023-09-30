@@ -74,10 +74,7 @@ func TestExecution(t *testing.T) {
 	state, err := repo.Get("1", "workflow")
 	assert.ErrorIs(t, err, schemaless.ErrNotFound)
 
-	work := machine.NewSimpleMachineWithState(func(cmd Command, state State) (State, error) {
-		return Transition(cmd, state, di)
-	}, state.Data)
-
+	work := NewMachine(di, state.Data)
 	err = work.Handle(&Run{
 		Flow:  &FlowRef{FlowID: "hello_world_flow"},
 		Input: schema.MkString("world"),
@@ -108,10 +105,7 @@ func TestExecution(t *testing.T) {
 	state, err = repo.Get("1", "workflow")
 	assert.NoError(t, err)
 
-	work = machine.NewSimpleMachineWithState(func(cmd Command, state State) (State, error) {
-		return Transition(cmd, state, di)
-	}, state.Data)
-
+	work = NewMachine(di, state.Data)
 	err = work.Handle(&Run{
 		Flow:  &FlowRef{FlowID: "hello_world_flow"},
 		Input: schema.MkString("world"),
@@ -226,9 +220,7 @@ func TestMachine(t *testing.T) {
 	}
 
 	suite := machine.NewTestSuite(func() *machine.Machine[Command, State] {
-		return machine.NewSimpleMachine(func(cmd Command, state State) (State, error) {
-			return Transition(cmd, state, di)
-		})
+		return NewMachine(di, nil)
 	})
 
 	suite.Case("start execution", func(c *machine.Case[Command, State]) {
