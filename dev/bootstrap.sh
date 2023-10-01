@@ -15,7 +15,7 @@ echo "Creating volume directory"
 mkdir -p $cwd/_volume
 
 echo "Starting localstack"
-docker-compose -f $cwd/compose.yml up -d
+docker compose -f $cwd/compose.yml up -d
 
 echo "Waiting for localstack to be ready"
 until awslocal sqs list-queues; do
@@ -39,4 +39,4 @@ echo "Localstack is UI is at port"
 echo "http://localhost:8080"
 
 echo "Streaming logs"
-docker-compose -f $cwd/compose.yml logs -f
+docker compose -f $cwd/compose.yml logs -f
