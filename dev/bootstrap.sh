@@ -16,6 +16,8 @@ mkdir -p $cwd/_volume
 
 echo "Starting localstack"
 docker compose -f $cwd/compose.yml up -d
+# trap exit and stop docker compose
+trap "docker compose -f $cwd/compose.yml down" EXIT
 
 echo "Waiting for localstack to be ready"
 until awslocal sqs list-queues; do
