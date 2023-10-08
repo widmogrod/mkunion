@@ -225,7 +225,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 						})
 						break
 					default:
-						log.Errorf("infer_defaults: unknown ast type embedded in struct: %T\n", typ)
+						log.Warnf("infer_defaults: unknown ast type embedded in struct: %T\n", typ)
 						continue
 					}
 				}
@@ -270,7 +270,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 						typ = shape.FromAst(ttt, shape.InjectPkgName(f.PkgImportName, f.PackageName))
 
 					default:
-						log.Errorf("infer_defaults: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+						log.Warnf("infer_defaults: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
 						typ = &shape.Any{}
 					}
 

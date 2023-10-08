@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
 	"github.com/widmogrod/mkunion/x/shape"
-	"log"
 	"os"
 	"os/signal"
 	"path"
@@ -16,6 +15,10 @@ import (
 
 func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	// set log level to error
+	log.SetOutput(os.Stderr)
+	log.SetLevel(log.ErrorLevel)
 
 	var app *cli.App
 	app = &cli.App{
@@ -219,7 +222,6 @@ func main() {
 					}
 
 					for _, structLike := range inferred.RetrieveStruct() {
-						fmt.Println(shape.ToStr(structLike))
 						tsr.AddStruct(structLike)
 					}
 
