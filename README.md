@@ -473,6 +473,10 @@ go test ./...
 - [x] Introduce self documenting state machines through tests [README.md](x/machine/README.md)
 
 ### V1.18.x
+- [x] `x/shape` library is integrated in extracting types from golang
+- [x] `munion shape-export --output-dir --input-go-file  --type=typescript` extract types from go file and generate typescript types
+ 
+### V1.19.x
 - [ ] Exhaustive pattern matching checks during generation
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!

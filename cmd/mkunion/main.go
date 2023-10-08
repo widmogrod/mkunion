@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
+	"github.com/widmogrod/mkunion/x/shape"
 	"log"
 	"os"
 	"os/signal"
@@ -178,6 +180,50 @@ func main() {
 					}
 
 					return nil
+				},
+			},
+			{
+				Name: "shape-export",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "type",
+						DefaultText: "typescript",
+					},
+					&cli.StringFlag{
+						Name:    "output-dir",
+						Aliases: []string{"o", "output"},
+					},
+					&cli.StringFlag{
+						Name:      "input-go-file",
+						Aliases:   []string{"i", "input"},
+						TakesFile: true,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					sourcePath := c.String("input-go-file")
+					if sourcePath == "" {
+						cwd, _ := syscall.Getwd()
+						sourceName := path.Base(os.Getenv("GOFILE"))
+						sourcePath = path.Join(cwd, sourceName)
+					}
+
+					// file name without extension
+					inferred, err := mkunion.InferFromFile(sourcePath)
+					if err != nil {
+						return err
+					}
+
+					tsr := shape.NewTypeScriptRenderer()
+					for _, union := range inferred.RetrieveUnions() {
+						tsr.AddUnion(union)
+					}
+
+					for _, structLike := range inferred.RetrieveStruct() {
+						fmt.Println(shape.ToStr(structLike))
+						tsr.AddStruct(structLike)
+					}
+
+					return tsr.WriteToDir(c.String("output-dir"))
 				},
 			},
 		},
