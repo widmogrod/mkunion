@@ -17,6 +17,33 @@ type (
 	packageName       = string
 )
 
+var helperTSFunctions = `/**
+* This function is used to remove $type field from {name}, so it can be understood by mkunion, 
+* that is assuming unions have one field in object, that is used to discriminate between variants.
+*/
+export function dediscriminate{name}(x: {name}): {name} {
+    if (x["$type"] !== undefined) {
+        delete x["$type"]
+        return x
+    }
+    return x
+}
+
+/**
+* This function is used to populate $type field in {name}, so it can be used as discriminative switch statement
+* @example https://www.typescriptlang.org/play#example/discriminate-types
+*/
+export function discriminate{name}(x: {name}): {name} {
+    if (x["$type"] === undefined) {
+        let keyx = Object.keys(x)
+        if (keyx.length === 1) {
+            x["$type"] = keyx[0] as any
+        }
+    }
+    return x
+}
+`
+
 func (o *TypeScriptOptions) IsCurrentPkgName(pkgName string) bool {
 	return o.currentPkgName == pkgName
 }
@@ -72,6 +99,12 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 		},
 		func(x *UnionLike) string {
 			result := &strings.Builder{}
+			// build helper functions for typescript
+			result.WriteString("\n")
+			_, _ = fmt.Fprintf(result, strings.ReplaceAll(helperTSFunctions, "{name}", x.Name))
+			result.WriteString("\n")
+
+			// build union type in typescript
 			_, _ = fmt.Fprintf(result, "export type %s = {\n", x.Name)
 			for idx, variant := range x.Variant {
 				if idx > 0 {
@@ -80,6 +113,8 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 
 				typeName := variant.Name
 				typeNameFul := fmt.Sprintf("%s.%s", x.PkgName, variant.Name)
+				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
 				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
 			}
 			result.WriteString("\n}")
@@ -134,11 +169,8 @@ func (r *TypeScriptRenderer) WriteToDir(dir string) error {
 
 		importsContent := &strings.Builder{}
 		for pkg, imp := range imports.imports {
-			//if pkg == pkgName {
-			//	continue
-			//}
-
-			_, err := fmt.Fprintf(importsContent, "import * as %s from '%s'\n", pkg, r.normaliseImport(imp))
+			_, err := fmt.Fprintf(importsContent, "//eslint-disable-next-line\n")
+			_, err = fmt.Fprintf(importsContent, "import * as %s from '%s'\n", pkg, r.normaliseImport(imp))
 			if err != nil {
 				return fmt.Errorf("totypescript: WriteToDir failed to write imports: %w", err)
 			}
