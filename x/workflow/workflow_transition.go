@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
+	"strings"
 )
 
 var (
@@ -162,8 +163,11 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 	return MustMatchReshaperR2(
 		reshaper,
 		func(x *GetValue) (schema.Schema, error) {
-			if val, ok := context.Variables[x.Path]; ok {
-				return val, nil
+			//FIXME: create utility function for working with paths!
+			parts := strings.Split(x.Path, ".")
+			first, rest := parts[0], parts[1:]
+			if val, ok := context.Variables[first]; ok {
+				return schema.Get(val, strings.Join(rest, ".")), nil
 			} else {
 				return nil, fmt.Errorf("variable %s not found", x.Path)
 			}
@@ -311,7 +315,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				if err != nil {
 					return &Error{
 						Code:      "execute-reshaper",
-						Reason:    "failed to execute reshaper while preparing func args, reason: " + err.Error(),
+						Reason:    fmt.Sprintf("failed to execute reshaper while preparing args for function %s(), reason: %s", x.Name, err.Error()),
 						Retried:   0,
 						BaseState: newContext,
 					}
