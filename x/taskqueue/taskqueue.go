@@ -109,7 +109,7 @@ type Task[T any] struct {
 }
 
 type FunctionProcessor[T any] struct {
-	f func(task Task[schemaless.Record[T]])
+	F func(task Task[schemaless.Record[T]])
 }
 
 func (proc *FunctionProcessor[T]) Process(task Task[schemaless.Record[schema.Schema]]) error {
@@ -118,7 +118,7 @@ func (proc *FunctionProcessor[T]) Process(task Task[schemaless.Record[schema.Sch
 		panic(err)
 	}
 
-	proc.f(Task[schemaless.Record[T]]{
+	proc.F(Task[schemaless.Record[T]]{
 		Data: t,
 	})
 

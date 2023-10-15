@@ -83,7 +83,7 @@ func TestTaskQueue(t *testing.T) {
 	store := schemaless.NewInMemoryRepository()
 	repo := typedful.NewTypedRepository[workflow.State](store)
 	proc := &FunctionProcessor[workflow.State]{
-		f: func(task Task[schemaless.Record[workflow.State]]) {
+		F: func(task Task[schemaless.Record[workflow.State]]) {
 			t.Logf("task: %#v \n", task)
 			work := workflow.NewMachine(di, task.Data.Data)
 			//err := work.Handle(&workflow.Retry{})
