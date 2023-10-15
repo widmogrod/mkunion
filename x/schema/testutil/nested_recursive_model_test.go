@@ -89,6 +89,14 @@ func TestSchemaSchemaSerDeRecursive(t *testing.T) {
 
 	assert.JSONEq(t, string(bjson), string(ajson))
 
+	adata, err := FromJSON(ajson)
+	assert.NoError(t, err)
+
+	bdata, err := FromJSON(bjson)
+	assert.NoError(t, err)
+
+	assert.True(t, 0 == Compare(adata, bdata))
+
 	got, err := ToGo(schema)
 	assert.NoError(t, err)
 	assert.Equal(t, subject, got)
