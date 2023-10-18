@@ -2,20 +2,15 @@ package predicate
 
 import (
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/storage/predicate/testutil"
 	"testing"
 )
 
-type sampleStruct struct {
-	ID      string
-	Age     int
-	Friends []sampleStruct
-}
-
 func TestEvaluate(t *testing.T) {
-	defValue := sampleStruct{
+	defValue := testutil.SampleStruct{
 		ID:  "123",
 		Age: 20,
-		Friends: []sampleStruct{
+		Friends: []testutil.SampleStruct{
 			{
 				ID:  "53",
 				Age: 40,
@@ -25,6 +20,21 @@ func TestEvaluate(t *testing.T) {
 				Age: 15,
 			},
 		},
+		Tree: &testutil.Branch{
+			Name: "root",
+			Left: &testutil.Branch{
+				Name: "cool-branch",
+				Left: &testutil.Leaf{
+					Value: schema.MkInt(123),
+				},
+				Right: &testutil.Leaf{
+					Value: schema.MkBool(true),
+				},
+			},
+			Right: &testutil.Leaf{
+				Value: schema.MkInt(123),
+			},
+		},
 	}
 
 	defBind := map[string]any{
@@ -32,6 +42,8 @@ func TestEvaluate(t *testing.T) {
 		":age":            20,
 		":firstFriendId":  "53",
 		":secondFriendId": "54",
+		":leaf0val":       123,
+		":branch1name":    "cool-branch",
 	}
 
 	useCases := []struct {
@@ -58,6 +70,30 @@ func TestEvaluate(t *testing.T) {
 			bind:   defBind,
 			result: true,
 		},
+		{
+			value:  "Tree.#.Right.#.Value.# = :leaf0val",
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  "Tree.#.Left.#.Name = :branch1name",
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  "Tree.#.Left.#.Left.#.Value.# = :leaf0val",
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		//{
+		//	value:  "Tree.#.Left.#.Left.#.Value.# = Tree.#.Right.#.Value.#",
+		//	data:   defValue,
+		//	bind:   defBind,
+		//	result: true,
+		//},
 	}
 	for _, uc := range useCases {
 		t.Run(uc.value, func(t *testing.T) {
@@ -76,5 +112,4 @@ func TestEvaluate(t *testing.T) {
 			}
 		})
 	}
-
 }
