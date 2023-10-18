@@ -20,6 +20,7 @@ type Dependency interface {
 	FindWorkflow(flowID string) (*Flow, error)
 	FindFunction(funcID string) (Function, error)
 	GenerateCallbackID() string
+	GenerateRunID() string
 }
 
 func NewMachine(di Dependency, state State) *machine.Machine[Command, State] {
@@ -48,7 +49,8 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 			}
 
 			context := BaseState{
-				Flow: x.Flow,
+				RunID: dep.GenerateRunID(),
+				Flow:  x.Flow,
 				Variables: map[string]schema.Schema{
 					flow.Arg: x.Input,
 				},
@@ -91,6 +93,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 
 func cloneBaseState(base BaseState) BaseState {
 	result := BaseState{
+		RunID:      base.RunID,
 		StepID:     base.StepID,
 		Flow:       base.Flow,
 		Variables:  make(map[string]schema.Schema),

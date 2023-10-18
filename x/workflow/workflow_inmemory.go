@@ -6,6 +6,7 @@ type DI struct {
 	FindFunctionF       func(funcID string) (Function, error)
 	FindWorkflowF       func(flowID string) (*Flow, error)
 	GenerateCallbackIDF func() string
+	GenerateRunIDF      func() string
 }
 
 func (di *DI) FindWorkflow(flowID string) (*Flow, error) {
@@ -18,4 +19,8 @@ func (di *DI) FindFunction(funcID string) (Function, error) {
 
 func (di *DI) GenerateCallbackID() string {
 	return di.GenerateCallbackIDF()
+}
+
+func (di *DI) GenerateRunID() string {
+	return di.GenerateRunIDF()
 }

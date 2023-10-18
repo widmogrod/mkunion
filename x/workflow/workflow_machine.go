@@ -2,7 +2,6 @@ package workflow
 
 import (
 	"github.com/widmogrod/mkunion/x/schema"
-	"time"
 )
 
 type Execution struct {
@@ -51,8 +50,9 @@ type (
 	}
 	Await struct {
 		CallbackID string
-		Timeout    time.Duration
-		BaseState  BaseState
+		Timeout    int64
+		//Timeout    time.Duration
+		BaseState BaseState
 	}
 )
 
@@ -62,6 +62,24 @@ type BaseState struct {
 	StepID     string  // StepID is a unique identifier of the step in the execution
 	Variables  map[string]schema.Schema
 	ExprResult map[string]schema.Schema
+}
+
+func GetRunID(state State) string {
+	return MustMatchState(
+		state,
+		func(x *NextOperation) string {
+			return x.BaseState.RunID
+		},
+		func(x *Done) string {
+			return x.BaseState.RunID
+		},
+		func(x *Error) string {
+			return x.BaseState.RunID
+		},
+		func(x *Await) string {
+			return x.BaseState.RunID
+		},
+	)
 }
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Worflow
@@ -165,11 +183,13 @@ type (
 )
 
 type ResumeOptions struct {
-	Timeout time.Duration
+	Timeout int64
+	//Timeout time.Duration
 }
 
 type ApplyAwaitOptions struct {
-	Timeout time.Duration
+	Timeout int64
+	//Timeout time.Duration
 }
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Reshaper
