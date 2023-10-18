@@ -1,6 +1,45 @@
 .App {
-  text-align: left;
+    text-align: left;
     margin: 0 auto;
-    width: 50%;
+    width: 90%;
 }
 
+span {
+    font-family: monospace;
+    background-color: aquamarine;
+    padding: 2px;
+    margin-right: 5px;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 5px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 200px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+thead tr {
+    background-color: #009879;
+    color: #ffffff;
+    text-align: left;
+}
+
+th,
+td {
+    padding: 12px 15px;
+    vertical-align: top;
+}
+
+tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+tbody tr:last-of-type {
+    border-bottom: 2px solid #009879;
+}

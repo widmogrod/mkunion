@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
 	_ "github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"github.com/widmogrod/mkunion/x/workflow"
@@ -14,59 +16,154 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
-	"strconv"
 )
 
-var program = &workflow.Flow{
-	Name: "hello_world_flow",
-	Arg:  "input",
-	Body: []workflow.Expr{
-		&workflow.Assign{
-			ID:    "assign1",
-			VarOk: "res",
-			Val: &workflow.Apply{ID: "apply1", Name: "concat", Args: []workflow.Reshaper{
-				&workflow.SetValue{Value: schema.MkString("hello ")},
-				&workflow.GetValue{Path: "input"},
-			}},
-		},
-		&workflow.End{
-			ID:     "end1",
-			Result: &workflow.GetValue{Path: "res"},
-		},
-	},
-}
-
-var di = &workflow.DI{
-	FindWorkflowF: func(flowID string) (*workflow.Flow, error) {
-		return program, nil
-	},
-	FindFunctionF: func(funcID string) (workflow.Function, error) {
-		if fn, ok := functions[funcID]; ok {
-			return fn, nil
-		}
-
-		return nil, fmt.Errorf("function %s not found", funcID)
-	},
-}
+//var program = &workflow.Flow{
+//	Name: "hello_world_flow",
+//	Arg:  "input",
+//	Body: []workflow.Expr{
+//		&workflow.Assign{
+//			ID:    "assign1",
+//			VarOk: "res",
+//			Val: &workflow.Apply{ID: "apply1", Name: "concat", Args: []workflow.Reshaper{
+//				&workflow.SetValue{Value: schema.MkString("hello ")},
+//				&workflow.GetValue{Path: "input"},
+//			}},
+//		},
+//		&workflow.End{
+//			ID:     "end1",
+//			Result: &workflow.GetValue{Path: "res"},
+//		},
+//	},
+//}
 
 func main() {
 	schema.RegisterRules([]schema.RuleMatcher{
 		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(workflow.BaseState{})),
+		schema.WhenPath([]string{"*", "Await"}, schema.UseStruct(&workflow.ApplyAwaitOptions{})),
 	})
 
 	log.SetLevel(log.DebugLevel)
 
 	store := schemaless.NewInMemoryRepository()
-	repo := typedful.NewTypedRepository[workflow.State](store)
+	statesRepo := typedful.NewTypedRepository[workflow.State](store)
+	flowsRepo := typedful.NewTypedRepository[workflow.Flow](store)
+
+	var di = &workflow.DI{
+		FindWorkflowF: func(flowID string) (*workflow.Flow, error) {
+			record, err := flowsRepo.Get(flowID, "flow")
+			if err != nil {
+				return nil, err
+			}
+
+			return &record.Data, nil
+		},
+		FindFunctionF: func(funcID string) (workflow.Function, error) {
+			if fn, ok := functions[funcID]; ok {
+				return fn, nil
+			}
+
+			return nil, fmt.Errorf("function %s not found", funcID)
+		},
+		GenerateCallbackIDF: func() string {
+			return "callback_id"
+		},
+		GenerateRunIDF: func() string {
+			return fmt.Sprintf("run_id:%d", rand.Int())
+		},
+	}
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 	}))
-	e.GET("/list", func(c echo.Context) error {
-		records, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
-			RecordType: "process",
+	e.POST("/flow", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		schemed, err := schema.FromJSON(data)
+		if err != nil {
+			log.Errorf("failed to parse request body: %v", err)
+			return err
+		}
+
+		program, err := schema.ToGoG[workflow.Worflow](schemed)
+		if err != nil {
+			log.Errorf("failed to convert to command: %v", err)
+			return err
+		}
+
+		flow, ok := program.(*workflow.Flow)
+		if !ok {
+			return errors.New("expected *workflow.Flow")
+		}
+
+		err = flowsRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.Flow]{
+			ID:   flow.Name,
+			Type: "flow",
+			Data: *flow,
+		}))
+
+		if err != nil {
+			log.Errorf("failed to save state: %v", err)
+			return err
+		}
+
+		return c.JSONBlob(http.StatusOK, data)
+	})
+	e.GET("/flow/:id", func(c echo.Context) error {
+		record, err := flowsRepo.Get(c.Param("id"), "flow")
+		if err != nil {
+			log.Errorf("failed to get flow: %v", err)
+			return err
+		}
+
+		schemed := schema.FromGo(record)
+		result, err := schema.ToJSON(schemed)
+		if err != nil {
+			if errors.As(err, &schemaless.ErrNotFound) {
+				return c.JSONBlob(http.StatusNotFound, []byte(`{"error": "not found"}`))
+			}
+
+			log.Errorf("failed to convert to json: %v", err)
+			return err
+		}
+
+		return c.JSONBlob(http.StatusOK, result)
+	})
+	e.GET("/flows", func(c echo.Context) error {
+		records, err := flowsRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.Flow]]{
+			RecordType: "flow",
 			//Limit:      2,
+		})
+		if err != nil {
+			log.Errorf("failed to get flowsRepo: %v", err)
+			return err
+		}
+
+		schemed := schema.FromGo(records)
+		result, err := schema.ToJSON(schemed)
+		if err != nil {
+			log.Errorf("failed to convert to json: %v", err)
+			return err
+		}
+
+		return c.JSONBlob(http.StatusOK, result)
+	})
+
+	e.GET("/list", func(c echo.Context) error {
+		records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
+			RecordType: "process",
+			//Where: predicate.MustWhere(
+			//	"Type = :type AND Data.#.#.BaseState.Flow.#.Name = :name",
+			//	predicate.ParamBinds{
+			//		":type": schema.MkString("process"),
+			//		":name": schema.MkString("hello_world"),
+			//	},
+			//),
 		})
 		if err != nil {
 			return err
@@ -108,8 +205,8 @@ func main() {
 		}
 
 		newState := work.State()
-		err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-			ID:   strconv.Itoa(rand.Int()),
+		err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
+			ID:   workflow.GetRunID(newState),
 			Type: "process",
 			Data: newState,
 		}))
@@ -127,6 +224,89 @@ func main() {
 
 		return c.JSONBlob(http.StatusOK, result)
 	})
+
+	e.POST("/callback", func(c echo.Context) error {
+		// validate payload
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		schemed, err := schema.FromJSON(data)
+		if err != nil {
+			log.Errorf("failed to parse request body: %v", err)
+			return err
+		}
+
+		cmd, err := schema.ToGoG[workflow.Command](schemed)
+		if err != nil {
+			log.Errorf("failed to convert to command: %v", err)
+			return err
+		}
+
+		callbackCMD, ok := cmd.(*workflow.Callback)
+		if !ok {
+			log.Errorf("expected callback command")
+			return errors.New("expected callback command")
+		}
+
+		// find callback id in database
+		records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
+			//RecordType: "process",
+			Where: predicate.MustWhere(
+				"Type = :type AND Data.#.#.CallbackID = :callbackID",
+				predicate.ParamBinds{
+					":type":       schema.MkString("process"),
+					":callbackID": schema.MkString(callbackCMD.CallbackID),
+				},
+			),
+			Limit: 1,
+		})
+		if err != nil {
+			log.Errorf("failed to find callback id: %v", err)
+			return err
+		}
+
+		if len(records.Items) == 0 {
+			log.Errorf("state, with callbackID not found")
+			return errors.New("state, with callbackID not found")
+		}
+
+		state := records.Items[0]
+		log.Infof("state: %+v", state)
+
+		// apply command
+		work := workflow.NewMachine(di, state.Data)
+		err = work.Handle(cmd)
+		if err != nil {
+			log.Errorf("failed to handle command: %v", err)
+			return err
+		}
+
+		// save state
+		newState := work.State()
+		err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
+			ID:      workflow.GetRunID(newState),
+			Type:    "process",
+			Data:    newState,
+			Version: state.Version,
+		}))
+		if err != nil {
+			log.Errorf("failed to save state: %v", err)
+			return err
+		}
+
+		schemed = schema.FromGo(newState)
+		result, err := schema.ToJSON(schemed)
+		if err != nil {
+			log.Errorf("failed to convert to json: %v", err)
+			return err
+		}
+
+		return c.JSONBlob(http.StatusOK, result)
+	})
+
 	e.Logger.Fatal(e.Start(":8080"))
 
 }
