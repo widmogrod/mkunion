@@ -72,6 +72,9 @@ func TestTaskQueue(t *testing.T) {
 
 			return nil, fmt.Errorf("function %s not found", funcID)
 		},
+		GenerateRunIDF: func() string {
+			return "run_id"
+		},
 	}
 
 	desc := &Description{
