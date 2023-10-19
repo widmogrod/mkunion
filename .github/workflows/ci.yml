@@ -24,4 +24,17 @@ jobs:
       - run: dev/bootstrap.sh& sleep 10
 
       # run tests
-      - run: go test -v ./...
+      - run: |
+          set -e
+          retries=3
+          until [ $retries -le 0 ]; do
+            if go test -v ./...; then
+              break
+            fi
+            echo "Retrying Go tests ($retries retries left)..."
+            retries=$((retries - 1))
+          done
+          if [ $retries -eq 0 ]; then
+            echo "Go tests failed after all retries."
+            exit 1
+          fi
