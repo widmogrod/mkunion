@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
@@ -11,31 +12,13 @@ import (
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
+	"github.com/widmogrod/mkunion/x/taskqueue"
 	"github.com/widmogrod/mkunion/x/workflow"
 	_ "github.com/widmogrod/mkunion/x/workflow"
 	"io"
 	"math/rand"
 	"net/http"
 )
-
-//var program = &workflow.Flow{
-//	Name: "hello_world_flow",
-//	Arg:  "input",
-//	Body: []workflow.Expr{
-//		&workflow.Assign{
-//			ID:    "assign1",
-//			VarOk: "res",
-//			Val: &workflow.Apply{ID: "apply1", Name: "concat", Args: []workflow.Reshaper{
-//				&workflow.SetValue{Value: schema.MkString("hello ")},
-//				&workflow.GetValue{Path: "input"},
-//			}},
-//		},
-//		&workflow.End{
-//			ID:     "end1",
-//			Result: &workflow.GetValue{Path: "res"},
-//		},
-//	},
-//}
 
 func main() {
 	schema.RegisterRules([]schema.RuleMatcher{
@@ -225,6 +208,28 @@ func main() {
 		return c.JSONBlob(http.StatusOK, result)
 	})
 
+	e.POST("/workflow-to-str", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		schemed, err := schema.FromJSON(data)
+		if err != nil {
+			log.Errorf("failed to parse request body: %v", err)
+			return err
+		}
+
+		program, err := schema.ToGoG[workflow.Worflow](schemed)
+		if err != nil {
+			log.Errorf("failed to convert to workflow: %v", err)
+			return err
+		}
+
+		return c.String(http.StatusOK, workflow.ToStrWorkflow(program, 0))
+	})
+
 	e.POST("/callback", func(c echo.Context) error {
 		// validate payload
 		data, err := io.ReadAll(c.Request().Body)
@@ -306,6 +311,72 @@ func main() {
 
 		return c.JSONBlob(http.StatusOK, result)
 	})
+
+	proc := &taskqueue.FunctionProcessor[workflow.State]{
+		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
+			log.Infof("task: %#v \n", task)
+			work := workflow.NewMachine(di, task.Data.Data)
+			//err := work.Handle(&workflow.Retry{})
+			err := work.Handle(&workflow.Run{})
+			if err != nil {
+				log.Errorf("err: %s", err)
+				return
+			}
+
+			err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
+				ID:      task.Data.ID,
+				Data:    work.State(),
+				Version: task.Data.Version,
+			}))
+
+			if err != nil {
+				if errors.Is(err, schemaless.ErrVersionConflict) {
+					// make it configurable, but by default we should
+					// just ignore conflicts, since that means we may have duplicate,
+					// or some other process already update it.
+					// assuming that queue is populated from stream of changes
+					// it such case (there was update) new message with new version
+					// will land in queue soon (if it pass selector)
+					log.Warnf("version conflict, ignoring")
+				} else {
+					panic(err)
+				}
+			}
+		},
+	}
+
+	// there can be few process,
+	// - timeout out workflow (command to timeout)
+	// - retry workflow (command to retry)
+	// - run workflow (command to run)
+	// - callback workflow (command to callback)
+	// - terminate workflow (command to terminate)
+	// - complete workflow (command to complete)
+
+	desc := &taskqueue.Description{
+		Change: []string{"create", "update"},
+		Entity: "process",
+		//Filter: "Data.#.Retried > Data.#.Error.MaxRetries",
+	}
+	queue := taskqueue.NewInMemoryQueue[schemaless.Record[schema.Schema]]()
+
+	ctx := context.Background()
+	tq2 := taskqueue.NewTaskQueue(desc, queue, store, proc)
+	_ = ctx
+	_ = tq2
+	//go func() {
+	//	err := tq2.RunSelector(ctx)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}()
+	//
+	//go func() {
+	//	err := tq2.RunProcessor(ctx)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}()
 
 	e.Logger.Fatal(e.Start(":8080"))
 

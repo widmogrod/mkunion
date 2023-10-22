@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import './App.css';
 import * as workflow from './workflow/workflow'
 import {dediscriminateCommand} from './workflow/workflow'
@@ -11,6 +11,13 @@ function flowCreate(flow: workflow.Flow) {
         body: JSON.stringify(flow),
     }).then(res => res.text())
         .then(data => console.log("save-flow-result", data))
+}
+
+function flowToString(flow: workflow.Worflow) {
+    return fetch('http://localhost:8080/workflow-to-str', {
+        method: 'POST',
+        body: JSON.stringify(flow),
+    }).then(res => res.text())
 }
 
 function App() {
@@ -27,6 +34,7 @@ function App() {
     const [image, setImage] = React.useState("" as string);
     const [imageWidth, setImageWidth] = React.useState(100 as number);
     const [imageHeight, setImageHeight] = React.useState(100 as number);
+    const [selectedFlow, setSelectedFlow] = React.useState("hello_world" as string);
 
     type recordFlow = {
         ID: string,
@@ -277,13 +285,39 @@ function App() {
                 }}>
                     List flows
                 </button>
-                <select>
+                <select value={selectedFlow}
+                        onChange={(e) => setSelectedFlow(e.currentTarget.value)}>
                     {flows.Items.map((item) => {
                         return (
                             <option key={item.ID} value={item.ID}>{item.ID}</option>
                         );
                     })}
                 </select>
+
+                <button onClick={() => {
+                    const cmd: workflow.Command = {
+                        "workflow.Run": {
+                            Flow: {
+                                "workflow.FlowRef": {
+                                    FlowID: selectedFlow,
+                                }
+                            },
+                            Input: {
+                                "schema.String": input,
+                            },
+                        }
+                    }
+                    fetch('http://localhost:8080/', {
+                        method: 'POST',
+                        body: JSON.stringify(dediscriminateCommand(cmd)),
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            setState(data)
+                        })
+                }}>
+                    Run selected flow
+                </button>
 
                 <button onClick={() => {
                     const cmd: workflow.Command = {
@@ -397,12 +431,17 @@ function App() {
                 </button>
 
 
+                <CreateAttachment input={input}/>
+
                 <table>
                     <tbody>
                     <tr>
                         <td>
-                            <PaginatedTable table={flows} mapData={(data) => {
-                                return <SchemaValue data={data}/>
+                            <PaginatedTable table={flows} mapData={(data: workflow.Flow) => {
+                                return <WorkflowToString flow={{
+                                    "workflow.Flow": data,
+                                }}/>
+                                // return <SchemaValue data={data}/>
                             }}/>
                         </td>
                         <td>
@@ -540,4 +579,154 @@ function PaginatedTable(props: { table: { Items: any[] }, mapData: (data: any) =
         })}
         </tbody>
     </table>
+}
+
+function WorkflowToString(props: { flow: workflow.Worflow }) {
+    const [str, setStr] = useState("")
+
+    useEffect(() => {
+        flowToString(props.flow).then((data) => {
+            setStr(data)
+        })
+    }, [props.flow])
+
+    return <>
+        {/*<pre>{JSON.stringify(props.flow)}</pre>*/}
+        <pre>{str}</pre>
+    </>
+}
+
+function CreateAttachment(props: { input: string }) {
+    /*
+    * flow book_product(input) {
+    *    let reservation = BookReservation(input.productId, input.userId, input.quantity) @timeout(1m)
+    *
+    *    let user_payment_info, problem = await GetUserPaymentInfo() @timeout(5m) or input.user_payment_info
+    *    if user_payment_info.err || problem.timeout {
+    *      let canceled = CancelReservation(reservation)
+    *      if canceled.err {
+    *        return {err: "payment failed and reservation cancelation failed"}
+    *      }
+    *
+    *      return {err: "payment failed, no use payment info"}
+    *    }
+    *
+    *    let payment, problem = await ProcessPayment(user_payment_info) @timeout(24h)
+    *    if payment.err || problem.timeout {
+    *       let canceled = CancelReservation(reservation)
+    *       if canceled.err {
+    *           return {err: "payment failed and reservation cancelation failed"}
+    *       }
+    *
+    *      return return {err: "payment failed, payment processing failed"}
+    *    }
+    *
+    *    return return {ok: true, reservation, payment}
+    * }
+    */
+    const cmd: workflow.Command = {
+        "workflow.Run": {
+            Flow: {
+                "workflow.Flow": {
+                    Name: "create_attachment",
+                    Arg: "input",
+                    Body: [
+                        {
+                            "workflow.Choose": {
+                                ID: "choose1",
+                                If: {
+                                    "workflow.Compare": {
+                                        Operation: "=",
+                                        Left: {
+                                            "workflow.GetValue": {
+                                                Path: "input",
+                                            }
+                                        },
+                                        Right: {
+                                            "workflow.SetValue": {
+                                                Value: {
+                                                    "schema.String": "666",
+                                                },
+                                            },
+                                        },
+                                    }
+                                },
+                                Then: [
+                                    {
+                                        "workflow.End": {
+                                            ID: "end2",
+                                            Result: {
+                                                "workflow.SetValue": {
+                                                    Value: {
+                                                        "schema.String": "Do no evil",
+                                                    },
+                                                }
+                                            },
+                                        },
+                                    }
+                                ],
+                            }
+                        },
+                        {
+                            "workflow.Assign": {
+                                ID: "assign1",
+                                VarOk: "res",
+                                Val: {
+                                    "workflow.Apply": {
+                                        ID: "apply1",
+                                        Name: "concat",
+                                        Args: [
+                                            {
+                                                "workflow.SetValue": {
+                                                    Value: {
+                                                        "schema.String": "hello ",
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "workflow.GetValue": {
+                                                    Path: "input",
+                                                }
+                                            },
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "workflow.End": {
+                                ID: "end1",
+                                Result: {
+                                    "workflow.GetValue": {
+                                        Path: "res",
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                },
+            },
+            Input: {
+                "schema.String": props.input,
+            },
+        }
+    }
+
+    const doIt = () => {
+        if (cmd?.["workflow.Run"]?.Flow) {
+            flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
+        }
+
+        fetch('http://localhost:8080/', {
+            method: 'POST',
+            body: JSON.stringify(dediscriminateCommand(cmd)),
+        })
+            .then(res => res.json())
+        // .then(data => setState(data))
+    }
+
+    return <button onClick={doIt}>
+        Create attachment
+    </button>
+
 }
