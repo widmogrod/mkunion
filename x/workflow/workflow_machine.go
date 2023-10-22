@@ -26,9 +26,7 @@ type (
 		Result schema.Schema
 		//Fail       schema.Schema
 	}
-	//Retry struct {
-	//	StepID string
-	//}
+	TryRecover struct{}
 )
 
 //go:generate go run ../../cmd/mkunion/main.go -name=State
@@ -42,11 +40,11 @@ type (
 		BaseState BaseState
 	}
 	Error struct {
-		Code       string
-		Reason     string
-		Retried    int64
-		MaxRetries int64
-		BaseState  BaseState
+		Code    string
+		Reason  string
+		Retried int64
+		//MaxRetries int64
+		BaseState BaseState
 	}
 	Await struct {
 		CallbackID string
@@ -62,6 +60,9 @@ type BaseState struct {
 	StepID     string  // StepID is a unique identifier of the step in the execution
 	Variables  map[string]schema.Schema
 	ExprResult map[string]schema.Schema
+
+	// Default values
+	DefaultMaxRetries int64
 }
 
 func GetRunID(state State) string {

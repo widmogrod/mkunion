@@ -7,15 +7,23 @@ stateDiagram
 	[*] --> "*workflow.Error": "*workflow.Run"
  %% error=failed to find workflow hello_world_flow_non_existing: flow hello_world_flow_non_existing not found 
 	[*] --> [*]: "❌*workflow.Run"
- %% error=already started 
-	"*workflow.Await" --> "*workflow.Await": "❌*workflow.Run"
- %% error=cannot apply commands, when workflow is completed 
-	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Run"
- %% error=cannot apply commands, when workflow is completed 
-	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Callback"
- %% error=invalid state transition 
-	[*] --> [*]: "❌*workflow.Callback"
+	"*workflow.Error" --> "*workflow.Error": "*workflow.TryRecover"
  %% error=already started 
 	"*workflow.Error" --> "*workflow.Error": "❌*workflow.Run"
  %% error=invalid state transition 
 	"*workflow.Error" --> "*workflow.Error": "❌*workflow.Callback"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Run"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Callback"
+ %% error=already started 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.Run"
+ %% error=invalid state transition 
+	[*] --> [*]: "❌*workflow.TryRecover"
+ %% error=invalid state transition 
+	[*] --> [*]: "❌*workflow.Callback"
+	"*workflow.Error" --> "*workflow.Done": "*workflow.TryRecover"
+ %% error=invalid state transition 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.TryRecover"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.TryRecover"

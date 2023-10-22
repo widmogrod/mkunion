@@ -7,6 +7,9 @@ type DI struct {
 	FindWorkflowF       func(flowID string) (*Flow, error)
 	GenerateCallbackIDF func() string
 	GenerateRunIDF      func() string
+
+	// Defaults
+	DefaultMaxRetries int64
 }
 
 func (di *DI) FindWorkflow(flowID string) (*Flow, error) {
@@ -23,4 +26,12 @@ func (di *DI) GenerateCallbackID() string {
 
 func (di *DI) GenerateRunID() string {
 	return di.GenerateRunIDF()
+}
+
+func (di *DI) MaxRetries() int64 {
+	if di.DefaultMaxRetries > 0 {
+		return di.DefaultMaxRetries
+	}
+
+	return 3
 }

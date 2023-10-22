@@ -104,7 +104,8 @@ func TestExecution(t *testing.T) {
 				"input": schema.MkString("world"),
 				"res":   schema.MkString("hello world"),
 			},
-			ExprResult: make(map[string]schema.Schema),
+			ExprResult:        make(map[string]schema.Schema),
+			DefaultMaxRetries: 3,
 		},
 	}, newState)
 
@@ -251,7 +252,8 @@ func TestMachine(t *testing.T) {
 						"input": schema.MkString("world"),
 						"res":   schema.MkString("hello world"),
 					},
-					ExprResult: make(map[string]schema.Schema),
+					ExprResult:        make(map[string]schema.Schema),
+					DefaultMaxRetries: 3,
 				},
 			})
 	})
@@ -271,7 +273,8 @@ func TestMachine(t *testing.T) {
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 					},
-					ExprResult: make(map[string]schema.Schema),
+					ExprResult:        make(map[string]schema.Schema),
+					DefaultMaxRetries: 3,
 				},
 			}).
 			ForkCase("callback received", func(c *machine.Case[Command, State]) {
@@ -295,6 +298,7 @@ func TestMachine(t *testing.T) {
 							ExprResult: map[string]schema.Schema{
 								"apply1": schema.MkString("hello + world"),
 							},
+							DefaultMaxRetries: 3,
 						},
 					})
 			}).
@@ -314,7 +318,8 @@ func TestMachine(t *testing.T) {
 							Variables: map[string]schema.Schema{
 								"input": schema.MkString("world"),
 							},
-							ExprResult: make(map[string]schema.Schema),
+							ExprResult:        make(map[string]schema.Schema),
+							DefaultMaxRetries: 3,
 						},
 					}, ErrCallbackNotMatch)
 			})
@@ -334,7 +339,8 @@ func TestMachine(t *testing.T) {
 					Variables: map[string]schema.Schema{
 						"input": nil,
 					},
-					ExprResult: map[string]schema.Schema{},
+					ExprResult:        map[string]schema.Schema{},
+					DefaultMaxRetries: 3,
 				},
 			})
 	})
@@ -374,8 +380,42 @@ func TestMachine(t *testing.T) {
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
 					},
-					ExprResult: map[string]schema.Schema{},
+					ExprResult:        map[string]schema.Schema{},
+					DefaultMaxRetries: 3,
 				},
+			}).
+			ForkCase("retry execution", func(c *machine.Case[Command, State]) {
+				c.
+					GivenCommand(&TryRecover{},
+						machine.WithBefore(func() {
+							di.FindFunctionF = func(funcID string) (Function, error) {
+								return nil, fmt.Errorf("function funcID='%s' not found", funcID)
+							}
+						}), machine.WithAfter(func() {
+							di.FindFunctionF = func(funcID string) (Function, error) {
+								if fn, ok := functions[funcID]; ok {
+									return fn, nil
+								}
+
+								return nil, fmt.Errorf("function %s not found", funcID)
+							}
+						}),
+					).
+					ThenState(&Error{
+						Code:    "function-missing",
+						Reason:  "function concat() not found, details: function funcID='concat' not found",
+						Retried: 1,
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "apply1",
+							Flow:   &FlowRef{FlowID: "hello_world_flow"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+							},
+							ExprResult:        map[string]schema.Schema{},
+							DefaultMaxRetries: 3,
+						},
+					})
 			})
 	})
 	suite.Case("execute function with if statement", func(c *machine.Case[Command, State]) {
@@ -394,7 +434,8 @@ func TestMachine(t *testing.T) {
 						"input": schema.MkString("El Mundo"),
 						"res":   schema.MkString("hello El Mundo"),
 					},
-					ExprResult: map[string]schema.Schema{},
+					ExprResult:        map[string]schema.Schema{},
+					DefaultMaxRetries: 3,
 				},
 			})
 	})

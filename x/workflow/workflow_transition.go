@@ -14,6 +14,7 @@ var (
 	ErrInvalidStateTransition = errors.New("invalid state transition")
 	ErrExpressionHasResult    = errors.New("expression has result")
 	ErrStateReachEnd          = errors.New("cannot apply commands, when workflow is completed")
+	ErrMaxRetriesReached      = errors.New("max retries reached")
 )
 
 type Dependency interface {
@@ -21,6 +22,7 @@ type Dependency interface {
 	FindFunction(funcID string) (Function, error)
 	GenerateCallbackID() string
 	GenerateRunID() string
+	MaxRetries() int64
 }
 
 func NewMachine(di Dependency, state State) *machine.Machine[Command, State] {
@@ -54,7 +56,8 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 				Variables: map[string]schema.Schema{
 					flow.Arg: x.Input,
 				},
-				ExprResult: make(map[string]schema.Schema),
+				ExprResult:        make(map[string]schema.Schema),
+				DefaultMaxRetries: dep.MaxRetries(),
 			}
 
 			newStatus := ExecuteAll(context, flow, dep)
@@ -85,19 +88,48 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 
 			return nil, ErrInvalidStateTransition
 		},
-		//func(x *Retry) (State, error) {
-		//	panic("implement me")
-		//},
+		func(x *TryRecover) (State, error) {
+			switch s := state.(type) {
+			case *Error:
+				maxRetries := s.BaseState.DefaultMaxRetries
+				//if s.MaxRetries > 0 {
+				//	maxRetries = s.MaxRetries
+				//}
+				if s.Retried >= maxRetries {
+					return nil, ErrMaxRetriesReached
+				}
+
+				newContext := cloneBaseState(s.BaseState)
+
+				flow, err := getFlow(newContext.Flow, dep)
+				if err != nil {
+					return nil, err
+				}
+
+				newStatus := ExecuteAll(newContext, flow, dep)
+
+				// when state is, the same error, then let's increment Retried counter
+				errorState, isErrorState := newStatus.(*Error)
+				if isErrorState && errorState.Code == s.Code && errorState.Reason == s.Reason {
+					errorState.Retried = s.Retried + 1
+				}
+
+				return newStatus, nil
+			}
+
+			return nil, ErrInvalidStateTransition
+		},
 	)
 }
 
 func cloneBaseState(base BaseState) BaseState {
 	result := BaseState{
-		RunID:      base.RunID,
-		StepID:     base.StepID,
-		Flow:       base.Flow,
-		Variables:  make(map[string]schema.Schema),
-		ExprResult: make(map[string]schema.Schema),
+		RunID:             base.RunID,
+		StepID:            base.StepID,
+		Flow:              base.Flow,
+		Variables:         make(map[string]schema.Schema),
+		ExprResult:        make(map[string]schema.Schema),
+		DefaultMaxRetries: base.DefaultMaxRetries,
 	}
 	for k, v := range base.Variables {
 		result.Variables[k] = v
@@ -264,7 +296,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				return &Error{
 					Code:      "execute-reshaper",
 					Reason:    "failed to execute reshaper in ok path",
-					Retried:   0,
 					BaseState: newContext,
 				}
 			}
@@ -288,7 +319,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				return &Error{
 					Code:      "assign-variable",
 					Reason:    fmt.Sprintf("variable %s already exists", x.VarOk),
-					Retried:   0,
 					BaseState: newContext,
 				}
 			}
@@ -319,7 +349,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 					return &Error{
 						Code:      "execute-reshaper",
 						Reason:    fmt.Sprintf("failed to execute reshaper while preparing args for function %s(), reason: %s", x.Name, err.Error()),
-						Retried:   0,
 						BaseState: newContext,
 					}
 				}
@@ -331,7 +360,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				return &Error{
 					Code:      "function-missing",
 					Reason:    fmt.Sprintf("function %s() not found, details: %s", x.Name, err.Error()),
-					Retried:   0,
 					BaseState: newContext,
 				}
 			}
@@ -350,7 +378,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				return &Error{
 					Code:      "function-execution",
 					Reason:    fmt.Sprintf("function %s() returned error: %s", x.Name, err.Error()),
-					Retried:   0,
 					BaseState: newContext,
 				}
 			}
@@ -377,7 +404,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				return &Error{
 					Code:      "choose-evaluate-predicate",
 					Reason:    "failed to evaluate predicate, reason: " + err.Error(),
-					Retried:   0,
 					BaseState: newContext,
 				}
 			}
@@ -387,7 +413,6 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				return &Error{
 					Code:      "choose-then-empty",
 					Reason:    "then branch cannot be empty",
-					Retried:   0,
 					BaseState: newContext,
 				}
 			}
