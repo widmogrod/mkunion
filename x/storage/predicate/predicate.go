@@ -16,9 +16,16 @@ type (
 	Compare struct {
 		Location  string
 		Operation string
-		BindValue BindValue
+		BindValue Bindable
 	}
 )
 
-type BindValue = string
-type ParamBinds map[BindValue]schema.Schema
+//go:generate go run ../../../cmd/mkunion/main.go -name=Bindable
+type (
+	BindValue struct{ BindName BindName }
+	Literal   struct{ Value schema.Schema }
+	Locatable struct{ Location string }
+)
+
+type BindName = string
+type ParamBinds map[BindName]schema.Schema

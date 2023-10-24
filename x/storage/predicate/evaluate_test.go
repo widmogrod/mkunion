@@ -8,16 +8,19 @@ import (
 
 func TestEvaluate(t *testing.T) {
 	defValue := testutil.SampleStruct{
-		ID:  "123",
-		Age: 20,
+		ID:      "123",
+		Age:     20,
+		Visible: true,
 		Friends: []testutil.SampleStruct{
 			{
-				ID:  "53",
-				Age: 40,
+				ID:      "53",
+				Age:     40,
+				Visible: false,
 			},
 			{
-				ID:  "54",
-				Age: 15,
+				ID:      "54",
+				Age:     15,
+				Visible: true,
 			},
 		},
 		Tree: &testutil.Branch{
@@ -65,35 +68,65 @@ func TestEvaluate(t *testing.T) {
 			result: true,
 		},
 		{
-			value:  "ID = :id AND Age <= :age AND Friends.[0].ID = :firstFriendId",
+			value:  "ID = :id AND Age <= :age AND Friends[0].ID = :firstFriendId",
 			data:   defValue,
 			bind:   defBind,
 			result: true,
 		},
 		{
-			value:  "Tree.#.Right.#.Value.# = :leaf0val",
+			value:  `Tree["testutil.Branch"].Right["testutil.Leaf"].Value["schema.Number"] = :leaf0val`,
 			data:   defValue,
 			bind:   defBind,
 			result: true,
 		},
 		{
-			value:  "Tree.#.Left.#.Name = :branch1name",
+			value:  "Tree[*].Right[*].Value[*] = :leaf0val",
 			data:   defValue,
 			bind:   defBind,
 			result: true,
 		},
 		{
-			value:  "Tree.#.Left.#.Left.#.Value.# = :leaf0val",
+			value:  "Tree[*].Left[*].Name = :branch1name",
 			data:   defValue,
 			bind:   defBind,
 			result: true,
 		},
-		//{
-		//	value:  "Tree.#.Left.#.Left.#.Value.# = Tree.#.Right.#.Value.#",
-		//	data:   defValue,
-		//	bind:   defBind,
-		//	result: true,
-		//},
+		{
+			value:  "Tree[*].Left[*].Left[*].Value[*] = :leaf0val",
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  `ID = "123"`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  `Age = 20`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  `Visible = true`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  `Friends[0].Visible = false`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  "Tree[*].Left[*].Left[*].Value[*] = Tree[*].Right[*].Value[*]",
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
 	}
 	for _, uc := range useCases {
 		t.Run(uc.value, func(t *testing.T) {
@@ -102,7 +135,7 @@ func TestEvaluate(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			schemaBind := map[string]schema.Schema{}
+			schemaBind := map[BindName]schema.Schema{}
 			for k, v := range uc.bind {
 				schemaBind[k] = schema.FromGo(v)
 			}

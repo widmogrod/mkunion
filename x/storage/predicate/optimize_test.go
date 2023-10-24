@@ -12,14 +12,14 @@ func TestOptimizePredicates(t *testing.T) {
 				P: &Compare{
 					Location:  "x",
 					Operation: "=",
-					BindValue: ":x",
+					BindValue: &BindValue{BindName: ":x"},
 				},
 			},
 		}
 		expected := &Compare{
 			Location:  "x",
 			Operation: "=",
-			BindValue: ":x",
+			BindValue: &BindValue{BindName: ":x"},
 		}
 		assert.Equal(t, expected, Optimize(p))
 	})
@@ -30,14 +30,14 @@ func TestOptimizePredicates(t *testing.T) {
 				&Compare{
 					Location:  "x",
 					Operation: "=",
-					BindValue: ":x",
+					BindValue: &BindValue{BindName: ":x"},
 				},
 			},
 		}
 		expected := &Compare{
 			Location:  "x",
 			Operation: "=",
-			BindValue: ":x",
+			BindValue: &BindValue{BindName: ":x"},
 		}
 		assert.Equal(t, expected, Optimize(p))
 	})
@@ -48,14 +48,14 @@ func TestOptimizePredicates(t *testing.T) {
 				&Compare{
 					Location:  "x",
 					Operation: "=",
-					BindValue: ":x",
+					BindValue: &BindValue{BindName: ":x"},
 				},
 			},
 		}
 		expected := &Compare{
 			Location:  "x",
 			Operation: "=",
-			BindValue: ":x",
+			BindValue: &BindValue{BindName: ":x"},
 		}
 		assert.Equal(t, expected, Optimize(p))
 	})

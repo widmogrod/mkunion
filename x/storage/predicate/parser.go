@@ -3,6 +3,7 @@ package predicate
 import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/widmogrod/mkunion/x/schema"
 	"strings"
 )
 
@@ -10,13 +11,16 @@ var (
 	predicateLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{"Whitespace", `\s+`},
 		{"Keyword", `AND|OR|NOT`},
-		{"Operator", `(<>|<=|>=|=|<|>|!=)`},
+		{"Operator", `(<>|<=|>=|=|<|>|!=|#=)`},
 		{"Bind", `:[a-zA-Z][a-zA-Z0-9]*`},
-		{"Ident", `[a-zA-Z][a-zA-Z0-9\#\.\[\]]*`},
+		{"Location", `[a-zA-Z][a-zA-Z0-9\#\.\[\]'"\*]*`},
+		{"Number", `[-+]?[0-9]*\.?[0-9]+`},
+		{"String", `"[^"]+"`},
 	})
 	predicateParser = participle.MustBuild[Expression](
 		participle.Lexer(predicateLexer),
 		participle.Elide("Whitespace"),
+		participle.Unquote("String"),
 		participle.UseLookahead(2),
 	)
 )
@@ -33,24 +37,65 @@ func Parse(input string) (Predicate, error) {
 }
 
 type Comparable struct {
-	Location string `( @Ident`
+	Location string `( @Location`
 	Operator string `  @( "<>" | "<=" | ">=" | "=" | "<" | ">" | "!=" )`
-	BindName string `  @Bind | @Ident)`
+	BindName Value  `  @@)`
+}
+
+type Value struct {
+	BindName *string  `(  @Bind`
+	Number   *float64 `| @Number`
+	String   *string  `| @String`
+	Bool     *string  `| @("TRUE" | "FALSE" | "true" | "false") `
+	Location *string  `| @Location )`
+}
+
+func (v Value) ToBindable() Bindable {
+	if v.BindName != nil {
+		return &BindValue{BindName: *v.BindName}
+	}
+
+	if v.Number != nil {
+		return &Literal{
+			Value: schema.MkFloat(*v.Number),
+		}
+	}
+
+	if v.String != nil {
+		return &Literal{
+			Value: schema.MkString(*v.String),
+		}
+	}
+
+	if v.Location != nil {
+		return &Locatable{
+			Location: *v.Location,
+		}
+	}
+
+	if v.Bool != nil {
+		var result bool
+		switch *v.Bool {
+		case "TRUE", "true":
+			result = true
+		case "FALSE", "false":
+			result = false
+		}
+
+		return &Literal{
+			Value: schema.MkBool(result),
+		}
+	}
+
+	return nil
 }
 
 func (a Comparable) ToPredicate() (Predicate, error) {
 	return &Compare{
 		Location:  a.Location,
 		Operation: a.Operator,
-		BindValue: a.BindName,
+		BindValue: a.BindName.ToBindable(),
 	}, nil
-}
-
-type Boolean bool
-
-func (b *Boolean) Capture(values []string) error {
-	*b = values[0] == "TRUE"
-	return nil
 }
 
 type Expression struct {

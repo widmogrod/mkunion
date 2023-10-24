@@ -90,8 +90,8 @@ func bindValuesFromPredicate(predicate Predicate, params []string) []string {
 			return bindValuesFromPredicate(x.P, params)
 		},
 		func(x *Compare) []string {
-			if strings.HasPrefix(x.BindValue, ":") {
-				return append(params, x.BindValue)
+			if bind, ok := x.BindValue.(*BindValue); ok {
+				return append(params, bind.BindName)
 			}
 
 			return params

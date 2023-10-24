@@ -7,6 +7,7 @@ type SampleStruct struct {
 	Age     int
 	Friends []SampleStruct
 	Tree    Treeish
+	Visible bool
 }
 
 //go:generate go run ../../../../cmd/mkunion/main.go -name=Treeish

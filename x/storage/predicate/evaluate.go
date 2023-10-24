@@ -1,6 +1,8 @@
 package predicate
 
-import "github.com/widmogrod/mkunion/x/schema"
+import (
+	"github.com/widmogrod/mkunion/x/schema"
+)
 
 func Evaluate(predicate Predicate, data schema.Schema, bind ParamBinds) bool {
 	return MustMatchPredicate(
@@ -26,7 +28,7 @@ func Evaluate(predicate Predicate, data schema.Schema, bind ParamBinds) bool {
 			return !Evaluate(x.P, data, bind)
 		},
 		func(x *Compare) bool {
-			value, ok := bind[x.BindValue]
+			value, ok := GetValue(x.BindValue, bind, data)
 			if !ok {
 				return false
 			}
@@ -54,12 +56,28 @@ func Evaluate(predicate Predicate, data schema.Schema, bind ParamBinds) bool {
 	)
 }
 
+func GetValue(x Bindable, params ParamBinds, data schema.Schema) (schema.Schema, bool) {
+	return MustMatchBindableR2(
+		x,
+		func(x *BindValue) (schema.Schema, bool) {
+			result, ok := params[x.BindName]
+			return result, ok
+		},
+		func(x *Literal) (schema.Schema, bool) {
+			return x.Value, true
+		},
+		func(x *Locatable) (schema.Schema, bool) {
+			return schema.Get(data, x.Location), true
+		},
+	)
+}
+
 func EvaluateEqual(record schema.Schema, location string, value any) bool {
 	return Evaluate(
 		&Compare{
 			Location:  location,
 			Operation: "=",
-			BindValue: ":value",
+			BindValue: &BindValue{BindName: ":value"},
 		},
 		record,
 		map[string]schema.Schema{
