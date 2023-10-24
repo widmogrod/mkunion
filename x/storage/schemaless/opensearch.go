@@ -266,11 +266,17 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 			}
 		},
 		func(x *predicate.Compare) map[string]any {
+			bindValue, ok := x.BindValue.(*predicate.BindValue)
+			if !ok {
+				panic(fmt.Errorf("store.OpenSearchRepository.toFilters: expected bind value, got %T", x.BindValue))
+			}
+
+			bindName := bindValue.BindName
 			switch x.Operation {
 			case "=":
 				return map[string]any{
 					"term": map[string]any{
-						fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[x.BindValue],
+						fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[bindName],
 					},
 				}
 
@@ -279,7 +285,7 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 					"bool": map[string]any{
 						"must_not": map[string]any{
 							"term": map[string]any{
-								fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[x.BindValue],
+								fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[bindName],
 							},
 						},
 					},
@@ -289,7 +295,7 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 				return map[string]any{
 					"range": map[string]any{
 						os.attrName(x.Location): map[string]any{
-							mapOfOperationToOpenSearchQuery[x.Operation]: params[x.BindValue],
+							mapOfOperationToOpenSearchQuery[x.Operation]: params[bindName],
 						},
 					},
 				}
@@ -301,8 +307,30 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 }
 
 func (os *OpenSearchRepository) attrName(location string) string {
+	locs, err := schema.ParseLocation(location)
+	if err != nil {
+		panic(err)
+	}
+
+	var result []string
+	for _, loc := range locs {
+		val := schema.MustMatchLocation(
+			loc,
+			func(x *schema.LocationField) string {
+				return x.Name
+			},
+			func(x *schema.LocationIndex) string {
+				return fmt.Sprintf("[%d]", x.Index)
+			},
+			func(x *schema.LocationAnything) string {
+				return "schema.Map"
+			},
+		)
+		result = append(result, val)
+	}
+
 	// TODO(schema.Union) find better way to represent union map
-	return strings.ReplaceAll(location, "#", "schema.Map")
+	return strings.Join(result, ".")
 }
 
 func (os *OpenSearchRepository) ToSorters(sort []SortField) []any {

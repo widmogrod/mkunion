@@ -235,7 +235,7 @@ func (d *DynamoDBRepository) FindingRecords(query FindingRecords[Record[schema.S
 
 func (d *DynamoDBRepository) buildFilterExpression(query FindingRecords[Record[schema.Schema]]) (string, map[string]types.AttributeValue, map[string]string, error) {
 	var where predicate.Predicate
-	var binds predicate.ParamBinds = map[predicate.BindValue]schema.Schema{}
+	var binds predicate.ParamBinds = map[predicate.BindName]schema.Schema{}
 	var names map[string]string = map[string]string{}
 
 	if query.RecordType != "" {
@@ -243,7 +243,7 @@ func (d *DynamoDBRepository) buildFilterExpression(query FindingRecords[Record[s
 		where = &predicate.Compare{
 			Location:  "Type",
 			Operation: "=",
-			BindValue: ":Type",
+			BindValue: &predicate.BindValue{BindName: ":Type"},
 		}
 		binds[":Type"] = schema.MkString(query.RecordType)
 	}
@@ -309,23 +309,65 @@ func toExpression(where predicate.Predicate, names map[string]string) string {
 			// Because of https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html
 			// we need to make sure that all names are not reserved keyword, so we add a counter to the end of the name in case of collision
 			var named []string
-			var parts []string = strings.Split(x.Location, ".")
+			//var parts []string = strings.Split(x.Location, ".")
 
-			for _, part := range parts {
-				if _, ok := names[part]; !ok {
-					// TODO(schema.Union) find a better way to handle # union separator
-					// for example insteaf hard coded schema.Map use schema.UnionType....
-					if part == "#" {
-						part = "schema.Map"
-						names[part] = "#hash"
-					} else {
-						names[part] = "#" + part
-					}
+			locs, err := schema.ParseLocation(x.Location)
+			if err != nil {
+				panic(err)
+			}
+
+			for _, loc := range locs {
+				part := schema.MustMatchLocation(
+					loc,
+					func(x *schema.LocationField) string {
+						return x.Name
+					},
+					func(x *schema.LocationIndex) string {
+						panic("implement me")
+					},
+					func(x *schema.LocationAnything) string {
+						return "schema.Map"
+					},
+				)
+
+				name := part
+				if strings.Contains(name, ".") {
+					name = strings.ReplaceAll(name, ".", "_")
 				}
+
+				if _, ok := names[part]; !ok {
+					names[part] = "#" + name
+				}
+
 				named = append(named, names[part])
 			}
 
-			return strings.Join(named, ".") + " " + x.Operation + " " + x.BindValue
+			//for _, part := range parts {
+			//	if _, ok := names[part]; !ok {
+			//		// TODO(schema.Union) find a better way to handle # union separator
+			//		// for example insteaf hard coded schema.Map use schema.UnionType....
+			//		if part == "[*]" {
+			//			part = "schema.Map"
+			//			names[part] = "#hash"
+			//		} else {
+			//			names[part] = "#" + part
+			//		}
+			//	}
+			//	named = append(named, names[part])
+			//}
+
+			return predicate.MustMatchBindable(
+				x.BindValue,
+				func(y *predicate.BindValue) string {
+					return strings.Join(named, ".") + " " + x.Operation + " " + y.BindName
+				},
+				func(y *predicate.Literal) string {
+					panic("implement me")
+				},
+				func(y *predicate.Locatable) string {
+					panic("implement me")
+				},
+			)
 		},
 	)
 }
