@@ -258,7 +258,7 @@ func TestGet(t *testing.T) {
 							MkField("schema.Number", MkInt(10)),
 						)),
 					))))),
-			location: "Data.#.Age.#",
+			location: "Data[*].Age[*]",
 			expected: MkInt(10),
 		},
 		"nested serialised union direct accessor": {
@@ -269,7 +269,7 @@ func TestGet(t *testing.T) {
 							MkField("schema.Number", MkInt(10)),
 						)),
 					))))),
-			location: "Data.'schema.Map'.Age.'schema.Number'",
+			location: `Data["schema.Map"].Age["schema.Number"]`,
 			expected: MkInt(10),
 		},
 	}

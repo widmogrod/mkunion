@@ -267,8 +267,8 @@ func TestSchemaConversions(t *testing.T) {
 	for _, uc := range useCases {
 		t.Run(uc.name, func(t *testing.T) {
 			got := FromGo(uc.in)
-			if assert.Equal(t, uc.out, got, "forward conversion issue") {
-				assert.Equal(t, uc.back, MustToGo(got), "back conversion issue")
+			if assert.True(t, Compare(uc.out, got) == 0, "forward conversion issue") {
+				assert.EqualValues(t, uc.back, MustToGo(got), "back conversion issue")
 			}
 		})
 	}

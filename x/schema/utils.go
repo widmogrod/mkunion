@@ -2,6 +2,7 @@ package schema
 
 import (
 	"bytes"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
@@ -146,102 +147,78 @@ func AsDefault[A int | int8 | int16 | int32 | int64 |
 	return def
 }
 
-func LocationToPath(location string) []string {
-	var result []string
-
-	var value []string
-	var isQuote bool = false
-	var isLit bool = false
-	for _, char := range strings.Split(location, "") {
-		switch char {
-		case "'":
-			isQuote = !isQuote
-
-		case ".":
-			if isLit && !isQuote {
-				isLit = false
-				result = append(result, strings.Join(value, ""))
-				value = nil
-
-			} else {
-				if isQuote {
-					value = append(value, char)
-				} else {
-					result = append(result, strings.Join(value, ""))
-					value = nil
-				}
-			}
-
-		default:
-			if !isLit && !isQuote {
-				isLit = true
-			}
-
-			if isQuote || isLit {
-				value = append(value, char)
-			} else {
-				result = append(result, strings.Join(value, ""))
-				value = nil
-			}
-		}
+func Get(data Schema, location string) Schema {
+	path, err := ParseLocation(location)
+	if err != nil {
+		log.Warnf("schema.Get: failed to parse location: %s", err)
+		return nil
 	}
 
-	if len(value) > 0 {
-		result = append(result, strings.Join(value, ""))
-	}
-
-	return result
+	return GetLocation(data, path)
 }
 
-func Get(data Schema, location string) Schema {
-	path := LocationToPath(location)
-	for _, p := range path {
-		if p == "" {
-			return nil
+func GetLocation(data Schema, locations []Location) Schema {
+	for {
+		if len(locations) == 0 {
+			return data
 		}
 
-		if strings.HasPrefix(p, "[") && strings.HasSuffix(p, "]") {
-			idx := strings.TrimPrefix(p, "[")
-			idx = strings.TrimSuffix(idx, "]")
-			i, err := strconv.Atoi(idx)
-			if err != nil {
-				return nil
-			}
+		location := locations[0]
+		locations = locations[1:]
 
-			listData, ok := data.(*List)
-			if ok && len(listData.Items) > i {
-				data = listData.Items[i]
-				continue
-			}
+		data, locations = MustMatchLocationR2(
+			location,
+			func(x *LocationField) (Schema, []Location) {
+				mapData, ok := data.(*Map)
+				if !ok {
+					return nil, locations
+				}
 
-			return nil
-		}
+				for _, item := range mapData.Field {
+					if item.Name == x.Name {
+						return item.Value, locations
+					}
+				}
 
-		mapData, ok := data.(*Map)
-		if !ok {
-			return nil
-		}
+				return nil, locations
+			},
+			func(x *LocationIndex) (Schema, []Location) {
+				listData, ok := data.(*List)
+				if ok && len(listData.Items) > x.Index {
+					return listData.Items[x.Index], locations
+				}
 
-		if p == "#" && len(mapData.Field) == 1 {
-			data = mapData.Field[0].Value
-			continue
-		}
+				return nil, locations
+			},
+			func(x *LocationAnything) (Schema, []Location) {
+				switch data.(type) {
+				case *List:
+					for _, item := range data.(*List).Items {
+						newData := GetLocation(item, locations)
+						if newData != nil {
+							return newData, nil
+						}
+					}
 
-		var found bool
-		for _, item := range mapData.Field {
-			if item.Name == p {
-				found = true
-				data = item.Value
-				break
-			}
-		}
+					return nil, locations
 
-		if !found {
-			return nil
+				case *Map:
+					for _, item := range data.(*Map).Field {
+						newData := GetLocation(item.Value, locations)
+						if newData != nil {
+							return newData, nil
+						}
+					}
+				}
+
+				return nil, locations
+			},
+		)
+
+		if data == nil {
+			return data
 		}
 	}
-
-	return data
 }
 
 func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
