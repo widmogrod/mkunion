@@ -105,19 +105,8 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 			result.WriteString("\n")
 
 			// build union type in typescript
-			_, _ = fmt.Fprintf(result, "export type %s = {\n", x.Name)
-			for idx, variant := range x.Variant {
-				if idx > 0 {
-					result.WriteString("\n} | {\n")
-				}
-
-				typeName := variant.Name
-				typeNameFul := fmt.Sprintf("%s.%s", x.PkgName, variant.Name)
-				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
-				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
-				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
-			}
-			result.WriteString("\n}")
+			_, _ = fmt.Fprintf(result, "export type %s = ", x.Name)
+			result.WriteString(toTypeTypeScriptTypeName(x, option))
 
 			result.WriteString("\n")
 			for _, variant := range x.Variant {
@@ -226,4 +215,55 @@ func (r *TypeScriptRenderer) normaliseImport(imp packageImportName) string {
 	result := replace.Replace(imp)
 	result = "./" + result
 	return result
+}
+
+func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
+	return MustMatchShape(
+		variant,
+		func(x *Any) string {
+			return "any"
+		},
+		func(x *RefName) string {
+			return x.Name
+		},
+		func(x *BooleanLike) string {
+			return "boolean"
+		},
+		func(x *StringLike) string {
+			return "string"
+		},
+		func(x *NumberLike) string {
+			return "number"
+		},
+		func(x *ListLike) string {
+			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
+		},
+		func(x *MapLike) string {
+			return fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
+		},
+		func(x *StructLike) string {
+			result := &strings.Builder{}
+			typeName := x.Name
+			typeNameFul := fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+
+			result.WriteString("{\n")
+			_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+			_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
+			_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
+			result.WriteString("\n}")
+
+			return result.String()
+
+		},
+		func(x *UnionLike) string {
+			result := &strings.Builder{}
+			for idx, variant := range x.Variant {
+				if idx > 0 {
+					result.WriteString(" | ")
+				}
+				result.WriteString(toTypeTypeScriptTypeName(variant, option))
+			}
+			return result.String()
+		},
+	)
 }

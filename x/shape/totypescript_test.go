@@ -13,8 +13,8 @@ func TestTypeScriptSchemaGeneration(t *testing.T) {
 		Name:          "Tree",
 		PkgName:       "test",
 		PkgImportName: "test",
-		Variant: []*StructLike{
-			{
+		Variant: []Shape{
+			&StructLike{
 				Name:          "Branch",
 				PkgName:       "test",
 				PkgImportName: "go.import.test",
@@ -37,7 +37,7 @@ func TestTypeScriptSchemaGeneration(t *testing.T) {
 					},
 				},
 			},
-			{
+			&StructLike{
 				Name:          "Leaf",
 				PkgName:       "test",
 				PkgImportName: "go.import.test",
