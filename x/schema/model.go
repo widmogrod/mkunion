@@ -108,6 +108,12 @@ type Field struct {
 	Value Schema
 }
 
+type UnionInformationRule interface {
+	UnionType() reflect.Type
+	VariantsTypes() []reflect.Type
+	IsUnionOrUnionType(t reflect.Type) bool
+}
+
 func UseStruct(t any) TypeMapDefinition {
 	// Optimisation: When struct has its own definition how to populate it from schema,
 	// we can use it instead of costly StructDefinition, that is based on reflection.
