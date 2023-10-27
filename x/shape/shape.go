@@ -36,7 +36,7 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
-		Variant       []*StructLike
+		Variant       []Shape
 	}
 )
 

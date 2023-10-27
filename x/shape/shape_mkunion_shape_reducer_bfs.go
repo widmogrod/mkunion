@@ -114,6 +114,9 @@ func (d *ShapeBreadthFirstVisitor[A]) VisitStructLike(v *StructLike) any {
 
 func (d *ShapeBreadthFirstVisitor[A]) VisitUnionLike(v *UnionLike) any {
 	d.queue = append(d.queue, v)
+	for idx := range v.Variant {
+		d.queue = append(d.queue, v.Variant[idx])
+	}
 
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false

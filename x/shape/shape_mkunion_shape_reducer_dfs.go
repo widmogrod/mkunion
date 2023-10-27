@@ -109,6 +109,11 @@ func (d *ShapeDepthFirstVisitor[A]) VisitUnionLike(v *UnionLike) any {
 	if d.stop {
 		return nil
 	}
+	for idx := range v.Variant {
+		if _ = v.Variant[idx].AcceptShape(d); d.stop {
+			return nil
+		}
+	}
 
 	return nil
 }

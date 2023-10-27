@@ -42,7 +42,7 @@ export type Predicate = {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "workflow.Compare",
 	"workflow.Compare": Compare
-}
+} | (string | number) |  string |  number |  null |  undefined |  {[key: string]: any} |  any[]
 
 export type And = {
 	L?: Predicate[],
