@@ -97,7 +97,9 @@ func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Reco
 	// wheere internal representation Record[schema.Schen] is access it
 	//		Data["schema.Map"].Name, Data["schema.Map"].Age
 	// This means, that we need add between data path and
-	query.Where.Predicate = wrapLocationInShemaMap(query.Where.Predicate)
+	if query.Where != nil {
+		query.Where.Predicate = wrapLocationInShemaMap(query.Where.Predicate)
+	}
 
 	// do the same for sort fields
 	for i, sort := range query.Sort {
