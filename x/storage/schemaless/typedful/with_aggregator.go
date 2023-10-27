@@ -3,6 +3,7 @@ package typedful
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/storage/predicate"
 	. "github.com/widmogrod/mkunion/x/storage/schemaless"
 	"log"
 )
@@ -87,6 +88,22 @@ func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]
 }
 
 func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error) {
+	// Typed version of FindingRecords should work with different form of where and sort fields
+	// Typed version suggest that data stored in storage is typed,
+	// but in fact it stored as schema.Schema
+	// For example Record[User]
+	// should be accessed as
+	//		Data.Name, Data.Age
+	// wheere internal representation Record[schema.Schen] is access it
+	//		Data["schema.Map"].Name, Data["schema.Map"].Age
+	// This means, that we need add between data path and
+	query.Where.Predicate = wrapLocationInShemaMap(query.Where.Predicate)
+
+	// do the same for sort fields
+	for i, sort := range query.Sort {
+		query.Sort[i].Field = wrapLocation(sort.Field)
+	}
+
 	found, err := r.store.FindingRecords(FindingRecords[Record[schema.Schema]]{
 		RecordType: query.RecordType,
 		Where:      query.Where,
@@ -146,4 +163,75 @@ func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Reco
 //     This implies control plane. Versions of records should follow monotonically increasing order, that way it will be easier to detect when index is up to date.
 func (r *TypedRepoWithAggregator[T, C]) ReindexAll() {
 	panic("not implemented")
+}
+
+func wrapLocationInShemaMap(x predicate.Predicate) predicate.Predicate {
+	if x == nil {
+		return nil
+	}
+
+	return predicate.MustMatchPredicate(
+		x,
+		func(x *predicate.And) predicate.Predicate {
+			r := &predicate.And{}
+			for _, p := range x.L {
+				r.L = append(r.L, wrapLocationInShemaMap(p))
+			}
+			return r
+		},
+		func(x *predicate.Or) predicate.Predicate {
+			r := &predicate.Or{}
+			for _, p := range x.L {
+				r.L = append(r.L, wrapLocationInShemaMap(p))
+			}
+			return r
+		},
+		func(x *predicate.Not) predicate.Predicate {
+			r := &predicate.Not{}
+			r.P = wrapLocationInShemaMap(x.P)
+			return r
+		},
+		func(x *predicate.Compare) predicate.Predicate {
+			return &predicate.Compare{
+				Location:  wrapLocation(x.Location),
+				Operation: x.Operation,
+				BindValue: predicate.MustMatchBindable(
+					x.BindValue,
+					func(x *predicate.BindValue) predicate.Bindable {
+						return x
+					},
+					func(x *predicate.Literal) predicate.Bindable {
+						return x
+					},
+					func(x *predicate.Locatable) predicate.Bindable {
+						return &predicate.Locatable{
+							Location: wrapLocation(x.Location),
+						}
+					},
+				),
+			}
+		},
+	)
+}
+
+func wrapLocation(x string) string {
+	loc, err := schema.ParseLocation(x)
+	if err != nil {
+		return x
+	}
+	if len(loc) >= 2 {
+		first := loc[0]
+		if fl, ok := first.(*schema.LocationField); ok && fl.Name != "Data" {
+			return x
+		}
+
+		rest := loc[1:]
+
+		newLoc := []schema.Location{first}
+		newLoc = append(newLoc, &schema.LocationField{Name: "schema.Map"})
+		newLoc = append(newLoc, rest...)
+		return schema.LocationToStr(newLoc)
+	}
+
+	return x
 }
