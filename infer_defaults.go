@@ -116,7 +116,7 @@ func (f *InferredInfo) StructShapeWith(name string) *shape.StructLike {
 func (f *InferredInfo) RetrieveUnions() []*shape.UnionLike {
 	result := make([]*shape.UnionLike, 0)
 	for unionName, possibleVariants := range f.possibleVariantTypes {
-		var variants []*shape.StructLike
+		var variants []shape.Shape
 		for _, variant := range possibleVariants {
 			variants = append(variants, f.shapes[variant])
 		}
