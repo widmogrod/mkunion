@@ -6,7 +6,8 @@ import (
 )
 
 func TestParseLocation(t *testing.T) {
-	result, err := ParseLocation(`x.y[1].Data["some.Some"].Abc[*].X`)
+	input := `x.y[1].Data["some.Some"].Abc[*].X`
+	result, err := ParseLocation(input)
 	assert.NoError(t, err)
 	assert.Equal(t, []Location{
 		&LocationField{Name: "x"},
@@ -18,10 +19,13 @@ func TestParseLocation(t *testing.T) {
 		&LocationAnything{},
 		&LocationField{Name: "X"},
 	}, result)
+
+	assert.Equal(t, input, LocationToStr(result))
 }
 
 func TestParseLocation2(t *testing.T) {
-	result, err := ParseLocation(`Tree[*].Right["testutil.Branch"].Value[*]`)
+	input := `Tree[*].Right["testutil.Branch"].Value[*]`
+	result, err := ParseLocation(input)
 	assert.NoError(t, err)
 	assert.Equal(t, []Location{
 		&LocationField{Name: "Tree"},
@@ -31,4 +35,5 @@ func TestParseLocation2(t *testing.T) {
 		&LocationField{Name: "Value"},
 		&LocationAnything{},
 	}, result)
+	assert.Equal(t, input, LocationToStr(result))
 }

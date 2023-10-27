@@ -11,6 +11,14 @@ var (
 	)
 )
 
+func MustParseLocation(input string) []Location {
+	result, err := ParseLocation(input)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
 func ParseLocation(input string) ([]Location, error) {
 	// Parse the input and build a Predicate value
 	ast, err := pathParser.ParseString("", strings.TrimSpace(input))
