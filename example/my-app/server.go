@@ -260,7 +260,7 @@ func main() {
 		records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
 			//RecordType: "process",
 			Where: predicate.MustWhere(
-				"Type = :type AND Data.#.#.CallbackID = :callbackID",
+				`Type = :type AND Data["workflow.Await"].CallbackID = :callbackID`,
 				predicate.ParamBinds{
 					":type":       schema.MkString("process"),
 					":callbackID": schema.MkString(callbackCMD.CallbackID),
@@ -314,21 +314,44 @@ func main() {
 
 	proc := &taskqueue.FunctionProcessor[workflow.State]{
 		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
-			log.Infof("task: %#v \n", task)
+			//log.Infof("data id: %#v \n", task.Data.ID)
 			work := workflow.NewMachine(di, task.Data.Data)
-			//err := work.Handle(&workflow.Retry{})
 			err := work.Handle(&workflow.Run{})
 			if err != nil {
 				log.Errorf("err: %s", err)
 				return
 			}
 
-			err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-				ID:      task.Data.ID,
-				Data:    work.State(),
-				Version: task.Data.Version,
-			}))
+			newState := work.State()
+			//log.Infof("newState: %T", newState)
 
+			saving := []schemaless.Record[workflow.State]{
+				{
+					ID:      task.Data.ID,
+					Data:    newState,
+					Type:    task.Data.Type,
+					Version: task.Data.Version,
+				},
+			}
+
+			if next := workflow.ScheduleNext(newState, di); next != nil {
+				work := workflow.NewMachine(di, nil)
+				err := work.Handle(next)
+				if err != nil {
+					log.Infof("err: %s", err)
+					return
+				}
+
+				//log.Infof("next id=%s", workflow.GetRunID(work.State()))
+
+				saving = append(saving, schemaless.Record[workflow.State]{
+					ID:   workflow.GetRunID(work.State()),
+					Type: task.Data.Type,
+					Data: work.State(),
+				})
+			}
+
+			err = statesRepo.UpdateRecords(schemaless.Save(saving...))
 			if err != nil {
 				if errors.Is(err, schemaless.ErrVersionConflict) {
 					// make it configurable, but by default we should
@@ -337,7 +360,7 @@ func main() {
 					// assuming that queue is populated from stream of changes
 					// it such case (there was update) new message with new version
 					// will land in queue soon (if it pass selector)
-					log.Warnf("version conflict, ignoring")
+					log.Warnf("version conflict, ignoring: %s", err.Error())
 				} else {
 					panic(err)
 				}
@@ -354,29 +377,38 @@ func main() {
 	// - complete workflow (command to complete)
 
 	desc := &taskqueue.Description{
-		Change: []string{"create", "update"},
+		Change: []string{"create"},
 		Entity: "process",
-		//Filter: "Data.#.Retried > Data.#.Error.MaxRetries",
+		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0 AND Version = 1`,
+		Filter: `Data[*]["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
+AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
+AND Version = 1`,
 	}
 	queue := taskqueue.NewInMemoryQueue[schemaless.Record[schema.Schema]]()
-
+	stream := store.AppendLog()
 	ctx := context.Background()
-	tq2 := taskqueue.NewTaskQueue(desc, queue, store, proc)
-	_ = ctx
-	_ = tq2
+	tq2 := taskqueue.NewTaskQueue(desc, queue, store, stream, proc)
+
 	//go func() {
-	//	err := tq2.RunSelector(ctx)
+	//	err := tq2.RunCDC(ctx)
 	//	if err != nil {
 	//		panic(err)
 	//	}
 	//}()
-	//
-	//go func() {
-	//	err := tq2.RunProcessor(ctx)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}()
+
+	go func() {
+		err := tq2.RunSelector(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		err := tq2.RunProcessor(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	e.Logger.Fatal(e.Start(":8080"))
 

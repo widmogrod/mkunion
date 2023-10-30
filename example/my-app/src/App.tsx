@@ -450,6 +450,7 @@ function App() {
                                     if ("schema.Binary" in data["workflow.Done"].Result) {
                                         return (
                                             <>
+                                                <span className="done">workflow.Done</span>
                                                 <img
                                                     src={`data:image/jpeg;base64,${data["workflow.Done"].Result["schema.Binary"]}`}
                                                     alt=""/>
@@ -458,7 +459,7 @@ function App() {
                                         )
                                     } else if ("schema.String" in data["workflow.Done"].Result) {
                                         return <>
-                                            <span>workflow.Done</span>
+                                            <span className="done">workflow.Done</span>
                                             {data["workflow.Done"].Result["schema.String"]}
                                             <ListVariables data={data["workflow.Done"].BaseState}/>
                                         </>
@@ -467,14 +468,22 @@ function App() {
                                     return JSON.stringify(data["workflow.Done"].Result)
                                 } else if ("workflow.Error" in data) {
                                     return <>
-                                        <span>workflow.Error</span>
+                                        <span className="error">workflow.Error</span>
                                         {JSON.stringify(data["workflow.Error"])}
                                     </>
                                 } else if ("workflow.Await" in data) {
                                     return (
                                         <>
-                                            <span>workflow.Await</span>
+                                            <span className="await">workflow.Await</span>
                                             <ListVariables data={data["workflow.Await"].BaseState}/>
+                                        </>
+                                    )
+                                } else if ("workflow.Scheduled" in data) {
+                                    return (
+                                        <>
+                                            <span className="schedguled">workflow.Scheduled</span>
+                                            <span>{JSON.stringify(data["workflow.Scheduled"].RunOption)}</span>
+                                            <ListVariables data={data["workflow.Scheduled"].BaseState}/>
                                         </>
                                     )
                                 } else {
@@ -709,6 +718,14 @@ function CreateAttachment(props: { input: string }) {
             Input: {
                 "schema.String": props.input,
             },
+            RunOption: {
+                "workflow.ScheduleRun": {
+                    Interval: "@every 10s"
+                },
+                // "workflow.DelayRun": {
+                //     DelayBySeconds: 10,
+                // },
+            }
         }
     }
 

@@ -11,6 +11,16 @@ span {
     margin-right: 5px;
 }
 
+span.schedguled {
+    background-color: #b8975d;
+}
+span.error {
+    background-color: #de7773;
+}
+span.await {
+    background-color: #52d2d2;
+}
+
 table {
     border-collapse: collapse;
     margin: 5px 0;

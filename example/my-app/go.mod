@@ -2,7 +2,7 @@ module github.com/widmogrod/mkunion/exammple/my-app
 
 go 1.21.1
 
-replace github.com/widmogrod/mkunion v1.17.1 => ../../
+replace github.com/widmogrod/mkunion => ../../
 
 require (
 	github.com/labstack/echo/v4 v4.11.2
@@ -31,6 +31,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
