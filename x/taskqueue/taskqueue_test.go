@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/stretchr/testify/assert"
-	"github.com/widmogrod/mkunion/x/localstackutil"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
@@ -73,35 +71,84 @@ func TestTaskQueue(t *testing.T) {
 			return nil, fmt.Errorf("function %s not found", funcID)
 		},
 		GenerateRunIDF: func() string {
-			return "run_id"
+			return "run_id" + time.Now().String()
 		},
 	}
 
+	// every time we have workflow with error,
+	// that was not retried more than MaxRetries option
+	// we will try recover it
 	desc := &Description{
 		Change: []string{"create", "update"},
 		Entity: "process",
-		//Filter: "Data.#.Retried > Data.#.Error.MaxRetries",
+		//Filter: `Data[*]["workflow.Error"].Retried < Data["workflow.Error"].BaseState.MaxRetries`,
+		//Filter: `Data #= "workflow.Error" AND Data[*].Retried < Data[*].BaseState.MaxRetries`,
+	}
+
+	// every time we have delayed workflow,
+	// that is ready to run, we will run it
+	desc = &Description{
+		Change: []string{"create"},
+		Entity: "process",
+		Filter: `Data[*]["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
+AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
+AND Version = 1`,
+		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0`,
+		//Filter: `Data #= "workflow.Scheduled" && Data[*].RunOption.Delayed > 0`,
 	}
 
 	store := schemaless.NewInMemoryRepository()
+	stream := store.AppendLog()
+
 	repo := typedful.NewTypedRepository[workflow.State](store)
 	proc := &FunctionProcessor[workflow.State]{
 		F: func(task Task[schemaless.Record[workflow.State]]) {
-			t.Logf("task: %#v \n", task)
+			//t.Logf("task id: %s \n", task.ID)
+			t.Logf("data id: %s \n", task.Data.ID)
+			t.Logf("version: %d \n", task.Data.Version)
 			work := workflow.NewMachine(di, task.Data.Data)
-			//err := work.Handle(&workflow.Retry{})
 			err := work.Handle(&workflow.Run{})
+			//err := work.Handle(&workflow.TryRecover{})
 			if err != nil {
 				t.Logf("err: %s", err)
 				return
 			}
 
-			err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-				ID:      task.Data.ID,
-				Data:    work.State(),
-				Version: task.Data.Version,
-			}))
+			newState := work.State()
+			//d, _ := schema.ToJSON(schema.FromGo(newState))
+			//t.Logf("newState: %s", string(d))
 
+			saving := []schemaless.Record[workflow.State]{
+				{
+					ID:      task.Data.ID,
+					Data:    newState,
+					Type:    task.Data.Type,
+					Version: task.Data.Version,
+				},
+			}
+
+			if next := workflow.ScheduleNext(newState, di); next != nil {
+				//d, _ := schema.ToJSON(schema.FromGo(next))
+				//t.Logf("next: %s", string(d))
+				work := workflow.NewMachine(di, nil)
+				err := work.Handle(next)
+				if err != nil {
+					t.Logf("err: %s", err)
+					return
+				}
+
+				t.Logf("next id=%s", workflow.GetRunID(work.State()))
+				//d, _ = schema.ToJSON(schema.FromGo(work.State()))
+				//t.Logf("nextState: %s", string(d))
+
+				saving = append(saving, schemaless.Record[workflow.State]{
+					ID:   workflow.GetRunID(work.State()),
+					Type: task.Data.Type,
+					Data: work.State(),
+				})
+			}
+
+			err = repo.UpdateRecords(schemaless.Save(saving...))
 			if err != nil {
 				if errors.Is(err, schemaless.ErrVersionConflict) {
 					// make it configurable, but by default we should
@@ -110,7 +157,8 @@ func TestTaskQueue(t *testing.T) {
 					// assuming that queue is populated from stream of changes
 					// it such case (there was update) new message with new version
 					// will land in queue soon (if it pass selector)
-					fmt.Println("version conflict, ignoring")
+					t.Log("version conflict, ignoring")
+					t.Logf("err: %s", err)
 				} else {
 					panic(err)
 				}
@@ -118,14 +166,12 @@ func TestTaskQueue(t *testing.T) {
 		},
 	}
 
-	//queue := NewInMemoryQueue[schemaless.Record[schema.Schema]]()
-
-	awsconf, err := localstackutil.LoadLocalStackAwsConfig(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	awssqs := sqs.NewFromConfig(awsconf)
+	//awsconf, err := localstackutil.LoadLocalStackAwsConfig(context.Background())
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//
+	//awssqs := sqs.NewFromConfig(awsconf)
 
 	queueURL := os.Getenv("AWS_SQS_QUEUE_URL")
 	if queueURL == "" {
@@ -138,17 +184,24 @@ To run this test, please set AWS_SQS_QUEUE_URL to the address of your AWS SQS in
 `)
 	}
 
-	queue := NewSQSQueue(awssqs, queueURL)
-	//queue := NewInMemoryQueue[schemaless.Record[schema.Schema]]()
+	//queue := NewSQSQueue(awssqs, queueURL)
+	queue := NewInMemoryQueue[schemaless.Record[schema.Schema]]()
 
 	ctx := context.Background()
-	tq2 := NewTaskQueue(desc, queue, store, proc)
+	tq2 := NewTaskQueue(desc, queue, store, stream, proc)
 	go func() {
 		err := tq2.RunSelector(ctx)
 		if err != nil {
 			panic(err)
 		}
 	}()
+
+	//go func() {
+	//	err := tq2.RunCDC(ctx)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}()
 
 	go func() {
 		err := tq2.RunProcessor(ctx)
@@ -158,19 +211,26 @@ To run this test, please set AWS_SQS_QUEUE_URL to the address of your AWS SQS in
 	}()
 
 	work := workflow.NewMachine(di, nil)
-	err = work.Handle(&workflow.Run{
+	err := work.Handle(&workflow.Run{
+		//RunOption: &workflow.DelayRun{
+		//	DelayBySeconds: int64(1 * time.Second),
+		//},
+		RunOption: &workflow.ScheduleRun{
+			Interval: "@every 0s",
+		},
 		Flow:  &workflow.FlowRef{FlowID: "hello_world_flow"},
 		Input: schema.MkString("world"),
 	})
 	assert.NoError(t, err)
 
 	newState := work.State()
+	fmt.Printf("newState: %#v\n", newState)
 	err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-		ID:   "1",
+		ID:   workflow.GetRunID(newState),
 		Type: "process",
 		Data: newState,
 	}))
 	assert.NoError(t, err)
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 }

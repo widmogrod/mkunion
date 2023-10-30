@@ -8,12 +8,19 @@ import (
 	"time"
 )
 
-func NewTaskQueue(desc *Description, queue Queuer[schemaless.Record[schema.Schema]], find Repository, proc Processor[schemaless.Record[schema.Schema]]) *TaskQueue {
+func NewTaskQueue(
+	desc *Description,
+	queue Queuer[schemaless.Record[schema.Schema]],
+	find Repository,
+	stream *schemaless.AppendLog[schema.Schema],
+	proc Processor[schemaless.Record[schema.Schema]],
+) *TaskQueue {
 	return &TaskQueue{
-		desc:  desc,
-		queue: queue,
-		find:  find,
-		proc:  proc,
+		desc:   desc,
+		queue:  queue,
+		find:   find,
+		stream: stream,
+		proc:   proc,
 	}
 }
 
@@ -32,29 +39,54 @@ type Processor[T any] interface {
 }
 
 type TaskQueue struct {
-	desc  *Description
-	queue Queuer[schemaless.Record[schema.Schema]]
-	find  Repository
-	proc  Processor[schemaless.Record[schema.Schema]]
+	desc   *Description
+	queue  Queuer[schemaless.Record[schema.Schema]]
+	find   Repository
+	stream *schemaless.AppendLog[schema.Schema]
+	proc   Processor[schemaless.Record[schema.Schema]]
+}
+
+func (q *TaskQueue) RunCDC(ctx context.Context) error {
+	return q.stream.Subscribe(ctx, 0, func(change schemaless.Change[schema.Schema]) {
+		filter := predicate.MustWhere(q.desc.Filter, q.params())
+		if !predicate.Evaluate(filter.Predicate, schema.FromGo(change.After), filter.Params) {
+			return
+		}
+
+		err := q.queue.Push(ctx, Task[schemaless.Record[schema.Schema]]{
+			ID:   change.After.ID,
+			Data: *change.After,
+		})
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func (q *TaskQueue) RunSelector(ctx context.Context) error {
+	var timeDelta = time.Second * 1
+	var startTime time.Time
 	for {
+		startTime = time.Now()
+
 		var after = &schemaless.FindingRecords[schemaless.Record[schema.Schema]]{
 			RecordType: q.desc.Entity,
-			Where:      predicate.MustWhere(q.desc.Filter, predicate.ParamBinds{}),
+			Where:      predicate.MustWhere(q.desc.Filter, q.params()),
 			Limit:      10,
 		}
 
 		for {
 			records, err := q.find.FindingRecords(*after)
 			if err != nil {
+				panic(err)
 				return err
 			}
 
 			for _, record := range records.Items {
 				err := q.queue.Push(ctx, Task[schemaless.Record[schema.Schema]]{
+					ID:   record.ID,
 					Data: record,
+					Meta: nil,
 				})
 				if err != nil {
 					panic(err)
@@ -62,14 +94,18 @@ func (q *TaskQueue) RunSelector(ctx context.Context) error {
 				}
 			}
 
+			after = records.Next
 			if !records.HasNext() {
 				break
 			}
-
-			after = records.Next
 		}
 
-		time.Sleep(1 * time.Second)
+		// don't run too often
+		elapsed := time.Now().Sub(startTime)
+		if elapsed < timeDelta {
+			wait := timeDelta - elapsed
+			time.Sleep(wait)
+		}
 	}
 }
 
@@ -96,6 +132,13 @@ func (q *TaskQueue) RunProcessor(ctx context.Context) error {
 	}
 }
 
+func (q *TaskQueue) params() predicate.ParamBinds {
+	timeNow := schema.FromGo(time.Now().Unix())
+	return predicate.ParamBinds{
+		":now": timeNow,
+	}
+}
+
 type Description struct {
 	Change []string
 	Entity string
@@ -119,6 +162,7 @@ func (proc *FunctionProcessor[T]) Process(task Task[schemaless.Record[schema.Sch
 	}
 
 	proc.F(Task[schemaless.Record[T]]{
+		ID:   task.ID,
 		Data: t,
 	})
 
