@@ -126,15 +126,13 @@ func TestMachine(t *testing.T) {
 		Arg:  "input",
 		Body: []Expr{
 			&Assign{
-				ID:    "assign1",
 				VarOk: "res",
-				Val: &Apply{ID: "apply1", Name: "concat", Args: []Reshaper{
+				Val: &Apply{Name: "concat", Args: []Reshaper{
 					&SetValue{Value: schema.MkString("hello ")},
 					&GetValue{Path: "input"},
 				}},
 			},
 			&End{
-				ID:     "end1",
 				Result: &GetValue{Path: "res"},
 			},
 		},
@@ -148,10 +146,8 @@ func TestMachine(t *testing.T) {
 		Arg:  "input",
 		Body: []Expr{
 			&Assign{
-				ID:    "assign1",
 				VarOk: "res",
 				Val: &Apply{
-					ID:   "apply1",
 					Name: "concat",
 					Args: []Reshaper{
 						&SetValue{Value: schema.MkString("hello ")},
@@ -163,7 +159,6 @@ func TestMachine(t *testing.T) {
 				},
 			},
 			&End{
-				ID:     "end1",
 				Result: &GetValue{Path: "res"},
 			},
 		},
@@ -174,7 +169,6 @@ func TestMachine(t *testing.T) {
 		Arg:  "input",
 		Body: []Expr{
 			&Assign{
-				ID:    "assign1",
 				VarOk: "res",
 				Val: &Apply{ID: "apply1", Name: "concat", Args: []Reshaper{
 					&SetValue{Value: schema.MkString("hello ")},
@@ -189,13 +183,11 @@ func TestMachine(t *testing.T) {
 				},
 				Then: []Expr{
 					&End{
-						ID:     "end1",
 						Result: &GetValue{Path: "res"},
 					},
 				},
 				Else: []Expr{
 					&End{
-						ID:     "fail1",
 						Result: &SetValue{Value: schema.MkString("only Spanish will work!")},
 					},
 				},
@@ -203,6 +195,7 @@ func TestMachine(t *testing.T) {
 		},
 	}
 
+	timeNow := time.Now()
 	di := &DI{
 		FindWorkflowF: func(flowID string) (*Flow, error) {
 			switch flowID {
@@ -230,6 +223,7 @@ func TestMachine(t *testing.T) {
 		GenerateRunIDF: func() string {
 			return runID
 		},
+		MockTimeNow: &timeNow,
 	}
 
 	suite := machine.NewTestSuite(func() *machine.Machine[Command, State] {
@@ -246,7 +240,7 @@ func TestMachine(t *testing.T) {
 				Result: schema.MkString("hello world"),
 				BaseState: BaseState{
 					RunID:  runID,
-					StepID: "end1",
+					StepID: "end",
 					Flow:   &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
@@ -255,6 +249,53 @@ func TestMachine(t *testing.T) {
 					ExprResult:        make(map[string]schema.Schema),
 					DefaultMaxRetries: 3,
 				},
+			})
+	})
+	suite.Case("start scheduled execution delay 10s", func(c *machine.Case[Command, State]) {
+		c.
+			GivenCommand(&Run{
+				Flow:  &FlowRef{FlowID: "hello_world_flow"},
+				Input: schema.MkString("world"),
+				RunOption: &DelayRun{
+					DelayBySeconds: 10,
+				},
+			}).
+			ThenState(&Scheduled{
+				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
+				BaseState: BaseState{
+					RunID:  runID,
+					StepID: "",
+					Flow:   &FlowRef{FlowID: "hello_world_flow"},
+					Variables: map[string]schema.Schema{
+						"input": schema.MkString("world"),
+					},
+					ExprResult:        make(map[string]schema.Schema),
+					DefaultMaxRetries: 3,
+					RunOption: &DelayRun{
+						DelayBySeconds: 10,
+					},
+				},
+			}).
+			ForkCase("resume execution", func(c *machine.Case[Command, State]) {
+				c.
+					GivenCommand(&Run{}).
+					ThenState(&Done{
+						Result: schema.MkString("hello world"),
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "end",
+							Flow:   &FlowRef{FlowID: "hello_world_flow"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+								"res":   schema.MkString("hello world"),
+							},
+							ExprResult:        make(map[string]schema.Schema),
+							DefaultMaxRetries: 3,
+							RunOption: &DelayRun{
+								DelayBySeconds: 10,
+							},
+						},
+					})
 			})
 	})
 	suite.Case("start execution that awaits for callback", func(c *machine.Case[Command, State]) {
@@ -268,7 +309,7 @@ func TestMachine(t *testing.T) {
 				CallbackID: callbackID,
 				BaseState: BaseState{
 					RunID:  runID,
-					StepID: "apply1",
+					StepID: "apply-concat",
 					Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
@@ -289,14 +330,14 @@ func TestMachine(t *testing.T) {
 						Result: schema.MkString("hello + world"),
 						BaseState: BaseState{
 							RunID:  runID,
-							StepID: "end1",
+							StepID: "end",
 							Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
 							Variables: map[string]schema.Schema{
 								"input": schema.MkString("world"),
 								"res":   schema.MkString("hello + world"),
 							},
 							ExprResult: map[string]schema.Schema{
-								"apply1": schema.MkString("hello + world"),
+								"apply-concat": schema.MkString("hello + world"),
 							},
 							DefaultMaxRetries: 3,
 						},
@@ -313,7 +354,7 @@ func TestMachine(t *testing.T) {
 						CallbackID: callbackID,
 						BaseState: BaseState{
 							RunID:  runID,
-							StepID: "apply1",
+							StepID: "apply-concat",
 							Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
 							Variables: map[string]schema.Schema{
 								"input": schema.MkString("world"),
@@ -334,7 +375,7 @@ func TestMachine(t *testing.T) {
 				Reason: "function concat() returned error: expected string, got <nil>",
 				BaseState: BaseState{
 					RunID:  runID,
-					StepID: "apply1",
+					StepID: "apply-concat",
 					Flow:   &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": nil,
@@ -375,7 +416,7 @@ func TestMachine(t *testing.T) {
 				Reason: "function concat() not found, details: function funcID='concat' not found",
 				BaseState: BaseState{
 					RunID:  runID,
-					StepID: "apply1",
+					StepID: "apply-concat",
 					Flow:   &FlowRef{FlowID: "hello_world_flow"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("world"),
@@ -407,7 +448,7 @@ func TestMachine(t *testing.T) {
 						Retried: 1,
 						BaseState: BaseState{
 							RunID:  runID,
-							StepID: "apply1",
+							StepID: "apply-concat",
 							Flow:   &FlowRef{FlowID: "hello_world_flow"},
 							Variables: map[string]schema.Schema{
 								"input": schema.MkString("world"),
@@ -428,7 +469,7 @@ func TestMachine(t *testing.T) {
 				Result: schema.MkString("only Spanish will work!"),
 				BaseState: BaseState{
 					RunID:  runID,
-					StepID: "fail1",
+					StepID: "end-1",
 					Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
 					Variables: map[string]schema.Schema{
 						"input": schema.MkString("El Mundo"),

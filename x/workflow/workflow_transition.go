@@ -3,9 +3,10 @@ package workflow
 import (
 	"errors"
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
-	"strings"
+	"time"
 )
 
 var (
@@ -15,6 +16,9 @@ var (
 	ErrExpressionHasResult    = errors.New("expression has result")
 	ErrStateReachEnd          = errors.New("cannot apply commands, when workflow is completed")
 	ErrMaxRetriesReached      = errors.New("max retries reached")
+	ErrFlowNotFound           = errors.New("flow not found")
+	ErrFlowNotSet             = errors.New("flow not set")
+	ErrIntervalParse          = errors.New("failed to parse interval")
 )
 
 type Dependency interface {
@@ -23,6 +27,7 @@ type Dependency interface {
 	GenerateCallbackID() string
 	GenerateRunID() string
 	MaxRetries() int64
+	TimeNow() time.Time
 }
 
 func NewMachine(di Dependency, state State) *machine.Machine[Command, State] {
@@ -40,28 +45,56 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 	return MustMatchCommandR2(
 		cmd,
 		func(x *Run) (State, error) {
-			if state != nil {
-				return nil, ErrAlreadyStarted
+			switch s := state.(type) {
+			// resume scheduled or delayed execution
+			case *Scheduled:
+				flow, err := getFlow(s.BaseState.Flow, dep)
+				if err != nil {
+					return nil, err
+				}
+
+				newStatus := ExecuteAll(s.BaseState, flow, dep)
+				return newStatus, nil
+
+			// start new execution
+			case nil:
+				// resolve flow
+				flow, err := getFlow(x.Flow, dep)
+				if err != nil {
+					return nil, err
+				}
+
+				context := BaseState{
+					RunID: dep.GenerateRunID(),
+					Flow:  x.Flow,
+					Variables: map[string]schema.Schema{
+						flow.Arg: x.Input,
+					},
+					ExprResult:        make(map[string]schema.Schema),
+					DefaultMaxRetries: dep.MaxRetries(),
+				}
+
+				switch x.RunOption.(type) {
+				case *ScheduleRun, *DelayRun:
+					context.RunOption = x.RunOption
+
+					runTimestamp, err := completeRunOption(x.RunOption, dep)
+					if err != nil {
+						return nil, err
+					}
+
+					// schedule or delay execution
+					return &Scheduled{
+						ExpectedRunTimestamp: runTimestamp,
+						BaseState:            context,
+					}, nil
+				}
+
+				newStatus := ExecuteAll(context, flow, dep)
+				return newStatus, nil
 			}
 
-			// resolve flow
-			flow, err := getFlow(x.Flow, dep)
-			if err != nil {
-				return nil, err
-			}
-
-			context := BaseState{
-				RunID: dep.GenerateRunID(),
-				Flow:  x.Flow,
-				Variables: map[string]schema.Schema{
-					flow.Arg: x.Input,
-				},
-				ExprResult:        make(map[string]schema.Schema),
-				DefaultMaxRetries: dep.MaxRetries(),
-			}
-
-			newStatus := ExecuteAll(context, flow, dep)
-			return newStatus, nil
+			return nil, ErrAlreadyStarted
 		},
 		func(x *Callback) (State, error) {
 			switch s := state.(type) {
@@ -130,6 +163,7 @@ func cloneBaseState(base BaseState) BaseState {
 		Variables:         make(map[string]schema.Schema),
 		ExprResult:        make(map[string]schema.Schema),
 		DefaultMaxRetries: base.DefaultMaxRetries,
+		RunOption:         base.RunOption,
 	}
 	for k, v := range base.Variables {
 		result.Variables[k] = v
@@ -141,18 +175,45 @@ func cloneBaseState(base BaseState) BaseState {
 }
 
 func getFlow(x Worflow, dep Dependency) (*Flow, error) {
+	if x == nil {
+		return nil, ErrFlowNotSet
+	}
+
 	return MustMatchWorflowR2(
 		x,
 		func(x *Flow) (*Flow, error) {
-			return x, nil
+			return initStepID(x), nil
 		},
 		func(x *FlowRef) (*Flow, error) {
 			flow, err := dep.FindWorkflow(x.FlowID)
 			if err != nil {
-				return nil, fmt.Errorf("failed to find workflow %s: %w", x.FlowID, err)
+				return nil, fmt.Errorf("failed to find workflow %s: %w; %w", x.FlowID, err, ErrFlowNotFound)
 			}
 
-			return flow, nil
+			return initStepID(flow), nil
+		},
+	)
+}
+
+var cronParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
+
+func completeRunOption(x RunOption, dep Dependency) (int64, error) {
+	return MustMatchRunOptionR2(
+		x,
+		func(x *ScheduleRun) (int64, error) {
+			schedule, err := cronParser.Parse(x.Interval)
+			if err != nil {
+				return 0, fmt.Errorf("workflow.completeRunOption: failed to parse interval: %w; %w", err, ErrIntervalParse)
+			}
+
+			return schedule.Next(dep.TimeNow()).Unix(), nil
+		},
+		func(x *DelayRun) (int64, error) {
+			// always calculate time in the future
+			return dep.
+				TimeNow().
+				Add(time.Duration(x.DelayBySeconds) * time.Second).
+				Unix(), nil
 		},
 	)
 }
@@ -160,11 +221,11 @@ func getFlow(x Worflow, dep Dependency) (*Flow, error) {
 func ExecuteAll(context BaseState, x *Flow, dep Dependency) State {
 	for _, expr := range x.Body {
 		status := ExecuteExpr(context, expr, dep)
-		if stopExecution(status) {
+		if shouldStopExecution(status) {
 			return status
 		}
 
-		context = getBaseState(status)
+		context = GetBaseState(status)
 	}
 
 	return &Done{
@@ -172,7 +233,7 @@ func ExecuteAll(context BaseState, x *Flow, dep Dependency) State {
 	}
 }
 
-func getBaseState(status State) BaseState {
+func GetBaseState(status State) BaseState {
 	return MustMatchState(
 		status,
 		func(x *NextOperation) BaseState {
@@ -187,7 +248,37 @@ func getBaseState(status State) BaseState {
 		func(x *Await) BaseState {
 			return x.BaseState
 		},
+		func(x *Scheduled) BaseState {
+			return x.BaseState
+		},
 	)
+}
+
+func ScheduleNext(x State, dep Dependency) *Run {
+	base := GetBaseState(x)
+	if base.RunOption == nil {
+		return nil
+	}
+
+	switch base.RunOption.(type) {
+	case *ScheduleRun:
+		flow, err := getFlow(base.Flow, dep)
+		if err != nil {
+			return nil
+		}
+
+		return &Run{
+			Flow:      base.Flow,
+			Input:     base.Variables[flow.Arg],
+			RunOption: base.RunOption,
+		}
+	}
+
+	return nil
+}
+
+func GetRunID(state State) string {
+	return GetBaseState(state).RunID
 }
 
 func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error) {
@@ -198,11 +289,17 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 	return MustMatchReshaperR2(
 		reshaper,
 		func(x *GetValue) (schema.Schema, error) {
-			//FIXME: create utility function for working with paths!
-			parts := strings.Split(x.Path, ".")
-			first, rest := parts[0], parts[1:]
-			if val, ok := context.Variables[first]; ok {
-				return schema.Get(val, strings.Join(rest, ".")), nil
+			loc, err := schema.ParseLocation(x.Path)
+			if err != nil {
+				return nil, fmt.Errorf("workflow.ExecuteReshaper: failed to parse location: %w", err)
+			}
+			first, rest := loc[0], loc[1:]
+			field, ok := first.(*schema.LocationField)
+			if !ok {
+				return nil, fmt.Errorf("workflow.ExecuteReshaper: expected location to start with field name, got %s", x.Path)
+			}
+			if val, ok := context.Variables[field.Name]; ok {
+				return schema.GetLocation(val, rest), nil
 			} else {
 				return nil, fmt.Errorf("variable %s not found", x.Path)
 			}
@@ -434,11 +531,11 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 
 			for _, expr2 := range evaluate {
 				status = ExecuteExpr(newContext, expr2, dep)
-				if stopExecution(status) {
+				if shouldStopExecution(status) {
 					return status
 				}
 
-				newContext = getBaseState(status)
+				newContext = GetBaseState(status)
 			}
 
 			return status
@@ -446,11 +543,68 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 	)
 }
 
-func stopExecution(state State) bool {
+func shouldStopExecution(state State) bool {
 	switch state.(type) {
 	case *Error, *Done, *Await:
 		return true
 	}
 
 	return false
+}
+
+func initStepID(x *Flow) *Flow {
+	if x == nil {
+		return nil
+	}
+
+	steps := map[string]int{}
+	for i, expr := range x.Body {
+		x.Body[i] = initExprStepID(expr, steps)
+	}
+
+	return x
+}
+
+func initExprStepID(x Expr, steps map[string]int) Expr {
+	return MustMatchExpr(
+		x,
+		func(x *End) Expr {
+			x.ID = stepId(x.ID, "end", steps)
+			return x
+
+		},
+		func(x *Assign) Expr {
+			x.ID = stepId(x.ID, "assign", steps)
+			x.Val = initExprStepID(x.Val, steps)
+			return x
+		},
+		func(x *Apply) Expr {
+			x.ID = stepId(x.ID, "apply-"+x.Name, steps)
+			return x
+		},
+		func(x *Choose) Expr {
+			x.ID = stepId(x.ID, "choose", steps)
+			for i, expr := range x.Then {
+				x.Then[i] = initExprStepID(expr, steps)
+			}
+			for i, expr := range x.Else {
+				x.Else[i] = initExprStepID(expr, steps)
+			}
+			return x
+		},
+	)
+}
+
+func stepId(stepID, orName string, steps map[string]int) string {
+	if stepID == "" {
+		stepID = orName
+	}
+
+	if _, ok := steps[stepID]; !ok {
+		steps[stepID] = 0
+		return stepID
+	}
+
+	steps[stepID]++
+	return fmt.Sprintf("%s-%d", stepID, steps[stepID])
 }

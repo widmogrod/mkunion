@@ -13,17 +13,29 @@ type Execution struct {
 	Variables map[string]schema.Schema
 }
 
+//go:generate go run ../../cmd/mkunion/main.go -name=RunOption
+type (
+	ScheduleRun struct {
+		// CRON like definition
+		Interval string
+	}
+	DelayRun struct {
+		// DelayBySeconds
+		DelayBySeconds int64
+	}
+)
+
 //go:generate go run ../../cmd/mkunion/main.go -name=Command
 type (
 	Run struct {
-		//FlowID string
 		Flow  Worflow
 		Input schema.Schema
+		// Schedule run
+		RunOption RunOption
 	}
 	Callback struct {
 		CallbackID string
-		//Flow       Worflow
-		Result schema.Schema
+		Result     schema.Schema
 		//Fail       schema.Schema
 	}
 	TryRecover struct{}
@@ -52,6 +64,12 @@ type (
 		//Timeout    time.Duration
 		BaseState BaseState
 	}
+	// Scheduled is a state that is used to schedule execution of the flow, once or periodically
+	Scheduled struct {
+		// ExpectedRunTimestamp is server timestamp + DelayBySeconds
+		ExpectedRunTimestamp int64
+		BaseState            BaseState
+	}
 )
 
 type BaseState struct {
@@ -63,24 +81,8 @@ type BaseState struct {
 
 	// Default values
 	DefaultMaxRetries int64
-}
 
-func GetRunID(state State) string {
-	return MustMatchState(
-		state,
-		func(x *NextOperation) string {
-			return x.BaseState.RunID
-		},
-		func(x *Done) string {
-			return x.BaseState.RunID
-		},
-		func(x *Error) string {
-			return x.BaseState.RunID
-		},
-		func(x *Await) string {
-			return x.BaseState.RunID
-		},
-	)
+	RunOption RunOption
 }
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Worflow
@@ -176,21 +178,21 @@ type (
 	////
 	//Resume struct {
 	//	ID      string
-	//	Timeout time.Duration
+	//	Timeout time.DelayBySeconds
 	//	//Caller  schema.Schema
 	//	//Callee  schema.Schema
-	//	Options ResumeOptions
+	//	RunOption ResumeOptions
 	//}
 )
 
 type ResumeOptions struct {
 	Timeout int64
-	//Timeout time.Duration
+	//Timeout time.DelayBySeconds
 }
 
 type ApplyAwaitOptions struct {
 	Timeout int64
-	//Timeout time.Duration
+	//Timeout time.DelayBySeconds
 }
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Reshaper

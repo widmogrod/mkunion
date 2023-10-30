@@ -1,5 +1,7 @@
 package workflow
 
+import "time"
+
 var _ Dependency = (*DI)(nil)
 
 type DI struct {
@@ -10,6 +12,7 @@ type DI struct {
 
 	// Defaults
 	DefaultMaxRetries int64
+	MockTimeNow       *time.Time
 }
 
 func (di *DI) FindWorkflow(flowID string) (*Flow, error) {
@@ -34,4 +37,12 @@ func (di *DI) MaxRetries() int64 {
 	}
 
 	return 3
+}
+
+func (di *DI) TimeNow() time.Time {
+	if di.MockTimeNow != nil {
+		return *di.MockTimeNow
+	}
+
+	return time.Now()
 }
