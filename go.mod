@@ -13,6 +13,7 @@ require (
 	github.com/bxcodec/faker/v3 v3.8.1
 	github.com/fatih/structtag v1.2.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.2
 	github.com/urfave/cli/v2 v2.25.3

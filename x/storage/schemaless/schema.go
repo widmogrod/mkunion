@@ -53,7 +53,7 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 	newLog := NewAppendLog[schema.Schema]()
 
 	for _, record := range x.Saving {
-		stored, ok := s.store[record.ID+record.Type]
+		stored, ok := s.store[s.toKey(record)]
 		if !ok {
 			// new record, should have version 1
 			// and since few lines below we increment version
