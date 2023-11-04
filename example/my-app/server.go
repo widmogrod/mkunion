@@ -63,18 +63,28 @@ func main() {
 		func(state workflow.State) *machine.Machine[workflow.Command, workflow.State] {
 			return workflow.NewMachine(di, state)
 		},
-		func(cmd workflow.Command) (string, bool) {
+		func(cmd workflow.Command) (*predicate.WherePredicates, bool) {
 			if cmd == nil {
-				return "", false
+				return nil, false
 			}
 
 			switch cmd := cmd.(type) {
 			case *workflow.StopSchedule:
-				return cmd.RunID, true
+				return predicate.MustWhere(
+					`Data["workflow.Scheduled"].ParentRunID = :runID`,
+					predicate.ParamBinds{
+						":runID": schema.MkString(cmd.ParentRunID),
+					},
+				), true
 			case *workflow.ResumeSchedule:
-				return cmd.RunID, true
+				return predicate.MustWhere(
+					`Data["workflow.ScheduleStopped"].ParentRunID = :runID`,
+					predicate.ParamBinds{
+						":runID": schema.MkString(cmd.ParentRunID),
+					},
+				), true
 			default:
-				return "", false
+				return nil, false
 			}
 		},
 		func(state workflow.State) (string, bool) {
@@ -436,37 +446,47 @@ func NewService[CMD any, State any](
 	recordType string,
 	statesRepo *typedful.TypedRepoWithAggregator[State, any],
 	newMachine func(state State) *machine.Machine[CMD, State],
-	extractID func(CMD) (string, bool),
+	extractWhere func(CMD) (*predicate.WherePredicates, bool),
 	extractIDFromState func(State) (string, bool),
 ) *Service[CMD, State] {
 	return &Service[CMD, State]{
-		repo:                  statesRepo,
-		extractIDFromCommandF: extractID,
-		recordType:            recordType,
-		newMachine:            newMachine,
-		extractIDFromStateF:   extractIDFromState,
+		repo:                     statesRepo,
+		extractWhereFromCommandF: extractWhere,
+		recordType:               recordType,
+		newMachine:               newMachine,
+		extractIDFromStateF:      extractIDFromState,
 	}
 }
 
 type Service[CMD any, State any] struct {
-	repo                  *typedful.TypedRepoWithAggregator[State, any]
-	extractIDFromCommandF func(CMD) (string, bool)
-	extractIDFromStateF   func(State) (string, bool)
-	recordType            string
-	newMachine            func(state State) *machine.Machine[CMD, State]
+	repo                     *typedful.TypedRepoWithAggregator[State, any]
+	extractWhereFromCommandF func(CMD) (*predicate.WherePredicates, bool)
+	extractIDFromStateF      func(State) (string, bool)
+	recordType               string
+	newMachine               func(state State) *machine.Machine[CMD, State]
 }
 
 func (service *Service[CMD, State]) CreateOrUpdate(cmd CMD) (res State, err error) {
 	version := uint16(0)
-	recordID, foundAndUpdate := service.extractIDFromCommandF(cmd)
+	recordID := ""
+	where, foundAndUpdate := service.extractWhereFromCommandF(cmd)
 	if foundAndUpdate {
-		record, err := service.repo.Get(recordID, service.recordType)
+		records, err := service.repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[State]]{
+			RecordType: service.recordType,
+			Where:      where,
+			Limit:      1,
+		})
 		if err != nil {
 			return res, err
 		}
+		if len(records.Items) == 0 {
+			return res, fmt.Errorf("expected at least one record")
+		}
 
+		record := records.Items[0]
 		res = record.Data
 		version = record.Version
+		recordID = record.ID
 	}
 
 	work := service.newMachine(res)
@@ -483,6 +503,10 @@ func (service *Service[CMD, State]) CreateOrUpdate(cmd CMD) (res State, err erro
 			return res, fmt.Errorf("expected recordID in state")
 		}
 		recordID = saveId
+	}
+
+	if recordID == "" {
+		return res, fmt.Errorf("expected recordID in state")
 	}
 
 	err = service.repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{

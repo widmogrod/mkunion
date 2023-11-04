@@ -53,3 +53,12 @@ tbody tr:nth-of-type(even) {
 tbody tr:last-of-type {
     border-bottom: 2px solid #009879;
 }
+
+/* tables inside a table should be smaller */
+table table {
+    font-size: 0.8em;
+    min-width: 0;
+}
+table table th, td {
+    padding: 5px 10px;
+}

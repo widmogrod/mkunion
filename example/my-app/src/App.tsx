@@ -484,14 +484,14 @@ function App() {
                                             <span className="schedguled">workflow.Scheduled</span>
                                             <span>{JSON.stringify(data["workflow.Scheduled"].ExpectedRunTimestamp)}</span>
                                             <ListVariables data={data["workflow.Scheduled"].BaseState}/>
-                                            <StopSchedule runId={data["workflow.Scheduled"].BaseState.RunID}/>
+                                            <StopSchedule parentRunID={data["workflow.Scheduled"].ParentRunID}/>
                                         </>
                                     )
                                 } else if ("workflow.ScheduleStopped") {
                                     return <>
                                         <span className="stopped">workflow.ScheduleStopped</span>
                                         <ListVariables data={data["workflow.ScheduleStopped"].BaseState}/>
-                                        <ResumeSchedule runId={data["workflow.ScheduleStopped"].BaseState.RunID}/>
+                                        <ResumeSchedule parentRunID={data["workflow.ScheduleStopped"].ParentRunID}/>
                                     </>
                                 } else {
                                     return JSON.stringify(data)
@@ -562,13 +562,46 @@ function ListVariables(props: { data: workflow.BaseState }) {
 }
 
 function SchemaValue(props: { data: schema.Schema }) {
+    // check if props.data is an object
+    if (typeof props.data !== 'object') {
+        return <>{JSON.stringify(props.data)}</>
+    }
+
     if ("schema.String" in props.data) {
         return <>{props.data["schema.String"]}</>
     } else if ("schema.Binary" in props.data) {
         return <>binary</>
-    } else {
-        return <>{JSON.stringify(props.data)}</>
+    } else if ("schema.Map" in props.data) {
+        const mapData = props.data["schema.Map"];
+        const keys = Object.keys(mapData);
+
+        if (keys.length === 0) {
+            return null; // If the map is empty, return null (no table to display)
+        }
+
+        return (
+            <table>
+                <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Value</th>
+                </tr>
+                </thead>
+                <tbody>
+                {keys.map((key) => (
+                    <tr key={key}>
+                        <td className="key">{key}</td>
+                        <td>
+                            <SchemaValue data={mapData[key]}/>
+                        </td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+        );
     }
+
+    return <>{JSON.stringify(props.data)}</>
 }
 
 function PaginatedTable(props: { table: { Items: any[] }, mapData: (data: any) => any }) {
@@ -751,10 +784,10 @@ function CreateAttachment(props: { input: string }) {
 }
 
 
-function StopSchedule(props: { runId: string }) {
+function StopSchedule(props: { parentRunID: string }) {
     const cmd: workflow.Command = {
         "workflow.StopSchedule": {
-            RunID: props.runId,
+            ParentRunID: props.parentRunID,
         }
     }
 
@@ -772,10 +805,10 @@ function StopSchedule(props: { runId: string }) {
 
 }
 
-function ResumeSchedule(props: { runId: string }) {
+function ResumeSchedule(props: { parentRunID: string }) {
     const cmd: workflow.Command = {
         "workflow.ResumeSchedule": {
-            RunID: props.runId,
+            ParentRunID: props.parentRunID,
         }
     }
 
