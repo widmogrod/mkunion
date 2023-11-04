@@ -38,7 +38,14 @@ type (
 		Result     schema.Schema
 		//Fail       schema.Schema
 	}
-	TryRecover struct{}
+	TryRecover   struct{}
+	StopSchedule struct {
+		// Run can be stopped by user, or by system
+		RunID string
+	}
+	ResumeSchedule struct {
+		RunID string
+	}
 )
 
 //go:generate go run ../../cmd/mkunion/main.go -name=State
@@ -61,14 +68,16 @@ type (
 	Await struct {
 		CallbackID string
 		Timeout    int64
-		//Timeout    time.Duration
-		BaseState BaseState
+		BaseState  BaseState
 	}
 	// Scheduled is a state that is used to schedule execution of the flow, once or periodically
 	Scheduled struct {
 		// ExpectedRunTimestamp is server timestamp + DelayBySeconds
 		ExpectedRunTimestamp int64
 		BaseState            BaseState
+	}
+	ScheduleStopped struct {
+		BaseState BaseState
 	}
 )
 
@@ -159,8 +168,8 @@ type (
 	//	Catch []Expr
 	//}
 
-	//// Resume is like reverse callback, or Apply with await.
-	//// Resume waits for caller to provide a result, and then continue execution.
+	//// ResumeSchedule is like reverse callback, or Apply with await.
+	//// ResumeSchedule waits for caller to provide a result, and then continue execution.
 	//// ```
 	//// 	let res, err = await ReserveInventory(...)
 	//// 	if err {
@@ -176,7 +185,7 @@ type (
 	////   return({status: "rejected"})
 	//// }
 	////
-	//Resume struct {
+	//ResumeSchedule struct {
 	//	ID      string
 	//	Timeout time.DelayBySeconds
 	//	//Caller  schema.Schema

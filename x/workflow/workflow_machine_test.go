@@ -296,6 +296,46 @@ func TestMachine(t *testing.T) {
 							},
 						},
 					})
+			}).
+			ForkCase("stop execution", func(c *machine.Case[Command, State]) {
+				c.
+					GivenCommand(&StopSchedule{
+						RunID: runID,
+					}).
+					ThenState(&ScheduleStopped{
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "",
+							Flow:   &FlowRef{FlowID: "hello_world_flow"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+							},
+							ExprResult:        make(map[string]schema.Schema),
+							DefaultMaxRetries: 3,
+							RunOption: &DelayRun{
+								DelayBySeconds: 10,
+							},
+						},
+					}).
+					GivenCommand(&ResumeSchedule{
+						RunID: runID,
+					}).
+					ThenState(&Scheduled{
+						ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "",
+							Flow:   &FlowRef{FlowID: "hello_world_flow"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+							},
+							ExprResult:        make(map[string]schema.Schema),
+							DefaultMaxRetries: 3,
+							RunOption: &DelayRun{
+								DelayBySeconds: 10,
+							},
+						},
+					})
 			})
 	})
 	suite.Case("start execution that awaits for callback", func(c *machine.Case[Command, State]) {
@@ -326,7 +366,6 @@ func TestMachine(t *testing.T) {
 						Result:     schema.MkString("hello + world"),
 					}).
 					ThenState(&Done{
-
 						Result: schema.MkString("hello + world"),
 						BaseState: BaseState{
 							RunID:  runID,

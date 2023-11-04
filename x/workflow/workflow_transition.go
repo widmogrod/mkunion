@@ -19,6 +19,7 @@ var (
 	ErrFlowNotFound           = errors.New("flow not found")
 	ErrFlowNotSet             = errors.New("flow not set")
 	ErrIntervalParse          = errors.New("failed to parse interval")
+	ErrRunIDNotMatch          = errors.New("run id not match")
 )
 
 type Dependency interface {
@@ -152,6 +153,40 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 
 			return nil, ErrInvalidStateTransition
 		},
+		func(x *StopSchedule) (State, error) {
+			switch s := state.(type) {
+			case *Scheduled:
+				if s.BaseState.RunID != x.RunID {
+					return nil, ErrRunIDNotMatch
+				}
+
+				return &ScheduleStopped{
+					BaseState: s.BaseState,
+				}, nil
+			}
+
+			return nil, ErrInvalidStateTransition
+		},
+		func(x *ResumeSchedule) (State, error) {
+			switch s := state.(type) {
+			case *ScheduleStopped:
+				if s.BaseState.RunID != x.RunID {
+					return nil, ErrRunIDNotMatch
+				}
+
+				runTimestamp, err := completeRunOption(s.BaseState.RunOption, dep)
+				if err != nil {
+					return nil, err
+				}
+
+				return &Scheduled{
+					ExpectedRunTimestamp: runTimestamp,
+					BaseState:            s.BaseState,
+				}, nil
+			}
+
+			return nil, ErrInvalidStateTransition
+		},
 	)
 }
 
@@ -249,6 +284,9 @@ func GetBaseState(status State) BaseState {
 			return x.BaseState
 		},
 		func(x *Scheduled) BaseState {
+			return x.BaseState
+		},
+		func(x *ScheduleStopped) BaseState {
 			return x.BaseState
 		},
 	)
