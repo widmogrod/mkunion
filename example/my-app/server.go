@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	log "github.com/sirupsen/logrus"
+	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
 	_ "github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
@@ -55,6 +56,31 @@ func main() {
 			return fmt.Sprintf("run_id:%d", rand.Int())
 		},
 	}
+
+	srv := NewService[workflow.Command, workflow.State](
+		"process",
+		statesRepo,
+		func(state workflow.State) *machine.Machine[workflow.Command, workflow.State] {
+			return workflow.NewMachine(di, state)
+		},
+		func(cmd workflow.Command) (string, bool) {
+			if cmd == nil {
+				return "", false
+			}
+
+			switch cmd := cmd.(type) {
+			case *workflow.StopSchedule:
+				return cmd.RunID, true
+			case *workflow.ResumeSchedule:
+				return cmd.RunID, true
+			default:
+				return "", false
+			}
+		},
+		func(state workflow.State) (string, bool) {
+			return workflow.GetRunID(state), true
+		},
+	)
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -161,52 +187,29 @@ func main() {
 
 		return c.JSONBlob(http.StatusOK, result)
 	})
-	e.POST("/", func(c echo.Context) error {
-		data, err := io.ReadAll(c.Request().Body)
-		if err != nil {
-			log.Errorf("failed to read request body: %v", err)
-			return err
-		}
 
-		schemed, err := schema.FromJSON(data)
-		if err != nil {
-			log.Errorf("failed to parse request body: %v", err)
-			return err
-		}
-
-		cmd, err := schema.ToGoG[workflow.Command](schemed)
-		if err != nil {
-			log.Errorf("failed to convert to command: %v", err)
-			return err
-		}
-
-		work := workflow.NewMachine(di, nil)
-		err = work.Handle(cmd)
-		if err != nil {
-			log.Errorf("failed to handle command: %v", err)
-			return err
-		}
-
-		newState := work.State()
-		err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-			ID:   workflow.GetRunID(newState),
-			Type: "process",
-			Data: newState,
-		}))
-		if err != nil {
-			log.Errorf("failed to save state: %v", err)
-			return err
-		}
-
-		schemed = schema.FromGo(newState)
-		result, err := schema.ToJSON(schemed)
-		if err != nil {
-			log.Errorf("failed to convert to json: %v", err)
-			return err
-		}
-
-		return c.JSONBlob(http.StatusOK, result)
-	})
+	e.POST("/", TypedRequest(func(cmd workflow.Command) (workflow.State, error) {
+		return srv.CreateOrUpdate(cmd)
+		//work := workflow.NewMachine(di, nil)
+		//err := work.Handle(cmd)
+		//if err != nil {
+		//	log.Errorf("failed to handle command: %v", err)
+		//	return nil, err
+		//}
+		//
+		//newState := work.State()
+		//err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
+		//	ID:   workflow.GetRunID(newState),
+		//	Type: "process",
+		//	Data: newState,
+		//}))
+		//if err != nil {
+		//	log.Errorf("failed to save state: %v", err)
+		//	return nil, err
+		//}
+		//
+		//return newState, nil
+	}))
 
 	e.POST("/workflow-to-str", func(c echo.Context) error {
 		data, err := io.ReadAll(c.Request().Body)
@@ -230,30 +233,11 @@ func main() {
 		return c.String(http.StatusOK, workflow.ToStrWorkflow(program, 0))
 	})
 
-	e.POST("/callback", func(c echo.Context) error {
-		// validate payload
-		data, err := io.ReadAll(c.Request().Body)
-		if err != nil {
-			log.Errorf("failed to read request body: %v", err)
-			return err
-		}
-
-		schemed, err := schema.FromJSON(data)
-		if err != nil {
-			log.Errorf("failed to parse request body: %v", err)
-			return err
-		}
-
-		cmd, err := schema.ToGoG[workflow.Command](schemed)
-		if err != nil {
-			log.Errorf("failed to convert to command: %v", err)
-			return err
-		}
-
+	e.POST("/callback", TypedRequest(func(cmd workflow.Command) (workflow.State, error) {
 		callbackCMD, ok := cmd.(*workflow.Callback)
 		if !ok {
 			log.Errorf("expected callback command")
-			return errors.New("expected callback command")
+			return nil, errors.New("expected callback command")
 		}
 
 		// find callback id in database
@@ -270,12 +254,12 @@ func main() {
 		})
 		if err != nil {
 			log.Errorf("failed to find callback id: %v", err)
-			return err
+			return nil, err
 		}
 
 		if len(records.Items) == 0 {
 			log.Errorf("state, with callbackID not found")
-			return errors.New("state, with callbackID not found")
+			return nil, errors.New("state, with callbackID not found")
 		}
 
 		state := records.Items[0]
@@ -286,7 +270,7 @@ func main() {
 		err = work.Handle(cmd)
 		if err != nil {
 			log.Errorf("failed to handle command: %v", err)
-			return err
+			return nil, err
 		}
 
 		// save state
@@ -299,18 +283,11 @@ func main() {
 		}))
 		if err != nil {
 			log.Errorf("failed to save state: %v", err)
-			return err
+			return nil, err
 		}
 
-		schemed = schema.FromGo(newState)
-		result, err := schema.ToJSON(schemed)
-		if err != nil {
-			log.Errorf("failed to convert to json: %v", err)
-			return err
-		}
-
-		return c.JSONBlob(http.StatusOK, result)
-	})
+		return newState, nil
+	}))
 
 	proc := &taskqueue.FunctionProcessor[workflow.State]{
 		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
@@ -382,7 +359,7 @@ func main() {
 		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0 AND Version = 1`,
 		Filter: `Data[*]["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
 AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
-AND Version = 1`,
+`,
 	}
 	queue := taskqueue.NewInMemoryQueue[schemaless.Record[schema.Schema]]()
 	stream := store.AppendLog()
@@ -412,4 +389,112 @@ AND Version = 1`,
 
 	e.Logger.Fatal(e.Start(":8080"))
 
+}
+
+func TypedRequest[A, B any](handle func(x A) (B, error)) func(c echo.Context) error {
+	return func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		schemed, err := schema.FromJSON(data)
+		if err != nil {
+			log.Errorf("failed to parse request body: %v", err)
+			return err
+		}
+
+		in, err := schema.ToGoG[A](schemed)
+		if err != nil {
+			log.Errorf("failed to convert to command: %v", err)
+			return err
+		}
+
+		out, err := handle(in)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := any(out).(B); !ok {
+			var b B
+			return fmt.Errorf("TypedRequest: expected %T, got %T", b, out)
+		}
+
+		schemed = schema.FromGo(out)
+		result, err := schema.ToJSON(schemed)
+		if err != nil {
+			log.Errorf("failed to convert to json: %v", err)
+			return err
+		}
+
+		return c.JSONBlob(http.StatusOK, result)
+	}
+}
+
+func NewService[CMD any, State any](
+	recordType string,
+	statesRepo *typedful.TypedRepoWithAggregator[State, any],
+	newMachine func(state State) *machine.Machine[CMD, State],
+	extractID func(CMD) (string, bool),
+	extractIDFromState func(State) (string, bool),
+) *Service[CMD, State] {
+	return &Service[CMD, State]{
+		repo:                  statesRepo,
+		extractIDFromCommandF: extractID,
+		recordType:            recordType,
+		newMachine:            newMachine,
+		extractIDFromStateF:   extractIDFromState,
+	}
+}
+
+type Service[CMD any, State any] struct {
+	repo                  *typedful.TypedRepoWithAggregator[State, any]
+	extractIDFromCommandF func(CMD) (string, bool)
+	extractIDFromStateF   func(State) (string, bool)
+	recordType            string
+	newMachine            func(state State) *machine.Machine[CMD, State]
+}
+
+func (service *Service[CMD, State]) CreateOrUpdate(cmd CMD) (res State, err error) {
+	version := uint16(0)
+	recordID, foundAndUpdate := service.extractIDFromCommandF(cmd)
+	if foundAndUpdate {
+		record, err := service.repo.Get(recordID, service.recordType)
+		if err != nil {
+			return res, err
+		}
+
+		res = record.Data
+		version = record.Version
+	}
+
+	work := service.newMachine(res)
+	err = work.Handle(cmd)
+	if err != nil {
+		log.Errorf("failed to handle command: %v", err)
+		return res, err
+	}
+
+	newState := work.State()
+	if !foundAndUpdate {
+		saveId, ok := service.extractIDFromStateF(newState)
+		if !ok {
+			return res, fmt.Errorf("expected recordID in state")
+		}
+		recordID = saveId
+	}
+
+	err = service.repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
+		ID:      recordID,
+		Type:    service.recordType,
+		Data:    newState,
+		Version: version,
+	}))
+
+	if err != nil {
+		return res, err
+	}
+
+	return newState, nil
 }

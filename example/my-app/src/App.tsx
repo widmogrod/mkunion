@@ -482,10 +482,17 @@ function App() {
                                     return (
                                         <>
                                             <span className="schedguled">workflow.Scheduled</span>
-                                            <span>{JSON.stringify(data["workflow.Scheduled"].RunOption)}</span>
+                                            <span>{JSON.stringify(data["workflow.Scheduled"].ExpectedRunTimestamp)}</span>
                                             <ListVariables data={data["workflow.Scheduled"].BaseState}/>
+                                            <StopSchedule runId={data["workflow.Scheduled"].BaseState.RunID}/>
                                         </>
                                     )
+                                } else if ("workflow.ScheduleStopped") {
+                                    return <>
+                                        <span className="stopped">workflow.ScheduleStopped</span>
+                                        <ListVariables data={data["workflow.ScheduleStopped"].BaseState}/>
+                                        <ResumeSchedule runId={data["workflow.ScheduleStopped"].BaseState.RunID}/>
+                                    </>
                                 } else {
                                     return JSON.stringify(data)
                                 }
@@ -642,7 +649,6 @@ function CreateAttachment(props: { input: string }) {
                     Body: [
                         {
                             "workflow.Choose": {
-                                ID: "choose1",
                                 If: {
                                     "workflow.Compare": {
                                         Operation: "=",
@@ -663,7 +669,6 @@ function CreateAttachment(props: { input: string }) {
                                 Then: [
                                     {
                                         "workflow.End": {
-                                            ID: "end2",
                                             Result: {
                                                 "workflow.SetValue": {
                                                     Value: {
@@ -678,11 +683,9 @@ function CreateAttachment(props: { input: string }) {
                         },
                         {
                             "workflow.Assign": {
-                                ID: "assign1",
                                 VarOk: "res",
                                 Val: {
                                     "workflow.Apply": {
-                                        ID: "apply1",
                                         Name: "concat",
                                         Args: [
                                             {
@@ -704,7 +707,6 @@ function CreateAttachment(props: { input: string }) {
                         },
                         {
                             "workflow.End": {
-                                ID: "end1",
                                 Result: {
                                     "workflow.GetValue": {
                                         Path: "res",
@@ -746,4 +748,46 @@ function CreateAttachment(props: { input: string }) {
         Create attachment
     </button>
 
+}
+
+
+function StopSchedule(props: { runId: string }) {
+    const cmd: workflow.Command = {
+        "workflow.StopSchedule": {
+            RunID: props.runId,
+        }
+    }
+
+    const doIt = () => {
+        fetch('http://localhost:8080/', {
+            method: 'POST',
+            body: JSON.stringify(dediscriminateCommand(cmd)),
+        })
+            .then(res => res.json())
+    }
+
+    return <button onClick={doIt}>
+        Stop Schedule
+    </button>
+
+}
+
+function ResumeSchedule(props: { runId: string }) {
+    const cmd: workflow.Command = {
+        "workflow.ResumeSchedule": {
+            RunID: props.runId,
+        }
+    }
+
+    const doIt = () => {
+        fetch('http://localhost:8080/', {
+            method: 'POST',
+            body: JSON.stringify(dediscriminateCommand(cmd)),
+        })
+            .then(res => res.json())
+    }
+
+    return <button onClick={doIt}>
+        Resume Schedule
+    </button>
 }
