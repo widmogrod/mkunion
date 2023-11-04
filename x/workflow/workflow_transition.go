@@ -86,6 +86,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 
 					// schedule or delay execution
 					return &Scheduled{
+						ParentRunID:          context.RunID,
 						ExpectedRunTimestamp: runTimestamp,
 						BaseState:            context,
 					}, nil
@@ -156,12 +157,13 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		func(x *StopSchedule) (State, error) {
 			switch s := state.(type) {
 			case *Scheduled:
-				if s.BaseState.RunID != x.RunID {
+				if s.ParentRunID != x.ParentRunID {
 					return nil, ErrRunIDNotMatch
 				}
 
 				return &ScheduleStopped{
-					BaseState: s.BaseState,
+					ParentRunID: x.ParentRunID,
+					BaseState:   s.BaseState,
 				}, nil
 			}
 
@@ -170,7 +172,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		func(x *ResumeSchedule) (State, error) {
 			switch s := state.(type) {
 			case *ScheduleStopped:
-				if s.BaseState.RunID != x.RunID {
+				if s.ParentRunID != x.ParentRunID {
 					return nil, ErrRunIDNotMatch
 				}
 
@@ -181,6 +183,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 
 				return &Scheduled{
 					ExpectedRunTimestamp: runTimestamp,
+					ParentRunID:          x.ParentRunID,
 					BaseState:            s.BaseState,
 				}, nil
 			}

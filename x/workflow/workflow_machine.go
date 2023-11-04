@@ -40,11 +40,11 @@ type (
 	}
 	TryRecover   struct{}
 	StopSchedule struct {
-		// Run can be stopped by user, or by system
-		RunID string
+		// ParentRunID can be stopped by user, or by system
+		ParentRunID string
 	}
 	ResumeSchedule struct {
-		RunID string
+		ParentRunID string
 	}
 )
 
@@ -74,10 +74,14 @@ type (
 	Scheduled struct {
 		// ExpectedRunTimestamp is server timestamp + DelayBySeconds
 		ExpectedRunTimestamp int64
-		BaseState            BaseState
+		// ParentRunID is a reference to the original run, that scheduled this run and any between
+		// ParentRunID is used to track history of the execution, and is stable reference to the original run
+		ParentRunID string
+		BaseState   BaseState
 	}
 	ScheduleStopped struct {
-		BaseState BaseState
+		ParentRunID string
+		BaseState   BaseState
 	}
 )
 

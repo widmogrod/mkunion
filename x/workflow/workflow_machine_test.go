@@ -261,6 +261,7 @@ func TestMachine(t *testing.T) {
 				},
 			}).
 			ThenState(&Scheduled{
+				ParentRunID:          runID,
 				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 				BaseState: BaseState{
 					RunID:  runID,
@@ -300,9 +301,10 @@ func TestMachine(t *testing.T) {
 			ForkCase("stop execution", func(c *machine.Case[Command, State]) {
 				c.
 					GivenCommand(&StopSchedule{
-						RunID: runID,
+						ParentRunID: runID,
 					}).
 					ThenState(&ScheduleStopped{
+						ParentRunID: runID,
 						BaseState: BaseState{
 							RunID:  runID,
 							StepID: "",
@@ -318,9 +320,10 @@ func TestMachine(t *testing.T) {
 						},
 					}).
 					GivenCommand(&ResumeSchedule{
-						RunID: runID,
+						ParentRunID: runID,
 					}).
 					ThenState(&Scheduled{
+						ParentRunID:          runID,
 						ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 						BaseState: BaseState{
 							RunID:  runID,
