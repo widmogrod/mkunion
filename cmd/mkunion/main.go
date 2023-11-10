@@ -22,10 +22,9 @@ func main() {
 
 	var app *cli.App
 	app = &cli.App{
-		Name:                 mkunion.Program,
-		Description:          "VisitorGenerator union type and visitor pattern gor golang",
-		EnableBashCompletion: true,
-		//DefaultCommand:         "union",
+		Name:                   mkunion.Program,
+		Description:            "VisitorGenerator union type and visitor pattern gor golang",
+		EnableBashCompletion:   true,
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
@@ -41,7 +40,7 @@ func main() {
 			&cli.StringFlag{
 				Name:     "skip-extension",
 				Aliases:  []string{"skip-ext"},
-				Value:    "reducer_dfs,reducer_bfs,default_visitor,default_reducer",
+				Value:    "reducer_bfs,reducer_dfs,default_visitor,default_reducer",
 				Required: false,
 			},
 			&cli.StringFlag{
@@ -161,14 +160,13 @@ func main() {
 					skipExtension := strings.Split(c.String("skip-extension"), ",")
 					includeExtension := strings.Split(c.String("include-extension"), ",")
 					if len(includeExtension) > 0 {
-						for _, name := range includeExtension {
-							// skip if already included in skipExtension, remove from skipExtension
-							for i, skip := range skipExtension {
-								if skip == name {
+						for _, includeName := range includeExtension {
+							for i, skipName := range skipExtension {
+								if skipName == includeName {
+									log.Infof("include extension, that was skipName %s", includeName)
 									skipExtension = append(skipExtension[:i], skipExtension[i+1:]...)
 								}
 							}
-							// otherwise, cannot include extension other than existing ones
 						}
 					}
 
