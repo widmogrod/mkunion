@@ -6,12 +6,11 @@ import (
 )
 
 func TestDefaultReductionGenerator(t *testing.T) {
-	g := ReducerDefaultReductionGenerator{
-		Header:      Header,
-		Name:        "Tree",
-		PackageName: "visitor",
-		Types:       []string{"Branch", "Leaf"},
-	}
+	g := NewReducerDefaultReductionGenerator(
+		"Tree",
+		[]string{"Branch", "Leaf"},
+		NewHelper(WithPackageName("visitor")),
+	)
 
 	result, err := g.Generate()
 	assert.NoError(t, err)

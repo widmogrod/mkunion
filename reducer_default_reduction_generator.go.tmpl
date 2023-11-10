@@ -1,7 +1,7 @@
-{{ .Header }}
-package {{ .PackageName }}
-{{ $root := . }}
-{{- $name := .Name }}
+{{ RenderHeader -}}
+
+{{- $root := . -}}
+{{- $name := .Name -}}
 var _ {{ $name }}Reducer[any] = (*{{ $name }}DefaultReduction[any])(nil)
 
 type (
