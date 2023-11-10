@@ -6,12 +6,11 @@ import (
 )
 
 func TestOptionalVisitor(t *testing.T) {
-	g := VisitorDefaultGenerator{
-		Header:      Header,
-		Name:        "Vehicle",
-		Types:       []string{"Plane", "Car", "Boat"},
-		PackageName: "visitor",
-	}
+	g := NewVisitorDefaultGenerator(
+		"Vehicle",
+		[]string{"Plane", "Car", "Boat"},
+		NewHelper(WithPackageName("visitor")),
+	)
 
 	result, err := g.Generate()
 	assert.NoError(t, err)

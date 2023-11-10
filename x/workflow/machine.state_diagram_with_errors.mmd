@@ -1,0 +1,65 @@
+stateDiagram
+	[*] --> "*workflow.Done": "*workflow.Run"
+	[*] --> "*workflow.Scheduled": "*workflow.Run"
+	"*workflow.Scheduled" --> "*workflow.Done": "*workflow.Run"
+	"*workflow.Scheduled" --> "*workflow.ScheduleStopped": "*workflow.StopSchedule"
+	"*workflow.ScheduleStopped" --> "*workflow.Scheduled": "*workflow.ResumeSchedule"
+	[*] --> "*workflow.Await": "*workflow.Run"
+	"*workflow.Await" --> "*workflow.Done": "*workflow.Callback"
+ %% error=callback not match 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.Callback"
+	[*] --> "*workflow.Error": "*workflow.Run"
+ %% error=failed to find workflow hello_world_flow_non_existing: flow hello_world_flow_non_existing not found; flow not found 
+	[*] --> [*]: "❌*workflow.Run"
+	"*workflow.Error" --> "*workflow.Error": "*workflow.TryRecover"
+ %% error=invalid state transition 
+	[*] --> [*]: "❌*workflow.Callback"
+ %% error=invalid state transition 
+	"*workflow.Error" --> "*workflow.Error": "❌*workflow.StopSchedule"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Callback"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.Run"
+ %% error=invalid state transition 
+	[*] --> [*]: "❌*workflow.TryRecover"
+ %% error=already started 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.Run"
+ %% error=invalid state transition 
+	[*] --> [*]: "❌*workflow.ResumeSchedule"
+ %% error=invalid state transition 
+	[*] --> [*]: "❌*workflow.StopSchedule"
+ %% error=already started 
+	"*workflow.Error" --> "*workflow.Error": "❌*workflow.Run"
+	"*workflow.Error" --> "*workflow.Done": "*workflow.TryRecover"
+ %% error=flow not set 
+	[*] --> [*]: "❌*workflow.Run"
+ %% error=invalid state transition 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.TryRecover"
+ %% error=invalid state transition 
+	"*workflow.Error" --> "*workflow.Error": "❌*workflow.ResumeSchedule"
+ %% error=invalid state transition 
+	"*workflow.Scheduled" --> "*workflow.Scheduled": "❌*workflow.Callback"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.StopSchedule"
+ %% error=already started 
+	"*workflow.ScheduleStopped" --> "*workflow.ScheduleStopped": "❌*workflow.Run"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.ResumeSchedule"
+ %% error=invalid state transition 
+	"*workflow.Error" --> "*workflow.Error": "❌*workflow.Callback"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.TryRecover"
+ %% error=invalid state transition 
+	"*workflow.ScheduleStopped" --> "*workflow.ScheduleStopped": "❌*workflow.TryRecover"
+ %% error=invalid state transition 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.StopSchedule"
+ %% error=invalid state transition 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.ResumeSchedule"
+ %% error=invalid state transition 
+	"*workflow.ScheduleStopped" --> "*workflow.ScheduleStopped": "❌*workflow.Callback"
+ %% error=invalid state transition 
+	"*workflow.Scheduled" --> "*workflow.Scheduled": "❌*workflow.TryRecover"
+ %% error=invalid state transition 
+	"*workflow.ScheduleStopped" --> "*workflow.ScheduleStopped": "❌*workflow.StopSchedule"
+ %% error=invalid state transition 
+	"*workflow.Scheduled" --> "*workflow.Scheduled": "❌*workflow.ResumeSchedule"

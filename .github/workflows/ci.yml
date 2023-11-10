@@ -17,4 +17,24 @@ jobs:
 
       - run: go get -v -t -d ./...
       - run: go generate ./...
-      - run: go test -v ./...
+
+      # initiate docker-compose services
+      - run: |
+          pip install awscli-local
+      - run: dev/bootstrap.sh& sleep 10
+
+      # run tests
+      - run: |
+          set -e
+          retries=3
+          until [ $retries -le 0 ]; do
+            if go test -v ./...; then
+              break
+            fi
+            echo "Retrying Go tests ($retries retries left)..."
+            retries=$((retries - 1))
+          done
+          if [ $retries -eq 0 ]; then
+            echo "Go tests failed after all retries."
+            exit 1
+          fi

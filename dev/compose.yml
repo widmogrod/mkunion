@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
+    image: localstack/localstack:2.3.1
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+    environment:
+      - DEBUG=${DEBUG-}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - SERVICES=${SERVICES:-dynamodb,s3,sqs}
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./_volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    depends_on:
+      - opensearch
+
+
+  opensearch:
+    container_name: "${LOCALSTACK_DOCKER_NAME-opensearch}"
+    image: opensearchproject/opensearch:2.10.0
+    environment:
+      - node.name=opensearch
+      - cluster.name=opensearch-docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ports:
+      - 9200:9200 # REST API
+      - 9600:9600 # Performance Analyzer
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data01:/usr/share/opensearch/data
+
+
+volumes:
+  data01:
+    name: tmp
+    driver: local

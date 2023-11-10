@@ -1,12 +1,7 @@
-{{ .Header }}
-package {{ .PackageName }}
+{{ RenderHeader -}}
+{{ RenderImport "github.com/widmogrod/mkunion/x/schema" -}}
 
-import (
-	"github.com/widmogrod/mkunion/x/schema"
-)
-
-{{- $name := .Name }}
-
+{{- $name := .Name -}}
 func init() {
 	schema.RegisterUnionTypes({{ $name }}SchemaDef())
 }

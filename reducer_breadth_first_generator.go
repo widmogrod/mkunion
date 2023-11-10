@@ -8,21 +8,35 @@ import (
 
 var (
 	//go:embed reducer_breadth_first_generator.go.tmpl
-	breadthFirstTmpl   string
-	renderBreadthFirst = template.Must(template.New("main").Parse(breadthFirstTmpl))
+	breadthFirstTmpl string
 )
 
+func NewReducerBreadthFirstGenerator(
+	name variantName,
+	types []typeName,
+	branches map[typeName][]Branching,
+	helper *Helpers,
+) *ReducerBreadthFirstGenerator {
+	return &ReducerBreadthFirstGenerator{
+		Name:     name,
+		Types:    types,
+		Branches: branches,
+		Helper:   helper,
+		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(breadthFirstTmpl)),
+	}
+}
+
 type ReducerBreadthFirstGenerator struct {
-	Header      string
-	Name        variantName
-	Types       []typeName
-	PackageName string
-	Branches    map[typeName][]Branching
+	Name     variantName
+	Types    []typeName
+	Branches map[typeName][]Branching
+	Helper   *Helpers
+	template *template.Template
 }
 
 func (t *ReducerBreadthFirstGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := renderBreadthFirst.ExecuteTemplate(result, "main", t)
+	err := t.template.ExecuteTemplate(result, "main", t)
 	if err != nil {
 		return nil, err
 	}

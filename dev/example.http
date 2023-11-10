@@ -1,0 +1,34 @@
+# Dummy request to OS to see how it handles "schema.Map" fields
+POST localhost:9200/test-records-index/_search
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "range": {
+            "Data.schema.Map.Age": {
+              "gt": 20
+            }
+          }
+        },
+        {
+          "range": {
+            "Data.schema.Map.Age": {
+              "lt": 40
+            }
+          }
+        },
+        {
+          "term": {
+            "Type.keyword": "exampleRecord"
+          }
+        }
+      ]
+    }
+  },
+  "size": 2
+}
+
+

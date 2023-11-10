@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.17
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.19
 ```
 
 ### Create your first union
@@ -45,11 +45,7 @@ Go will generate few files for you in the same location as union defnition
 // source file
 example/tree_example.go
 // generated file
-example/tree_example_mkunion_tree_default_reducer.go
-example/tree_example_mkunion_tree_default_visitor.go
-example/tree_example_mkunion_tree_reducer_bfs.go
-example/tree_example_mkunion_tree_reducer_dfs.go
-example/tree_example_mkunion_tree_visitor.go
+example/tree_example_tree_gen.go
 ```
 Don't commit generated files to your repository. They are generated on the fly.
 In your CI/CD process you need to run go generate before testing & building your project.
@@ -473,6 +469,16 @@ go test ./...
 - [x] Introduce self documenting state machines through tests [README.md](x/machine/README.md)
 
 ### V1.18.x
+- [x] `x/shape` library is integrated in extracting types from golang
+- [x] `munion shape-export --output-dir --input-go-file  --type=typescript` extract types from go file and generate typescript types
+ 
+### V1.19.x
+- [x] Reduce number of generated defauls, to most essential ones: visitor - for interface, match functions, and schema for serialisation/deserialisation
+- [x] `mkunion` offers `include-extension` for backward compatibility with previous versions
+- [x] `mkunion` allows generation outside of `//go:generate` directive and now you can call it as `mkunion -i=you/path/to/file.go -i=you/path/to/other/file.go` 
+- [x] `mkunion` allows to generate code for multiple unions in one file. Use `--no-compact` to change behaviour to previous one
+
+### V1.20.x
 - [ ] Exhaustive pattern matching checks during generation
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!
@@ -487,3 +493,16 @@ go test ./...
 
 
 
+
+  
+## Development
+Setup containers and dependencies
+```go
+dev/bootstrap.sh
+```
+
+Run tests
+```go
+go generate ./...
+go test ./...
+```

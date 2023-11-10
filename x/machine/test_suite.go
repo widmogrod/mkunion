@@ -22,63 +22,11 @@ type Suite[TCommand, TState any] struct {
 	then      []*Case[TCommand, TState]
 }
 
-type Case[TCommand, TState any] struct {
-	name    string
-	command []TCommand
-	state   []TState
-	err     []error
-	then    [][]*Case[TCommand, TState]
-}
-
-func (c *Case[TCommand, TState]) next() {
-	var zeroCmd TCommand
-	var zeroState TState
-	var zeroErr error
-
-	c.command = append(c.command, zeroCmd)
-	c.state = append(c.state, zeroState)
-	c.err = append(c.err, zeroErr)
-	c.then = append(c.then, nil)
-}
-
-func (c *Case[TCommand, TState]) index() int {
-	return len(c.command) - 1
-}
-
-// GivenCommand starts building assertion that when command is applied to machine, it will result in given state or error.
-// Use this method always with ThenState or ThenStateAndError
-func (c *Case[TCommand, TState]) GivenCommand(cmd TCommand) *Case[TCommand, TState] {
-	c.next()
-	c.command[c.index()] = cmd
-	return c
-}
-
-// ThenState asserts that command applied to machine will result in given state
-func (c *Case[TCommand, TState]) ThenState(state TState) *Case[TCommand, TState] {
-	c.state[c.index()] = state
-	c.err[c.index()] = nil
-	return c
-}
-
-// ForkCase takes previous state of machine and allows to apply another case from this point onward
-// there can be many forks from one state
-func (c *Case[TCommand, TState]) ForkCase(name string, definition func(c *Case[TCommand, TState])) *Case[TCommand, TState] {
-	useCase := &Case[TCommand, TState]{name: name}
-	definition(useCase)
-	c.then[c.index()] = append(c.then[c.index()], useCase)
-	return c
-}
-
-func (c *Case[TCommand, TState]) ThenStateAndError(state TState, err error) {
-	c.state[c.index()] = state
-	c.err[c.index()] = err
-}
-
-func (suite *Suite[TCommand, TState]) Case(name string, init func(c *Case[TCommand, TState])) {
+func (suite *Suite[TCommand, TState]) Case(name string, definition func(c *Case[TCommand, TState])) {
 	useCase := &Case[TCommand, TState]{
 		name: name,
 	}
-	init(useCase)
+	definition(useCase)
 
 	suite.then = append(suite.then, useCase)
 }
@@ -97,7 +45,10 @@ func (suite *Suite[TCommand, TState]) assert(t *testing.T, c *Case[TCommand, TSt
 		for idx, cmd := range c.command {
 			state := m.State()
 			t.Run(fmt.Sprintf("Apply(cmd=%T, state=%T)", cmd, state), func(t *testing.T) {
+				c.commandOption[idx].before()
 				err := m.Handle(cmd)
+				c.commandOption[idx].after()
+
 				newState := m.State()
 
 				if c.err[idx] == nil {
@@ -111,9 +62,9 @@ func (suite *Suite[TCommand, TState]) assert(t *testing.T, c *Case[TCommand, TSt
 				suite.infer.Record(cmd, state, newState, err)
 
 				if len(c.then[idx]) > 0 {
-					for _, then := range c.then[idx] {
-						m := *m
-						suite.assert(t, then, &m)
+					for _, c2 := range c.then[idx] {
+						m2 := *m
+						suite.assert(t, c2, &m2)
 					}
 				}
 			})
@@ -132,11 +83,16 @@ func (suite *Suite[TCommand, TState]) Fuzzy(t *testing.T) {
 	m := suite.mkMachine()
 	var states []TState
 	var commands []TCommand
+	var commandOptions []*caseOption
 
 	then := suite.then
 	for len(then) > 0 {
 		c := then[0]
 		then = then[1:]
+
+		for _, opt := range c.commandOption {
+			commandOptions = append(commandOptions, opt)
+		}
 		for _, cmd := range c.command {
 			commands = append(commands, cmd)
 		}
@@ -154,7 +110,10 @@ func (suite *Suite[TCommand, TState]) Fuzzy(t *testing.T) {
 		//r.Seed(int64(seed))
 		_ = seed
 		// randomly select command and state
-		cmd := commands[r.Intn(len(commands))]
+		idx := r.Intn(len(commands))
+		commandOptions[idx].before()
+		cmd := commands[idx]
+		commandOptions[idx].after()
 
 		// with some chance keep previous state, or randomly select new state
 		// this helps to generate new states, that can succeed after applying command
@@ -238,4 +197,92 @@ func (suite *Suite[TCommand, TState]) SelfDocumentStateDiagram(t *testing.T, bas
 
 func (suite *Suite[TCommand, TState]) SelfDocumentTitle(title string) {
 	suite.infer.WithTitle(title)
+}
+
+type caseOption struct {
+	before func()
+	after  func()
+}
+
+var zeroCaseOption caseOption = caseOption{
+	before: func() {},
+	after:  func() {},
+}
+
+type InitCaseOptions func(o *caseOption)
+
+func WithBefore(f func()) InitCaseOptions {
+	return func(o *caseOption) {
+		o.before = f
+	}
+}
+
+func WithAfter(f func()) InitCaseOptions {
+	return func(o *caseOption) {
+		o.after = f
+	}
+}
+
+type Case[TCommand, TState any] struct {
+	name          string
+	command       []TCommand
+	commandOption []*caseOption
+	state         []TState
+	err           []error
+	then          [][]*Case[TCommand, TState]
+}
+
+func (c *Case[TCommand, TState]) next() {
+	var zeroCmd TCommand
+	var zeroState TState
+	var zeroErr error
+
+	c.commandOption = append(c.commandOption, &zeroCaseOption)
+	c.command = append(c.command, zeroCmd)
+	c.state = append(c.state, zeroState)
+	c.err = append(c.err, zeroErr)
+	c.then = append(c.then, nil)
+}
+
+func (c *Case[TCommand, TState]) index() int {
+	return len(c.command) - 1
+}
+
+// GivenCommand starts building assertion that when command is applied to machine, it will result in given state or error.
+// Use this method always with ThenState or ThenStateAndError
+func (c *Case[TCommand, TState]) GivenCommand(cmd TCommand, opts ...InitCaseOptions) *Case[TCommand, TState] {
+	c.next()
+
+	option := &caseOption{
+		before: func() {},
+		after:  func() {},
+	}
+	for _, o := range opts {
+		o(option)
+	}
+
+	c.commandOption[c.index()] = option
+	c.command[c.index()] = cmd
+	return c
+}
+
+// ThenState asserts that command applied to machine will result in given state
+func (c *Case[TCommand, TState]) ThenState(state TState) *Case[TCommand, TState] {
+	c.state[c.index()] = state
+	c.err[c.index()] = nil
+	return c
+}
+
+// ForkCase takes previous state of machine and allows to apply another case from this point onward
+// there can be many forks from one state
+func (c *Case[TCommand, TState]) ForkCase(name string, definition func(c *Case[TCommand, TState])) *Case[TCommand, TState] {
+	useCase := &Case[TCommand, TState]{name: name}
+	definition(useCase)
+	c.then[c.index()] = append(c.then[c.index()], useCase)
+	return c
+}
+
+func (c *Case[TCommand, TState]) ThenStateAndError(state TState, err error) {
+	c.state[c.index()] = state
+	c.err[c.index()] = err
 }

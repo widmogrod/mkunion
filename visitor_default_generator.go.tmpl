@@ -1,6 +1,6 @@
-{{ .Header }}
-package {{ .PackageName }}
-{{ $name := .Name }}
+{{ RenderHeader -}}
+
+{{ $name := .Name -}}
 type {{ $name }}DefaultVisitor[A any] struct {
 	Default A
 	{{- range .Types }}

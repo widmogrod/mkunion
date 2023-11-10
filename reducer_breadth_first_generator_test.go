@@ -6,19 +6,18 @@ import (
 )
 
 func TestReducerBreadthFirstGenerator(t *testing.T) {
-	g := ReducerBreadthFirstGenerator{
-		Header:      Header,
-		Name:        "Tree",
-		PackageName: "visitor",
-		Types:       []string{"Branch", "Leaf"},
-		Branches: map[string][]Branching{
+	g := NewReducerBreadthFirstGenerator(
+		"Tree",
+		[]string{"Branch", "Leaf"},
+		map[string][]Branching{
 			"Branch": {
 				{Lit: PtrStr("Lit")},
 				{List: PtrStr("List")},
 				{Map: PtrStr("Map")},
 			},
 		},
-	}
+		NewHelper(WithPackageName("visitor")),
+	)
 
 	result, err := g.Generate()
 	assert.NoError(t, err)

@@ -27,6 +27,7 @@ func MustDefineUnion[A any](xs ...A) *UnionVariants[A] {
 }
 
 var _ RuleMatcher = (*UnionVariants[any])(nil)
+var _ UnionInformationRule = (*UnionVariants[any])(nil)
 
 type UnionVariants[A any] struct {
 	variants    []A
@@ -34,7 +35,38 @@ type UnionVariants[A any] struct {
 	unique      map[string]struct{}
 	pathToUnion map[string]TypeMapDefinition
 
+	itype reflect.Type
+
 	lock sync.RWMutex
+}
+
+func (u *UnionVariants[A]) UnionType() reflect.Type {
+	if u.itype != nil {
+		return u.itype
+	}
+
+	var a *A = (*A)(nil)
+	u.itype = reflect.TypeOf(a).Elem()
+	return u.itype
+}
+
+func (u *UnionVariants[A]) IsUnionOrUnionType(t reflect.Type) bool {
+	if t.Implements(u.UnionType()) {
+		return true
+	}
+
+	for _, x := range u.reflections {
+		if x.Implements(t) {
+			//log.Println("yes implements", x.String(), t.String())
+			return true
+		}
+	}
+
+	return false
+}
+
+func (u *UnionVariants[A]) VariantsTypes() []reflect.Type {
+	return u.reflections
 }
 
 func (u *UnionVariants[A]) SchemaToUnionType(x any, schema Schema, config *goConfig) (Schema, bool) {
@@ -43,19 +75,31 @@ func (u *UnionVariants[A]) SchemaToUnionType(x any, schema Schema, config *goCon
 		return nil, false
 	}
 
-	for i := range u.variants {
-		// TODO: fix reflection!
-		if u.reflections[i] == reflect.TypeOf(x) {
-			return &Map{
-				Field: []Field{
-					{
-						Name:  config.variantName(u.reflections[i]),
-						Value: schema,
-					},
+	t := reflect.TypeOf(x)
+	if t.Implements(u.UnionType()) {
+		return &Map{
+			Field: []Field{
+				{
+					Name:  config.variantName(t),
+					Value: schema,
 				},
-			}, true
-		}
+			},
+		}, true
 	}
+
+	//for i := range u.variants {
+	//	// TODO: fix reflection!
+	//	if u.reflections[i] == t {
+	//		return &Map{
+	//			Field: []Field{
+	//				{
+	//					Name:  config.variantName(u.reflections[i]),
+	//					Value: schema,
+	//				},
+	//			},
+	//		}, true
+	//	}
+	//}
 
 	panic("schema.UnionVariants.SchemaToUnionType: unreachable")
 }

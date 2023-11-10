@@ -1,0 +1,38 @@
+stateDiagram
+	[*] --> "*workflow.Done": "*workflow.Run"
+	[*] --> "*workflow.Scheduled": "*workflow.Run"
+	"*workflow.Scheduled" --> "*workflow.Done": "*workflow.Run"
+	"*workflow.Scheduled" --> "*workflow.ScheduleStopped": "*workflow.StopSchedule"
+	"*workflow.ScheduleStopped" --> "*workflow.Scheduled": "*workflow.ResumeSchedule"
+	[*] --> "*workflow.Await": "*workflow.Run"
+	"*workflow.Await" --> "*workflow.Done": "*workflow.Callback"
+ %% error=callback not match 
+	[*] --> "*workflow.Error": "*workflow.Run"
+ %% error=failed to find workflow hello_world_flow_non_existing: flow hello_world_flow_non_existing not found; flow not found 
+	"*workflow.Error" --> "*workflow.Error": "*workflow.TryRecover"
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=cannot apply commands, when workflow is completed 
+ %% error=cannot apply commands, when workflow is completed 
+ %% error=invalid state transition 
+ %% error=already started 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=already started 
+	"*workflow.Error" --> "*workflow.Done": "*workflow.TryRecover"
+ %% error=flow not set 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=cannot apply commands, when workflow is completed 
+ %% error=already started 
+ %% error=cannot apply commands, when workflow is completed 
+ %% error=invalid state transition 
+ %% error=cannot apply commands, when workflow is completed 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=invalid state transition 
+ %% error=invalid state transition 

@@ -19,6 +19,7 @@ type goConfig struct {
 	registry       *Registry
 	useRegistry    bool
 	unionFormatter UnionFormatFunc
+	activeBuilder  any
 }
 
 func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
@@ -51,7 +52,7 @@ func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
 	return c.defaultMapDef
 }
 
-func (c *goConfig) Transform(x any, r *Map) Schema {
+func (c *goConfig) Transform(x any, r Schema) Schema {
 	for _, rule := range c.localRules {
 		v, ok := rule.SchemaToUnionType(x, r, c)
 		if ok {
@@ -142,11 +143,8 @@ func goToSchema(x any, c *goConfig) Schema {
 	}
 
 	switch y := x.(type) {
-	// This is a special case, when we don't want to serialise the schema itself.
-	// Such situation can happen in composite types, like recordInTest[T any] { ID string, Data T}
-	// and instance of such type is recordInTest[Schema] { ID: "foo", Data: Schema{...} }
 	case Schema:
-		return y
+		return c.Transform(x, y)
 
 	case nil:
 		return &None{}
@@ -408,23 +406,49 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 	return MustMatchSchemaR2(
 		x,
 		func(x *None) (any, error) {
+			// it means that schema was serialised, and when being deserialized,
+			// leaf variants, needs to be returned as is.
+			// serialize(Struct{K: V}) == deserialize(Map(K=>V))
+			// serialize(String(abc)) == deserialize(UnionMap(String => abc)
+			// serialize(List(Map{k=>v})) == deserialize(UnionMap(List => Map{k => v}))
+			if _, ok := c.activeBuilder.(*UnionMap); ok {
+				return x, nil
+			}
+
 			return nil, nil
 		},
 		func(x *Bool) (any, error) {
+			if _, ok := c.activeBuilder.(*UnionMap); ok {
+				return x, nil
+			}
+
 			return bool(*x), nil
 		},
 		func(x *Number) (any, error) {
+			if _, ok := c.activeBuilder.(*UnionMap); ok {
+				return x, nil
+			}
+
 			return float64(*x), nil
 		},
 		func(x *String) (any, error) {
+			if _, ok := c.activeBuilder.(*UnionMap); ok {
+				return x, nil
+			}
+
 			return string(*x), nil
 		},
 		func(x *Binary) (any, error) {
+			if _, ok := c.activeBuilder.(*UnionMap); ok {
+				return x, nil
+			}
+
 			return x.B, nil
 		},
 		func(x *List) (any, error) {
 			build := c.ListDefFor(x, path).NewListBuilder()
 			for _, v := range x.Items {
+				c.activeBuilder = build
 				value, err := schemaToGo(v, c, append(path, "[*]"))
 				if err != nil {
 					return nil, err
@@ -448,6 +472,7 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 			}
 
 			for _, field := range x.Field {
+				c.activeBuilder = build
 				value, err := schemaToGo(field.Value, c, append(path, field.Name))
 				if err != nil {
 					return nil, err
@@ -540,14 +565,14 @@ func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
 
 		if err != nil {
 			var a A
-			return a, fmt.Errorf("schema.ToGoG[%T] schema conversion failed. %w", a, err)
+			return a, fmt.Errorf("schema.ToGoG[%T] schema conversion failed. %w", any((*A)(nil)), err)
 		}
 	}
 
 	typed, ok := result.(A)
 	if !ok {
 		var a A
-		return a, fmt.Errorf("schema.ToGoG[%T] type assertion failed. %w", a, err)
+		return a, fmt.Errorf("schema.ToGoG[%T] type assertion failed on type %T", any((*A)(nil)), result)
 	}
 
 	return typed, nil

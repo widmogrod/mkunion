@@ -9,6 +9,8 @@ var defaultRegistry *Registry
 
 func init() {
 	defaultRegistry = NewRegistry()
+
+	RegisterUnionTypes(SchemaSchemaDef())
 }
 
 func RegisterRules(xs []RuleMatcher) {
@@ -43,6 +45,10 @@ func RegisterUnionTypes[A any](x *UnionVariants[A]) {
 	defaultRegistry.RegisterRules([]RuleMatcher{x})
 }
 
+func UnionOf(t reflect.Type) (reflect.Type, []reflect.Type, bool) {
+	return defaultRegistry.UnionOf(t)
+}
+
 func NewRegistry() *Registry {
 	return &Registry{
 		rules:          nil,
@@ -61,4 +67,16 @@ func (r *Registry) RegisterRules(xs []RuleMatcher) {
 
 func (r *Registry) SetUnionTypeFormatter(f UnionFormatFunc) {
 	r.unionFormatter = f
+}
+
+func (r *Registry) UnionOf(t reflect.Type) (reflect.Type, []reflect.Type, bool) {
+	for _, x := range r.rules {
+		if y, ok := x.(UnionInformationRule); ok {
+			if y.IsUnionOrUnionType(t) {
+				return y.UnionType(), y.VariantsTypes(), true
+			}
+		}
+	}
+
+	return nil, nil, false
 }

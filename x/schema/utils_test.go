@@ -1,6 +1,9 @@
 package schema
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestCompare(t *testing.T) {
 	useCases := map[string]struct {
@@ -228,6 +231,52 @@ func TestCompare(t *testing.T) {
 			if cmp != uc.cmp {
 				t.Fatalf("expected %d, got %d", uc.cmp, cmp)
 			}
+		})
+	}
+}
+
+func TestGet(t *testing.T) {
+	useCases := map[string]struct {
+		data     Schema
+		location string
+		expected Schema
+	}{
+		"nested map": {
+			data: MkMap(
+				MkField("Data", MkMap(
+					MkField("Age", MkInt(10)),
+				)),
+			),
+			location: "Data.Age",
+			expected: MkInt(10),
+		},
+		"nested serialised union # accessor": {
+			data: MkMap(
+				MkField("Data", MkMap(
+					MkField("schema.Map", MkMap(
+						MkField("Age", MkMap(
+							MkField("schema.Number", MkInt(10)),
+						)),
+					))))),
+			location: "Data[*].Age[*]",
+			expected: MkInt(10),
+		},
+		"nested serialised union direct accessor": {
+			data: MkMap(
+				MkField("Data", MkMap(
+					MkField("schema.Map", MkMap(
+						MkField("Age", MkMap(
+							MkField("schema.Number", MkInt(10)),
+						)),
+					))))),
+			location: `Data["schema.Map"].Age["schema.Number"]`,
+			expected: MkInt(10),
+		},
+	}
+	for name, uc := range useCases {
+		t.Run(name, func(t *testing.T) {
+			result := Get(uc.data, uc.location)
+			assert.Equal(t, uc.expected, result)
 		})
 	}
 }

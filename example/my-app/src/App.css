@@ -1,0 +1,64 @@
+.App {
+    text-align: left;
+    margin: 0 auto;
+    width: 90%;
+}
+
+span {
+    font-family: monospace;
+    background-color: aquamarine;
+    padding: 2px;
+    margin-right: 5px;
+}
+
+span.schedguled {
+    background-color: #b8975d;
+}
+span.error {
+    background-color: #de7773;
+}
+span.await {
+    background-color: #52d2d2;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 5px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 200px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+thead tr {
+    background-color: #009879;
+    color: #ffffff;
+    text-align: left;
+}
+
+th,
+td {
+    padding: 12px 15px;
+    vertical-align: top;
+}
+
+tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+tbody tr:last-of-type {
+    border-bottom: 2px solid #009879;
+}
+
+/* tables inside a table should be smaller */
+table table {
+    font-size: 0.8em;
+    min-width: 0;
+}
+table table th, td {
+    padding: 5px 10px;
+}
