@@ -434,9 +434,6 @@ export type ResumeSchedule = {
 	ParentRunID?: string,
 }
 
-export type ResumeOptions = {
-	Timeout?: number,
-}
 export type BaseState = {
 	Flow?: Worflow,
 	RunID?: string,
@@ -457,13 +454,16 @@ export type Execution = {
 export type ApplyAwaitOptions = {
 	Timeout?: number,
 }
+export type ResumeOptions = {
+	Timeout?: number,
+}
+export type FunctionOutput = {
+	Result?: schema.Schema,
+}
 export type FunctionInput = {
 	Name?: string,
 	CallbackID?: string,
 	Args?: any[],
-}
-export type FunctionOutput = {
-	Result?: schema.Schema,
 }
 
 //eslint-disable-next-line
