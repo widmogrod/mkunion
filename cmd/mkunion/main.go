@@ -200,7 +200,7 @@ func main() {
 						header.WriteString(helper.RenderBufferedImport())
 						log.Infof(helper.RenderBufferedImport())
 
-						fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + ".go"
+						fileName := baseName + "_" + strings.ToLower(visitor.Name) + "_gen.go"
 						log.Infof("writing %s", fileName)
 
 						header.Write(body.Bytes())
