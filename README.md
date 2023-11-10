@@ -45,11 +45,7 @@ Go will generate few files for you in the same location as union defnition
 // source file
 example/tree_example.go
 // generated file
-example/tree_example_mkunion_tree_default_reducer.go
-example/tree_example_mkunion_tree_default_visitor.go
-example/tree_example_mkunion_tree_reducer_bfs.go
-example/tree_example_mkunion_tree_reducer_dfs.go
-example/tree_example_mkunion_tree_visitor.go
+example/tree_example_tree_gen.go
 ```
 Don't commit generated files to your repository. They are generated on the fly.
 In your CI/CD process you need to run go generate before testing & building your project.
