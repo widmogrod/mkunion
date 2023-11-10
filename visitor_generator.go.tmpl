@@ -1,11 +1,7 @@
-{{ .Header }}
-package {{ .PackageName }}
+{{ RenderHeader -}}
+{{ RenderImport "github.com/widmogrod/mkunion/f" -}}
 
-import (
-	"github.com/widmogrod/mkunion/f"
-)
-
-{{ $name := .Name }}
+{{- $name := .Name }}
 type {{ $name }}Visitor interface {
 	{{- range .Types }}
 	Visit{{ . }}(v *{{ . }}) any

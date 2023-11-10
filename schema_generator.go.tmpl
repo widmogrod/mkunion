@@ -1,9 +1,5 @@
-{{ .Header }}
-package {{ .PackageName }}
-
-import (
-	"github.com/widmogrod/mkunion/x/schema"
-)
+{{ RenderHeader -}}
+{{ RenderImport "github.com/widmogrod/mkunion/x/schema" -}}
 
 {{- $name := .Name }}
 

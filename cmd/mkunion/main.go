@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -60,6 +61,11 @@ func main() {
 				Required: false,
 				Value:    false,
 			},
+			&cli.BoolFlag{
+				Name:     "compact-to-one-file",
+				Aliases:  []string{"compact"},
+				Required: false,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if c.Bool("verbose") {
@@ -104,12 +110,16 @@ func main() {
 						types = inferred.PossibleVariantsTypes(unionName)
 					}
 
-					visitor := mkunion.VisitorGenerator{
-						Header:      mkunion.Header,
-						Name:        unionName,
-						Types:       types,
-						PackageName: inferred.PackageName,
+					options := []mkunion.GenerateOption{
+						mkunion.WithPackageName(inferred.PackageName),
 					}
+					if c.Bool("compact-to-one-file") {
+						options = append(options, mkunion.WithBufferedImports())
+					}
+
+					helper := mkunion.NewHelper(options...)
+					visitor := mkunion.NewVisitorGenerator(unionName, types, helper)
+					schema := mkunion.NewSchemaGenerator(visitor.Name, visitor.Types, helper)
 
 					depthFirstGenerator := mkunion.ReducerDepthFirstGenerator{
 						Header:      mkunion.Header,
@@ -141,20 +151,13 @@ func main() {
 						PackageName: inferred.PackageName,
 					}
 
-					schema := mkunion.SchemaGenerator{
-						Header:      mkunion.Header,
-						Name:        visitor.Name,
-						Types:       visitor.Types,
-						PackageName: inferred.PackageName,
-					}
-
 					generators := map[string]mkunion.Generator{
-						"visitor":         &visitor,
+						"visitor":         visitor,
 						"reducer_dfs":     &depthFirstGenerator,
 						"reducer_bfs":     &breadthFirstGenerator,
 						"default_reducer": &defaultReduction,
 						"default_visitor": &defaultVisitor,
-						"schema":          &schema,
+						"schema":          schema,
 					}
 
 					skipExtension := strings.Split(c.String("skip-extension"), ",")
@@ -175,16 +178,44 @@ func main() {
 						delete(generators, name)
 					}
 
-					for name, g := range generators {
-						b, err := g.Generate()
+					if c.Bool("compact-to-one-file") {
+						body := bytes.Buffer{}
+						for _, g := range generators {
+							b, err := g.Generate()
+							if err != nil {
+								return err
+							}
+							body.Write(b)
+						}
+
+						header := bytes.Buffer{}
+						header.WriteString(helper.RenderBufferedHeader())
+						header.WriteString(helper.RenderBufferedImport())
+						log.Infof(helper.RenderBufferedImport())
+
+						fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + ".go"
+						log.Infof("writing %s", fileName)
+
+						header.Write(body.Bytes())
+
+						err = os.WriteFile(path.Join(cwd, fileName), header.Bytes(), 0644)
 						if err != nil {
 							return err
 						}
-						fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
-						log.Infof("writing %s", fileName)
-						err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
-						if err != nil {
-							return err
+					} else {
+						for name, g := range generators {
+							b, err := g.Generate()
+							if err != nil {
+								return err
+							}
+
+							fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
+							log.Infof("writing %s", fileName)
+
+							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
+							if err != nil {
+								return err
+							}
 						}
 					}
 				}
