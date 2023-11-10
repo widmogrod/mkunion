@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.17
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.19
 ```
 
 ### Create your first union
@@ -477,6 +477,11 @@ go test ./...
 - [x] `munion shape-export --output-dir --input-go-file  --type=typescript` extract types from go file and generate typescript types
  
 ### V1.19.x
+- [x] Reduce number of generated defauls, to most essential ones: visitor - for interface, match functions, and schema for serialisation/deserialisation
+- [x] `mkunion` offers `include-extension` for backward compatibility with previous versions
+- [x] `mkunion` allows generation outside of `//go:generate` directive and now you can call it as `mkunion -i=you/path/to/file.go -i=you/path/to/other/file.go` 
+
+### V1.20.x
 - [ ] Exhaustive pattern matching checks during generation
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!
