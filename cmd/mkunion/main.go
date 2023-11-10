@@ -142,19 +142,14 @@ func main() {
 						PackageName: inferred.PackageName,
 					}
 
-					defaultVisitor := mkunion.VisitorDefaultGenerator{
-						Header:      mkunion.Header,
-						Name:        visitor.Name,
-						Types:       visitor.Types,
-						PackageName: inferred.PackageName,
-					}
+					defaultVisitor := mkunion.NewVisitorDefaultGenerator(visitor.Name, visitor.Types, helper)
 
 					generators := map[string]mkunion.Generator{
 						"visitor":         visitor,
-						"reducer_dfs":     &depthFirstGenerator,
+						"reducer_dfs":     depthFirstGenerator,
 						"reducer_bfs":     &breadthFirstGenerator,
 						"default_reducer": &defaultReduction,
-						"default_visitor": &defaultVisitor,
+						"default_visitor": defaultVisitor,
 						"schema":          schema,
 					}
 

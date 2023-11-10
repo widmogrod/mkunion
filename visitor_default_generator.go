@@ -8,20 +8,28 @@ import (
 
 var (
 	//go:embed visitor_default_generator.go.tmpl
-	optionalVisitorTmpl   string
-	optionalVisitorRender = template.Must(template.New("main").Parse(optionalVisitorTmpl))
+	optionalVisitorTmpl string
 )
 
+func NewVisitorDefaultGenerator(name string, types []string, helper *Helpers) *VisitorDefaultGenerator {
+	return &VisitorDefaultGenerator{
+		Name:     name,
+		Types:    types,
+		Helper:   helper,
+		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(optionalVisitorTmpl)),
+	}
+}
+
 type VisitorDefaultGenerator struct {
-	Header      string
-	Name        string
-	Types       []string
-	PackageName string
+	Name     string
+	Types    []string
+	Helper   *Helpers
+	template *template.Template
 }
 
 func (g *VisitorDefaultGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := optionalVisitorRender.ExecuteTemplate(result, "main", g)
+	err := g.template.ExecuteTemplate(result, "main", g)
 	if err != nil {
 		return nil, err
 	}

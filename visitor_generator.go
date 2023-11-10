@@ -138,12 +138,10 @@ func NewVisitorGenerator(name string, types []string, helper *Helpers) *VisitorG
 }
 
 type VisitorGenerator struct {
-	Header      string
-	Types       []string
-	Name        string
-	PackageName string
-	Helper      *Helpers
-	template    *template.Template
+	Types    []string
+	Name     string
+	Helper   *Helpers
+	template *template.Template
 }
 
 func (g *VisitorGenerator) Generate() ([]byte, error) {
