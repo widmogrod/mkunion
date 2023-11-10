@@ -105,6 +105,14 @@ func (f *InferredInfo) ForVariantType(name string, types []string) map[string][]
 	return result
 }
 
+func (f *InferredInfo) PossibleUnionTypes() []string {
+	result := make([]string, 0)
+	for unionName := range f.possibleVariantTypes {
+		result = append(result, unionName)
+	}
+	return result
+}
+
 func (f *InferredInfo) PossibleVariantsTypes(unionName string) []string {
 	return f.possibleVariantTypes[unionName]
 }
