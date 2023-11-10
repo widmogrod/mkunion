@@ -503,6 +503,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			}
 
 			input := &FunctionInput{
+				Name: x.Name,
 				Args: args,
 			}
 			// IF function is async, we need to generate a callback ID
