@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/sashabaranov/go-openai"
+	"github.com/sashabaranov/go-openai/jsonschema"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -19,9 +21,27 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
+)
+
+//go:generate mkunion -name=ChatCMD
+type (
+	UserMessage struct {
+		Message string
+	}
+)
+
+//go:generate mkunion -name=ChatResult
+type (
+	SystemResponse struct {
+		Message   string
+		ToolCalls []openai.ToolCall
+	}
 )
 
 func main() {
+	schema.RegisterUnionTypes(ChatResultSchemaDef())
+	schema.RegisterUnionTypes(ChatCMDSchemaDef())
 	schema.RegisterRules([]schema.RuleMatcher{
 		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(workflow.BaseState{})),
 		schema.WhenPath([]string{"*", "Await"}, schema.UseStruct(&workflow.ApplyAwaitOptions{})),
@@ -56,6 +76,8 @@ func main() {
 			return fmt.Sprintf("run_id:%d", rand.Int())
 		},
 	}
+
+	oaic := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
 
 	srv := NewService[workflow.Command, workflow.State](
 		"process",
@@ -96,6 +118,69 @@ func main() {
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 	}))
+	e.POST("/message", TypedRequest(func(x ChatCMD) (ChatResult, error) {
+		log.Infof("x: %+v", x)
+		ctx := context.Background()
+		result, err := oaic.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+			Model: openai.GPT3Dot5Turbo1106,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: x.(*UserMessage).Message,
+				},
+			},
+			Tools: []openai.Tool{
+				{
+					Type: openai.ToolTypeFunction,
+					Function: openai.FunctionDefinition{
+						Name:        "list_workflows",
+						Description: "list all workflows that are being executed",
+						Parameters: &jsonschema.Definition{
+							Type: jsonschema.Object,
+							Properties: map[string]jsonschema.Definition{
+								"count": {
+									Type:        jsonschema.Number,
+									Description: "total number of words in sentence",
+								},
+								"words": {
+									Type:        jsonschema.Array,
+									Description: "list of words in sentence",
+									Items: &jsonschema.Definition{
+										Type: jsonschema.String,
+									},
+								},
+								"enumTest": {
+									Type: jsonschema.String,
+									Enum: []string{"hello", "world"},
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			log.Errorf("failed to create chat completion: %v", err)
+			return nil, err
+		}
+
+		log.Infof("result: %+v", result)
+		return &SystemResponse{
+			Message:   result.Choices[0].Message.Content,
+			ToolCalls: result.Choices[0].Message.ToolCalls,
+		}, nil
+	}))
+
+	e.POST("/func", TypedRequest(func(x *workflow.FunctionInput) (*workflow.FunctionOutput, error) {
+		fn, err := di.FindFunction(x.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		return fn(x)
+	}))
+
 	e.POST("/flow", func(c echo.Context) error {
 		data, err := io.ReadAll(c.Request().Body)
 		if err != nil {

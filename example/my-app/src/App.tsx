@@ -3,6 +3,7 @@ import './App.css';
 import * as workflow from './workflow/workflow'
 import {dediscriminateCommand} from './workflow/workflow'
 import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
+import {Chat} from "./Chat";
 
 function flowCreate(flow: workflow.Flow) {
     console.log("save-flow", flow)
@@ -23,6 +24,7 @@ function flowToString(flow: workflow.Worflow) {
 function App() {
     const [state, setState] = React.useState({} as workflow.State);
     const [input, setInput] = React.useState("hello");
+    const [output, setOutput] = React.useState("" as any);
 
     type record = {
         ID: string,
@@ -433,9 +435,14 @@ function App() {
 
                 <CreateAttachment input={input}/>
 
+                <CallConcat name={input} onResult={(x) => setOutput(JSON.stringify(x))}/>
+
                 <table>
                     <tbody>
                     <tr>
+                        <td>
+                            <Chat name="John"/>
+                        </td>
                         <td>
                             <PaginatedTable table={flows} mapData={(data: workflow.Flow) => {
                                 return <WorkflowToString flow={{
@@ -500,7 +507,8 @@ function App() {
                         </td>
                         <td>
                             <img src={`data:image/jpeg;base64,${image}`} alt=""/>
-                            <pre>{JSON.stringify(state, null, 2)} </pre>
+                            <pre>Func output: {output}</pre>
+                            <pre>Workflow output: {JSON.stringify(state, null, 2)} </pre>
                         </td>
                     </tr>
                     </tbody>
@@ -822,5 +830,32 @@ function ResumeSchedule(props: { parentRunID: string }) {
 
     return <button onClick={doIt}>
         Resume Schedule
+    </button>
+}
+
+function CallConcat(props: { name: string, onResult: (x: workflow.FunctionOutput) => void }) {
+    const cmd: workflow.FunctionInput = {
+        Name: "concat",
+        Args: [
+            {
+                "schema.String": "hello ",
+            },
+            {
+                "schema.String": props.name,
+            },
+        ]
+    }
+
+    const doIt = () => {
+        fetch('http://localhost:8080/func', {
+            method: 'POST',
+            body: JSON.stringify(cmd),
+        })
+            .then(res => res.json())
+            .then(data => props.onResult(data as workflow.FunctionOutput))
+    }
+
+    return <button onClick={doIt}>
+        Concat with {props.name}
     </button>
 }
