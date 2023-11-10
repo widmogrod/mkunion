@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
@@ -62,8 +63,7 @@ func main() {
 				Value:    false,
 			},
 			&cli.BoolFlag{
-				Name:     "compact-to-one-file",
-				Aliases:  []string{"compact"},
+				Name:     "no-compact",
 				Required: false,
 			},
 		},
@@ -113,7 +113,8 @@ func main() {
 					options := []mkunion.GenerateOption{
 						mkunion.WithPackageName(inferred.PackageName),
 					}
-					if c.Bool("compact-to-one-file") {
+
+					if !c.Bool("no-compact") {
 						options = append(options, mkunion.WithBufferedImports())
 					}
 
@@ -166,14 +167,32 @@ func main() {
 						delete(generators, name)
 					}
 
-					if c.Bool("compact-to-one-file") {
-						body := bytes.Buffer{}
-						for _, g := range generators {
+					if c.Bool("no-compact") {
+
+						for name, g := range generators {
 							b, err := g.Generate()
 							if err != nil {
 								return err
 							}
+
+							fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
+							log.Infof("writing %s", fileName)
+
+							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
+							if err != nil {
+								return err
+							}
+						}
+					} else {
+						body := bytes.Buffer{}
+						for name, g := range generators {
+							b, err := g.Generate()
+							if err != nil {
+								return err
+							}
+							body.WriteString(fmt.Sprintf("//mkunion-extension:%s\n", name))
 							body.Write(b)
+							body.WriteString("\n")
 						}
 
 						header := bytes.Buffer{}
@@ -189,21 +208,6 @@ func main() {
 						err = os.WriteFile(path.Join(cwd, fileName), header.Bytes(), 0644)
 						if err != nil {
 							return err
-						}
-					} else {
-						for name, g := range generators {
-							b, err := g.Generate()
-							if err != nil {
-								return err
-							}
-
-							fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
-							log.Infof("writing %s", fileName)
-
-							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
-							if err != nil {
-								return err
-							}
 						}
 					}
 				}

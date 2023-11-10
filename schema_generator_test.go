@@ -15,8 +15,6 @@ package visitor
 
 import "github.com/widmogrod/mkunion/x/schema"
 
-
-
 func init() {
 	schema.RegisterUnionTypes(VehicleSchemaDef())
 }

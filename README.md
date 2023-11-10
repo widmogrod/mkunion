@@ -480,6 +480,7 @@ go test ./...
 - [x] Reduce number of generated defauls, to most essential ones: visitor - for interface, match functions, and schema for serialisation/deserialisation
 - [x] `mkunion` offers `include-extension` for backward compatibility with previous versions
 - [x] `mkunion` allows generation outside of `//go:generate` directive and now you can call it as `mkunion -i=you/path/to/file.go -i=you/path/to/other/file.go` 
+- [x] `mkunion` allows to generate code for multiple unions in one file. Use `--no-compact` to change behaviour to previous one
 
 ### V1.20.x
 - [ ] Exhaustive pattern matching checks during generation
