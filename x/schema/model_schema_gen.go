@@ -3,6 +3,231 @@ package schema
 
 import "github.com/widmogrod/mkunion/f"
 
+// mkunion-extension:reducer_bfs
+var _ SchemaVisitor = (*SchemaBreadthFirstVisitor[any])(nil)
+
+type SchemaBreadthFirstVisitor[A any] struct {
+	stop   bool
+	result A
+	reduce SchemaReducer[A]
+
+	queue         []Schema
+	visited       map[Schema]bool
+	shouldExecute map[Schema]bool
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitNone(v *None) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceNone(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitBool(v *Bool) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceBool(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitNumber(v *Number) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceNumber(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitString(v *String) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceString(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitBinary(v *Binary) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceBinary(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitList(v *List) any {
+	d.queue = append(d.queue, v)
+	for idx := range v.Items {
+		d.queue = append(d.queue, v.Items[idx])
+	}
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceList(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitMap(v *Map) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceMap(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) execute() {
+	for len(d.queue) > 0 {
+		if d.stop {
+			return
+		}
+
+		i := d.pop()
+		if d.visited[i] {
+			continue
+		}
+		d.visited[i] = true
+		d.shouldExecute[i] = true
+		i.AcceptSchema(d)
+	}
+
+	return
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) pop() Schema {
+	i := d.queue[0]
+	d.queue = d.queue[1:]
+	return i
+}
+
+func ReduceSchemaBreadthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
+	reducer := &SchemaBreadthFirstVisitor[A]{
+		result:        init,
+		reduce:        r,
+		queue:         []Schema{v},
+		visited:       make(map[Schema]bool),
+		shouldExecute: make(map[Schema]bool),
+	}
+
+	_ = v.AcceptSchema(reducer)
+
+	return reducer.result
+}
+
+// mkunion-extension:default_reducer
+var _ SchemaReducer[any] = (*SchemaDefaultReduction[any])(nil)
+
+type (
+	SchemaDefaultReduction[A any] struct {
+		PanicOnFallback      bool
+		DefaultStopReduction bool
+		OnNone               func(x *None, agg A) (result A, stop bool)
+		OnBool               func(x *Bool, agg A) (result A, stop bool)
+		OnNumber             func(x *Number, agg A) (result A, stop bool)
+		OnString             func(x *String, agg A) (result A, stop bool)
+		OnBinary             func(x *Binary, agg A) (result A, stop bool)
+		OnList               func(x *List, agg A) (result A, stop bool)
+		OnMap                func(x *Map, agg A) (result A, stop bool)
+	}
+)
+
+func (t *SchemaDefaultReduction[A]) ReduceNone(x *None, agg A) (result A, stop bool) {
+	if t.OnNone != nil {
+		return t.OnNone(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceBool(x *Bool, agg A) (result A, stop bool) {
+	if t.OnBool != nil {
+		return t.OnBool(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceNumber(x *Number, agg A) (result A, stop bool) {
+	if t.OnNumber != nil {
+		return t.OnNumber(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceString(x *String, agg A) (result A, stop bool) {
+	if t.OnString != nil {
+		return t.OnString(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceBinary(x *Binary, agg A) (result A, stop bool) {
+	if t.OnBinary != nil {
+		return t.OnBinary(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceList(x *List, agg A) (result A, stop bool) {
+	if t.OnList != nil {
+		return t.OnList(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceMap(x *Map, agg A) (result A, stop bool) {
+	if t.OnMap != nil {
+		return t.OnMap(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
 // mkunion-extension:default_visitor
 type SchemaDefaultVisitor[A any] struct {
 	Default  A
@@ -257,229 +482,4 @@ func ReduceSchemaDepthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
 	_ = v.AcceptSchema(reducer)
 
 	return reducer.result
-}
-
-// mkunion-extension:reducer_bfs
-var _ SchemaVisitor = (*SchemaBreadthFirstVisitor[any])(nil)
-
-type SchemaBreadthFirstVisitor[A any] struct {
-	stop   bool
-	result A
-	reduce SchemaReducer[A]
-
-	queue         []Schema
-	visited       map[Schema]bool
-	shouldExecute map[Schema]bool
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitNone(v *None) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceNone(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitBool(v *Bool) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceBool(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitNumber(v *Number) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceNumber(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitString(v *String) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceString(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitBinary(v *Binary) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceBinary(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitList(v *List) any {
-	d.queue = append(d.queue, v)
-	for idx := range v.Items {
-		d.queue = append(d.queue, v.Items[idx])
-	}
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceList(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitMap(v *Map) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceMap(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) execute() {
-	for len(d.queue) > 0 {
-		if d.stop {
-			return
-		}
-
-		i := d.pop()
-		if d.visited[i] {
-			continue
-		}
-		d.visited[i] = true
-		d.shouldExecute[i] = true
-		i.AcceptSchema(d)
-	}
-
-	return
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) pop() Schema {
-	i := d.queue[0]
-	d.queue = d.queue[1:]
-	return i
-}
-
-func ReduceSchemaBreadthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
-	reducer := &SchemaBreadthFirstVisitor[A]{
-		result:        init,
-		reduce:        r,
-		queue:         []Schema{v},
-		visited:       make(map[Schema]bool),
-		shouldExecute: make(map[Schema]bool),
-	}
-
-	_ = v.AcceptSchema(reducer)
-
-	return reducer.result
-}
-
-// mkunion-extension:default_reducer
-var _ SchemaReducer[any] = (*SchemaDefaultReduction[any])(nil)
-
-type (
-	SchemaDefaultReduction[A any] struct {
-		PanicOnFallback      bool
-		DefaultStopReduction bool
-		OnNone               func(x *None, agg A) (result A, stop bool)
-		OnBool               func(x *Bool, agg A) (result A, stop bool)
-		OnNumber             func(x *Number, agg A) (result A, stop bool)
-		OnString             func(x *String, agg A) (result A, stop bool)
-		OnBinary             func(x *Binary, agg A) (result A, stop bool)
-		OnList               func(x *List, agg A) (result A, stop bool)
-		OnMap                func(x *Map, agg A) (result A, stop bool)
-	}
-)
-
-func (t *SchemaDefaultReduction[A]) ReduceNone(x *None, agg A) (result A, stop bool) {
-	if t.OnNone != nil {
-		return t.OnNone(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceBool(x *Bool, agg A) (result A, stop bool) {
-	if t.OnBool != nil {
-		return t.OnBool(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceNumber(x *Number, agg A) (result A, stop bool) {
-	if t.OnNumber != nil {
-		return t.OnNumber(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceString(x *String, agg A) (result A, stop bool) {
-	if t.OnString != nil {
-		return t.OnString(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceBinary(x *Binary, agg A) (result A, stop bool) {
-	if t.OnBinary != nil {
-		return t.OnBinary(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceList(x *List, agg A) (result A, stop bool) {
-	if t.OnList != nil {
-		return t.OnList(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceMap(x *Map, agg A) (result A, stop bool) {
-	if t.OnMap != nil {
-		return t.OnMap(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
 }
