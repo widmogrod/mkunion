@@ -1,7 +1,7 @@
-{{ .Header }}
-package {{ .PackageName }}
-{{ $root := . }}
-{{- $name := .Name }}
+{{ RenderHeader -}}
+
+{{- $root := . -}}
+{{- $name := .Name -}}
 type (
 	{{ $name }}Reducer[A any] interface {
 		{{- range .Types }}
