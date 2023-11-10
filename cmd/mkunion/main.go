@@ -28,7 +28,7 @@ func main() {
 		//DefaultCommand:         "union",
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:     "name",
 				Aliases:  []string{"n"},
 				Required: false,
@@ -41,97 +41,154 @@ func main() {
 			&cli.StringFlag{
 				Name:     "skip-extension",
 				Aliases:  []string{"skip-ext"},
+				Value:    "reducer_dfs,reducer_bfs,default_visitor,default_reducer",
 				Required: false,
+			},
+			&cli.StringFlag{
+				Name:     "include-extension",
+				Aliases:  []string{"inc-ext"},
+				Required: false,
+			},
+			&cli.StringSliceFlag{
+				Name:      "input-go-file",
+				Aliases:   []string{"i", "input"},
+				Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:generate mkunion -name=MyUnionType`,
+				TakesFile: true,
+			},
+			&cli.BoolFlag{
+				Name:     "verbose",
+				Aliases:  []string{"v"},
+				Required: false,
+				Value:    false,
 			},
 		},
 		Action: func(c *cli.Context) error {
-			cwd, _ := syscall.Getwd()
-			sourceName := path.Base(os.Getenv("GOFILE"))
-			sourcePath := path.Join(cwd, sourceName)
-
-			baseName := strings.TrimSuffix(sourceName, path.Ext(sourceName))
-
-			// file name without extension
-			inferred, err := mkunion.InferFromFile(sourcePath)
-			if err != nil {
-				return err
+			if c.Bool("verbose") {
+				log.SetLevel(log.DebugLevel)
 			}
 
-			unionName := c.String("name")
-			var types []string
-			if c.String("variants") != "" {
-				types = strings.Split(c.String("variants"), ",")
-			} else {
-				types = inferred.PossibleVariantsTypes(unionName)
+			sourcePaths := c.StringSlice("input-go-file")
+			if len(sourcePaths) == 0 && os.Getenv("GOFILE") != "" {
+				cwd, _ := syscall.Getwd()
+				sourceName := path.Base(os.Getenv("GOFILE"))
+				sourcePaths = []string{
+					path.Join(cwd, sourceName),
+				}
 			}
 
-			visitor := mkunion.VisitorGenerator{
-				Header:      mkunion.Header,
-				Name:        unionName,
-				Types:       types,
-				PackageName: inferred.PackageName,
+			if len(sourcePaths) == 0 {
+				// show usage
+				cli.ShowAppHelpAndExit(c, 1)
 			}
 
-			depthFirstGenerator := mkunion.ReducerDepthFirstGenerator{
-				Header:      mkunion.Header,
-				Name:        visitor.Name,
-				Types:       visitor.Types,
-				PackageName: inferred.PackageName,
-				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
-			}
+			for _, sourcePath := range sourcePaths {
+				cwd := path.Dir(sourcePath)
+				sourceName := path.Base(sourcePath)
+				baseName := strings.TrimSuffix(sourceName, path.Ext(sourceName))
 
-			breadthFirstGenerator := mkunion.ReducerBreadthFirstGenerator{
-				Header:      mkunion.Header,
-				Name:        visitor.Name,
-				Types:       visitor.Types,
-				PackageName: inferred.PackageName,
-				Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
-			}
-
-			defaultReduction := mkunion.ReducerDefaultReductionGenerator{
-				Header:      mkunion.Header,
-				Name:        visitor.Name,
-				Types:       visitor.Types,
-				PackageName: inferred.PackageName,
-			}
-
-			defaultVisitor := mkunion.VisitorDefaultGenerator{
-				Header:      mkunion.Header,
-				Name:        visitor.Name,
-				Types:       visitor.Types,
-				PackageName: inferred.PackageName,
-			}
-
-			schema := mkunion.SchemaGenerator{
-				Header:      mkunion.Header,
-				Name:        visitor.Name,
-				Types:       visitor.Types,
-				PackageName: inferred.PackageName,
-			}
-
-			generators := map[string]mkunion.Generator{
-				"visitor":         &visitor,
-				"reducer_dfs":     &depthFirstGenerator,
-				"reducer_bfs":     &breadthFirstGenerator,
-				"default_reducer": &defaultReduction,
-				"default_visitor": &defaultVisitor,
-				"schema":          &schema,
-			}
-
-			skipExtension := strings.Split(c.String("skip-extension"), ",")
-			for _, name := range skipExtension {
-				delete(generators, name)
-			}
-
-			for name, g := range generators {
-				b, err := g.Generate()
+				// file name without extension
+				inferred, err := mkunion.InferFromFile(sourcePath)
 				if err != nil {
 					return err
 				}
-				err = os.WriteFile(path.Join(cwd,
-					baseName+"_"+mkunion.Program+"_"+strings.ToLower(visitor.Name)+"_"+name+".go"), b, 0644)
-				if err != nil {
-					return err
+
+				unionNamse := c.StringSlice("name")
+				if len(unionNamse) == 0 {
+					unionNamse = inferred.PossibleUnionTypes()
+				}
+
+				for _, unionName := range unionNamse {
+					var types []string
+					if len(unionNamse) == 1 && c.String("variants") != "" {
+						types = strings.Split(c.String("variants"), ",")
+					} else {
+						types = inferred.PossibleVariantsTypes(unionName)
+					}
+
+					visitor := mkunion.VisitorGenerator{
+						Header:      mkunion.Header,
+						Name:        unionName,
+						Types:       types,
+						PackageName: inferred.PackageName,
+					}
+
+					depthFirstGenerator := mkunion.ReducerDepthFirstGenerator{
+						Header:      mkunion.Header,
+						Name:        visitor.Name,
+						Types:       visitor.Types,
+						PackageName: inferred.PackageName,
+						Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
+					}
+
+					breadthFirstGenerator := mkunion.ReducerBreadthFirstGenerator{
+						Header:      mkunion.Header,
+						Name:        visitor.Name,
+						Types:       visitor.Types,
+						PackageName: inferred.PackageName,
+						Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
+					}
+
+					defaultReduction := mkunion.ReducerDefaultReductionGenerator{
+						Header:      mkunion.Header,
+						Name:        visitor.Name,
+						Types:       visitor.Types,
+						PackageName: inferred.PackageName,
+					}
+
+					defaultVisitor := mkunion.VisitorDefaultGenerator{
+						Header:      mkunion.Header,
+						Name:        visitor.Name,
+						Types:       visitor.Types,
+						PackageName: inferred.PackageName,
+					}
+
+					schema := mkunion.SchemaGenerator{
+						Header:      mkunion.Header,
+						Name:        visitor.Name,
+						Types:       visitor.Types,
+						PackageName: inferred.PackageName,
+					}
+
+					generators := map[string]mkunion.Generator{
+						"visitor":         &visitor,
+						"reducer_dfs":     &depthFirstGenerator,
+						"reducer_bfs":     &breadthFirstGenerator,
+						"default_reducer": &defaultReduction,
+						"default_visitor": &defaultVisitor,
+						"schema":          &schema,
+					}
+
+					skipExtension := strings.Split(c.String("skip-extension"), ",")
+					includeExtension := strings.Split(c.String("include-extension"), ",")
+					if len(includeExtension) > 0 {
+						for _, name := range includeExtension {
+							// skip if already included in skipExtension, remove from skipExtension
+							for i, skip := range skipExtension {
+								if skip == name {
+									skipExtension = append(skipExtension[:i], skipExtension[i+1:]...)
+								}
+							}
+							// otherwise, cannot include extension other than existing ones
+						}
+					}
+
+					for _, name := range skipExtension {
+						log.Infof("skip extension %s", name)
+						delete(generators, name)
+					}
+
+					for name, g := range generators {
+						b, err := g.Generate()
+						if err != nil {
+							return err
+						}
+						fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
+						log.Infof("writing %s", fileName)
+						err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 
@@ -196,33 +253,43 @@ func main() {
 						Name:    "output-dir",
 						Aliases: []string{"o", "output"},
 					},
-					&cli.StringFlag{
+					&cli.StringSliceFlag{
 						Name:      "input-go-file",
 						Aliases:   []string{"i", "input"},
+						Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:generate mkunion -name=MyUnionType`,
 						TakesFile: true,
 					},
 				},
 				Action: func(c *cli.Context) error {
-					sourcePath := c.String("input-go-file")
-					if sourcePath == "" {
+					sourcePaths := c.StringSlice("input-go-file")
+					if len(sourcePaths) == 0 && os.Getenv("GOFILE") != "" {
 						cwd, _ := syscall.Getwd()
 						sourceName := path.Base(os.Getenv("GOFILE"))
-						sourcePath = path.Join(cwd, sourceName)
+						sourcePaths = []string{
+							path.Join(cwd, sourceName),
+						}
 					}
 
-					// file name without extension
-					inferred, err := mkunion.InferFromFile(sourcePath)
-					if err != nil {
-						return err
+					if len(sourcePaths) == 0 {
+						// show usage
+						cli.ShowAppHelpAndExit(c, 1)
 					}
 
 					tsr := shape.NewTypeScriptRenderer()
-					for _, union := range inferred.RetrieveUnions() {
-						tsr.AddUnion(union)
-					}
+					for _, sourcePath := range sourcePaths {
+						// file name without extension
+						inferred, err := mkunion.InferFromFile(sourcePath)
+						if err != nil {
+							return err
+						}
 
-					for _, structLike := range inferred.RetrieveStruct() {
-						tsr.AddStruct(structLike)
+						for _, union := range inferred.RetrieveUnions() {
+							tsr.AddUnion(union)
+						}
+
+						for _, structLike := range inferred.RetrieveStruct() {
+							tsr.AddStruct(structLike)
+						}
 					}
 
 					return tsr.WriteToDir(c.String("output-dir"))
