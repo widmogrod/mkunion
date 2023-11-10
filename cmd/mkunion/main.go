@@ -126,27 +126,23 @@ func main() {
 						inferred.ForVariantType(visitor.Name, visitor.Types),
 						helper,
 					)
-
-					breadthFirstGenerator := mkunion.ReducerBreadthFirstGenerator{
-						Header:      mkunion.Header,
-						Name:        visitor.Name,
-						Types:       visitor.Types,
-						PackageName: inferred.PackageName,
-						Branches:    inferred.ForVariantType(visitor.Name, visitor.Types),
-					}
-
+					breadthFirstGenerator := mkunion.NewReducerBreadthFirstGenerator(
+						visitor.Name,
+						visitor.Types,
+						inferred.ForVariantType(visitor.Name, visitor.Types),
+						helper,
+					)
 					defaultReduction := mkunion.NewReducerDefaultReductionGenerator(
 						visitor.Name,
 						visitor.Types,
 						helper,
 					)
-
 					defaultVisitor := mkunion.NewVisitorDefaultGenerator(visitor.Name, visitor.Types, helper)
 
 					generators := map[string]mkunion.Generator{
 						"visitor":         visitor,
 						"reducer_dfs":     depthFirstGenerator,
-						"reducer_bfs":     &breadthFirstGenerator,
+						"reducer_bfs":     breadthFirstGenerator,
 						"default_reducer": defaultReduction,
 						"default_visitor": defaultVisitor,
 						"schema":          schema,

@@ -1,7 +1,7 @@
-{{ .Header }}
-package {{ .PackageName }}
-{{ $root := . }}
-{{- $name := .Name }}
+{{ RenderHeader -}}
+
+{{- $root := . -}}
+{{- $name := .Name -}}
 var _ {{ $name }}Visitor = (*{{ $name }}BreadthFirstVisitor[any])(nil)
 
 type {{ $name }}BreadthFirstVisitor[A any] struct {
