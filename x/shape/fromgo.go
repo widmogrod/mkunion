@@ -105,9 +105,38 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		fields := make([]*FieldLike, 0, x.NumField())
 		for i := 0; i < x.NumField(); i++ {
 			field := x.Field(i)
+
+			var desc *string
+			if descStr := field.Tag.Get("desc"); descStr != "" {
+				descStr = strings.Trim(descStr, `"`)
+				if descStr != "" {
+					desc = &descStr
+				}
+			}
+
+			name := field.Name
+			if nameStr := field.Tag.Get("name"); nameStr != "" {
+				nameStr = strings.Trim(nameStr, `"`)
+				if nameStr != "" {
+					name = nameStr
+				}
+			}
+
+			var guard Guard
+			if enum := field.Tag.Get("enum"); enum != "" {
+				guard = ConcatGuard(guard, &Enum{
+					Val: strings.Split(enum, ","),
+				})
+			}
+			if required := field.Tag.Get("required"); required == "true" {
+				guard = ConcatGuard(guard, &Required{})
+			}
+
 			fields = append(fields, &FieldLike{
-				Name: field.Name,
-				Type: FromGoReflect(field.Type, infiniteRecursionFix),
+				Name:  name,
+				Type:  FromGoReflect(field.Type, infiniteRecursionFix),
+				Desc:  desc,
+				Guard: guard,
 			})
 		}
 

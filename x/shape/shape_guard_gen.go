@@ -11,86 +11,77 @@ func init() {
 
 func GuardSchemaDef() *schema.UnionVariants[Guard] {
 	return schema.MustDefineUnion[Guard](
-		&Regexp{},
-		&Between{},
+		&Enum{},
+		&Required{},
 		&AndGuard{},
-		&OrGuard{},
 	)
 }
 
 //mkunion-extension:visitor
 
 type GuardVisitor interface {
-	VisitRegexp(v *Regexp) any
-	VisitBetween(v *Between) any
+	VisitEnum(v *Enum) any
+	VisitRequired(v *Required) any
 	VisitAndGuard(v *AndGuard) any
-	VisitOrGuard(v *OrGuard) any
 }
 
 type Guard interface {
 	AcceptGuard(g GuardVisitor) any
 }
 
-func (r *Regexp) AcceptGuard(v GuardVisitor) any   { return v.VisitRegexp(r) }
-func (r *Between) AcceptGuard(v GuardVisitor) any  { return v.VisitBetween(r) }
+func (r *Enum) AcceptGuard(v GuardVisitor) any     { return v.VisitEnum(r) }
+func (r *Required) AcceptGuard(v GuardVisitor) any { return v.VisitRequired(r) }
 func (r *AndGuard) AcceptGuard(v GuardVisitor) any { return v.VisitAndGuard(r) }
-func (r *OrGuard) AcceptGuard(v GuardVisitor) any  { return v.VisitOrGuard(r) }
 
 var (
-	_ Guard = (*Regexp)(nil)
-	_ Guard = (*Between)(nil)
+	_ Guard = (*Enum)(nil)
+	_ Guard = (*Required)(nil)
 	_ Guard = (*AndGuard)(nil)
-	_ Guard = (*OrGuard)(nil)
 )
 
 func MatchGuard[TOut any](
 	x Guard,
-	f1 func(x *Regexp) TOut,
-	f2 func(x *Between) TOut,
+	f1 func(x *Enum) TOut,
+	f2 func(x *Required) TOut,
 	f3 func(x *AndGuard) TOut,
-	f4 func(x *OrGuard) TOut,
 	df func(x Guard) TOut,
 ) TOut {
-	return f.Match4(x, f1, f2, f3, f4, df)
+	return f.Match3(x, f1, f2, f3, df)
 }
 
 func MatchGuardR2[TOut1, TOut2 any](
 	x Guard,
-	f1 func(x *Regexp) (TOut1, TOut2),
-	f2 func(x *Between) (TOut1, TOut2),
+	f1 func(x *Enum) (TOut1, TOut2),
+	f2 func(x *Required) (TOut1, TOut2),
 	f3 func(x *AndGuard) (TOut1, TOut2),
-	f4 func(x *OrGuard) (TOut1, TOut2),
 	df func(x Guard) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.Match4R2(x, f1, f2, f3, f4, df)
+	return f.Match3R2(x, f1, f2, f3, df)
 }
 
 func MustMatchGuard[TOut any](
 	x Guard,
-	f1 func(x *Regexp) TOut,
-	f2 func(x *Between) TOut,
+	f1 func(x *Enum) TOut,
+	f2 func(x *Required) TOut,
 	f3 func(x *AndGuard) TOut,
-	f4 func(x *OrGuard) TOut,
 ) TOut {
-	return f.MustMatch4(x, f1, f2, f3, f4)
+	return f.MustMatch3(x, f1, f2, f3)
 }
 
 func MustMatchGuardR0(
 	x Guard,
-	f1 func(x *Regexp),
-	f2 func(x *Between),
+	f1 func(x *Enum),
+	f2 func(x *Required),
 	f3 func(x *AndGuard),
-	f4 func(x *OrGuard),
 ) {
-	f.MustMatch4R0(x, f1, f2, f3, f4)
+	f.MustMatch3R0(x, f1, f2, f3)
 }
 
 func MustMatchGuardR2[TOut1, TOut2 any](
 	x Guard,
-	f1 func(x *Regexp) (TOut1, TOut2),
-	f2 func(x *Between) (TOut1, TOut2),
+	f1 func(x *Enum) (TOut1, TOut2),
+	f2 func(x *Required) (TOut1, TOut2),
 	f3 func(x *AndGuard) (TOut1, TOut2),
-	f4 func(x *OrGuard) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.MustMatch4R2(x, f1, f2, f3, f4)
+	return f.MustMatch3R2(x, f1, f2, f3)
 }

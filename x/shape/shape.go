@@ -41,23 +41,48 @@ type (
 )
 
 type FieldLike struct {
-	Name string
-	Type Shape
+	Name  string
+	Type  Shape
+	Desc  *string
+	Guard Guard
 }
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Guard
 type (
-	Regexp struct {
-		Regexp string
+	Enum struct {
+		Val []string
 	}
-	Between struct {
-		Min int
-		Max int
-	}
+	Required struct{}
+	//Regexp   struct {
+	//	Regexp string
+	//}
+	//Between struct {
+	//	Min int
+	//	Max int
+	//}
 	AndGuard struct {
 		L []Guard
 	}
-	OrGuard struct {
-		L []Guard
-	}
 )
+
+func ConcatGuard(a, b Guard) Guard {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+
+	var result *AndGuard
+	if and, ok := a.(*AndGuard); ok {
+		result = and
+	} else {
+		result = &AndGuard{
+			L: []Guard{a},
+		}
+	}
+
+	return &AndGuard{
+		L: append(result.L, b),
+	}
+}
