@@ -140,6 +140,16 @@ func main() {
 					)
 					defaultVisitor := mkunion.NewVisitorDefaultGenerator(visitor.Name, visitor.Types, helper)
 
+					// ensures that order of generators is always the same
+					generatorsList := []string{
+						"visitor",
+						"reducer_dfs",
+						"reducer_bfs",
+						"default_reducer",
+						"default_visitor",
+						"schema",
+					}
+
 					generators := map[string]mkunion.Generator{
 						"visitor":         visitor,
 						"reducer_dfs":     depthFirstGenerator,
@@ -168,8 +178,12 @@ func main() {
 					}
 
 					if c.Bool("no-compact") {
+						for _, name := range generatorsList {
+							g, ok := generators[name]
+							if !ok {
+								continue
+							}
 
-						for name, g := range generators {
 							b, err := g.Generate()
 							if err != nil {
 								return err
@@ -185,7 +199,12 @@ func main() {
 						}
 					} else {
 						body := bytes.Buffer{}
-						for name, g := range generators {
+						for _, name := range generatorsList {
+							g, ok := generators[name]
+							if !ok {
+								continue
+							}
+
 							b, err := g.Generate()
 							if err != nil {
 								return err

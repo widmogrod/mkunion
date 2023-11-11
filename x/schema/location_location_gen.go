@@ -3,33 +3,6 @@ package schema
 
 import "github.com/widmogrod/mkunion/f"
 
-// mkunion-extension:default_visitor
-type LocationDefaultVisitor[A any] struct {
-	Default            A
-	OnLocationField    func(x *LocationField) A
-	OnLocationIndex    func(x *LocationIndex) A
-	OnLocationAnything func(x *LocationAnything) A
-}
-
-func (t *LocationDefaultVisitor[A]) VisitLocationField(v *LocationField) any {
-	if t.OnLocationField != nil {
-		return t.OnLocationField(v)
-	}
-	return t.Default
-}
-func (t *LocationDefaultVisitor[A]) VisitLocationIndex(v *LocationIndex) any {
-	if t.OnLocationIndex != nil {
-		return t.OnLocationIndex(v)
-	}
-	return t.Default
-}
-func (t *LocationDefaultVisitor[A]) VisitLocationAnything(v *LocationAnything) any {
-	if t.OnLocationAnything != nil {
-		return t.OnLocationAnything(v)
-	}
-	return t.Default
-}
-
 //mkunion-extension:visitor
 
 type LocationVisitor interface {
@@ -282,4 +255,31 @@ func (t *LocationDefaultReduction[A]) ReduceLocationAnything(x *LocationAnything
 		panic("no fallback allowed on undefined ReduceBranch")
 	}
 	return agg, t.DefaultStopReduction
+}
+
+// mkunion-extension:default_visitor
+type LocationDefaultVisitor[A any] struct {
+	Default            A
+	OnLocationField    func(x *LocationField) A
+	OnLocationIndex    func(x *LocationIndex) A
+	OnLocationAnything func(x *LocationAnything) A
+}
+
+func (t *LocationDefaultVisitor[A]) VisitLocationField(v *LocationField) any {
+	if t.OnLocationField != nil {
+		return t.OnLocationField(v)
+	}
+	return t.Default
+}
+func (t *LocationDefaultVisitor[A]) VisitLocationIndex(v *LocationIndex) any {
+	if t.OnLocationIndex != nil {
+		return t.OnLocationIndex(v)
+	}
+	return t.Default
+}
+func (t *LocationDefaultVisitor[A]) VisitLocationAnything(v *LocationAnything) any {
+	if t.OnLocationAnything != nil {
+		return t.OnLocationAnything(v)
+	}
+	return t.Default
 }
