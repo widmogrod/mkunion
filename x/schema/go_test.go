@@ -3,6 +3,7 @@ package schema
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestGoToSchema(t *testing.T) {
@@ -217,4 +218,47 @@ func TestToGenericGo(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, data, result)
 	})
+}
+
+type ExternalPackageStruct struct {
+	Duration     time.Duration            `desc:"time duration"`
+	DurationList []time.Duration          `desc:"time duration list"`
+	DurationMap  map[string]time.Duration `desc:"time duration map"`
+
+	DurationRef *time.Duration `desc:"time duration ref"`
+
+	Time     time.Time   `desc:"time"`
+	TimeList []time.Time `desc:"time list"`
+	TimeMap  map[string]time.Time
+	TimeRef  *time.Time `desc:"time ref"`
+}
+
+func TestExternalPackageSerDe(t *testing.T) {
+	now, _ := time.Parse(time.RFC3339Nano, time.Now().Format(time.RFC3339Nano))
+	hour := time.Hour
+	data := ExternalPackageStruct{
+		Duration: time.Second,
+		DurationList: []time.Duration{
+			time.Second,
+			time.Minute,
+		},
+		DurationMap: map[string]time.Duration{
+			"hour": time.Hour,
+		},
+		DurationRef: &hour,
+		Time:        now,
+		TimeList: []time.Time{
+			now,
+			now.Add(time.Hour),
+		},
+		TimeMap: map[string]time.Time{
+			"now":    now,
+			"now+1h": now.Add(time.Hour),
+		},
+	}
+
+	schema := FromGo(data)
+	result, err := ToGoG[ExternalPackageStruct](schema)
+	assert.NoError(t, err)
+	assert.Equal(t, data, result)
 }

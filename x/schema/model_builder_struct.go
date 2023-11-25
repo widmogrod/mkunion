@@ -48,6 +48,16 @@ type StructBuilder struct {
 	original any
 	r        reflect.Value
 	deref    *reflect.Value
+
+	wellDefinedFromConversion func(x Schema, r reflect.Type) any
+}
+
+type wellDefinedSupported interface {
+	WithWellDefinedTypesConversion(from func(x Schema, r reflect.Type) any)
+}
+
+func (s *StructBuilder) WithWellDefinedTypesConversion(from func(x Schema, r reflect.Type) any) {
+	s.wellDefinedFromConversion = from
 }
 
 func (s *StructBuilder) Set(key string, value any) error {
@@ -78,6 +88,21 @@ func (s *StructBuilder) Set(key string, value any) error {
 }
 
 func (s *StructBuilder) set(f reflect.Value, value any) error {
+	if s.wellDefinedFromConversion != nil {
+		// TODO this is not optimal, because we are doing conversion twice
+		v := FromGo(value)
+		if result := s.wellDefinedFromConversion(v, f.Type()); result != nil {
+			val := reflect.ValueOf(result)
+			if f.Type().Kind() == reflect.Ptr {
+				val = reflect.New(f.Type().Elem())
+				val.Elem().Set(reflect.ValueOf(result))
+			}
+
+			f.Set(val.Convert(f.Type()))
+			return nil
+		}
+	}
+
 	switch f.Type().Kind() {
 	case reflect.Pointer:
 		v := reflect.ValueOf(value)

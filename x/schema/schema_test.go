@@ -233,7 +233,7 @@ func TestSchemaConversions(t *testing.T) {
 				},
 			},
 			// Yes, back conversion always normalise to floats and []any
-			// To map back to correct type use ToGo(_, WhenPath(nil, UseSlice(int)))
+			// To map back to correct type use WellDefinedTypeToGo(_, WhenPath(nil, UseSlice(int)))
 			back: []interface{}{
 				float64(1),
 				float64(2),
