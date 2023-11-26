@@ -48,13 +48,13 @@
 }
 
 /* Style for the sender's messages */
-.chat-message.sent {
+.chat-message.user {
     background-color: #daf8cb;
     align-self: flex-end; /* Aligns the message to the right if a flex container is used */
 }
 
 /* Style for the receiver's messages */
-.chat-message.received {
+.chat-message.system {
     background-color: #e7e7e7;
     align-self: flex-start; /* Aligns the message to the left if a flex container is used */
 }

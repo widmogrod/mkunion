@@ -28,6 +28,7 @@ table {
     font-family: sans-serif;
     min-width: 200px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+    clear: both;
 }
 
 thead tr {
@@ -61,4 +62,10 @@ table table {
 }
 table table th, td {
     padding: 5px 10px;
+}
+
+form.action-section {
+    margin: 10px 0;
+    float: left;
+    width: 33%
 }

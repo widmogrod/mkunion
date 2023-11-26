@@ -7,42 +7,87 @@ type Message = {
     type: "user" | "system"
 }
 
-export function Chat(props: { name: string }) {
-    const [messages, setMessages] = useState<Message[]>([]);
+
+interface ChatParams {
+    props: {
+        name: string;
+        onFunctionCall?: (func: { Name: string, Arguments: string }) => void
+    };
+}
+
+function mapChatResultToMessages(result: ChatResult): Message[] {
+    if ("main.SystemResponse" in result) {
+        return [{
+            type: "system",
+            text: result["main.SystemResponse"]["Message"] as string || "acknowledged system"
+        }]
+    } else if ("main.UserResponse" in result) {
+        return [{
+            type: "user",
+            text: result["main.UserResponse"]["Message"] as string || "acknowledged user"
+        }]
+    } else if ("main.ChatResponses" in result) {
+        const responses = result["main.ChatResponses"]["Responses"] || [];
+        return responses.flatMap((response: ChatResult) => {
+            return mapChatResultToMessages(response)
+        })
+    }
+    return [
+        {
+            type: "system",
+            text: "acknowledged default"
+        },
+    ]
+}
+
+function getToolCalls(result: ChatResult): any[] {
+    if ("main.SystemResponse" in result) {
+        return result["main.SystemResponse"]["ToolCalls"] || []
+    } else if ("main.ChatResponses" in result) {
+        const responses = result["main.ChatResponses"]["Responses"] || [];
+        return responses.flatMap((response: ChatResult) => {
+            return getToolCalls(response)
+        }).filter((toolCall: any) => toolCall)
+    }
+    return []
+}
+
+export function Chat({props}: ChatParams) {
+    const [messages, setMessages] = useState<Message[]>([
+        {type: "system", text: "Hello, " + props.name + "!"},
+        {type: "system", text: "What can I do for you?"},
+    ]);
 
     useEffect(() => {
         let lastMessage = messages[messages.length - 1];
-        if (lastMessage && lastMessage.type === "user") {
-            let cmd: ChatCMD = {
-                "main.UserMessage": {
-                    "Message": lastMessage.text,
-                },
-            };
-            fetch('http://localhost:8080/message', {
-                method: 'POST',
-                body: JSON.stringify(dediscriminateChatCMD(cmd)),
-            }).then(res => res.json() as Promise<ChatResult>)
-                .then(data => {
-                    if ( "main.SystemResponse" in data) {
-                        if (data["main.SystemResponse"]["Message"] as string !== "") {
-                            setMessages([...messages, {
-                                type: "system",
-                                text: data["main.SystemResponse"]["Message"] as string
-                            }])
-                        }
-
-                        let toolCalls = data["main.SystemResponse"]["ToolCalls"] || [];
-                        toolCalls.forEach((toolCall: any) => {
-                            switch (toolCall.Function.Name) {
-                                case "list_workflows":
-
-                            }
-                        })
-                    }
-                });
+        if (!lastMessage || lastMessage.type !== "user") {
+            return
         }
 
-    }, [messages]);
+        let cmd: ChatCMD = {
+            "main.UserMessage": {
+                "Message": lastMessage.text,
+            },
+        };
+
+        fetch('http://localhost:8080/message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dediscriminateChatCMD(cmd)),
+        })
+            .then(res => res.json() as Promise<ChatResult>)
+            .then(data => {
+                    setMessages([...messages, ...mapChatResultToMessages(data)])
+
+                    let toolCalls = getToolCalls(data)
+                    toolCalls.forEach((toolCall: any) => {
+                        props.onFunctionCall && props.onFunctionCall(toolCall.Function);
+                    })
+            });
+
+    }, [messages, props]);
 
     return <div className="chat-window">
         <ChatHistory messages={messages}/>
