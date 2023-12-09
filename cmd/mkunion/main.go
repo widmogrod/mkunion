@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
 	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shared"
 	"os"
 	"os/signal"
 	"path"
@@ -24,7 +25,7 @@ func main() {
 
 	var app *cli.App
 	app = &cli.App{
-		Name:                   mkunion.Program,
+		Name:                   shared.Program,
 		Description:            "VisitorGenerator union type and visitor pattern gor golang",
 		EnableBashCompletion:   true,
 		UseShortOptionHandling: true,
@@ -97,14 +98,14 @@ func main() {
 					return err
 				}
 
-				unionNamse := c.StringSlice("name")
-				if len(unionNamse) == 0 {
-					unionNamse = inferred.PossibleUnionTypes()
+				unionNames := c.StringSlice("name")
+				if len(unionNames) == 0 {
+					unionNames = inferred.PossibleUnionTypes()
 				}
 
-				for _, unionName := range unionNamse {
+				for _, unionName := range unionNames {
 					var types []string
-					if len(unionNamse) == 1 && c.String("variants") != "" {
+					if len(unionNames) == 1 && c.String("variants") != "" {
 						types = strings.Split(c.String("variants"), ",")
 					} else {
 						types = inferred.PossibleVariantsTypes(unionName)
@@ -119,7 +120,10 @@ func main() {
 					}
 
 					helper := mkunion.NewHelper(options...)
-					shapeGenerator := mkunion.NewShapeGenerator(inferred.RetrieveUnion(unionName), helper)
+					union := inferred.RetrieveUnion(unionName)
+
+					jsonGenerator := mkunion.NewDeSerJSONGenerator(union, helper)
+					shapeGenerator := mkunion.NewShapeGenerator(union, helper)
 					visitor := mkunion.NewVisitorGenerator(unionName, types, helper)
 					schema := mkunion.NewSchemaGenerator(visitor.Name, visitor.Types, helper)
 					depthFirstGenerator := mkunion.NewReducerDepthFirstGenerator(
@@ -150,6 +154,7 @@ func main() {
 						"default_visitor",
 						"schema",
 						"shape",
+						"json",
 					}
 
 					generators := map[string]mkunion.Generator{
@@ -160,6 +165,7 @@ func main() {
 						"default_visitor": defaultVisitor,
 						"schema":          schema,
 						"shape":           shapeGenerator,
+						"json":            jsonGenerator,
 					}
 
 					skipExtension := strings.Split(c.String("skip-extension"), ",")
@@ -192,7 +198,7 @@ func main() {
 								return err
 							}
 
-							fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
+							fileName := baseName + "_" + shared.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
 							log.Infof("writing %s", fileName)
 
 							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
@@ -321,7 +327,7 @@ func main() {
 					tsr := shape.NewTypeScriptRenderer()
 					for _, sourcePath := range sourcePaths {
 						// file name without extension
-						inferred, err := mkunion.InferFromFile(sourcePath)
+						inferred, err := shape.InferFromFile(sourcePath)
 						if err != nil {
 							return err
 						}

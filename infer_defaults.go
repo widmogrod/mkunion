@@ -4,6 +4,7 @@ import (
 	"github.com/fatih/structtag"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -123,17 +124,9 @@ func (f *InferredInfo) StructShapeWith(name string) *shape.StructLike {
 
 func (f *InferredInfo) RetrieveUnions() []*shape.UnionLike {
 	result := make([]*shape.UnionLike, 0)
-	for unionName, possibleVariants := range f.possibleVariantTypes {
-		var variants []shape.Shape
-		for _, variant := range possibleVariants {
-			variants = append(variants, f.shapes[variant])
-		}
-		result = append(result, &shape.UnionLike{
-			Name:          unionName,
-			PkgName:       f.PackageName,
-			PkgImportName: f.PkgImportName,
-			Variant:       variants,
-		})
+	for unionName := range f.possibleVariantTypes {
+		union := f.RetrieveUnion(unionName)
+		result = append(result, &union)
 	}
 
 	return result
@@ -178,7 +171,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	switch t := n.(type) {
 	case *ast.GenDecl:
 		comment := comment(t.Doc)
-		if !strings.Contains(comment, Program) {
+		if !strings.Contains(comment, shared.Program) {
 			return f
 		}
 		if t.Tok != token.TYPE {
@@ -296,9 +289,22 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 						typ = &shape.Any{}
 					}
 
+					tag := ""
+					if field.Tag != nil {
+						tag = field.Tag.Value
+					}
+
+					tags := shape.ExtractTags(tag)
+					desc := shape.TagsToDesc(tags)
+					guard := shape.TagsToGuard(tags)
+
 					structShape.Fields = append(structShape.Fields, &shape.FieldLike{
-						Name: fieldName.Name,
-						Type: typ,
+						Name:      fieldName.Name,
+						Type:      typ,
+						Desc:      desc,
+						Guard:     guard,
+						Tags:      tags,
+						IsPointer: shape.IsStarExpr(field.Type),
 					})
 				}
 			}
