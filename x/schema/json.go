@@ -8,6 +8,10 @@ import (
 )
 
 func FromJSON(data []byte) (Schema, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+
 	var x any
 	if err := json.Unmarshal(data, &x); err != nil {
 		return nil, err

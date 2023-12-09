@@ -588,6 +588,10 @@ func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
 	var result any
 	var err error
 
+	if x == nil {
+		return a, nil
+	}
+
 	switch any(a).(type) {
 	case int:
 		result = AsDefault[int](x, any(a).(int))
