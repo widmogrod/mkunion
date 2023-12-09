@@ -139,6 +139,20 @@ func (f *InferredInfo) RetrieveUnions() []*shape.UnionLike {
 	return result
 }
 
+func (f *InferredInfo) RetrieveUnion(name string) shape.UnionLike {
+	var variants []shape.Shape
+	for _, variant := range f.possibleVariantTypes[name] {
+		variants = append(variants, f.shapes[variant])
+	}
+
+	return shape.UnionLike{
+		Name:          name,
+		PkgName:       f.PackageName,
+		PkgImportName: f.PkgImportName,
+		Variant:       variants,
+	}
+}
+
 func (f *InferredInfo) RetrieveStruct() []*shape.StructLike {
 	structs := make(map[string]*shape.StructLike)
 	for _, structShape := range f.shapes {

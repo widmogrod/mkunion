@@ -119,6 +119,7 @@ func main() {
 					}
 
 					helper := mkunion.NewHelper(options...)
+					shapeGenerator := mkunion.NewShapeGenerator(inferred.RetrieveUnion(unionName), helper)
 					visitor := mkunion.NewVisitorGenerator(unionName, types, helper)
 					schema := mkunion.NewSchemaGenerator(visitor.Name, visitor.Types, helper)
 					depthFirstGenerator := mkunion.NewReducerDepthFirstGenerator(
@@ -148,6 +149,7 @@ func main() {
 						"default_reducer",
 						"default_visitor",
 						"schema",
+						"shape",
 					}
 
 					generators := map[string]mkunion.Generator{
@@ -157,6 +159,7 @@ func main() {
 						"default_reducer": defaultReduction,
 						"default_visitor": defaultVisitor,
 						"schema":          schema,
+						"shape":           shapeGenerator,
 					}
 
 					skipExtension := strings.Split(c.String("skip-extension"), ",")
