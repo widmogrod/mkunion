@@ -1,0 +1,101 @@
+{{- $self := . -}}
+
+{{ RenderHeader -}}
+{{ RenderImport "github.com/widmogrod/mkunion/x/shape" -}}
+{{ RenderImport "encoding/json" -}}
+{{ RenderImport "fmt" -}}
+
+type {{ .Union.Name }}UnionJSON struct {
+	Type string `json:"$type,omitempty"`
+	{{- range $index, $variant := .Union.Variant }}
+	{{ $variant.Name }} json.RawMessage `json:"{{ $self.JSONVariantName $variant }},omitempty"`
+	{{ end -}}
+}
+
+func {{ .Union.Name }}FromJSON(x []byte) ({{ .Union.Name }}, error) {
+	var data {{ .Union.Name }}UnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	{{- range $index, $variant := .Union.Variant }}
+	case "{{ $self.JSONVariantName $variant }}":
+		return {{ $variant.Name }}FromJSON(data.{{ $variant.Name }})
+	{{ end -}}
+	}
+
+	{{range $index, $variant := .Union.Variant }}
+	{{- if $index -}} else if {{ else }}if {{ end -}}
+	data.{{ $variant.Name }} != nil {
+		return {{ $variant.Name }}FromJSON(data.{{ $variant.Name }})
+	} {{ end }}
+
+	return nil, fmt.Errorf("unknown type %s", data.Type)
+}
+
+func {{ .Union.Name }}ToJSON(x {{ .Union.Name }}) ([]byte, error) {
+	return MustMatch{{ .Union.Name }}R2(
+		x,
+		{{range $index, $variant := .Union.Variant }}
+		func(x *{{ $variant.Name }}) ([]byte, error) {
+			body, err := {{ $variant.Name }}ToJSON(x)
+			if err != nil {
+				 return nil, err
+			}
+
+			return json.Marshal({{ $self.Union.Name }}UnionJSON{
+				Type: "{{ $self.JSONVariantName $variant }}",
+				{{ $variant.Name }}: body,
+			})
+		},
+		{{end}}
+    )
+}
+{{range $index, $variant := .Union.Variant }}
+func {{ $variant.Name }}FromJSON(x []byte) (*{{ $variant.Name }}, error) {
+	var result *{{ $variant.Name }} = &{{ $variant.Name }}{}
+
+	// if is Struct
+	err := shape.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		{{- range $index, $field := $variant.Fields }}
+		case "{{ $self.JSONFieldName $field }}":
+			{{ $self.UnmarshalTemplate $field 2}}
+		{{- end }}
+		}
+
+		return fmt.Errorf("{{ $self.Union.PkgName }}.{{ $variant.Name }}FromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func {{ $variant.Name }}ToJSON(x *{{ $variant.Name }}) ([]byte, error) {
+	{{- range $index, $field := $variant.Fields }}
+	field_{{ $field.Name }}, err := {{ $self.MarshalTemplate $field 2}}
+	if err != nil {
+		return nil, err
+	}
+	{{ end }}
+	return json.Marshal(map[string]json.RawMessage{
+		{{- range $index, $field := $variant.Fields }}
+		"{{ $self.JSONFieldName $field }}": field_{{ $field.Name }},
+		{{- end}}
+	})
+}
+
+func (self *{{ $variant.Name }}) MarshalJSON() ([]byte, error) {
+	return {{ $variant.Name }}ToJSON(self)
+}
+
+func (self *{{ $variant.Name }}) UnmarshalJSON(x []byte) error {
+	n, err := {{ $variant.Name }}FromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+{{end -}}
