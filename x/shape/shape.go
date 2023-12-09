@@ -18,13 +18,16 @@ type (
 	ListLike struct {
 		//Extend *ListLike
 		//Guard  Guard
-		Element Shape
+		Element          Shape
+		ElementIsPointer bool
 	}
 	MapLike struct {
 		//Extend *MapLike
 		//Guard  Guard
-		Key Shape
-		Val Shape
+		Key          Shape
+		Val          Shape
+		KeyIsPointer bool
+		ValIsPointer bool
 	}
 	StructLike struct {
 		Name          string
@@ -41,10 +44,17 @@ type (
 )
 
 type FieldLike struct {
-	Name  string
-	Type  Shape
-	Desc  *string
-	Guard Guard
+	Name      string
+	Type      Shape
+	Desc      *string
+	Guard     Guard
+	IsPointer bool
+	Tags      map[string]FieldTag
+}
+
+type FieldTag struct {
+	Value   string
+	Options []string
 }
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Guard

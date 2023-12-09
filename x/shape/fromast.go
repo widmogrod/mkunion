@@ -35,14 +35,19 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 
 			return result
 		}
+
 	case *ast.ArrayType:
 		return &ListLike{
-			Element: FromAst(y.Elt, fx...),
+			Element:          FromAst(y.Elt, fx...),
+			ElementIsPointer: IsStarExpr(y.Elt),
 		}
+
 	case *ast.MapType:
 		return &MapLike{
-			Key: FromAst(y.Key, fx...),
-			Val: FromAst(y.Value, fx...),
+			Key:          FromAst(y.Key, fx...),
+			KeyIsPointer: IsStarExpr(y.Key),
+			Val:          FromAst(y.Value, fx...),
+			ValIsPointer: IsStarExpr(y.Value),
 		}
 
 	case *ast.SelectorExpr:
@@ -53,6 +58,11 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 	}
 
 	return &Any{}
+}
+
+func IsStarExpr(x ast.Expr) bool {
+	_, ok := x.(*ast.StarExpr)
+	return ok
 }
 
 func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {

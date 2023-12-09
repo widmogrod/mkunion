@@ -1,8 +1,10 @@
 package shape
 
 import (
+	"fmt"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
+	log "github.com/sirupsen/logrus"
 )
 
 func ToOpenAIFunctionDefinition(name, desc string, in Shape) openai.FunctionDefinition {
@@ -18,17 +20,19 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 		in,
 		func(x *Any) *jsonschema.Definition {
 			//TODO: this should be list of all possible types [object, string, number, boolean, null]
-			panic("not implemented")
-			//return &jsonschema.Definition{
-			//	Type: jsonschema.Null,
-			//}
+			log.Errorf("Any is not supported yet: %+v", x)
+			//panic("not implemented")
+			return &jsonschema.Definition{
+				Type: jsonschema.Null,
+			}
 		},
 		func(x *RefName) *jsonschema.Definition {
 			// TODO: this should be list of all possible types [object, string, number, boolean, null]
-			panic("not implemented")
-			//return &jsonschema.Definition{
-			//	Type: jsonschema.Null,
-			//}
+			//log.Errorf("RefName is not supported yet: %+v", x)
+			//panic("not implemented")
+			return &jsonschema.Definition{
+				Type: jsonschema.Null,
+			}
 		},
 		func(x *BooleanLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
@@ -76,12 +80,65 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 			}
 		},
 		func(x *UnionLike) *jsonschema.Definition {
-			panic("not implemented")
-			//return &jsonschema.Definition{
-			//	OneOf: toFunctionParameters(x.Variant),
-			//}
+			properties := map[string]jsonschema.Definition{}
+			for _, variant := range x.Variant {
+				def := toFunctionParameters(variant)
+				variantName := toVariantName(variant)
+				properties[variantName] = *def
+			}
+
+			return &jsonschema.Definition{
+				Type:        jsonschema.Object,
+				Description: "Each field is a variant of the union. Only one of them can be present in the object.",
+				Properties:  properties,
+			}
 		},
 	)
+}
+
+func toVariantName(x Shape) string {
+	return MustMatchShape(
+		x,
+		func(a *Any) string {
+			return "any"
+			//panic("not implemented")
+		},
+		func(x *RefName) string {
+			//panic("not implemented")
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+		func(x *BooleanLike) string {
+			return "boolean"
+			//panic("not implemented")
+		},
+		func(x *StringLike) string {
+			return "string"
+			//panic("not implemented")
+
+		},
+		func(x *NumberLike) string {
+			return "number"
+			//panic("not implemented")
+
+		},
+		func(x *ListLike) string {
+			return "list"
+			//panic("not implemented")
+
+		},
+		func(x *MapLike) string {
+			return "map"
+			//panic("not implemented")
+
+		},
+		func(x *StructLike) string {
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+		func(x *UnionLike) string {
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+	)
+
 }
 
 func requireFields(fields []*FieldLike) []string {
