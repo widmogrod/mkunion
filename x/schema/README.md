@@ -78,6 +78,35 @@ func (c *Car) UnmarshalSchema(x schema.*Map) error {
 }
 ```
 
+### How to convert well defined types from external packages?
+```go
+type Car struct {
+    Name string
+    LastDriven time.Time
+}
+
+// Register conversion from time.Time to schema.String
+schema.RegisterWellDefinedTypesConversion[time.Time](
+  func(x time.Time) Schema {
+      return MkString(x.Format(time.RFC3339Nano))
+  },
+  func(x Schema) time.Time {
+      if v, ok := x.(*String); ok {
+          t, _ := time.Parse(time.RFC3339Nano, string(*v))
+          return t
+      }
+
+      panic("invalid type")
+  },
+)
+
+// Then you can translate schema between back and forth without worrying about time.Time
+schema := FromGo(data)
+result, err := ToGoG[ExternalPackageStruct](schema)
+assert.NoError(t, err)
+assert.Equal(t, data, result)
+```
+
 ## Roadmap
 ### V0.1.0
 - [x] Json <-> Schema <-> Go (with structs mapping)

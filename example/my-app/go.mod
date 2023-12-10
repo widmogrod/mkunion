@@ -6,9 +6,9 @@ replace github.com/widmogrod/mkunion => ../../
 
 require (
 	github.com/labstack/echo/v4 v4.11.2
-	github.com/sashabaranov/go-openai v1.17.3
+	github.com/sashabaranov/go-openai v1.17.5
 	github.com/sirupsen/logrus v1.9.3
-	github.com/widmogrod/mkunion v1.17.1
+	github.com/widmogrod/mkunion v1.19.0
 	golang.org/x/image v0.13.0
 )
 

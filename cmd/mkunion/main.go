@@ -6,8 +6,9 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/widmogrod/mkunion"
+	"github.com/widmogrod/mkunion/x/generators"
 	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shared"
 	"os"
 	"os/signal"
 	"path"
@@ -24,7 +25,7 @@ func main() {
 
 	var app *cli.App
 	app = &cli.App{
-		Name:                   mkunion.Program,
+		Name:                   shared.Program,
 		Description:            "VisitorGenerator union type and visitor pattern gor golang",
 		EnableBashCompletion:   true,
 		UseShortOptionHandling: true,
@@ -32,11 +33,6 @@ func main() {
 			&cli.StringSliceFlag{
 				Name:     "name",
 				Aliases:  []string{"n"},
-				Required: false,
-			},
-			&cli.StringFlag{
-				Name:     "variants",
-				Aliases:  []string{"var"},
 				Required: false,
 			},
 			&cli.StringFlag{
@@ -92,61 +88,58 @@ func main() {
 				baseName := strings.TrimSuffix(sourceName, path.Ext(sourceName))
 
 				// file name without extension
-				inferred, err := mkunion.InferFromFile(sourcePath)
+				inferred, err := shape.InferFromFile(sourcePath)
 				if err != nil {
 					return err
 				}
 
-				unionNamse := c.StringSlice("name")
-				if len(unionNamse) == 0 {
-					unionNamse = inferred.PossibleUnionTypes()
+				unionNames := c.StringSlice("name")
+				if len(unionNames) == 0 {
+					unionNames = inferred.PossibleUnionTypes()
 				}
 
-				for _, unionName := range unionNamse {
-					var types []string
-					if len(unionNamse) == 1 && c.String("variants") != "" {
-						types = strings.Split(c.String("variants"), ",")
-					} else {
-						types = inferred.PossibleVariantsTypes(unionName)
-					}
-
-					options := []mkunion.GenerateOption{
-						mkunion.WithPackageName(inferred.PackageName),
+				for _, unionName := range unionNames {
+					options := []generators.GenerateOption{
+						generators.WithPackageName(inferred.PackageName),
 					}
 
 					if !c.Bool("no-compact") {
-						options = append(options, mkunion.WithBufferedImports())
+						options = append(options, generators.WithBufferedImports())
 					}
 
-					helper := mkunion.NewHelper(options...)
-					visitor := mkunion.NewVisitorGenerator(unionName, types, helper)
-					schema := mkunion.NewSchemaGenerator(visitor.Name, visitor.Types, helper)
-					depthFirstGenerator := mkunion.NewReducerDepthFirstGenerator(
-						visitor.Name,
-						visitor.Types,
-						inferred.ForVariantType(visitor.Name, visitor.Types),
-						helper,
-					)
-					breadthFirstGenerator := mkunion.NewReducerBreadthFirstGenerator(
-						visitor.Name,
-						visitor.Types,
-						inferred.ForVariantType(visitor.Name, visitor.Types),
-						helper,
-					)
-					defaultReduction := mkunion.NewReducerDefaultReductionGenerator(
-						visitor.Name,
-						visitor.Types,
-						helper,
-					)
-					defaultVisitor := mkunion.NewVisitorDefaultGenerator(visitor.Name, visitor.Types, helper)
+					helper := generators.NewHelper(options...)
+					union := inferred.RetrieveUnion(unionName)
 
-					generators := map[string]mkunion.Generator{
+					jsonGenerator := generators.NewDeSerJSONGenerator(union, helper)
+					shapeGenerator := generators.NewShapeGenerator(union, helper)
+					visitor := generators.NewVisitorGenerator(union, helper)
+					schema := generators.NewSchemaGenerator(union, helper)
+					depthFirstGenerator := generators.NewReducerDepthFirstGenerator(union, helper)
+					breadthFirstGenerator := generators.NewReducerBreadthFirstGenerator(union, helper)
+					defaultReduction := generators.NewReducerDefaultReductionGenerator(union, helper)
+					defaultVisitor := generators.NewVisitorDefaultGenerator(union, helper)
+
+					// ensures that order of generators is always the same
+					generatorsList := []string{
+						"visitor",
+						"reducer_dfs",
+						"reducer_bfs",
+						"default_reducer",
+						"default_visitor",
+						"schema",
+						"shape",
+						"json",
+					}
+
+					generators := map[string]generators.Generator{
 						"visitor":         visitor,
 						"reducer_dfs":     depthFirstGenerator,
 						"reducer_bfs":     breadthFirstGenerator,
 						"default_reducer": defaultReduction,
 						"default_visitor": defaultVisitor,
 						"schema":          schema,
+						"shape":           shapeGenerator,
+						"json":            jsonGenerator,
 					}
 
 					skipExtension := strings.Split(c.String("skip-extension"), ",")
@@ -168,14 +161,18 @@ func main() {
 					}
 
 					if c.Bool("no-compact") {
+						for _, name := range generatorsList {
+							g, ok := generators[name]
+							if !ok {
+								continue
+							}
 
-						for name, g := range generators {
 							b, err := g.Generate()
 							if err != nil {
 								return err
 							}
 
-							fileName := baseName + "_" + mkunion.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
+							fileName := baseName + "_" + shared.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
 							log.Infof("writing %s", fileName)
 
 							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
@@ -185,7 +182,12 @@ func main() {
 						}
 					} else {
 						body := bytes.Buffer{}
-						for name, g := range generators {
+						for _, name := range generatorsList {
+							g, ok := generators[name]
+							if !ok {
+								continue
+							}
+
 							b, err := g.Generate()
 							if err != nil {
 								return err
@@ -232,7 +234,7 @@ func main() {
 					baseName := strings.TrimSuffix(sourceName, path.Ext(sourceName))
 
 					// file name without extension
-					inferred, err := mkunion.InferDeriveFuncMatchFromFile(sourcePath)
+					inferred, err := generators.InferDeriveFuncMatchFromFile(sourcePath)
 					if err != nil {
 						return err
 					}
@@ -243,7 +245,7 @@ func main() {
 						return err
 					}
 
-					derived := mkunion.DeriveFuncMatchGenerator{
+					derived := generators.DeriveFuncMatchGenerator{
 						Header:      "// Code generated by mkunion. DO NOT EDIT.",
 						PackageName: inferred.PackageName,
 						MatchSpec:   *spec,
@@ -299,7 +301,7 @@ func main() {
 					tsr := shape.NewTypeScriptRenderer()
 					for _, sourcePath := range sourcePaths {
 						// file name without extension
-						inferred, err := mkunion.InferFromFile(sourcePath)
+						inferred, err := shape.InferFromFile(sourcePath)
 						if err != nil {
 							return err
 						}

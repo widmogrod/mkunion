@@ -12,8 +12,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/bxcodec/faker/v3 v3.8.1
 	github.com/fatih/structtag v1.2.0
+	github.com/google/go-cmp v0.5.9
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/sashabaranov/go-openai v1.17.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.2
 	github.com/urfave/cli/v2 v2.25.3
@@ -39,7 +41,6 @@ require (
 	github.com/aws/smithy-go v1.14.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

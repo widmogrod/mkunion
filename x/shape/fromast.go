@@ -12,7 +12,12 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 		case "any":
 			return &Any{}
 		case "string":
-			return &StringLike{}
+			result := &StringLike{}
+			for _, f := range fx {
+				f(result)
+			}
+			return result
+
 		case "bool":
 			return &BooleanLike{}
 		case "int", "int8", "int16", "int32", "int64",
@@ -35,14 +40,19 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 
 			return result
 		}
+
 	case *ast.ArrayType:
 		return &ListLike{
-			Element: FromAst(y.Elt, fx...),
+			Element:          FromAst(y.Elt, fx...),
+			ElementIsPointer: IsStarExpr(y.Elt),
 		}
+
 	case *ast.MapType:
 		return &MapLike{
-			Key: FromAst(y.Key, fx...),
-			Val: FromAst(y.Value, fx...),
+			Key:          FromAst(y.Key, fx...),
+			KeyIsPointer: IsStarExpr(y.Key),
+			Val:          FromAst(y.Value, fx...),
+			ValIsPointer: IsStarExpr(y.Value),
 		}
 
 	case *ast.SelectorExpr:
@@ -55,12 +65,106 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 	return &Any{}
 }
 
+func IsStarExpr(x ast.Expr) bool {
+	_, ok := x.(*ast.StarExpr)
+	return ok
+}
+
 func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {
 	return func(x Shape) {
-		y, ok := x.(*RefName)
-		if ok && y.PkgName == "" {
-			y.PkgName = pkgName
-			y.PkgImportName = pkgImportName
+		if !IsNamed(x) {
+			return
+		}
+
+		switch y := x.(type) {
+		case *RefName:
+			isPkgNotSet := y.PkgName == ""
+			if isPkgNotSet {
+				y.PkgName = pkgName
+				y.PkgImportName = pkgImportName
+			}
+
+		case *StringLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *NumberLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *BooleanLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *ListLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *MapLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
 		}
 	}
+}
+
+func IsNamed(x Shape) bool {
+	switch y := x.(type) {
+	case *RefName, *StructLike, *UnionLike:
+		return true
+
+	case *StringLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name != ""
+
+	case *NumberLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name != ""
+
+	case *BooleanLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name != ""
+
+	case *ListLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name != ""
+
+	case *MapLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name != ""
+
+	case *Any:
+		return false
+	}
+
+	return false
 }

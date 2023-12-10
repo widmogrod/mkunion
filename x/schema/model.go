@@ -15,13 +15,12 @@ func MkBool(b bool) *Bool {
 }
 
 func MkInt(x int) *Number {
-	v := Number(x)
-	return &v
+	v := float64(x)
+	return (*Number)(&v)
 }
 
 func MkFloat(x float64) *Number {
-	v := Number(x)
-	return &v
+	return (*Number)(&x)
 }
 
 func MkBinary(b []byte) *Binary {
@@ -78,7 +77,7 @@ type (
 	}
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema
+//go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema,shape
 type (
 	None   struct{}
 	Bool   bool

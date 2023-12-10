@@ -69,7 +69,7 @@ func As[A int | int8 | int16 | int32 | int64 |
 			case string:
 				return any(string(*x)).(A), true
 			case []byte:
-				return any([]byte(*x)).(A), true
+				return any([]byte((*x))).(A), true
 			case float64:
 				v, err := strconv.ParseFloat(string(*x), 64)
 				if err != nil {
@@ -111,7 +111,7 @@ func As[A int | int8 | int16 | int32 | int64 |
 				if err != nil {
 					return def, false
 				}
-				return any(int64(v)).(A), true
+				return any(v).(A), true
 			}
 
 			return def, false

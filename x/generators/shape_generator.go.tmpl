@@ -1,0 +1,22 @@
+{{- $self := . -}}
+
+{{ RenderHeader -}}
+{{ RenderImport "github.com/widmogrod/mkunion/x/shape" -}}
+
+func {{ .Union.Name }}Shape() shape.Shape {
+	return &shape.UnionLike{
+		Name: "{{ .Union.Name }}",
+		PkgName: "{{ .Union.PkgName }}",
+		PkgImportName: "{{ .Union.PkgImportName }}",
+		Variant: []shape.Shape{
+		{{- range $index, $variant := .Union.Variant }}
+			{{ $self.VariantName $variant }}Shape(),
+		{{- end }}
+		},
+	}
+}
+{{ range $index, $variant := .Union.Variant }}
+func {{ $self.VariantName $variant }}Shape() shape.Shape {
+	return {{ $self.ShapeToString $variant 1 }}
+}
+{{ end -}}

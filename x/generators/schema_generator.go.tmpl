@@ -1,0 +1,15 @@
+{{ RenderHeader -}}
+{{ RenderImport "github.com/widmogrod/mkunion/x/schema" -}}
+
+{{- $name := .Name -}}
+func init() {
+	schema.RegisterUnionTypes({{ $name }}SchemaDef())
+}
+
+func {{ $name }}SchemaDef() *schema.UnionVariants[{{ $name }}] {
+	return schema.MustDefineUnion[{{ $name }}](
+	{{- range $i, $type := .Types }}
+		new({{ $type }}),
+	{{- end }}
+	)
+}

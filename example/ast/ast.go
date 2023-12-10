@@ -7,8 +7,6 @@
 // Much more advance parser is also possible, but it's not implemented here
 package ast
 
-import "github.com/widmogrod/mkunion/x/schema"
-
 // Value represents how value can be represented in AST
 // Lit - literal value like int or string
 // Accessor represents field access like "a.b.c"
@@ -35,10 +33,3 @@ type (
 	Or  struct{ List []Operator }
 	Not struct{ Operator }
 )
-
-func CustomValueSchemaDef() *schema.UnionVariants[Value] {
-	return schema.MustDefineUnion[Value](&Lit{}, &Accessor{})
-}
-func CustomOperationSchemaDef() *schema.UnionVariants[Operator] {
-	return schema.MustDefineUnion[Operator](&Eq{}, &Gt{}, &And{}, &Or{}, &Not{})
-}

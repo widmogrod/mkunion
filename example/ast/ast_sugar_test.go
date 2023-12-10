@@ -14,9 +14,13 @@ func TestAstSyntaxSugar(t *testing.T) {
 	}
 
 	sugarAST := OrFields{
-		"foo": &EqTo{"baz"},
-		"question": &OrFields{
-			"thanks": &GrThan{10},
+		M: map[string]SyntaxSugar{
+			"foo": &EqTo{"baz"},
+			"question": &OrFields{
+				M: map[string]SyntaxSugar{
+					"thanks": &GrThan{10},
+				},
+			},
 		},
 	}
 

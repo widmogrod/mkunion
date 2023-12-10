@@ -1,6 +1,7 @@
 package shape
 
 import (
+	"github.com/fatih/structtag"
 	"github.com/widmogrod/mkunion/x/schema"
 	"reflect"
 	"strings"
@@ -42,12 +43,15 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		return &NumberLike{}
 	case reflect.Slice:
 		return &ListLike{
-			Element: FromGoReflect(x.Elem(), infiniteRecursionFix),
+			Element:          FromGoReflect(x.Elem(), infiniteRecursionFix),
+			ElementIsPointer: x.Elem().Kind() == reflect.Ptr,
 		}
 	case reflect.Map:
 		return &MapLike{
-			Key: FromGoReflect(x.Key(), infiniteRecursionFix),
-			Val: FromGoReflect(x.Elem(), infiniteRecursionFix),
+			Key:          FromGoReflect(x.Key(), infiniteRecursionFix),
+			KeyIsPointer: x.Key().Kind() == reflect.Ptr,
+			Val:          FromGoReflect(x.Elem(), infiniteRecursionFix),
+			ValIsPointer: x.Elem().Kind() == reflect.Ptr,
 		}
 
 	case reflect.Ptr:
@@ -105,9 +109,28 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		fields := make([]*FieldLike, 0, x.NumField())
 		for i := 0; i < x.NumField(); i++ {
 			field := x.Field(i)
+
+			var guard Guard
+			if enum := field.Tag.Get("enum"); enum != "" {
+				guard = ConcatGuard(guard, &Enum{
+					Val: strings.Split(enum, ","),
+				})
+			}
+			if required := field.Tag.Get("required"); required == "true" {
+				guard = ConcatGuard(guard, &Required{})
+			}
+
+			tags := ExtractTags(string(field.Tag))
+			desc := TagsToDesc(tags)
+			guard = TagsToGuard(tags)
+
 			fields = append(fields, &FieldLike{
-				Name: field.Name,
-				Type: FromGoReflect(field.Type, infiniteRecursionFix),
+				Name:      field.Name,
+				Type:      FromGoReflect(field.Type, infiniteRecursionFix),
+				Desc:      desc,
+				Guard:     guard,
+				Tags:      tags,
+				IsPointer: field.Type.Kind() == reflect.Ptr,
 			})
 		}
 
@@ -116,6 +139,53 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 	}
 
 	return &Any{}
+}
+
+func TagsToGuard(tags map[string]FieldTag) Guard {
+	var result Guard
+	if enum, ok := tags["enum"]; ok {
+		result = ConcatGuard(result, &Enum{
+			Val: strings.Split(enum.Value, ","),
+		})
+	}
+	if required, ok := tags["required"]; ok && required.Value == "true" {
+		result = ConcatGuard(result, &Required{})
+	}
+
+	return result
+}
+
+func TagsToDesc(tags map[string]FieldTag) *string {
+	if desc, ok := tags["desc"]; ok {
+		descStr := strings.Trim(desc.Value, `"`)
+		if descStr != "" {
+			return &descStr
+		}
+	}
+
+	return nil
+}
+
+func ExtractTags(tag string) map[string]FieldTag {
+	tag = strings.Trim(tag, "`")
+	tags, err := structtag.Parse(tag)
+	if err != nil {
+		return nil
+	}
+
+	if len(tags.Tags()) == 0 {
+		return nil
+	}
+
+	result := make(map[string]FieldTag)
+	for _, t := range tags.Tags() {
+		result[t.Key] = FieldTag{
+			Value:   t.Value(),
+			Options: t.Options,
+		}
+	}
+
+	return result
 }
 
 func guessPkgName(x reflect.Type) string {

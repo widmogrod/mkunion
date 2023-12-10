@@ -4,13 +4,15 @@ import * as workflow from './workflow/workflow'
 import {dediscriminateCommand} from './workflow/workflow'
 import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
 import {Chat} from "./Chat";
+import {GenerateImage, ListWorkflowsFn} from "./workflow/main";
 
 function flowCreate(flow: workflow.Flow) {
     console.log("save-flow", flow)
     return fetch('http://localhost:8080/flow', {
         method: 'POST',
         body: JSON.stringify(flow),
-    }).then(res => res.text())
+    })
+        .then(res => res.text())
         .then(data => console.log("save-flow-result", data))
 }
 
@@ -18,7 +20,353 @@ function flowToString(flow: workflow.Worflow) {
     return fetch('http://localhost:8080/workflow-to-str', {
         method: 'POST',
         body: JSON.stringify(flow),
-    }).then(res => res.text())
+    })
+        .then(res => res.text())
+}
+
+type record = {
+    ID: string,
+    Type: string,
+    Data: workflow.State
+}
+
+function listStates(onData: (data: { Items: record[] }) => void) {
+    fetch('http://localhost:8080/list', {
+        method: 'GET',
+    })
+        .then(res => res.json())
+        .then(data => {
+            onData(data);
+        })
+}
+
+type recordFlow = {
+    ID: string,
+    Type: string,
+    Data: workflow.Flow
+}
+
+function listFlows(onData: (data: { Items: recordFlow[] }) => void) {
+    fetch('http://localhost:8080/flows', {
+        method: 'GET',
+    })
+        .then(res => res.json())
+        .then(data => {
+            onData(data);
+        })
+}
+
+function runFlow(flowID: string, input: string, onData?: (data: workflow.State) => void) {
+    const cmd: workflow.Command = {
+        "workflow.Run": {
+            Flow: {
+                "workflow.FlowRef": {
+                    FlowID: flowID,
+                }
+            },
+            Input: {
+                "schema.String": input,
+            },
+        }
+    }
+    fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(dediscriminateCommand(cmd)),
+    })
+        .then(res => res.json())
+        .then(data => {
+            onData && onData(data)
+        })
+
+}
+
+function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) => void) {
+    const cmd: workflow.Command = {
+        "workflow.Run": {
+            Flow: {
+                "workflow.Flow": {
+                    Name: "hello_world",
+                    Arg: "input",
+                    Body: [
+                        {
+                            "workflow.Choose": {
+                                ID: "choose1",
+                                If: {
+                                    "workflow.Compare": {
+                                        Operation: "=",
+                                        Left: {
+                                            "workflow.GetValue": {
+                                                Path: "input",
+                                            }
+                                        },
+                                        Right: {
+                                            "workflow.SetValue": {
+                                                Value: {
+                                                    "schema.String": "666",
+                                                },
+                                            },
+                                        },
+                                    }
+                                },
+                                Then: [
+                                    {
+                                        "workflow.End": {
+                                            ID: "end2",
+                                            Result: {
+                                                "workflow.SetValue": {
+                                                    Value: {
+                                                        "schema.String": "Do no evil",
+                                                    },
+                                                }
+                                            },
+                                        },
+                                    }
+                                ],
+                            }
+                        },
+                        {
+                            "workflow.Assign": {
+                                ID: "assign1",
+                                VarOk: "res",
+                                Val: {
+                                    "workflow.Apply": {
+                                        ID: "apply1",
+                                        Name: "concat",
+                                        Args: [
+                                            {
+                                                "workflow.SetValue": {
+                                                    Value: {
+                                                        "schema.String": "hello ",
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "workflow.GetValue": {
+                                                    Path: "input",
+                                                }
+                                            },
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "workflow.End": {
+                                ID: "end1",
+                                Result: {
+                                    "workflow.GetValue": {
+                                        Path: "res",
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                },
+            },
+            Input: {
+                "schema.String": input,
+            },
+        }
+    }
+
+    if (cmd?.["workflow.Run"]?.Flow) {
+        flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
+    }
+
+    fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(dediscriminateCommand(cmd)),
+    })
+        .then(res => res.json())
+        .then(data => onData && onData(data))
+}
+
+function generateImage(imageWidth: number, imageHeight: number, onData?: (data: workflow.State) => void) {
+    const cmd: workflow.Command = {
+        "workflow.Run": {
+            Flow: {
+                "workflow.Flow": {
+                    Name: "generateandresizeimage",
+                    Arg: "input",
+                    Body: [
+                        {
+                            "workflow.Assign": {
+                                ID: "assign1",
+                                VarOk: "res",
+                                Val: {
+                                    "workflow.Apply": {
+                                        ID: "apply1",
+                                        Name: "genimageb64",
+                                        Args: [
+                                            {
+                                                "workflow.GetValue": {
+                                                    Path: "input.prompt",
+                                                }
+                                            },
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "workflow.Assign": {
+                                ID: "assign2",
+                                VarOk: "res_small",
+                                Val: {
+                                    "workflow.Apply": {
+                                        ID: "apply2",
+                                        Name: "resizeimgb64",
+                                        Args: [
+                                            {
+                                                "workflow.GetValue": {
+                                                    Path: "res",
+                                                }
+                                            },
+                                            {
+                                                "workflow.GetValue": {
+                                                    Path: "input.width",
+                                                }
+                                            },
+                                            {
+                                                "workflow.GetValue": {
+                                                    Path: "input.height",
+                                                }
+                                            },
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "workflow.End": {
+                                ID: "end1",
+                                Result: {
+                                    "workflow.GetValue": {
+                                        Path: "res_small",
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                },
+            },
+            Input: {
+                "schema.Map": {
+                    "prompt": "no text",
+                    "width": imageWidth,
+                    "height": imageHeight,
+                },
+            },
+        }
+    }
+
+    if (cmd?.["workflow.Run"]?.Flow) {
+        flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
+    }
+
+    fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(dediscriminateCommand(cmd)),
+    })
+        .then(res => res.json())
+        .then((data: workflow.State) => {
+            onData && onData(data)
+
+        })
+}
+
+function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data: workflow.State) => void) {
+    const cmd: workflow.Command = {
+        "workflow.Run": {
+            Flow: {
+                "workflow.Flow": {
+                    Name: "concat_await",
+                    Arg: "input",
+                    Body: [
+                        {
+                            "workflow.Assign": {
+                                ID: "assign1",
+                                VarOk: "res",
+                                Val: {
+                                    "workflow.Apply": {
+                                        ID: "apply1",
+                                        Name: "concat",
+                                        Args: [
+                                            {
+                                                "workflow.SetValue": {
+                                                    Value: {
+                                                        "schema.String": "await hello ",
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "workflow.GetValue": {
+                                                    Path: "input.prompt",
+                                                }
+                                            },
+                                        ],
+                                        Await: {
+                                            Timeout: 10,
+                                        }
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "workflow.End": {
+                                ID: "end1",
+                                Result: {
+                                    "workflow.GetValue": {
+                                        Path: "res",
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                },
+            },
+            Input: {
+                "schema.Map": {
+                    "prompt": "no text",
+                    "width": imageWidth,
+                    "height": imageHeight,
+                },
+            },
+        }
+    }
+
+    if (cmd?.["workflow.Run"]?.Flow) {
+        flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
+    }
+
+    fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(dediscriminateCommand(cmd)),
+    })
+        .then(res => res.json())
+        .then((data: workflow.State) => {
+            onData && onData(data)
+        })
+}
+
+function submitCallbackResult(onData?: (data: workflow.State) => void) {
+    const cmd: workflow.Command = {
+        "workflow.Callback": {
+            CallbackID: "callback_id",
+            Result: {
+                "schema.String": "callback result",
+            },
+        }
+    }
+
+    fetch('http://localhost:8080/callback', {
+        method: 'POST',
+        body: JSON.stringify(dediscriminateCommand(cmd)),
+    })
+        .then(res => res.json())
+        .then((data: workflow.State) => {
+            onData && onData(data)
+        })
 }
 
 function App() {
@@ -26,11 +374,7 @@ function App() {
     const [input, setInput] = React.useState("hello");
     const [output, setOutput] = React.useState("" as any);
 
-    type record = {
-        ID: string,
-        Type: string,
-        Data: workflow.State
-    }
+
     const [table, setTable] = React.useState({Items: [] as record[]});
 
     const [image, setImage] = React.useState("" as string);
@@ -38,410 +382,192 @@ function App() {
     const [imageHeight, setImageHeight] = React.useState(100 as number);
     const [selectedFlow, setSelectedFlow] = React.useState("hello_world" as string);
 
-    type recordFlow = {
-        ID: string,
-        Type: string,
-        Data: workflow.Flow
-    }
 
     const [flows, setFlows] = React.useState({Items: [] as recordFlow[]});
+
 
     return (
         <div className="App">
             <main>
                 <h1>My App</h1>
-                <input type="text"
-                       placeholder="Enter your name"
-                       onInput={(e) => setInput(e.currentTarget.value)}/>
-                <button onClick={() => {
-                    const cmd: workflow.Command = {
-                        "workflow.Run": {
-                            Flow: {
-                                "workflow.Flow": {
-                                    Name: "hello_world",
-                                    Arg: "input",
-                                    Body: [
-                                        {
-                                            "workflow.Choose": {
-                                                ID: "choose1",
-                                                If: {
-                                                    "workflow.Compare": {
-                                                        Operation: "=",
-                                                        Left: {
-                                                            "workflow.GetValue": {
-                                                                Path: "input",
-                                                            }
-                                                        },
-                                                        Right: {
-                                                            "workflow.SetValue": {
-                                                                Value: {
-                                                                    "schema.String": "666",
-                                                                },
-                                                            },
-                                                        },
-                                                    }
-                                                },
-                                                Then: [
-                                                    {
-                                                        "workflow.End": {
-                                                            ID: "end2",
-                                                            Result: {
-                                                                "workflow.SetValue": {
-                                                                    Value: {
-                                                                        "schema.String": "Do no evil",
-                                                                    },
-                                                                }
-                                                            },
-                                                        },
-                                                    }
-                                                ],
-                                            }
-                                        },
-                                        {
-                                            "workflow.Assign": {
-                                                ID: "assign1",
-                                                VarOk: "res",
-                                                Val: {
-                                                    "workflow.Apply": {
-                                                        ID: "apply1",
-                                                        Name: "concat",
-                                                        Args: [
-                                                            {
-                                                                "workflow.SetValue": {
-                                                                    Value: {
-                                                                        "schema.String": "hello ",
-                                                                    }
-                                                                }
-                                                            },
-                                                            {
-                                                                "workflow.GetValue": {
-                                                                    Path: "input",
-                                                                }
-                                                            },
-                                                        ]
-                                                    }
-                                                }
-                                            },
-                                        },
-                                        {
-                                            "workflow.End": {
-                                                ID: "end1",
-                                                Result: {
-                                                    "workflow.GetValue": {
-                                                        Path: "res",
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ],
-                                },
-                            },
-                            Input: {
-                                "schema.String": input,
-                            },
-                        }
-                    }
+                <form
+                    className={"action-section"}
+                    onSubmit={(e) => {
+                        e.preventDefault()
+                        runHelloWorldWorkflow(input)
+                    }}
+                >
+                    <h2>Hello world</h2>
+                    <input type="text"
+                           placeholder="Enter your name"
+                           onInput={(e) => setInput(e.currentTarget.value)}/>
+                    <button>
+                        Run hello world workflow
+                    </button>
+                </form>
 
-                    if (cmd?.["workflow.Run"]?.Flow) {
-                        flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
-                    }
-
-                    fetch('http://localhost:8080/', {
-                        method: 'POST',
-                        body: JSON.stringify(dediscriminateCommand(cmd)),
-                    })
-                        .then(res => res.json())
-                        .then(data => setState(data))
-                }
-                }>Run workflow
-                </button>
-
-
-                <input type="number"
-                       placeholder="Width"
-                       onInput={(e) => setImageWidth(parseInt(e.currentTarget.value))}/>
-                <input type="number"
-                       placeholder="Height"
-                       onInput={(e) => setImageHeight(parseInt(e.currentTarget.value))}/>
-                <button onClick={() => {
-                    const cmd: workflow.Command = {
-                        "workflow.Run": {
-                            Flow: {
-                                "workflow.Flow": {
-                                    Name: "generateandresizeimage",
-                                    Arg: "input",
-                                    Body: [
-                                        {
-                                            "workflow.Assign": {
-                                                ID: "assign1",
-                                                VarOk: "res",
-                                                Val: {
-                                                    "workflow.Apply": {
-                                                        ID: "apply1",
-                                                        Name: "genimageb64",
-                                                        Args: [
-                                                            {
-                                                                "workflow.GetValue": {
-                                                                    Path: "input.prompt",
-                                                                }
-                                                            },
-                                                        ]
-                                                    }
-                                                }
-                                            },
-                                        },
-                                        {
-                                            "workflow.Assign": {
-                                                ID: "assign2",
-                                                VarOk: "res_small",
-                                                Val: {
-                                                    "workflow.Apply": {
-                                                        ID: "apply2",
-                                                        Name: "resizeimgb64",
-                                                        Args: [
-                                                            {
-                                                                "workflow.GetValue": {
-                                                                    Path: "res",
-                                                                }
-                                                            },
-                                                            {
-                                                                "workflow.GetValue": {
-                                                                    Path: "input.width",
-                                                                }
-                                                            },
-                                                            {
-                                                                "workflow.GetValue": {
-                                                                    Path: "input.height",
-                                                                }
-                                                            },
-                                                        ]
-                                                    }
-                                                }
-                                            },
-                                        },
-                                        {
-                                            "workflow.End": {
-                                                ID: "end1",
-                                                Result: {
-                                                    "workflow.GetValue": {
-                                                        Path: "res_small",
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ],
-                                },
-                            },
-                            Input: {
-                                "schema.Map": {
-                                    "prompt": "no text",
-                                    "width": imageWidth,
-                                    "height": imageHeight,
-                                },
-                            },
-                        }
-                    }
-
-                    if (cmd?.["workflow.Run"]?.Flow) {
-                        flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
-                    }
-
-                    fetch('http://localhost:8080/', {
-                        method: 'POST',
-                        body: JSON.stringify(dediscriminateCommand(cmd)),
-                    })
-                        .then(res => res.json())
-                        .then((data: workflow.State) => {
+                <form
+                    className={"action-section"}
+                    onSubmit={(e) => {
+                        e.preventDefault()
+                        generateImage(imageWidth, imageHeight, (data) => {
                             if ("workflow.Done" in data) {
                                 setImage(data["workflow.Done"].Result["schema.Binary"]);
                             } else if ("workflow.Error" in data) {
                                 console.log(data["workflow.Error"])
                             }
                         })
-                }
-                }>Generate image
-                </button>
+                    }}
+                >
+                    <h2>Image generation</h2>
+                    <input type="number"
+                           placeholder="Width"
+                           onInput={(e) => setImageWidth(parseInt(e.currentTarget.value))}/>
+                    <input type="number"
+                           placeholder="Height"
+                           onInput={(e) => setImageHeight(parseInt(e.currentTarget.value))}/>
+                    <button>
+                        Generate image
+                    </button>
+                </form>
 
-
-                <button onClick={() => {
-                    fetch('http://localhost:8080/list', {
-                        method: 'GET',
-                    })
-                        .then(res => res.json())
-                        .then(data => {
+                <form className={"action-section"}>
+                    <h2>Display tables</h2>
+                    <button onClick={(e) => {
+                        e.preventDefault()
+                        listStates((data) => {
                             setTable(data);
                         })
-                }}>
-                    List states
-                </button>
+                    }}>
+                        List states
+                    </button>
 
-                <button onClick={() => {
-                    fetch('http://localhost:8080/flows', {
-                        method: 'GET',
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            console.log(data)
+                    <button onClick={(e) => {
+                        e.preventDefault()
+                        listFlows((data) => {
                             setFlows(data);
                         })
-                }}>
-                    List flows
-                </button>
-                <select value={selectedFlow}
-                        onChange={(e) => setSelectedFlow(e.currentTarget.value)}>
-                    {flows.Items.map((item) => {
-                        return (
-                            <option key={item.ID} value={item.ID}>{item.ID}</option>
-                        );
-                    })}
-                </select>
+                    }}>
+                        List flows
+                    </button>
+                </form>
 
-                <button onClick={() => {
-                    const cmd: workflow.Command = {
-                        "workflow.Run": {
-                            Flow: {
-                                "workflow.FlowRef": {
-                                    FlowID: selectedFlow,
-                                }
-                            },
-                            Input: {
-                                "schema.String": input,
-                            },
-                        }
-                    }
-                    fetch('http://localhost:8080/', {
-                        method: 'POST',
-                        body: JSON.stringify(dediscriminateCommand(cmd)),
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            setState(data)
-                        })
-                }}>
-                    Run selected flow
-                </button>
-
-                <button onClick={() => {
-                    const cmd: workflow.Command = {
-                        "workflow.Run": {
-                            Flow: {
-                                "workflow.Flow": {
-                                    Name: "concat_await",
-                                    Arg: "input",
-                                    Body: [
-                                        {
-                                            "workflow.Assign": {
-                                                ID: "assign1",
-                                                VarOk: "res",
-                                                Val: {
-                                                    "workflow.Apply": {
-                                                        ID: "apply1",
-                                                        Name: "concat",
-                                                        Args: [
-                                                            {
-                                                                "workflow.SetValue": {
-                                                                    Value: {
-                                                                        "schema.String": "await hello ",
-                                                                    }
-                                                                }
-                                                            },
-                                                            {
-                                                                "workflow.GetValue": {
-                                                                    Path: "input.prompt",
-                                                                }
-                                                            },
-                                                        ],
-                                                        Await: {
-                                                            Timeout: 10,
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                        },
-                                        {
-                                            "workflow.End": {
-                                                ID: "end1",
-                                                Result: {
-                                                    "workflow.GetValue": {
-                                                        Path: "res",
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ],
-                                },
-                            },
-                            Input: {
-                                "schema.Map": {
-                                    "prompt": "no text",
-                                    "width": imageWidth,
-                                    "height": imageHeight,
-                                },
-                            },
-                        }
-                    }
-
-                    if (cmd?.["workflow.Run"]?.Flow) {
-                        flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
-                    }
-
-                    fetch('http://localhost:8080/', {
-                        method: 'POST',
-                        body: JSON.stringify(dediscriminateCommand(cmd)),
-                    })
-                        .then(res => res.json())
-                        .then((data: workflow.State) => {
+                <form
+                    className={"action-section"}
+                    onSubmit={(e) => {
+                        e.preventDefault()
+                        runFlow(selectedFlow, input, (data) => {
                             if ("workflow.Done" in data) {
                                 setImage(data["workflow.Done"].Result["schema.Binary"]);
                             } else if ("workflow.Error" in data) {
                                 console.log(data["workflow.Error"])
-                            } else {
-                                console.log("await", data)
                             }
                         })
-                }
-                }>Await image
-                </button>
+                    }}
+                >
+                    <h2>Run selected flow</h2>
+                    <select value={selectedFlow}
+                            onChange={(e) => setSelectedFlow(e.currentTarget.value)}>
+                        {flows.Items.map((item) => {
+                            return (
+                                <option key={item.ID} value={item.ID}>{item.ID}</option>
+                            );
+                        })}
+                    </select>
 
+                    <button>
+                        Run selected flow
+                    </button>
+                </form>
 
-                <button onClick={() => {
-                    const cmd: workflow.Command = {
-                        "workflow.Callback": {
-                            CallbackID: "callback_id",
-                            Result: {
-                                "schema.String": "callback result",
-                            },
-                        }
-                    }
-
-                    fetch('http://localhost:8080/callback', {
-                        method: 'POST',
-                        body: JSON.stringify(dediscriminateCommand(cmd)),
-                    })
-                        .then(res => res.json())
-                        .then((data: workflow.State) => {
+                <form className={"action-section"}>
+                    <h2>Async and callback result</h2>
+                    <button onClick={(e) => {
+                        e.preventDefault()
+                        runContactAwait(imageWidth, imageHeight, (data) => {
                             if ("workflow.Done" in data) {
                                 setImage(data["workflow.Done"].Result["schema.Binary"]);
                             } else if ("workflow.Error" in data) {
                                 console.log(data["workflow.Error"])
-                            } else {
-                                console.log("await", data)
                             }
                         })
-                }
-                }>Submit callback result
-                </button>
+                    }
+                    }>
+                        Await image
+                    </button>
 
+                    <button onClick={(e) => {
+                        e.preventDefault()
+                        submitCallbackResult((data) => {
+                            if ("workflow.Done" in data) {
+                                setImage(data["workflow.Done"].Result["schema.Binary"]);
+                            } else if ("workflow.Error" in data) {
+                                console.log(data["workflow.Error"])
+                            }
+                        })
+                    }}>
+                        Submit callback result
+                    </button>
+                </form>
 
-                <CreateAttachment input={input}/>
+                <form className={"action-section"}>
+                    <h2>Schedule run</h2>
+                    <SchedguledRun input={input}/>
+                </form>
 
-                <CallConcat name={input} onResult={(x) => setOutput(JSON.stringify(x))}/>
+                <form className={"action-section"}>
+                    <h2>Invoke function without workflow</h2>
+                    <button onClick={() => {
+                        callFunc("concat", [
+                            {"schema.String": "hello "},
+                            {"schema.String": input},
+                        ]).then((data) => {
+                            setOutput(JSON.stringify(data))
+                        })
+                    }}>
+                        Call func - Concat with {input}
+                    </button>
+                </form>
 
                 <table>
                     <tbody>
                     <tr>
                         <td>
-                            <Chat name="John"/>
+                            <Chat
+                                props={{
+                                    name: "John",
+                                    onFunctionCall: (x: { Name: string, Arguments: string }) => {
+                                        console.log("onFunctionCall", x);
+                                        switch (x.Name) {
+                                            case "count_words":
+                                                let args = JSON.parse(x.Arguments) as ListWorkflowsFn
+                                                console.log(args)
+                                                break
+
+                                            case "refresh_states":
+                                                listStates(setTable)
+                                                break;
+
+                                            case "refresh_flows":
+                                                listFlows(setFlows)
+                                                break;
+
+                                            case "generate_image":
+                                                let args2 = JSON.parse(x.Arguments) as GenerateImage;
+                                                generateImage(args2?.Width || 100, args2?.Height || 100, (data) => {
+                                                    if ("workflow.Done" in data) {
+                                                        setImage(data["workflow.Done"].Result["schema.Binary"]);
+                                                    } else if ("workflow.Error" in data) {
+                                                        console.log(data["workflow.Error"])
+                                                    }
+                                                    listStates(setTable)
+                                                    listFlows(setFlows)
+                                                })
+                                                break;
+                                        }
+                                    }
+                                }}
+                            />
                         </td>
                         <td>
                             <PaginatedTable table={flows} mapData={(data: workflow.Flow) => {
@@ -491,14 +617,22 @@ function App() {
                                             <span className="schedguled">workflow.Scheduled</span>
                                             <span>{JSON.stringify(data["workflow.Scheduled"].ExpectedRunTimestamp)}</span>
                                             <ListVariables data={data["workflow.Scheduled"].BaseState}/>
-                                            <StopSchedule parentRunID={data["workflow.Scheduled"].ParentRunID}/>
+                                            <button onClick={() => {
+                                                stopSchedule(data["workflow.Scheduled"].ParentRunID)
+                                            }}>
+                                                Stop Schedule
+                                            </button>
                                         </>
                                     )
                                 } else if ("workflow.ScheduleStopped") {
                                     return <>
                                         <span className="stopped">workflow.ScheduleStopped</span>
                                         <ListVariables data={data["workflow.ScheduleStopped"].BaseState}/>
-                                        <ResumeSchedule parentRunID={data["workflow.ScheduleStopped"].ParentRunID}/>
+                                        <button onClick={() => {
+                                            resumeSchedule(data["workflow.ScheduleStopped"].ParentRunID)
+                                        }}>
+                                            Resume Schedule
+                                        </button>
                                     </>
                                 } else {
                                     return JSON.stringify(data)
@@ -653,7 +787,7 @@ function WorkflowToString(props: { flow: workflow.Worflow }) {
     </>
 }
 
-function CreateAttachment(props: { input: string }) {
+function SchedguledRun(props: { input: string }) {
     /*
     * flow book_product(input) {
     *    let reservation = BookReservation(input.productId, input.userId, input.quantity) @timeout(1m)
@@ -786,76 +920,53 @@ function CreateAttachment(props: { input: string }) {
     }
 
     return <button onClick={doIt}>
-        Create attachment
+        Scheduled Run
     </button>
 
 }
 
-
-function StopSchedule(props: { parentRunID: string }) {
+function stopSchedule(parentRunID: string) {
     const cmd: workflow.Command = {
         "workflow.StopSchedule": {
-            ParentRunID: props.parentRunID,
+            ParentRunID: parentRunID,
         }
     }
 
-    const doIt = () => {
-        fetch('http://localhost:8080/', {
-            method: 'POST',
-            body: JSON.stringify(dediscriminateCommand(cmd)),
-        })
-            .then(res => res.json())
-    }
-
-    return <button onClick={doIt}>
-        Stop Schedule
-    </button>
-
+    return fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(dediscriminateCommand(cmd)),
+    })
+        .then(res => res.json())
+        .then(data => data as workflow.State)
 }
 
-function ResumeSchedule(props: { parentRunID: string }) {
+
+function resumeSchedule(parentRunID: string) {
     const cmd: workflow.Command = {
         "workflow.ResumeSchedule": {
-            ParentRunID: props.parentRunID,
+            ParentRunID: parentRunID,
         }
     }
 
-    const doIt = () => {
-        fetch('http://localhost:8080/', {
-            method: 'POST',
-            body: JSON.stringify(dediscriminateCommand(cmd)),
-        })
-            .then(res => res.json())
-    }
-
-    return <button onClick={doIt}>
-        Resume Schedule
-    </button>
+    return fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(dediscriminateCommand(cmd)),
+    })
+        .then(res => res.json())
+        .then(data => data as workflow.State)
 }
 
-function CallConcat(props: { name: string, onResult: (x: workflow.FunctionOutput) => void }) {
+function callFunc(funcID: string, args: any[]) {
     const cmd: workflow.FunctionInput = {
-        Name: "concat",
-        Args: [
-            {
-                "schema.String": "hello ",
-            },
-            {
-                "schema.String": props.name,
-            },
-        ]
+        Name: "funcID",
+        Args: args,
+
     }
 
-    const doIt = () => {
-        fetch('http://localhost:8080/func', {
-            method: 'POST',
-            body: JSON.stringify(cmd),
-        })
-            .then(res => res.json())
-            .then(data => props.onResult(data as workflow.FunctionOutput))
-    }
-
-    return <button onClick={doIt}>
-        Concat with {props.name}
-    </button>
+    return fetch('http://localhost:8080/func', {
+        method: 'POST',
+        body: JSON.stringify(cmd),
+    })
+        .then(res => res.json())
+        .then(data => data as workflow.FunctionOutput)
 }

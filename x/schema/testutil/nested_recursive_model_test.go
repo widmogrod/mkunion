@@ -42,6 +42,7 @@ func TestSchemaSchemaSerDe(t *testing.T) {
 }
 
 func TestSchemaSchemaSerDeRecursive(t *testing.T) {
+	t.Skip("to remove this feature")
 	subject := &ExampleTwo{
 		TwoData: MkMap(
 			MkField("name", MkString("Alpha")),
@@ -102,6 +103,7 @@ func TestSchemaSchemaSerDeRecursive(t *testing.T) {
 	assert.Equal(t, subject, got)
 }
 func TestSchemaSchemaSerDeRecursiveList(t *testing.T) {
+	t.Skip("to remove this feature")
 	subject := &ExampleTree{
 		Items: []Example{
 			&ExampleOne{OneValue: "foo"},

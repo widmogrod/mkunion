@@ -2,286 +2,9 @@
 package schema
 
 import "github.com/widmogrod/mkunion/f"
-
-// mkunion-extension:reducer_bfs
-var _ SchemaVisitor = (*SchemaBreadthFirstVisitor[any])(nil)
-
-type SchemaBreadthFirstVisitor[A any] struct {
-	stop   bool
-	result A
-	reduce SchemaReducer[A]
-
-	queue         []Schema
-	visited       map[Schema]bool
-	shouldExecute map[Schema]bool
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitNone(v *None) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceNone(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitBool(v *Bool) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceBool(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitNumber(v *Number) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceNumber(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitString(v *String) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceString(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitBinary(v *Binary) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceBinary(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitList(v *List) any {
-	d.queue = append(d.queue, v)
-	for idx := range v.Items {
-		d.queue = append(d.queue, v.Items[idx])
-	}
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceList(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) VisitMap(v *Map) any {
-	d.queue = append(d.queue, v)
-
-	if d.shouldExecute[v] {
-		d.shouldExecute[v] = false
-		d.result, d.stop = d.reduce.ReduceMap(v, d.result)
-	} else {
-		d.execute()
-	}
-	return nil
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) execute() {
-	for len(d.queue) > 0 {
-		if d.stop {
-			return
-		}
-
-		i := d.pop()
-		if d.visited[i] {
-			continue
-		}
-		d.visited[i] = true
-		d.shouldExecute[i] = true
-		i.AcceptSchema(d)
-	}
-
-	return
-}
-
-func (d *SchemaBreadthFirstVisitor[A]) pop() Schema {
-	i := d.queue[0]
-	d.queue = d.queue[1:]
-	return i
-}
-
-func ReduceSchemaBreadthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
-	reducer := &SchemaBreadthFirstVisitor[A]{
-		result:        init,
-		reduce:        r,
-		queue:         []Schema{v},
-		visited:       make(map[Schema]bool),
-		shouldExecute: make(map[Schema]bool),
-	}
-
-	_ = v.AcceptSchema(reducer)
-
-	return reducer.result
-}
-
-// mkunion-extension:default_reducer
-var _ SchemaReducer[any] = (*SchemaDefaultReduction[any])(nil)
-
-type (
-	SchemaDefaultReduction[A any] struct {
-		PanicOnFallback      bool
-		DefaultStopReduction bool
-		OnNone               func(x *None, agg A) (result A, stop bool)
-		OnBool               func(x *Bool, agg A) (result A, stop bool)
-		OnNumber             func(x *Number, agg A) (result A, stop bool)
-		OnString             func(x *String, agg A) (result A, stop bool)
-		OnBinary             func(x *Binary, agg A) (result A, stop bool)
-		OnList               func(x *List, agg A) (result A, stop bool)
-		OnMap                func(x *Map, agg A) (result A, stop bool)
-	}
-)
-
-func (t *SchemaDefaultReduction[A]) ReduceNone(x *None, agg A) (result A, stop bool) {
-	if t.OnNone != nil {
-		return t.OnNone(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceBool(x *Bool, agg A) (result A, stop bool) {
-	if t.OnBool != nil {
-		return t.OnBool(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceNumber(x *Number, agg A) (result A, stop bool) {
-	if t.OnNumber != nil {
-		return t.OnNumber(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceString(x *String, agg A) (result A, stop bool) {
-	if t.OnString != nil {
-		return t.OnString(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceBinary(x *Binary, agg A) (result A, stop bool) {
-	if t.OnBinary != nil {
-		return t.OnBinary(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceList(x *List, agg A) (result A, stop bool) {
-	if t.OnList != nil {
-		return t.OnList(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-func (t *SchemaDefaultReduction[A]) ReduceMap(x *Map, agg A) (result A, stop bool) {
-	if t.OnMap != nil {
-		return t.OnMap(x, agg)
-	}
-	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
-	}
-	return agg, t.DefaultStopReduction
-}
-
-// mkunion-extension:default_visitor
-type SchemaDefaultVisitor[A any] struct {
-	Default  A
-	OnNone   func(x *None) A
-	OnBool   func(x *Bool) A
-	OnNumber func(x *Number) A
-	OnString func(x *String) A
-	OnBinary func(x *Binary) A
-	OnList   func(x *List) A
-	OnMap    func(x *Map) A
-}
-
-func (t *SchemaDefaultVisitor[A]) VisitNone(v *None) any {
-	if t.OnNone != nil {
-		return t.OnNone(v)
-	}
-	return t.Default
-}
-func (t *SchemaDefaultVisitor[A]) VisitBool(v *Bool) any {
-	if t.OnBool != nil {
-		return t.OnBool(v)
-	}
-	return t.Default
-}
-func (t *SchemaDefaultVisitor[A]) VisitNumber(v *Number) any {
-	if t.OnNumber != nil {
-		return t.OnNumber(v)
-	}
-	return t.Default
-}
-func (t *SchemaDefaultVisitor[A]) VisitString(v *String) any {
-	if t.OnString != nil {
-		return t.OnString(v)
-	}
-	return t.Default
-}
-func (t *SchemaDefaultVisitor[A]) VisitBinary(v *Binary) any {
-	if t.OnBinary != nil {
-		return t.OnBinary(v)
-	}
-	return t.Default
-}
-func (t *SchemaDefaultVisitor[A]) VisitList(v *List) any {
-	if t.OnList != nil {
-		return t.OnList(v)
-	}
-	return t.Default
-}
-func (t *SchemaDefaultVisitor[A]) VisitMap(v *Map) any {
-	if t.OnMap != nil {
-		return t.OnMap(v)
-	}
-	return t.Default
-}
+import "github.com/widmogrod/mkunion/x/shared"
+import "encoding/json"
+import "fmt"
 
 //mkunion-extension:visitor
 
@@ -482,4 +205,638 @@ func ReduceSchemaDepthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
 	_ = v.AcceptSchema(reducer)
 
 	return reducer.result
+}
+
+// mkunion-extension:reducer_bfs
+var _ SchemaVisitor = (*SchemaBreadthFirstVisitor[any])(nil)
+
+type SchemaBreadthFirstVisitor[A any] struct {
+	stop   bool
+	result A
+	reduce SchemaReducer[A]
+
+	queue         []Schema
+	visited       map[Schema]bool
+	shouldExecute map[Schema]bool
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitNone(v *None) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceNone(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitBool(v *Bool) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceBool(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitNumber(v *Number) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceNumber(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitString(v *String) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceString(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitBinary(v *Binary) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceBinary(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitList(v *List) any {
+	d.queue = append(d.queue, v)
+	for idx := range v.Items {
+		d.queue = append(d.queue, v.Items[idx])
+	}
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceList(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) VisitMap(v *Map) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceMap(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) execute() {
+	for len(d.queue) > 0 {
+		if d.stop {
+			return
+		}
+
+		i := d.pop()
+		if d.visited[i] {
+			continue
+		}
+		d.visited[i] = true
+		d.shouldExecute[i] = true
+		i.AcceptSchema(d)
+	}
+
+	return
+}
+
+func (d *SchemaBreadthFirstVisitor[A]) pop() Schema {
+	i := d.queue[0]
+	d.queue = d.queue[1:]
+	return i
+}
+
+func ReduceSchemaBreadthFirst[A any](r SchemaReducer[A], v Schema, init A) A {
+	reducer := &SchemaBreadthFirstVisitor[A]{
+		result:        init,
+		reduce:        r,
+		queue:         []Schema{v},
+		visited:       make(map[Schema]bool),
+		shouldExecute: make(map[Schema]bool),
+	}
+
+	_ = v.AcceptSchema(reducer)
+
+	return reducer.result
+}
+
+// mkunion-extension:default_reducer
+var _ SchemaReducer[any] = (*SchemaDefaultReduction[any])(nil)
+
+type (
+	SchemaDefaultReduction[A any] struct {
+		PanicOnFallback      bool
+		DefaultStopReduction bool
+		OnNone               func(x *None, agg A) (result A, stop bool)
+		OnBool               func(x *Bool, agg A) (result A, stop bool)
+		OnNumber             func(x *Number, agg A) (result A, stop bool)
+		OnString             func(x *String, agg A) (result A, stop bool)
+		OnBinary             func(x *Binary, agg A) (result A, stop bool)
+		OnList               func(x *List, agg A) (result A, stop bool)
+		OnMap                func(x *Map, agg A) (result A, stop bool)
+	}
+)
+
+func (t *SchemaDefaultReduction[A]) ReduceNone(x *None, agg A) (result A, stop bool) {
+	if t.OnNone != nil {
+		return t.OnNone(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceNone")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceBool(x *Bool, agg A) (result A, stop bool) {
+	if t.OnBool != nil {
+		return t.OnBool(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBool")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceNumber(x *Number, agg A) (result A, stop bool) {
+	if t.OnNumber != nil {
+		return t.OnNumber(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceNumber")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceString(x *String, agg A) (result A, stop bool) {
+	if t.OnString != nil {
+		return t.OnString(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceString")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceBinary(x *Binary, agg A) (result A, stop bool) {
+	if t.OnBinary != nil {
+		return t.OnBinary(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBinary")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceList(x *List, agg A) (result A, stop bool) {
+	if t.OnList != nil {
+		return t.OnList(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceList")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *SchemaDefaultReduction[A]) ReduceMap(x *Map, agg A) (result A, stop bool) {
+	if t.OnMap != nil {
+		return t.OnMap(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceMap")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+// mkunion-extension:default_visitor
+type SchemaDefaultVisitor[A any] struct {
+	Default  A
+	OnNone   func(x *None) A
+	OnBool   func(x *Bool) A
+	OnNumber func(x *Number) A
+	OnString func(x *String) A
+	OnBinary func(x *Binary) A
+	OnList   func(x *List) A
+	OnMap    func(x *Map) A
+}
+
+func (t *SchemaDefaultVisitor[A]) VisitNone(v *None) any {
+	if t.OnNone != nil {
+		return t.OnNone(v)
+	}
+	return t.Default
+}
+func (t *SchemaDefaultVisitor[A]) VisitBool(v *Bool) any {
+	if t.OnBool != nil {
+		return t.OnBool(v)
+	}
+	return t.Default
+}
+func (t *SchemaDefaultVisitor[A]) VisitNumber(v *Number) any {
+	if t.OnNumber != nil {
+		return t.OnNumber(v)
+	}
+	return t.Default
+}
+func (t *SchemaDefaultVisitor[A]) VisitString(v *String) any {
+	if t.OnString != nil {
+		return t.OnString(v)
+	}
+	return t.Default
+}
+func (t *SchemaDefaultVisitor[A]) VisitBinary(v *Binary) any {
+	if t.OnBinary != nil {
+		return t.OnBinary(v)
+	}
+	return t.Default
+}
+func (t *SchemaDefaultVisitor[A]) VisitList(v *List) any {
+	if t.OnList != nil {
+		return t.OnList(v)
+	}
+	return t.Default
+}
+func (t *SchemaDefaultVisitor[A]) VisitMap(v *Map) any {
+	if t.OnMap != nil {
+		return t.OnMap(v)
+	}
+	return t.Default
+}
+
+// mkunion-extension:json
+type SchemaUnionJSON struct {
+	Type   string          `json:"$type,omitempty"`
+	None   json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.None,omitempty"`
+	Bool   json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Bool,omitempty"`
+	Number json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Number,omitempty"`
+	String json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.String,omitempty"`
+	Binary json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Binary,omitempty"`
+	List   json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.List,omitempty"`
+	Map    json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Map,omitempty"`
+}
+
+func SchemaFromJSON(x []byte) (Schema, error) {
+	var data SchemaUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "github.com/widmogrod/mkunion/x/schema.None":
+		return NoneFromJSON(data.None)
+	case "github.com/widmogrod/mkunion/x/schema.Bool":
+		return BoolFromJSON(data.Bool)
+	case "github.com/widmogrod/mkunion/x/schema.Number":
+		return NumberFromJSON(data.Number)
+	case "github.com/widmogrod/mkunion/x/schema.String":
+		return StringFromJSON(data.String)
+	case "github.com/widmogrod/mkunion/x/schema.Binary":
+		return BinaryFromJSON(data.Binary)
+	case "github.com/widmogrod/mkunion/x/schema.List":
+		return ListFromJSON(data.List)
+	case "github.com/widmogrod/mkunion/x/schema.Map":
+		return MapFromJSON(data.Map)
+	}
+
+	if data.None != nil {
+		return NoneFromJSON(data.None)
+	} else if data.Bool != nil {
+		return BoolFromJSON(data.Bool)
+	} else if data.Number != nil {
+		return NumberFromJSON(data.Number)
+	} else if data.String != nil {
+		return StringFromJSON(data.String)
+	} else if data.Binary != nil {
+		return BinaryFromJSON(data.Binary)
+	} else if data.List != nil {
+		return ListFromJSON(data.List)
+	} else if data.Map != nil {
+		return MapFromJSON(data.Map)
+	}
+
+	return nil, fmt.Errorf("unknown type %s", data.Type)
+}
+
+func SchemaToJSON(x Schema) ([]byte, error) {
+	return MustMatchSchemaR2(
+		x,
+		func(x *None) ([]byte, error) {
+			body, err := NoneToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.None",
+				None: body,
+			})
+		},
+		func(x *Bool) ([]byte, error) {
+			body, err := BoolToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.Bool",
+				Bool: body,
+			})
+		},
+		func(x *Number) ([]byte, error) {
+			body, err := NumberToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type:   "github.com/widmogrod/mkunion/x/schema.Number",
+				Number: body,
+			})
+		},
+		func(x *String) ([]byte, error) {
+			body, err := StringToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type:   "github.com/widmogrod/mkunion/x/schema.String",
+				String: body,
+			})
+		},
+		func(x *Binary) ([]byte, error) {
+			body, err := BinaryToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type:   "github.com/widmogrod/mkunion/x/schema.Binary",
+				Binary: body,
+			})
+		},
+		func(x *List) ([]byte, error) {
+			body, err := ListToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.List",
+				List: body,
+			})
+		},
+		func(x *Map) ([]byte, error) {
+			body, err := MapToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.Map",
+				Map:  body,
+			})
+		},
+	)
+}
+
+func NoneFromJSON(x []byte) (*None, error) {
+	var result *None = new(None)
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		}
+
+		return fmt.Errorf("schema.NoneFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func NoneToJSON(x *None) ([]byte, error) {
+	return json.Marshal(map[string]json.RawMessage{})
+}
+
+func (self *None) MarshalJSON() ([]byte, error) {
+	return NoneToJSON(self)
+}
+
+func (self *None) UnmarshalJSON(x []byte) error {
+	n, err := NoneFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func BoolFromJSON(x []byte) (*Bool, error) {
+	var result *Bool = new(Bool)
+	err := json.Unmarshal(x, result)
+
+	return result, err
+}
+
+func BoolToJSON(x *Bool) ([]byte, error) {
+	return json.Marshal(x)
+}
+
+func (self *Bool) MarshalJSON() ([]byte, error) {
+	return BoolToJSON(self)
+}
+
+func (self *Bool) UnmarshalJSON(x []byte) error {
+	n, err := BoolFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func NumberFromJSON(x []byte) (*Number, error) {
+	var result *Number = new(Number)
+	err := json.Unmarshal(x, result)
+
+	return result, err
+}
+
+func NumberToJSON(x *Number) ([]byte, error) {
+	return json.Marshal(x)
+}
+
+func (self *Number) MarshalJSON() ([]byte, error) {
+	return NumberToJSON(self)
+}
+
+func (self *Number) UnmarshalJSON(x []byte) error {
+	n, err := NumberFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func StringFromJSON(x []byte) (*String, error) {
+	var result *String = new(String)
+	err := json.Unmarshal(x, result)
+
+	return result, err
+}
+
+func StringToJSON(x *String) ([]byte, error) {
+	return json.Marshal(x)
+}
+
+func (self *String) MarshalJSON() ([]byte, error) {
+	return StringToJSON(self)
+}
+
+func (self *String) UnmarshalJSON(x []byte) error {
+	n, err := StringFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func BinaryFromJSON(x []byte) (*Binary, error) {
+	var result *Binary = new(Binary)
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "B":
+			return json.Unmarshal(value, &result.B)
+		}
+
+		return fmt.Errorf("schema.BinaryFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func BinaryToJSON(x *Binary) ([]byte, error) {
+	field_B, err := json.Marshal(x.B)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]json.RawMessage{
+		"B": field_B,
+	})
+}
+
+func (self *Binary) MarshalJSON() ([]byte, error) {
+	return BinaryToJSON(self)
+}
+
+func (self *Binary) UnmarshalJSON(x []byte) error {
+	n, err := BinaryFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func ListFromJSON(x []byte) (*List, error) {
+	var result *List = new(List)
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "Items":
+			return json.Unmarshal(value, &result.Items)
+		}
+
+		return fmt.Errorf("schema.ListFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func ListToJSON(x *List) ([]byte, error) {
+	field_Items, err := json.Marshal(x.Items)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]json.RawMessage{
+		"Items": field_Items,
+	})
+}
+
+func (self *List) MarshalJSON() ([]byte, error) {
+	return ListToJSON(self)
+}
+
+func (self *List) UnmarshalJSON(x []byte) error {
+	n, err := ListFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func MapFromJSON(x []byte) (*Map, error) {
+	var result *Map = new(Map)
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "Field":
+			return json.Unmarshal(value, &result.Field)
+		}
+
+		return fmt.Errorf("schema.MapFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func MapToJSON(x *Map) ([]byte, error) {
+	field_Field, err := json.Marshal(x.Field)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]json.RawMessage{
+		"Field": field_Field,
+	})
+}
+
+func (self *Map) MarshalJSON() ([]byte, error) {
+	return MapToJSON(self)
+}
+
+func (self *Map) UnmarshalJSON(x []byte) error {
+	n, err := MapFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
 }

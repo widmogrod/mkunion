@@ -7,11 +7,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sashabaranov/go-openai"
-	"github.com/sashabaranov/go-openai/jsonschema"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
 	_ "github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
@@ -34,10 +34,86 @@ type (
 //go:generate mkunion -name=ChatResult
 type (
 	SystemResponse struct {
+		//ID 	  string
 		Message   string
 		ToolCalls []openai.ToolCall
 	}
+	UserResponse struct {
+		//ID 	  string
+		Message string
+	}
+	ChatResponses struct {
+		Responses []ChatResult
+	}
 )
+
+func init() {
+	schema.RegisterWellDefinedTypesConversion[openai.ToolCall](
+		func(call openai.ToolCall) schema.Schema {
+			return schema.MkMap(
+				schema.MkField("Index", schema.FromGo(call.Index)),
+				schema.MkField("Type", schema.FromGo(call.Type)),
+				schema.MkField("Function", schema.FromGo(call.Function)),
+				schema.MkField("ID", schema.FromGo(call.ID)),
+			)
+		},
+		func(s schema.Schema) openai.ToolCall {
+			index, _ := schema.ToGoG[*int](schema.Get(s, "Index"))
+			typ, _ := schema.ToGoG[openai.ToolType](schema.Get(s, "Type"))
+			function, _ := schema.ToGoG[openai.FunctionCall](schema.Get(s, "Function"))
+			id, _ := schema.ToGoG[string](schema.Get(s, "ID"))
+
+			return openai.ToolCall{
+				Index:    index,
+				Type:     typ,
+				Function: function,
+				ID:       id,
+			}
+		},
+	)
+	schema.RegisterWellDefinedTypesConversion[openai.ToolType](
+		func(toolType openai.ToolType) schema.Schema {
+			return schema.MkString(string(toolType))
+		},
+		func(s schema.Schema) openai.ToolType {
+			v, err := schema.ToGoG[string](s)
+			if err != nil {
+				panic(err)
+			}
+			return openai.ToolType(v)
+		},
+	)
+	schema.RegisterWellDefinedTypesConversion[openai.FunctionCall](
+		func(call openai.FunctionCall) schema.Schema {
+			return schema.MkMap(
+				schema.MkField("Name", schema.FromGo(call.Name)),
+				schema.MkField("Arguments", schema.FromGo(call.Arguments)),
+			)
+		},
+		func(s schema.Schema) openai.FunctionCall {
+			name, _ := schema.ToGoG[string](schema.Get(s, "Name"))
+			arguments, _ := schema.ToGoG[string](schema.Get(s, "Arguments"))
+
+			return openai.FunctionCall{
+				Name:      name,
+				Arguments: arguments,
+			}
+		},
+	)
+}
+
+type ListWorkflowsFn struct {
+	Count    int      `desc:"total number of words in sentence"`
+	Words    []string `desc:"list of words in sentence"`
+	EnumTest string   `desc:"skip words" enum:"hello,world"`
+}
+
+type RefreshStates struct{}
+type RefreshFlows struct{}
+type GenerateImage struct {
+	Width  int `desc:"width of image as int between 50 and 500"`
+	Height int `desc:"height of image as int between 50 and 500"`
+}
 
 func main() {
 	schema.RegisterUnionTypes(ChatResultSchemaDef())
@@ -119,45 +195,54 @@ func main() {
 		AllowOrigins: []string{"*"},
 	}))
 	e.POST("/message", TypedRequest(func(x ChatCMD) (ChatResult, error) {
-		log.Infof("x: %+v", x)
 		ctx := context.Background()
+
+		model := openai.GPT3Dot5Turbo1106
+		tools := []openai.Tool{
+			{
+				Type: openai.ToolTypeFunction,
+				Function: shape.ToOpenAIFunctionDefinition(
+					"count_words",
+					"count number of valid words in sentence",
+					shape.FromGo(ListWorkflowsFn{}),
+				),
+			},
+			{
+				Type: openai.ToolTypeFunction,
+				Function: shape.ToOpenAIFunctionDefinition(
+					"refresh_flows",
+					"refresh list of workflows visible to user on UI",
+					shape.FromGo(RefreshFlows{}),
+				),
+			},
+			{
+				Type: openai.ToolTypeFunction,
+				Function: shape.ToOpenAIFunctionDefinition(
+					"refresh_states",
+					"refresh list of states visible to user on UI",
+					shape.FromGo(RefreshStates{}),
+				),
+			},
+			{
+				Type: openai.ToolTypeFunction,
+				Function: shape.ToOpenAIFunctionDefinition(
+					"generate_image",
+					"generate image",
+					shape.FromGo(GenerateImage{}),
+				),
+			},
+		}
+
+		var history []openai.ChatCompletionMessage
+		history = append(history, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleUser,
+			Content: x.(*UserMessage).Message,
+		})
+
 		result, err := oaic.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo1106,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: x.(*UserMessage).Message,
-				},
-			},
-			Tools: []openai.Tool{
-				{
-					Type: openai.ToolTypeFunction,
-					Function: openai.FunctionDefinition{
-						Name:        "list_workflows",
-						Description: "list all workflows that are being executed",
-						Parameters: &jsonschema.Definition{
-							Type: jsonschema.Object,
-							Properties: map[string]jsonschema.Definition{
-								"count": {
-									Type:        jsonschema.Number,
-									Description: "total number of words in sentence",
-								},
-								"words": {
-									Type:        jsonschema.Array,
-									Description: "list of words in sentence",
-									Items: &jsonschema.Definition{
-										Type: jsonschema.String,
-									},
-								},
-								"enumTest": {
-									Type: jsonschema.String,
-									Enum: []string{"hello", "world"},
-								},
-							},
-						},
-					},
-				},
-			},
+			Model:    model,
+			Messages: history,
+			Tools:    tools,
 		})
 
 		if err != nil {
@@ -165,11 +250,66 @@ func main() {
 			return nil, err
 		}
 
-		log.Infof("result: %+v", result)
-		return &SystemResponse{
+		history = append(history, result.Choices[0].Message)
+
+		response := &ChatResponses{}
+		response.Responses = append(response.Responses, &SystemResponse{
 			Message:   result.Choices[0].Message.Content,
 			ToolCalls: result.Choices[0].Message.ToolCalls,
-		}, nil
+		})
+
+		for _, tool := range result.Choices[0].Message.ToolCalls {
+			switch tool.Function.Name {
+			case "refresh_states":
+				records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
+					RecordType: "process",
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				schemed := schema.FromGo(records)
+				result, err := schema.ToJSON(schemed)
+
+				history = append(history, openai.ChatCompletionMessage{
+					Role:       openai.ChatMessageRoleTool,
+					Content:    string(result),
+					ToolCallID: tool.ID,
+				})
+
+			default:
+				history = append(history, openai.ChatCompletionMessage{
+					Role:       openai.ChatMessageRoleTool,
+					Content:    "not implemented",
+					ToolCallID: tool.ID,
+				})
+			}
+
+		}
+
+		if len(result.Choices[0].Message.ToolCalls) > 0 {
+			result2, err2 := oaic.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+				Model:    model,
+				Messages: history,
+				Tools:    tools,
+			})
+
+			if err2 != nil {
+				log.Errorf("failed to create chat completion2: %v", err2)
+				for _, h := range history {
+					log.Infof("history: %#+v \n", h)
+				}
+				return nil, err2
+			}
+
+			response.Responses = append(response.Responses, &SystemResponse{
+				Message:   result2.Choices[0].Message.Content,
+				ToolCalls: result2.Choices[0].Message.ToolCalls,
+			})
+		}
+
+		log.Infof("result: %+v", result)
+		return response, nil
 	}))
 
 	e.POST("/func", TypedRequest(func(x *workflow.FunctionInput) (*workflow.FunctionOutput, error) {

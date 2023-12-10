@@ -1,13 +1,5 @@
 package tictacstatemachine
 
-import "github.com/widmogrod/mkunion/x/schema"
-
-func init() {
-	schema.RegisterRules([]schema.RuleMatcher{
-		schema.WhenPath([]string{"*", "TicTacToeBaseState"}, schema.UseStruct(TicTacToeBaseState{})),
-	})
-}
-
 // Value objects, values that restrict cardinality of the state.
 type (
 	PlayerID = string

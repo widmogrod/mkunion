@@ -2,38 +2,19 @@ package ast
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/widmogrod/mkunion/x/schema"
 	"testing"
 )
 
 func TestAstJsonConversionOnSimpleType(t *testing.T) {
 	in := &Lit{Value: float64(12)}
-
-	s := schema.FromGo(in)
-
-	out := &schema.Map{
-		Field: []schema.Field{
-			{
-				Name: "ast.Lit",
-				Value: &schema.Map{
-					Field: []schema.Field{
-						{
-							Name:  "Value",
-							Value: schema.MkInt(12),
-						},
-					},
-				},
-			},
-		},
-	}
-	assert.Equal(t, out, s)
-
-	var data = schema.MustToGo(s)
-	assert.Equal(t, in, data)
-
-	jsonData, err := schema.ToJSON(s)
+	jsonData, err := ValueToJSON(in)
 	assert.NoError(t, err)
-	assert.JSONEq(t, `{"ast.Lit":{"Value":12}}`, string(jsonData))
+	assert.JSONEq(t, `{
+  "$type": "github.com/widmogrod/mkunion/example/ast.Lit",
+  "github.com/widmogrod/mkunion/example/ast.Lit": {
+    "Value": 12
+  }
+}`, string(jsonData))
 }
 func TestAstToJSONOnSumTypes(t *testing.T) {
 	in := &Eq{
@@ -41,87 +22,27 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 		R: &Lit{"baz"},
 	}
 
-	s := schema.FromGo(in, schema.WithOnlyTheseRules(
-		CustomValueSchemaDef(),
-		CustomOperationSchemaDef(),
-	), schema.WithUnionFormatter(schema.FormatUnionNameUsingTypeName))
-
-	out := &schema.Map{
-		Field: []schema.Field{
-			{
-				Name: "Eq",
-				Value: &schema.Map{
-					Field: []schema.Field{
-						{
-							Name: "L",
-							Value: &schema.Map{
-								Field: []schema.Field{
-									{
-										Name: "Accessor",
-										Value: &schema.Map{
-											Field: []schema.Field{
-												{
-													Name: "Path",
-													Value: &schema.List{
-														Items: []schema.Schema{
-															schema.MkString("foo"),
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						{
-							Name: "R",
-							Value: &schema.Map{
-								Field: []schema.Field{
-									{
-										Name: "Lit",
-										Value: &schema.Map{
-											Field: []schema.Field{
-												{
-													Name:  "Value",
-													Value: schema.MkString("baz"),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	assert.Equal(t, out, s, "schema transformation")
-
-	var data = schema.MustToGo(s, schema.WithOnlyTheseRules(
-		CustomValueSchemaDef(),
-		CustomOperationSchemaDef(),
-	), schema.WithUnionFormatter(schema.FormatUnionNameUsingTypeName))
-	assert.Equal(t, in, data, "back to original golang structs")
-
-	jsonData, err := schema.ToJSON(s)
+	jsonData, err := OperatorToJSON(in)
 	assert.NoError(t, err)
 	t.Log(string(jsonData))
-	assert.JSONEq(t, `{"Eq":{"L":{"Accessor":{"Path":["foo"]}},"R":{"Lit":{"Value":"baz"}}}}`, string(jsonData))
+	assert.JSONEq(t, `{
+  "$type": "github.com/widmogrod/mkunion/example/ast.Eq",
+  "github.com/widmogrod/mkunion/example/ast.Eq": {
+    "L": {
+      "$type": "github.com/widmogrod/mkunion/example/ast.Accessor",
+      "github.com/widmogrod/mkunion/example/ast.Accessor": {
+        "Path": [
+          "foo"
+        ]
+      }
+    },
+    "R": {
+      "$type": "github.com/widmogrod/mkunion/example/ast.Lit",
+      "github.com/widmogrod/mkunion/example/ast.Lit": {
+        "Value": "baz"
+      }
+    }
+  }
 }
-
-func TestASTSchema(t *testing.T) {
-	v := &And{
-		List: []Operator{
-			&Eq{
-				L: &Accessor{[]string{"foo"}},
-				R: &Lit{"baz"},
-			},
-		},
-	}
-	s := schema.FromGo(v)
-	result := schema.MustToGo(s)
-	assert.Equal(t, v, result)
+`, string(jsonData))
 }

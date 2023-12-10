@@ -12,14 +12,20 @@ var (
 	unionMap       = &UnionMap{}
 )
 
+type WellDefinedFromToStrategy[T any] struct {
+	ToSchema func(x T) Schema
+	ToGo     func(x Schema) T
+}
+
 type goConfig struct {
-	defaultListDef TypeListDefinition
-	defaultMapDef  TypeMapDefinition
-	localRules     []RuleMatcher
-	registry       *Registry
-	useRegistry    bool
-	unionFormatter UnionFormatFunc
-	activeBuilder  any
+	defaultListDef                  TypeListDefinition
+	defaultMapDef                   TypeMapDefinition
+	localRules                      []RuleMatcher
+	registry                        *Registry
+	useRegistry                     bool
+	unionFormatter                  UnionFormatFunc
+	activeBuilder                   any
+	localWellDefinedTypesConversion map[string]WellDefinedFromToStrategy[any]
 }
 
 func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
@@ -76,7 +82,87 @@ func (c *goConfig) variantName(r reflect.Type) string {
 	return c.formatter()(r)
 }
 
+func (c *goConfig) typeName(r reflect.Type) string {
+	return c.formatter()(r)
+}
+
+func (c *goConfig) RegisterStrategy(r reflect.Type, x WellDefinedFromToStrategy[any]) {
+	if c.localWellDefinedTypesConversion == nil {
+		c.localWellDefinedTypesConversion = make(map[string]WellDefinedFromToStrategy[any])
+	}
+
+	name := c.typeName(r)
+	c.localWellDefinedTypesConversion[name] = x
+}
+
+func (c *goConfig) WellDefinedTypeToSchema(x any) Schema {
+	r := reflect.TypeOf(x)
+	name := c.typeName(r)
+	if wellDefined, ok := c.localWellDefinedTypesConversion[name]; ok {
+		return wellDefined.ToSchema(x)
+	}
+
+	if c.useRegistry {
+		if wellDefined, ok := c.registry.wellDefinedTypesConversion[name]; ok {
+			return wellDefined.ToSchema(x)
+		}
+	}
+
+	return nil
+}
+
+func (c *goConfig) WellDefinedTypeToGo(x Schema, r reflect.Type) any {
+	name := c.typeName(r)
+	if wellDefined, ok := c.localWellDefinedTypesConversion[name]; ok {
+		return wellDefined.ToGo(x)
+	}
+
+	if c.useRegistry {
+		if wellDefined, ok := c.registry.wellDefinedTypesConversion[name]; ok {
+			return wellDefined.ToGo(x)
+		}
+	}
+
+	return nil
+}
+
 type goConfigFunc func(c *goConfig)
+
+func WithWellDefinedTypeConversion[T any](from func(T) Schema, to func(Schema) T) goConfigFunc {
+	return func(c *goConfig) {
+		var t T
+
+		r := reflect.TypeOf(t)
+		c.RegisterStrategy(r, NewWellDefinedFromToStrategy(from, to))
+	}
+}
+
+// NewWellDefinedFromToStrategy assumption is that from and to functions are symmetrical
+// and that function works on values, not pointers (to reduce implementation complexity)
+// and if there is need to do conversion on pointers, then it should be done in "runtime" wrapper (here)
+func NewWellDefinedFromToStrategy[T any](from func(T) Schema, to func(Schema) T) WellDefinedFromToStrategy[any] {
+	return WellDefinedFromToStrategy[any]{
+		ToSchema: func(x any) Schema {
+			if y, ok := x.(T); ok {
+				return from(y)
+			}
+
+			if y, ok := x.(*T); ok {
+				// check if value can be dereference, not using reflection
+				if y != nil {
+					return from(*y)
+				} else {
+					return MkNone()
+				}
+			}
+
+			panic(fmt.Errorf("schema.NewWellDefinedFromToStrategy: invalid type %T", x))
+		},
+		ToGo: func(x Schema) any {
+			return any(to(x))
+		},
+	}
+}
 
 func WithRulesFromRegistry(registry *Registry) goConfigFunc {
 	return func(c *goConfig) {
@@ -150,12 +236,12 @@ func goToSchema(x any, c *goConfig) Schema {
 		return &None{}
 
 	case bool:
-		return (*Bool)(&y)
+		return MkBool(y)
 	case *bool:
 		if y == nil {
 			return &None{}
 		} else {
-			return (*Bool)(y)
+			return MkBool(*y)
 		}
 
 	case string:
@@ -177,133 +263,112 @@ func goToSchema(x any, c *goConfig) Schema {
 		}
 
 	case float64:
-		v := Number(y)
-		return &v
+		return MkFloat(y)
 	case *float64:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(*y)
 		}
 
 	case float32:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *float32:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case int:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case int8:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int8:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
+
 	case int16:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int16:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
+
 	case int32:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int32:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case int64:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
+
 	case *int64:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint8:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint8:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint16:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint16:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint32:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint32:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint64:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint64:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case []any:
@@ -327,6 +392,10 @@ func goToSchema(x any, c *goConfig) Schema {
 		return goToSchema(y.Interface(), c)
 
 	default:
+		if definedType := c.WellDefinedTypeToSchema(x); definedType != nil {
+			return definedType
+		}
+
 		v := reflect.ValueOf(x)
 
 		if v.Kind() == reflect.Ptr {
@@ -471,6 +540,10 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 				return b.BuildFromMapSchema(x)
 			}
 
+			if inject, ok := build.(wellDefinedSupported); ok {
+				inject.WithWellDefinedTypesConversion(c.WellDefinedTypeToGo)
+			}
+
 			for _, field := range x.Field {
 				c.activeBuilder = build
 				value, err := schemaToGo(field.Value, c, append(path, field.Name))
@@ -493,6 +566,10 @@ func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
 	var a A
 	var result any
 	var err error
+
+	if x == nil {
+		return a, nil
+	}
 
 	switch any(a).(type) {
 	case int:
@@ -560,7 +637,8 @@ func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
 		if any(a) == nil {
 			result, err = ToGo(x, options...)
 		} else {
-			result, err = ToGo(x, WithExtraRules(WhenPath(nil, UseStruct(a))))
+			options := append(options, WithExtraRules(WhenPath(nil, UseStruct(a))))
+			result, err = ToGo(x, options...)
 		}
 
 		if err != nil {
