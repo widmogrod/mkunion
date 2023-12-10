@@ -30,12 +30,15 @@ func TestInferFromFile(t *testing.T) {
 					{
 						Name:      "Name",
 						Type:      &StringLike{},
-						Desc:      nil,
+						Desc:      ptr("Name of the person"),
 						Guard:     nil,
 						IsPointer: false,
 						Tags: map[string]FieldTag{
 							"json": {
 								Value: "name",
+							},
+							"desc": {
+								Value: "Name of the person",
 							},
 						},
 					},
