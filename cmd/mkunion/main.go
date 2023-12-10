@@ -125,7 +125,7 @@ func main() {
 					jsonGenerator := generators.NewDeSerJSONGenerator(union, helper)
 					shapeGenerator := generators.NewShapeGenerator(union, helper)
 					visitor := generators.NewVisitorGenerator(unionName, types, helper)
-					schema := generators.NewSchemaGenerator(visitor.Name, visitor.Types, helper)
+					schema := generators.NewSchemaGenerator(union, helper)
 					depthFirstGenerator := generators.NewReducerDepthFirstGenerator(union, helper)
 					breadthFirstGenerator := generators.NewReducerBreadthFirstGenerator(union, helper)
 					defaultReduction := generators.NewReducerDefaultReductionGenerator(union, helper)

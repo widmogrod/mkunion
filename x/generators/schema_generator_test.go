@@ -1,12 +1,21 @@
 package generators
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/shape"
 	"testing"
 )
 
 func TestDeSerJsonGeneration(t *testing.T) {
-	g := NewSchemaGenerator("Vehicle", []string{"Plane", "Car", "Boat"}, NewHelper(WithPackageName("visitor")))
+	log.SetLevel(log.DebugLevel)
+	inferred, err := shape.InferFromFile("testutils/tree_example_lit.go")
+	assert.NoError(t, err)
+
+	g := NewSchemaGenerator(
+		inferred.RetrieveUnion("Tree2"),
+		NewHelper(WithPackageName("visitor")),
+	)
 
 	result, err := g.Generate()
 	assert.NoError(t, err)
@@ -16,14 +25,13 @@ package visitor
 import "github.com/widmogrod/mkunion/x/schema"
 
 func init() {
-	schema.RegisterUnionTypes(VehicleSchemaDef())
+	schema.RegisterUnionTypes(Tree2SchemaDef())
 }
 
-func VehicleSchemaDef() *schema.UnionVariants[Vehicle] {
-	return schema.MustDefineUnion[Vehicle](
-		&Plane{},
-		&Car{},
-		&Boat{},
+func Tree2SchemaDef() *schema.UnionVariants[Tree2] {
+	return schema.MustDefineUnion[Tree2](
+		&Branch2{},
+		&Leaf2{},
 	)
 }
 `, string(result))

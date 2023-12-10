@@ -3,6 +3,7 @@ package generators
 import (
 	"bytes"
 	_ "embed"
+	"github.com/widmogrod/mkunion/x/shape"
 	"text/template"
 )
 
@@ -11,9 +12,10 @@ var (
 	visitorSchemaTmpl string
 )
 
-func NewSchemaGenerator(name string, types []string, helper *Helpers) *SchemaGenerator {
+func NewSchemaGenerator(union shape.UnionLike, helper *Helpers) *SchemaGenerator {
+	types, _ := AdaptUnionToOldVersionOfGenerator(union)
 	return &SchemaGenerator{
-		Name:     name,
+		Name:     union.Name,
 		Types:    types,
 		Helper:   helper,
 		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(visitorSchemaTmpl)),
