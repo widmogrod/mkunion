@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 	"text/template"
 )
@@ -141,9 +142,10 @@ var (
 	visitorTmpl string
 )
 
-func NewVisitorGenerator(name string, types []string, helper *Helpers) *VisitorGenerator {
+func NewVisitorGenerator(union shape.UnionLike, helper *Helpers) *VisitorGenerator {
+	types, _ := AdaptUnionToOldVersionOfGenerator(union)
 	return &VisitorGenerator{
-		Name:     name,
+		Name:     union.Name,
 		Types:    types,
 		Helper:   helper,
 		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(visitorTmpl)),

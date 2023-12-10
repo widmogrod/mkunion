@@ -36,11 +36,6 @@ func main() {
 				Required: false,
 			},
 			&cli.StringFlag{
-				Name:     "variants",
-				Aliases:  []string{"var"},
-				Required: false,
-			},
-			&cli.StringFlag{
 				Name:     "skip-extension",
 				Aliases:  []string{"skip-ext"},
 				Value:    "reducer_bfs,reducer_dfs,default_visitor,default_reducer",
@@ -104,13 +99,6 @@ func main() {
 				}
 
 				for _, unionName := range unionNames {
-					var types []string
-					if len(unionNames) == 1 && c.String("variants") != "" {
-						types = strings.Split(c.String("variants"), ",")
-					} else {
-						types = inferred.PossibleVariantsTypes(unionName)
-					}
-
 					options := []generators.GenerateOption{
 						generators.WithPackageName(inferred.PackageName),
 					}
@@ -124,7 +112,7 @@ func main() {
 
 					jsonGenerator := generators.NewDeSerJSONGenerator(union, helper)
 					shapeGenerator := generators.NewShapeGenerator(union, helper)
-					visitor := generators.NewVisitorGenerator(unionName, types, helper)
+					visitor := generators.NewVisitorGenerator(union, helper)
 					schema := generators.NewSchemaGenerator(union, helper)
 					depthFirstGenerator := generators.NewReducerDepthFirstGenerator(union, helper)
 					breadthFirstGenerator := generators.NewReducerBreadthFirstGenerator(union, helper)
