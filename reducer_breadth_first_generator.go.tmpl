@@ -16,7 +16,7 @@ type {{ $name }}BreadthFirstVisitor[A any] struct {
 {{ range $i, $type := .Types }}
 func (d *{{ $name }}BreadthFirstVisitor[A]) Visit{{ . }}(v *{{ . }}) any {
 	d.queue = append(d.queue, v)
-{{- range (index $root.Branches $type) -}}
+	{{- range (index $root.Branches $type) -}}
 	{{- if .Lit}}
 	d.queue = append(d.queue, v.{{ .Lit }})
 	{{- else if .List }}

@@ -127,12 +127,7 @@ func main() {
 					visitor := mkunion.NewVisitorGenerator(unionName, types, helper)
 					schema := mkunion.NewSchemaGenerator(visitor.Name, visitor.Types, helper)
 					depthFirstGenerator := mkunion.NewReducerDepthFirstGenerator(union, helper)
-					breadthFirstGenerator := mkunion.NewReducerBreadthFirstGenerator(
-						visitor.Name,
-						visitor.Types,
-						inferred.ForVariantType(visitor.Name, visitor.Types),
-						helper,
-					)
+					breadthFirstGenerator := mkunion.NewReducerBreadthFirstGenerator(union, helper)
 					defaultReduction := mkunion.NewReducerDefaultReductionGenerator(union, helper)
 					defaultVisitor := mkunion.NewVisitorDefaultGenerator(visitor.Name, visitor.Types, helper)
 

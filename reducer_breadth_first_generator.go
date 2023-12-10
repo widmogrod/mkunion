@@ -3,6 +3,7 @@ package mkunion
 import (
 	"bytes"
 	_ "embed"
+	"github.com/widmogrod/mkunion/x/shape"
 	"text/template"
 )
 
@@ -12,13 +13,12 @@ var (
 )
 
 func NewReducerBreadthFirstGenerator(
-	name variantName,
-	types []typeName,
-	branches map[typeName][]Branching,
+	union shape.UnionLike,
 	helper *Helpers,
 ) *ReducerBreadthFirstGenerator {
+	types, branches := AdaptUnionToOldVersionOfGenerator(union)
 	return &ReducerBreadthFirstGenerator{
-		Name:     name,
+		Name:     union.Name,
 		Types:    types,
 		Branches: branches,
 		Helper:   helper,
