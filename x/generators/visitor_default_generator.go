@@ -3,6 +3,7 @@ package generators
 import (
 	"bytes"
 	_ "embed"
+	"github.com/widmogrod/mkunion/x/shape"
 	"text/template"
 )
 
@@ -11,9 +12,10 @@ var (
 	optionalVisitorTmpl string
 )
 
-func NewVisitorDefaultGenerator(name string, types []string, helper *Helpers) *VisitorDefaultGenerator {
+func NewVisitorDefaultGenerator(union shape.UnionLike, helper *Helpers) *VisitorDefaultGenerator {
+	types, _ := AdaptUnionToOldVersionOfGenerator(union)
 	return &VisitorDefaultGenerator{
-		Name:     name,
+		Name:     union.Name,
 		Types:    types,
 		Helper:   helper,
 		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(optionalVisitorTmpl)),

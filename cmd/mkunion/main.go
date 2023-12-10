@@ -117,7 +117,7 @@ func main() {
 					depthFirstGenerator := generators.NewReducerDepthFirstGenerator(union, helper)
 					breadthFirstGenerator := generators.NewReducerBreadthFirstGenerator(union, helper)
 					defaultReduction := generators.NewReducerDefaultReductionGenerator(union, helper)
-					defaultVisitor := generators.NewVisitorDefaultGenerator(visitor.Name, visitor.Types, helper)
+					defaultVisitor := generators.NewVisitorDefaultGenerator(union, helper)
 
 					// ensures that order of generators is always the same
 					generatorsList := []string{
