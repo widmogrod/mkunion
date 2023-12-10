@@ -26,6 +26,7 @@ type (
 	TreeReducer[A any] interface {
 		ReduceBranch(x *Branch, agg A) (result A, stop bool)
 		ReduceLeaf(x *Leaf, agg A) (result A, stop bool)
+		ReduceK(x *K, agg A) (result A, stop bool)
 	}
 )
 
@@ -61,6 +62,15 @@ func (d *TreeDepthFirstVisitor[A]) VisitBranch(v *Branch) any {
 
 func (d *TreeDepthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
 	d.result, d.stop = d.reduce.ReduceLeaf(v, d.result)
+	if d.stop {
+		return nil
+	}
+
+	return nil
+}
+
+func (d *TreeDepthFirstVisitor[A]) VisitK(v *K) any {
+	d.result, d.stop = d.reduce.ReduceK(v, d.result)
 	if d.stop {
 		return nil
 	}

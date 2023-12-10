@@ -230,11 +230,6 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				f.shapes[f.currentType] = &BooleanLike{
 					Named: f.named(),
 				}
-
-			case "any":
-				f.shapes[f.currentType] = &Any{
-					Named: f.named(),
-				}
 			}
 
 		case *ast.MapType:

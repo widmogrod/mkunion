@@ -18,7 +18,7 @@ func NewVisitorDefaultGenerator(union shape.UnionLike, helper *Helpers) *Visitor
 		Name:     union.Name,
 		Types:    types,
 		Helper:   helper,
-		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(optionalVisitorTmpl)),
+		template: template.Must(template.New("visitor_default_generator.go.tmpl").Funcs(helper.Func()).Parse(optionalVisitorTmpl)),
 	}
 }
 
@@ -31,7 +31,7 @@ type VisitorDefaultGenerator struct {
 
 func (g *VisitorDefaultGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := g.template.ExecuteTemplate(result, "main", g)
+	err := g.template.ExecuteTemplate(result, "visitor_default_generator.go.tmpl", g)
 	if err != nil {
 		return nil, err
 	}

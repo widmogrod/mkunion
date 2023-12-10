@@ -15,7 +15,7 @@ func TestInferFromFile(t *testing.T) {
 	assert.Equal(t, "Example", union.Name)
 	assert.Equal(t, "testasset", union.PkgName)
 	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset", union.PkgImportName)
-	assert.Equal(t, 10, len(union.Variant))
+	assert.Equal(t, 9, len(union.Variant))
 
 	expected := &UnionLike{
 		Name:          "Example",
@@ -111,13 +111,6 @@ func TestInferFromFile(t *testing.T) {
 			&BooleanLike{
 				Named: &Named{
 					Name:          "F",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				},
-			},
-			&Any{
-				Named: &Named{
-					Name:          "G",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},

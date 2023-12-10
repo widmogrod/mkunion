@@ -75,9 +75,7 @@ func TestFromGoo(t *testing.T) {
 							Name:          "Any",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields: []*FieldLike{
-								named,
-							},
+							Fields:        []*FieldLike{},
 						},
 						&StructLike{
 							Name:          "RefName",
@@ -103,7 +101,7 @@ func TestFromGoo(t *testing.T) {
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 							Fields: []*FieldLike{
-								namedRef,
+								named,
 							},
 						},
 						&StructLike{

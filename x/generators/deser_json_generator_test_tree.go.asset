@@ -11,6 +11,7 @@ type TreeUnionJSON struct {
 	Type string `json:"$type,omitempty"`
 	Branch json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.Branch,omitempty"`
 	Leaf json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.Leaf,omitempty"`
+	K json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.K,omitempty"`
 }
 
 func TreeFromJSON(x []byte) (Tree, error) {
@@ -25,12 +26,16 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return BranchFromJSON(data.Branch)
 	case "github.com/widmogrod/mkunion/x/generators/testutils.Leaf":
 		return LeafFromJSON(data.Leaf)
+	case "github.com/widmogrod/mkunion/x/generators/testutils.K":
+		return KFromJSON(data.K)
 	}
 
 	if data.Branch != nil {
 		return BranchFromJSON(data.Branch)
 	} else if data.Leaf != nil {
 		return LeafFromJSON(data.Leaf)
+	} else if data.K != nil {
+		return KFromJSON(data.K)
 	}
 
 	return nil, fmt.Errorf("unknown type %s", data.Type)
@@ -61,12 +66,22 @@ func TreeToJSON(x Tree) ([]byte, error) {
 				Leaf: body,
 			})
 		},
+		func(x *K) ([]byte, error) {
+			body, err := KToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(TreeUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/generators/testutils.K",
+				K: body,
+			})
+		},
 	)
 }
 
 func BranchFromJSON(x []byte) (*Branch, error) {
-	var result *Branch = &Branch{}
-
+	var result *Branch = new(Branch)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -123,8 +138,7 @@ func (self *Branch) UnmarshalJSON(x []byte) error {
 }
 
 func LeafFromJSON(x []byte) (*Leaf, error) {
-	var result *Leaf = &Leaf{}
-
+	var result *Leaf = new(Leaf)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -154,6 +168,30 @@ func (self *Leaf) MarshalJSON() ([]byte, error) {
 
 func (self *Leaf) UnmarshalJSON(x []byte) error {
 	n, err := LeafFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func KFromJSON(x []byte) (*K, error) {
+	var result *K = new(K)
+	err := json.Unmarshal(x, result)
+
+	return result, err
+}
+
+func KToJSON(x *K) ([]byte, error) {
+	return json.Marshal(x)
+}
+
+func (self *K) MarshalJSON() ([]byte, error) {
+	return KToJSON(self)
+}
+
+func (self *K) UnmarshalJSON(x []byte) error {
+	n, err := KFromJSON(x)
 	if err != nil {
 		return err
 	}

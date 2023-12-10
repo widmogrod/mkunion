@@ -28,6 +28,7 @@ import "github.com/widmogrod/mkunion/f"
 type TreeVisitor interface {
 	VisitBranch(v *Branch) any
 	VisitLeaf(v *Leaf) any
+	VisitK(v *K) any
 }
 
 type Tree interface {
@@ -36,51 +37,58 @@ type Tree interface {
 
 func (r *Branch) AcceptTree(v TreeVisitor) any { return v.VisitBranch(r) }
 func (r *Leaf) AcceptTree(v TreeVisitor) any { return v.VisitLeaf(r) }
+func (r *K) AcceptTree(v TreeVisitor) any { return v.VisitK(r) }
 
 var (
 	_ Tree = (*Branch)(nil)
 	_ Tree = (*Leaf)(nil)
+	_ Tree = (*K)(nil)
 )
 
 func MatchTree[TOut any](
 	x Tree,
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
+	f3 func(x *K) TOut,
 	df func(x Tree) TOut,
 ) TOut {
-	return f.Match2(x, f1, f2, df)
+	return f.Match3(x, f1, f2, f3, df)
 }
 
 func MatchTreeR2[TOut1, TOut2 any](
 	x Tree,
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
+	f3 func(x *K) (TOut1, TOut2),
 	df func(x Tree) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.Match2R2(x, f1, f2, df)
+	return f.Match3R2(x, f1, f2, f3, df)
 }
 
 func MustMatchTree[TOut any](
 	x Tree,
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
+	f3 func(x *K) TOut,
 ) TOut {
-	return f.MustMatch2(x, f1, f2)
+	return f.MustMatch3(x, f1, f2, f3)
 }
 
 func MustMatchTreeR0(
 	x Tree,
 	f1 func(x *Branch),
 	f2 func(x *Leaf),
+	f3 func(x *K),
 ) {
-	f.MustMatch2R0(x, f1, f2)
+	f.MustMatch3R0(x, f1, f2, f3)
 }
 
 func MustMatchTreeR2[TOut1, TOut2 any](
 	x Tree,
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
+	f3 func(x *K) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.MustMatch2R2(x, f1, f2)
+	return f.MustMatch3R2(x, f1, f2, f3)
 }`, string(result))
 }

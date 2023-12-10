@@ -9,7 +9,7 @@ import (
 var (
 	//go:embed derive_func_match_generator.go.tmpl
 	deriveFuncMatchTmpl   string
-	deriveFuncMatchRender = template.Must(template.New("main").Funcs(map[string]any{
+	deriveFuncMatchRender = template.Must(template.New("derive_func_match_generator.go.tmpl").Funcs(map[string]any{
 		"GenIntSlice": func(from, to int) []int {
 			var result []int
 			for i := from; i <= to; i++ {
@@ -31,7 +31,7 @@ type DeriveFuncMatchGenerator struct {
 
 func (g *DeriveFuncMatchGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := deriveFuncMatchRender.ExecuteTemplate(result, "main", g)
+	err := deriveFuncMatchRender.ExecuteTemplate(result, "derive_func_match_generator.go.tmpl", g)
 	if err != nil {
 		return nil, err
 	}

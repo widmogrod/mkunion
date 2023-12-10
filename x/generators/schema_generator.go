@@ -18,7 +18,7 @@ func NewSchemaGenerator(union shape.UnionLike, helper *Helpers) *SchemaGenerator
 		Name:     union.Name,
 		Types:    types,
 		Helper:   helper,
-		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(visitorSchemaTmpl)),
+		template: template.Must(template.New("schema_generator.go.tmpl").Funcs(helper.Func()).Parse(visitorSchemaTmpl)),
 	}
 }
 
@@ -31,7 +31,7 @@ type SchemaGenerator struct {
 
 func (g *SchemaGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := g.template.ExecuteTemplate(result, "main", g)
+	err := g.template.ExecuteTemplate(result, "schema_generator.go.tmpl", g)
 	if err != nil {
 		return nil, err
 	}

@@ -65,6 +65,18 @@ func (d *TreeBreadthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
 	return nil
 }
 
+func (d *TreeBreadthFirstVisitor[A]) VisitK(v *K) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceK(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
 func (d *TreeBreadthFirstVisitor[A]) execute() {
 	for len(d.queue) > 0 {
 		if d.stop {

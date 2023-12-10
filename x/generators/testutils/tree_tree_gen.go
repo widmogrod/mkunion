@@ -13,6 +13,7 @@ import "fmt"
 type TreeVisitor interface {
 	VisitBranch(v *Branch) any
 	VisitLeaf(v *Leaf) any
+	VisitK(v *K) any
 }
 
 type Tree interface {
@@ -21,52 +22,291 @@ type Tree interface {
 
 func (r *Branch) AcceptTree(v TreeVisitor) any { return v.VisitBranch(r) }
 func (r *Leaf) AcceptTree(v TreeVisitor) any   { return v.VisitLeaf(r) }
+func (r *K) AcceptTree(v TreeVisitor) any      { return v.VisitK(r) }
 
 var (
 	_ Tree = (*Branch)(nil)
 	_ Tree = (*Leaf)(nil)
+	_ Tree = (*K)(nil)
 )
 
 func MatchTree[TOut any](
 	x Tree,
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
+	f3 func(x *K) TOut,
 	df func(x Tree) TOut,
 ) TOut {
-	return f.Match2(x, f1, f2, df)
+	return f.Match3(x, f1, f2, f3, df)
 }
 
 func MatchTreeR2[TOut1, TOut2 any](
 	x Tree,
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
+	f3 func(x *K) (TOut1, TOut2),
 	df func(x Tree) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.Match2R2(x, f1, f2, df)
+	return f.Match3R2(x, f1, f2, f3, df)
 }
 
 func MustMatchTree[TOut any](
 	x Tree,
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
+	f3 func(x *K) TOut,
 ) TOut {
-	return f.MustMatch2(x, f1, f2)
+	return f.MustMatch3(x, f1, f2, f3)
 }
 
 func MustMatchTreeR0(
 	x Tree,
 	f1 func(x *Branch),
 	f2 func(x *Leaf),
+	f3 func(x *K),
 ) {
-	f.MustMatch2R0(x, f1, f2)
+	f.MustMatch3R0(x, f1, f2, f3)
 }
 
 func MustMatchTreeR2[TOut1, TOut2 any](
 	x Tree,
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
+	f3 func(x *K) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.MustMatch2R2(x, f1, f2)
+	return f.MustMatch3R2(x, f1, f2, f3)
+}
+
+// mkunion-extension:reducer_dfs
+type (
+	TreeReducer[A any] interface {
+		ReduceBranch(x *Branch, agg A) (result A, stop bool)
+		ReduceLeaf(x *Leaf, agg A) (result A, stop bool)
+		ReduceK(x *K, agg A) (result A, stop bool)
+	}
+)
+
+type TreeDepthFirstVisitor[A any] struct {
+	stop   bool
+	result A
+	reduce TreeReducer[A]
+}
+
+var _ TreeVisitor = (*TreeDepthFirstVisitor[any])(nil)
+
+func (d *TreeDepthFirstVisitor[A]) VisitBranch(v *Branch) any {
+	d.result, d.stop = d.reduce.ReduceBranch(v, d.result)
+	if d.stop {
+		return nil
+	}
+	if _ = v.Lit.AcceptTree(d); d.stop {
+		return nil
+	}
+	for idx := range v.List {
+		if _ = v.List[idx].AcceptTree(d); d.stop {
+			return nil
+		}
+	}
+	for idx, _ := range v.Map {
+		if _ = v.Map[idx].AcceptTree(d); d.stop {
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (d *TreeDepthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
+	d.result, d.stop = d.reduce.ReduceLeaf(v, d.result)
+	if d.stop {
+		return nil
+	}
+
+	return nil
+}
+
+func (d *TreeDepthFirstVisitor[A]) VisitK(v *K) any {
+	d.result, d.stop = d.reduce.ReduceK(v, d.result)
+	if d.stop {
+		return nil
+	}
+
+	return nil
+}
+
+func ReduceTreeDepthFirst[A any](r TreeReducer[A], v Tree, init A) A {
+	reducer := &TreeDepthFirstVisitor[A]{
+		result: init,
+		reduce: r,
+	}
+
+	_ = v.AcceptTree(reducer)
+
+	return reducer.result
+}
+
+// mkunion-extension:reducer_bfs
+var _ TreeVisitor = (*TreeBreadthFirstVisitor[any])(nil)
+
+type TreeBreadthFirstVisitor[A any] struct {
+	stop   bool
+	result A
+	reduce TreeReducer[A]
+
+	queue         []Tree
+	visited       map[Tree]bool
+	shouldExecute map[Tree]bool
+}
+
+func (d *TreeBreadthFirstVisitor[A]) VisitBranch(v *Branch) any {
+	d.queue = append(d.queue, v)
+	d.queue = append(d.queue, v.Lit)
+	for idx := range v.List {
+		d.queue = append(d.queue, v.List[idx])
+	}
+	for idx, _ := range v.Map {
+		d.queue = append(d.queue, v.Map[idx])
+	}
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceBranch(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *TreeBreadthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceLeaf(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *TreeBreadthFirstVisitor[A]) VisitK(v *K) any {
+	d.queue = append(d.queue, v)
+
+	if d.shouldExecute[v] {
+		d.shouldExecute[v] = false
+		d.result, d.stop = d.reduce.ReduceK(v, d.result)
+	} else {
+		d.execute()
+	}
+	return nil
+}
+
+func (d *TreeBreadthFirstVisitor[A]) execute() {
+	for len(d.queue) > 0 {
+		if d.stop {
+			return
+		}
+
+		i := d.pop()
+		if d.visited[i] {
+			continue
+		}
+		d.visited[i] = true
+		d.shouldExecute[i] = true
+		i.AcceptTree(d)
+	}
+
+	return
+}
+
+func (d *TreeBreadthFirstVisitor[A]) pop() Tree {
+	i := d.queue[0]
+	d.queue = d.queue[1:]
+	return i
+}
+
+func ReduceTreeBreadthFirst[A any](r TreeReducer[A], v Tree, init A) A {
+	reducer := &TreeBreadthFirstVisitor[A]{
+		result:        init,
+		reduce:        r,
+		queue:         []Tree{v},
+		visited:       make(map[Tree]bool),
+		shouldExecute: make(map[Tree]bool),
+	}
+
+	_ = v.AcceptTree(reducer)
+
+	return reducer.result
+}
+
+// mkunion-extension:default_reducer
+var _ TreeReducer[any] = (*TreeDefaultReduction[any])(nil)
+
+type (
+	TreeDefaultReduction[A any] struct {
+		PanicOnFallback      bool
+		DefaultStopReduction bool
+		OnBranch             func(x *Branch, agg A) (result A, stop bool)
+		OnLeaf               func(x *Leaf, agg A) (result A, stop bool)
+		OnK                  func(x *K, agg A) (result A, stop bool)
+	}
+)
+
+func (t *TreeDefaultReduction[A]) ReduceBranch(x *Branch, agg A) (result A, stop bool) {
+	if t.OnBranch != nil {
+		return t.OnBranch(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceBranch")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *TreeDefaultReduction[A]) ReduceLeaf(x *Leaf, agg A) (result A, stop bool) {
+	if t.OnLeaf != nil {
+		return t.OnLeaf(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceLeaf")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *TreeDefaultReduction[A]) ReduceK(x *K, agg A) (result A, stop bool) {
+	if t.OnK != nil {
+		return t.OnK(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceK")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+// mkunion-extension:default_visitor
+type TreeDefaultVisitor[A any] struct {
+	Default  A
+	OnBranch func(x *Branch) A
+	OnLeaf   func(x *Leaf) A
+	OnK      func(x *K) A
+}
+
+func (t *TreeDefaultVisitor[A]) VisitBranch(v *Branch) any {
+	if t.OnBranch != nil {
+		return t.OnBranch(v)
+	}
+	return t.Default
+}
+func (t *TreeDefaultVisitor[A]) VisitLeaf(v *Leaf) any {
+	if t.OnLeaf != nil {
+		return t.OnLeaf(v)
+	}
+	return t.Default
+}
+func (t *TreeDefaultVisitor[A]) VisitK(v *K) any {
+	if t.OnK != nil {
+		return t.OnK(v)
+	}
+	return t.Default
 }
 
 // mkunion-extension:schema
@@ -76,8 +316,9 @@ func init() {
 
 func TreeSchemaDef() *schema.UnionVariants[Tree] {
 	return schema.MustDefineUnion[Tree](
-		&Branch{},
-		&Leaf{},
+		new(Branch),
+		new(Leaf),
+		new(K),
 	)
 }
 
@@ -90,6 +331,7 @@ func TreeShape() shape.Shape {
 		Variant: []shape.Shape{
 			BranchShape(),
 			LeafShape(),
+			KShape(),
 		},
 	}
 }
@@ -150,11 +392,22 @@ func LeafShape() shape.Shape {
 	}
 }
 
+func KShape() shape.Shape {
+	return &shape.StringLike{
+		Named: &shape.Named{
+			Name:          "K",
+			PkgName:       "testutils",
+			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		},
+	}
+}
+
 // mkunion-extension:json
 type TreeUnionJSON struct {
 	Type   string          `json:"$type,omitempty"`
 	Branch json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.Branch,omitempty"`
 	Leaf   json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.Leaf,omitempty"`
+	K      json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.K,omitempty"`
 }
 
 func TreeFromJSON(x []byte) (Tree, error) {
@@ -169,12 +422,16 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return BranchFromJSON(data.Branch)
 	case "github.com/widmogrod/mkunion/x/generators/testutils.Leaf":
 		return LeafFromJSON(data.Leaf)
+	case "github.com/widmogrod/mkunion/x/generators/testutils.K":
+		return KFromJSON(data.K)
 	}
 
 	if data.Branch != nil {
 		return BranchFromJSON(data.Branch)
 	} else if data.Leaf != nil {
 		return LeafFromJSON(data.Leaf)
+	} else if data.K != nil {
+		return KFromJSON(data.K)
 	}
 
 	return nil, fmt.Errorf("unknown type %s", data.Type)
@@ -205,12 +462,22 @@ func TreeToJSON(x Tree) ([]byte, error) {
 				Leaf: body,
 			})
 		},
+		func(x *K) ([]byte, error) {
+			body, err := KToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(TreeUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/generators/testutils.K",
+				K:    body,
+			})
+		},
 	)
 }
 
 func BranchFromJSON(x []byte) (*Branch, error) {
-	var result *Branch = &Branch{}
-
+	var result *Branch = new(Branch)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -267,8 +534,7 @@ func (self *Branch) UnmarshalJSON(x []byte) error {
 }
 
 func LeafFromJSON(x []byte) (*Leaf, error) {
-	var result *Leaf = &Leaf{}
-
+	var result *Leaf = new(Leaf)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -298,6 +564,30 @@ func (self *Leaf) MarshalJSON() ([]byte, error) {
 
 func (self *Leaf) UnmarshalJSON(x []byte) error {
 	n, err := LeafFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func KFromJSON(x []byte) (*K, error) {
+	var result *K = new(K)
+	err := json.Unmarshal(x, result)
+
+	return result, err
+}
+
+func KToJSON(x *K) ([]byte, error) {
+	return json.Marshal(x)
+}
+
+func (self *K) MarshalJSON() ([]byte, error) {
+	return KToJSON(self)
+}
+
+func (self *K) UnmarshalJSON(x []byte) error {
+	n, err := KFromJSON(x)
 	if err != nil {
 		return err
 	}

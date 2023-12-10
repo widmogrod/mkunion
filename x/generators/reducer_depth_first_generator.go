@@ -3,6 +3,7 @@ package generators
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"github.com/widmogrod/mkunion/x/shape"
 	"text/template"
 )
@@ -22,25 +23,45 @@ func AdaptUnionToOldVersionOfGenerator(union shape.UnionLike) ([]string, map[str
 		typeName := shape.MustMatchShape(
 			v,
 			func(x *shape.Any) string {
-				return "any"
+				panic(fmt.Errorf("generators.AdaptUnionToOldVersionOfGenerator: %T not supported", x))
 			},
 			func(x *shape.RefName) string {
 				return x.Name
 			},
 			func(x *shape.BooleanLike) string {
-				return "bool"
+				if shape.IsNamed(x) {
+					return x.Named.Name
+				}
+
+				panic(fmt.Errorf("generators.AdaptUnionToOldVersionOfGenerator: expects only named shape, but given %#v", x))
 			},
 			func(x *shape.StringLike) string {
-				return "string"
+				if shape.IsNamed(x) {
+					return x.Named.Name
+				}
+
+				panic(fmt.Errorf("generators.AdaptUnionToOldVersionOfGenerator: expects only named shape, but given %#v", x))
 			},
 			func(x *shape.NumberLike) string {
-				return "number"
+				if shape.IsNamed(x) {
+					return x.Named.Name
+				}
+
+				panic(fmt.Errorf("generators.AdaptUnionToOldVersionOfGenerator: expects only named shape, but given %#v", x))
 			},
 			func(x *shape.ListLike) string {
-				return "list"
+				if shape.IsNamed(x) {
+					return x.Named.Name
+				}
+
+				panic(fmt.Errorf("generators.AdaptUnionToOldVersionOfGenerator: expects only named shape, but given %#v", x))
 			},
 			func(x *shape.MapLike) string {
-				return "map"
+				if shape.IsNamed(x) {
+					return x.Named.Name
+				}
+
+				panic(fmt.Errorf("generators.AdaptUnionToOldVersionOfGenerator: expects only named shape, but given %#v", x))
 			},
 			func(x *shape.StructLike) string {
 				return x.Name
@@ -137,7 +158,7 @@ func NewReducerDepthFirstGenerator(union shape.UnionLike, helper *Helpers) *Redu
 		Types:    types,
 		Branches: branches,
 		helper:   helper,
-		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(traverseTmpl)),
+		template: template.Must(template.New("reducer_depth_first_generator.go.tmpl").Funcs(helper.Func()).Parse(traverseTmpl)),
 	}
 }
 
@@ -151,7 +172,7 @@ type ReducerDepthFirstGenerator struct {
 
 func (t *ReducerDepthFirstGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := t.template.ExecuteTemplate(result, "main", t)
+	err := t.template.ExecuteTemplate(result, "reducer_depth_first_generator.go.tmpl", t)
 	if err != nil {
 		return nil, err
 	}

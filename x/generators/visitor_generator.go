@@ -42,7 +42,7 @@ type Generator interface {
 func NewHelper(fs ...GenerateOption) *Helpers {
 	options := generatorOptions{
 		Header:      Header,
-		PackageName: "main",
+		PackageName: "visitor_generator.go.tmpl",
 	}
 
 	for _, f := range fs {
@@ -148,7 +148,7 @@ func NewVisitorGenerator(union shape.UnionLike, helper *Helpers) *VisitorGenerat
 		Name:     union.Name,
 		Types:    types,
 		Helper:   helper,
-		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(visitorTmpl)),
+		template: template.Must(template.New("visitor_generator.go.tmpl").Funcs(helper.Func()).Parse(visitorTmpl)),
 	}
 }
 
@@ -162,7 +162,7 @@ type VisitorGenerator struct {
 func (g *VisitorGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
 
-	err := g.template.ExecuteTemplate(result, "main", g)
+	err := g.template.ExecuteTemplate(result, "visitor_generator.go.tmpl", g)
 
 	if err != nil {
 		return nil, err

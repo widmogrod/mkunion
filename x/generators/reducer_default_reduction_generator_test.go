@@ -30,6 +30,7 @@ type (
 		DefaultStopReduction bool
 		OnBranch func(x *Branch, agg A) (result A, stop bool)
 		OnLeaf func(x *Leaf, agg A) (result A, stop bool)
+		OnK func(x *K, agg A) (result A, stop bool)
 	}
 )
 
@@ -49,6 +50,16 @@ func (t *TreeDefaultReduction[A]) ReduceLeaf(x *Leaf, agg A) (result A, stop boo
 	}
 	if t.PanicOnFallback {
 		panic("no fallback allowed on undefined ReduceLeaf")
+	}
+	return agg, t.DefaultStopReduction
+}
+
+func (t *TreeDefaultReduction[A]) ReduceK(x *K, agg A) (result A, stop bool) {
+	if t.OnK != nil {
+		return t.OnK(x, agg)
+	}
+	if t.PanicOnFallback {
+		panic("no fallback allowed on undefined ReduceK")
 	}
 	return agg, t.DefaultStopReduction
 }

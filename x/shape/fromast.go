@@ -72,7 +72,7 @@ func IsStarExpr(x ast.Expr) bool {
 
 func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {
 	return func(x Shape) {
-		if !isNamed(x) {
+		if !IsNamed(x) {
 			return
 		}
 
@@ -118,18 +118,11 @@ func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {
 				y.Named.PkgName = pkgName
 				y.Named.PkgImportName = pkgImportName
 			}
-
-		case *Any:
-			isPkgNotSet := y.Named.PkgName == ""
-			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
-			}
 		}
 	}
 }
 
-func isNamed(x Shape) bool {
+func IsNamed(x Shape) bool {
 	switch y := x.(type) {
 	case *RefName, *StructLike, *UnionLike:
 		return true
@@ -139,42 +132,38 @@ func isNamed(x Shape) bool {
 			return false
 		}
 
-		return y.Named.Name == ""
+		return y.Named.Name != ""
 
 	case *NumberLike:
 		if y.Named == nil {
 			return false
 		}
 
-		return y.Named.Name == ""
+		return y.Named.Name != ""
 
 	case *BooleanLike:
 		if y.Named == nil {
 			return false
 		}
 
-		return y.Named.Name == ""
+		return y.Named.Name != ""
 
 	case *ListLike:
 		if y.Named == nil {
 			return false
 		}
 
-		return y.Named.Name == ""
+		return y.Named.Name != ""
 
 	case *MapLike:
 		if y.Named == nil {
 			return false
 		}
 
-		return y.Named.Name == ""
+		return y.Named.Name != ""
 
 	case *Any:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name == ""
+		return false
 	}
 
 	return false

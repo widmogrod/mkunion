@@ -10,13 +10,13 @@ func {{ .Union.Name }}Shape() shape.Shape {
 		PkgImportName: "{{ .Union.PkgImportName }}",
 		Variant: []shape.Shape{
 		{{- range $index, $variant := .Union.Variant }}
-			{{ $variant.Name }}Shape(),
+			{{ $self.VariantName $variant }}Shape(),
 		{{- end }}
 		},
 	}
 }
 {{ range $index, $variant := .Union.Variant }}
-func {{ $variant.Name }}Shape() shape.Shape {
+func {{ $self.VariantName $variant }}Shape() shape.Shape {
 	return {{ $self.ShapeToString $variant 1 }}
 }
 {{ end -}}

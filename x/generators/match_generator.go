@@ -10,7 +10,7 @@ import (
 var (
 	//go:embed match_generator.go.tmpl
 	matchTmpl   string
-	renderMatch = template.Must(template.New("main").Funcs(map[string]any{
+	renderMatch = template.Must(template.New("match_generator.go.tmpl").Funcs(map[string]any{
 		"GenIntSlice": func(from, to int) []int {
 			var result []int
 			for i := from; i <= to; i++ {
@@ -39,7 +39,7 @@ type FunctionMatchGenerator struct {
 
 func (t *FunctionMatchGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := renderMatch.ExecuteTemplate(result, "main", t)
+	err := renderMatch.ExecuteTemplate(result, "match_generator.go.tmpl", t)
 	if err != nil {
 		return nil, err
 	}

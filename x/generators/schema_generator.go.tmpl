@@ -9,7 +9,7 @@ func init() {
 func {{ $name }}SchemaDef() *schema.UnionVariants[{{ $name }}] {
 	return schema.MustDefineUnion[{{ $name }}](
 	{{- range $i, $type := .Types }}
-		&{{ $type }}{},
+		new({{ $type }}),
 	{{- end }}
 	)
 }

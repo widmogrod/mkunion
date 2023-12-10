@@ -18,7 +18,7 @@ func NewDeSerJSONGenerator(union shape.UnionLike, helper *Helpers) *DeSerJSONGen
 	return &DeSerJSONGenerator{
 		Union:    union,
 		helper:   helper,
-		template: template.Must(template.New("main").Funcs(helper.Func()).Parse(deserJSONTmpl)),
+		template: template.Must(template.New("deser_json_generator.go.tmpl").Funcs(helper.Func()).Parse(deserJSONTmpl)),
 	}
 }
 
@@ -47,29 +47,53 @@ func (g *DeSerJSONGenerator) JSONFieldName(x shape.FieldLike) string {
 	return x.Name
 }
 
+func (g *DeSerJSONGenerator) IsStruct(x shape.Shape) bool {
+	_, ok := x.(*shape.StructLike)
+	return ok
+}
+
+func (g *DeSerJSONGenerator) VariantName(x shape.Shape) string {
+	return TemplateHelperShapeVariantToName(x)
+}
+
 func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
 	return shape.MustMatchShape(
 		x,
 		func(y *shape.Any) string {
-			return "any"
+			panic(fmt.Errorf("generators.JSONVariantName: %T not suported", y))
 		},
 		func(y *shape.RefName) string {
 			return fmt.Sprintf("%s.%s", y.PkgImportName, y.Name)
 		},
 		func(y *shape.BooleanLike) string {
-			return "bool"
+			if shape.IsNamed(y) {
+				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+			}
+			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StringLike) string {
-			return "string"
+			if shape.IsNamed(y) {
+				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+			}
+			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.NumberLike) string {
-			return "number"
+			if shape.IsNamed(y) {
+				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+			}
+			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.ListLike) string {
-			return fmt.Sprintf("list[%s]", g.JSONVariantName(y.Element))
+			if shape.IsNamed(y) {
+				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+			}
+			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.MapLike) string {
-			return fmt.Sprintf("map[%s]%s", g.JSONVariantName(y.Key), g.JSONVariantName(y.Val))
+			if shape.IsNamed(y) {
+				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+			}
+			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StructLike) string {
 			return fmt.Sprintf("%s.%s", y.PkgImportName, y.Name)
@@ -182,7 +206,7 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 
 func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := g.template.ExecuteTemplate(result, "main", g)
+	err := g.template.ExecuteTemplate(result, "deser_json_generator.go.tmpl", g)
 	if err != nil {
 		return nil, err
 	}

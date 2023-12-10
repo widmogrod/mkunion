@@ -30,8 +30,9 @@ func init() {
 
 func TreeSchemaDef() *schema.UnionVariants[Tree] {
 	return schema.MustDefineUnion[Tree](
-		&Branch{},
-		&Leaf{},
+		new(Branch),
+		new(Leaf),
+		new(K),
 	)
 }
 `, string(result))

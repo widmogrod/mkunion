@@ -26,6 +26,7 @@ type TreeDefaultVisitor[A any] struct {
 	Default A
 	OnBranch func(x *Branch) A
 	OnLeaf func(x *Leaf) A
+	OnK func(x *K) A
 }
 func (t *TreeDefaultVisitor[A]) VisitBranch(v *Branch) any {
 	if t.OnBranch != nil {
@@ -36,6 +37,12 @@ func (t *TreeDefaultVisitor[A]) VisitBranch(v *Branch) any {
 func (t *TreeDefaultVisitor[A]) VisitLeaf(v *Leaf) any {
 	if t.OnLeaf != nil {
 		return t.OnLeaf(v)
+	}
+	return t.Default
+}
+func (t *TreeDefaultVisitor[A]) VisitK(v *K) any {
+	if t.OnK != nil {
+		return t.OnK(v)
 	}
 	return t.Default
 }`, string(result))

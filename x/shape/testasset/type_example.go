@@ -16,7 +16,6 @@ type (
 	D int64
 	E float64
 	F bool
-	G any
 	H map[string]Example
 	I []Example
 	J [2]string

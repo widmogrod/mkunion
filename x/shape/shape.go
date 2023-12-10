@@ -2,9 +2,7 @@ package shape
 
 // go:generate go run ../../cmd/mkunion/main.go -name=Shape
 type (
-	Any struct {
-		Named *Named
-	}
+	Any     struct{}
 	RefName struct {
 		Name          string
 		PkgName       string
