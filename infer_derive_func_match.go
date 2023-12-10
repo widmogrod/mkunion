@@ -2,6 +2,7 @@ package mkunion
 
 import (
 	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -42,7 +43,7 @@ func (f *InferredDeriveFuncMatchInfo) MatchSpec(name string) (*MatchSpec, error)
 func (f *InferredDeriveFuncMatchInfo) Visit(n ast.Node) ast.Visitor {
 	switch t := n.(type) {
 	case *ast.GenDecl:
-		comment := comment(t.Doc)
+		comment := shared.Comment(t.Doc)
 		if !strings.Contains(comment, "match") {
 			return f
 		}

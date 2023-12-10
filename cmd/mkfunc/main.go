@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion"
+	"github.com/widmogrod/mkunion/x/shape"
 	"log"
 	"os"
 	"os/signal"
@@ -33,7 +34,7 @@ func main() {
 			sourcePath := path.Join(cwd, sourceName)
 
 			// file name without extension
-			inferred, err := mkunion.InferFromFile(sourcePath)
+			inferred, err := shape.InferFromFile(sourcePath)
 			if err != nil {
 				return err
 			}

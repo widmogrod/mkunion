@@ -93,7 +93,7 @@ func main() {
 				baseName := strings.TrimSuffix(sourceName, path.Ext(sourceName))
 
 				// file name without extension
-				inferred, err := mkunion.InferFromFile(sourcePath)
+				inferred, err := shape.InferFromFile(sourcePath)
 				if err != nil {
 					return err
 				}
