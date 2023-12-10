@@ -1,7 +1,7 @@
 {{- $self := . -}}
 
 {{ RenderHeader -}}
-{{ RenderImport "github.com/widmogrod/mkunion/x/shape" -}}
+{{ RenderImport "github.com/widmogrod/mkunion/x/shared" -}}
 {{ RenderImport "encoding/json" -}}
 {{ RenderImport "fmt" -}}
 
@@ -9,7 +9,7 @@ type {{ .Union.Name }}UnionJSON struct {
 	Type string `json:"$type,omitempty"`
 	{{- range $index, $variant := .Union.Variant }}
 	{{ $variant.Name }} json.RawMessage `json:"{{ $self.JSONVariantName $variant }},omitempty"`
-	{{ end -}}
+	{{- end }}
 }
 
 func {{ .Union.Name }}FromJSON(x []byte) ({{ .Union.Name }}, error) {
@@ -23,14 +23,14 @@ func {{ .Union.Name }}FromJSON(x []byte) ({{ .Union.Name }}, error) {
 	{{- range $index, $variant := .Union.Variant }}
 	case "{{ $self.JSONVariantName $variant }}":
 		return {{ $variant.Name }}FromJSON(data.{{ $variant.Name }})
-	{{ end -}}
+	{{- end }}
 	}
 
 	{{range $index, $variant := .Union.Variant }}
-	{{- if $index -}} else if {{ else }}if {{ end -}}
+	{{- if $index }} else if {{ else }}if {{ end -}}
 	data.{{ $variant.Name }} != nil {
 		return {{ $variant.Name }}FromJSON(data.{{ $variant.Name }})
-	} {{ end }}
+	}{{ end }}
 
 	return nil, fmt.Errorf("unknown type %s", data.Type)
 }
@@ -38,11 +38,11 @@ func {{ .Union.Name }}FromJSON(x []byte) ({{ .Union.Name }}, error) {
 func {{ .Union.Name }}ToJSON(x {{ .Union.Name }}) ([]byte, error) {
 	return MustMatch{{ .Union.Name }}R2(
 		x,
-		{{range $index, $variant := .Union.Variant }}
+		{{- range $index, $variant := .Union.Variant }}
 		func(x *{{ $variant.Name }}) ([]byte, error) {
 			body, err := {{ $variant.Name }}ToJSON(x)
 			if err != nil {
-				 return nil, err
+				return nil, err
 			}
 
 			return json.Marshal({{ $self.Union.Name }}UnionJSON{
@@ -50,19 +50,19 @@ func {{ .Union.Name }}ToJSON(x {{ .Union.Name }}) ([]byte, error) {
 				{{ $variant.Name }}: body,
 			})
 		},
-		{{end}}
-    )
+		{{- end}}
+	)
 }
 {{range $index, $variant := .Union.Variant }}
 func {{ $variant.Name }}FromJSON(x []byte) (*{{ $variant.Name }}, error) {
 	var result *{{ $variant.Name }} = &{{ $variant.Name }}{}
 
 	// if is Struct
-	err := shape.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
 		{{- range $index, $field := $variant.Fields }}
 		case "{{ $self.JSONFieldName $field }}":
-			{{ $self.UnmarshalTemplate $field 2}}
+			{{ $self.UnmarshalTemplate $field 2 }}
 		{{- end }}
 		}
 
@@ -78,7 +78,7 @@ func {{ $variant.Name }}ToJSON(x *{{ $variant.Name }}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	{{ end }}
+	{{- end }}
 	return json.Marshal(map[string]json.RawMessage{
 		{{- range $index, $field := $variant.Fields }}
 		"{{ $self.JSONFieldName $field }}": field_{{ $field.Name }},
@@ -98,4 +98,4 @@ func (self *{{ $variant.Name }}) UnmarshalJSON(x []byte) error {
 	*self = *n
 	return nil
 }
-{{end -}}
+{{end}}

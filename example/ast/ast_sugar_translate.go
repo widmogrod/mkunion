@@ -22,7 +22,7 @@ func (a *TranslateSyntaxASTtoOperatorAST) VisitGrThan(v *GrThan) any {
 
 func (a *TranslateSyntaxASTtoOperatorAST) VisitOrFields(v *OrFields) any {
 	var result []Operator
-	for field, value := range *v {
+	for field, value := range v.M {
 		a.currentField = append(a.currentField, field)
 		result = append(result, value.AcceptSyntaxSugar(a).(Operator))
 		a.currentField = a.currentField[:len(a.currentField)-1]

@@ -91,6 +91,11 @@ func findPackagePath(pkgImportName string) (string, error) {
 
 	// if path has "go.mod" and package name is the same as x.PkgName
 	// then we can assume that it's root of the package
+
+	// hack: to make sure code is simple, we start with the current directory
+	// add append nonsense to the path,
+	// because it will be stripped by path.Dir
+	cwd = path.Join(cwd, "nonsense")
 	for {
 		cwd = path.Dir(cwd)
 		if cwd == "." || cwd == "/" {

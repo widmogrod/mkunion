@@ -25,6 +25,9 @@ func TestFromGoo(t *testing.T) {
 				Name: "Name",
 				Type: &StringLike{},
 				Desc: ptr("Name of the person"),
+				Tags: map[string]FieldTag{
+					"desc": {Value: "Name of the person"},
+				},
 			},
 			{
 				Name: "Other",
@@ -192,11 +195,18 @@ func TestFromGoo(t *testing.T) {
 																Name:          "AndGuard",
 																PkgName:       "shape",
 																PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-																Fields: []*FieldLike{{Name: "L", Type: &ListLike{Element: &RefName{
-																	Name:          "Guard",
-																	PkgName:       "shape",
-																	PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-																}}}},
+																Fields: []*FieldLike{
+																	{
+																		Name: "L",
+																		Type: &ListLike{
+																			Element: &RefName{
+																				Name:          "Guard",
+																				PkgName:       "shape",
+																				PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+																			},
+																		},
+																	},
+																},
 															},
 														},
 													},
@@ -204,6 +214,27 @@ func TestFromGoo(t *testing.T) {
 												{
 													Name: "IsPointer",
 													Type: &BooleanLike{},
+												},
+												{
+													Name: "Tags",
+													Type: &MapLike{
+														Key: &StringLike{},
+														Val: &StructLike{
+															Name:          "FieldTag",
+															PkgName:       "shape",
+															PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+															Fields: []*FieldLike{
+																{
+																	Name: "Value",
+																	Type: &StringLike{},
+																},
+																{
+																	Name: "Options",
+																	Type: &ListLike{Element: &StringLike{}},
+																},
+															},
+														},
+													},
 												},
 											},
 										},
@@ -242,6 +273,9 @@ func TestFromGoo(t *testing.T) {
 							},
 						},
 					},
+				},
+				Tags: map[string]FieldTag{
+					"desc": {Value: "Big bag of attributes"},
 				},
 			},
 		},

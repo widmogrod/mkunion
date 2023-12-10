@@ -167,14 +167,17 @@ func TagsToDesc(tags map[string]FieldTag) *string {
 }
 
 func ExtractTags(tag string) map[string]FieldTag {
-	result := make(map[string]FieldTag)
-
 	tag = strings.Trim(tag, "`")
 	tags, err := structtag.Parse(tag)
 	if err != nil {
-		return result
+		return nil
 	}
 
+	if len(tags.Tags()) == 0 {
+		return nil
+	}
+
+	result := make(map[string]FieldTag)
 	for _, t := range tags.Tags() {
 		result[t.Key] = FieldTag{
 			Value:   t.Value(),

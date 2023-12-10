@@ -22,24 +22,6 @@ func TestExtractInferenceForTree(t *testing.T) {
 
 }
 
-func TestExtractInferenceForWherePredicate(t *testing.T) {
-	out, err := InferFromFile("example/where_predicate_example.go")
-	assert.NoError(t, err)
-	assert.Equal(t, "example", out.PackageName)
-	assert.Equal(t,
-		map[string][]Branching{
-			"Eq":  nil,
-			"And": nil,
-			"Or":  nil,
-			"Path": {
-				{Lit: PtrStr("Condition")},
-				{List: PtrStr("Then")},
-				{Map: PtrStr("Y")},
-			},
-		},
-		out.ForVariantType("WherePredicate", []string{"Eq", "And", "Or", "Path"}))
-}
-
 func TestAST(t *testing.T) {
 	out, err := InferFromFile("example/ast/ast.go")
 	assert.NoError(t, err)

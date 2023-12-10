@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Location -skip-extension=schema
+//go:generate go run ../../cmd/mkunion/main.go -name=Location -skip-extension=schema,shape
 type (
 	LocationField struct {
 		Name string

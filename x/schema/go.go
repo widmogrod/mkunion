@@ -236,12 +236,12 @@ func goToSchema(x any, c *goConfig) Schema {
 		return &None{}
 
 	case bool:
-		return (*Bool)(&y)
+		return MkBool(y)
 	case *bool:
 		if y == nil {
 			return &None{}
 		} else {
-			return (*Bool)(y)
+			return MkBool(*y)
 		}
 
 	case string:
@@ -263,133 +263,112 @@ func goToSchema(x any, c *goConfig) Schema {
 		}
 
 	case float64:
-		v := Number(y)
-		return &v
+		return MkFloat(y)
 	case *float64:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(*y)
 		}
 
 	case float32:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *float32:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case int:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case int8:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int8:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
+
 	case int16:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int16:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
+
 	case int32:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *int32:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case int64:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
+
 	case *int64:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint8:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint8:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint16:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint16:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint32:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint32:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case uint64:
-		v := Number(y)
-		return &v
+		return MkFloat(float64(y))
 	case *uint64:
 		if y == nil {
 			return &None{}
 		} else {
-			v := Number(*y)
-			return &v
+			return MkFloat(float64(*y))
 		}
 
 	case []any:
@@ -512,21 +491,21 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 				return x, nil
 			}
 
-			return bool(*x), nil
+			return x.B, nil
 		},
 		func(x *Number) (any, error) {
 			if _, ok := c.activeBuilder.(*UnionMap); ok {
 				return x, nil
 			}
 
-			return float64(*x), nil
+			return x.N, nil
 		},
 		func(x *String) (any, error) {
 			if _, ok := c.activeBuilder.(*UnionMap); ok {
 				return x, nil
 			}
 
-			return string(*x), nil
+			return x.S, nil
 		},
 		func(x *Binary) (any, error) {
 			if _, ok := c.activeBuilder.(*UnionMap); ok {

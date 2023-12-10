@@ -2,6 +2,9 @@
 package schema
 
 import "github.com/widmogrod/mkunion/f"
+import "github.com/widmogrod/mkunion/x/shared"
+import "encoding/json"
+import "fmt"
 
 //mkunion-extension:visitor
 
@@ -282,4 +285,198 @@ func (t *LocationDefaultVisitor[A]) VisitLocationAnything(v *LocationAnything) a
 		return t.OnLocationAnything(v)
 	}
 	return t.Default
+}
+
+// mkunion-extension:json
+type LocationUnionJSON struct {
+	Type          string          `json:"$type,omitempty"`
+	LocationField json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.LocationField,omitempty"`
+
+	LocationIndex json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.LocationIndex,omitempty"`
+
+	LocationAnything json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.LocationAnything,omitempty"`
+}
+
+func LocationFromJSON(x []byte) (Location, error) {
+	var data LocationUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "github.com/widmogrod/mkunion/x/schema.LocationField":
+		return LocationFieldFromJSON(data.LocationField)
+
+	case "github.com/widmogrod/mkunion/x/schema.LocationIndex":
+		return LocationIndexFromJSON(data.LocationIndex)
+
+	case "github.com/widmogrod/mkunion/x/schema.LocationAnything":
+		return LocationAnythingFromJSON(data.LocationAnything)
+	}
+
+	if data.LocationField != nil {
+		return LocationFieldFromJSON(data.LocationField)
+	} else if data.LocationIndex != nil {
+		return LocationIndexFromJSON(data.LocationIndex)
+	} else if data.LocationAnything != nil {
+		return LocationAnythingFromJSON(data.LocationAnything)
+	}
+
+	return nil, fmt.Errorf("unknown type %s", data.Type)
+}
+
+func LocationToJSON(x Location) ([]byte, error) {
+	return MustMatchLocationR2(
+		x,
+
+		func(x *LocationField) ([]byte, error) {
+			body, err := LocationFieldToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(LocationUnionJSON{
+				Type:          "github.com/widmogrod/mkunion/x/schema.LocationField",
+				LocationField: body,
+			})
+		},
+
+		func(x *LocationIndex) ([]byte, error) {
+			body, err := LocationIndexToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(LocationUnionJSON{
+				Type:          "github.com/widmogrod/mkunion/x/schema.LocationIndex",
+				LocationIndex: body,
+			})
+		},
+
+		func(x *LocationAnything) ([]byte, error) {
+			body, err := LocationAnythingToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(LocationUnionJSON{
+				Type:             "github.com/widmogrod/mkunion/x/schema.LocationAnything",
+				LocationAnything: body,
+			})
+		},
+	)
+}
+
+func LocationFieldFromJSON(x []byte) (*LocationField, error) {
+	var result *LocationField = &LocationField{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "Name":
+			return json.Unmarshal(value, &result.Name)
+
+		}
+
+		return fmt.Errorf("schema.LocationFieldFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func LocationFieldToJSON(x *LocationField) ([]byte, error) {
+	field_Name, err := json.Marshal(x.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"Name": field_Name,
+	})
+}
+
+func (self *LocationField) MarshalJSON() ([]byte, error) {
+	return LocationFieldToJSON(self)
+}
+
+func (self *LocationField) UnmarshalJSON(x []byte) error {
+	n, err := LocationFieldFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func LocationIndexFromJSON(x []byte) (*LocationIndex, error) {
+	var result *LocationIndex = &LocationIndex{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "Index":
+			return json.Unmarshal(value, &result.Index)
+
+		}
+
+		return fmt.Errorf("schema.LocationIndexFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func LocationIndexToJSON(x *LocationIndex) ([]byte, error) {
+	field_Index, err := json.Marshal(x.Index)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"Index": field_Index,
+	})
+}
+
+func (self *LocationIndex) MarshalJSON() ([]byte, error) {
+	return LocationIndexToJSON(self)
+}
+
+func (self *LocationIndex) UnmarshalJSON(x []byte) error {
+	n, err := LocationIndexFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func LocationAnythingFromJSON(x []byte) (*LocationAnything, error) {
+	var result *LocationAnything = &LocationAnything{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		}
+
+		return fmt.Errorf("schema.LocationAnythingFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func LocationAnythingToJSON(x *LocationAnything) ([]byte, error) {
+	return json.Marshal(map[string]json.RawMessage{})
+}
+
+func (self *LocationAnything) MarshalJSON() ([]byte, error) {
+	return LocationAnythingToJSON(self)
+}
+
+func (self *LocationAnything) UnmarshalJSON(x []byte) error {
+	n, err := LocationAnythingFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
 }

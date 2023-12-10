@@ -3,6 +3,9 @@ package shape
 
 import "github.com/widmogrod/mkunion/f"
 import "github.com/widmogrod/mkunion/x/schema"
+import "github.com/widmogrod/mkunion/x/shared"
+import "encoding/json"
+import "fmt"
 
 //mkunion-extension:visitor
 
@@ -84,4 +87,258 @@ func GuardSchemaDef() *schema.UnionVariants[Guard] {
 		&Required{},
 		&AndGuard{},
 	)
+}
+
+// mkunion-extension:shape
+func GuardShape() Shape {
+	return &UnionLike{
+		Name:          "Guard",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Variant: []Shape{
+			EnumShape(),
+			RequiredShape(),
+			AndGuardShape(),
+		},
+	}
+}
+
+func EnumShape() Shape {
+	return &StructLike{
+		Name:          "Enum",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Fields: []*FieldLike{
+			{
+				Name: "Val",
+				Type: &ListLike{
+					Element:          &StringLike{},
+					ElementIsPointer: false,
+				},
+			},
+		},
+	}
+}
+
+func RequiredShape() Shape {
+	return &StructLike{
+		Name:          "Required",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+	}
+}
+
+func AndGuardShape() Shape {
+	return &StructLike{
+		Name:          "AndGuard",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Fields: []*FieldLike{
+			{
+				Name: "L",
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "Guard",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					},
+					ElementIsPointer: false,
+				},
+			},
+		},
+	}
+}
+
+// mkunion-extension:json
+type GuardUnionJSON struct {
+	Type string          `json:"$type,omitempty"`
+	Enum json.RawMessage `json:"github.com/widmogrod/mkunion/x/shape.Enum,omitempty"`
+
+	Required json.RawMessage `json:"github.com/widmogrod/mkunion/x/shape.Required,omitempty"`
+
+	AndGuard json.RawMessage `json:"github.com/widmogrod/mkunion/x/shape.AndGuard,omitempty"`
+}
+
+func GuardFromJSON(x []byte) (Guard, error) {
+	var data GuardUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "github.com/widmogrod/mkunion/x/shape.Enum":
+		return EnumFromJSON(data.Enum)
+
+	case "github.com/widmogrod/mkunion/x/shape.Required":
+		return RequiredFromJSON(data.Required)
+
+	case "github.com/widmogrod/mkunion/x/shape.AndGuard":
+		return AndGuardFromJSON(data.AndGuard)
+	}
+
+	if data.Enum != nil {
+		return EnumFromJSON(data.Enum)
+	} else if data.Required != nil {
+		return RequiredFromJSON(data.Required)
+	} else if data.AndGuard != nil {
+		return AndGuardFromJSON(data.AndGuard)
+	}
+
+	return nil, fmt.Errorf("unknown type %s", data.Type)
+}
+
+func GuardToJSON(x Guard) ([]byte, error) {
+	return MustMatchGuardR2(
+		x,
+
+		func(x *Enum) ([]byte, error) {
+			body, err := EnumToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/shape.Enum",
+				Enum: body,
+			})
+		},
+
+		func(x *Required) ([]byte, error) {
+			body, err := RequiredToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type:     "github.com/widmogrod/mkunion/x/shape.Required",
+				Required: body,
+			})
+		},
+
+		func(x *AndGuard) ([]byte, error) {
+			body, err := AndGuardToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type:     "github.com/widmogrod/mkunion/x/shape.AndGuard",
+				AndGuard: body,
+			})
+		},
+	)
+}
+
+func EnumFromJSON(x []byte) (*Enum, error) {
+	var result *Enum = &Enum{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "Val":
+			return json.Unmarshal(value, &result.Val)
+
+		}
+
+		return fmt.Errorf("shape.EnumFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func EnumToJSON(x *Enum) ([]byte, error) {
+	field_Val, err := json.Marshal(x.Val)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"Val": field_Val,
+	})
+}
+
+func (self *Enum) MarshalJSON() ([]byte, error) {
+	return EnumToJSON(self)
+}
+
+func (self *Enum) UnmarshalJSON(x []byte) error {
+	n, err := EnumFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func RequiredFromJSON(x []byte) (*Required, error) {
+	var result *Required = &Required{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		}
+
+		return fmt.Errorf("shape.RequiredFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func RequiredToJSON(x *Required) ([]byte, error) {
+	return json.Marshal(map[string]json.RawMessage{})
+}
+
+func (self *Required) MarshalJSON() ([]byte, error) {
+	return RequiredToJSON(self)
+}
+
+func (self *Required) UnmarshalJSON(x []byte) error {
+	n, err := RequiredFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func AndGuardFromJSON(x []byte) (*AndGuard, error) {
+	var result *AndGuard = &AndGuard{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "L":
+			return json.Unmarshal(value, &result.L)
+
+		}
+
+		return fmt.Errorf("shape.AndGuardFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func AndGuardToJSON(x *AndGuard) ([]byte, error) {
+	field_L, err := json.Marshal(x.L)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"L": field_L,
+	})
+}
+
+func (self *AndGuard) MarshalJSON() ([]byte, error) {
+	return AndGuardToJSON(self)
+}
+
+func (self *AndGuard) UnmarshalJSON(x []byte) error {
+	n, err := AndGuardFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
 }

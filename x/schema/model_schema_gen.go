@@ -2,6 +2,9 @@
 package schema
 
 import "github.com/widmogrod/mkunion/f"
+import "github.com/widmogrod/mkunion/x/shared"
+import "encoding/json"
+import "fmt"
 
 //mkunion-extension:visitor
 
@@ -482,4 +485,438 @@ func (t *SchemaDefaultVisitor[A]) VisitMap(v *Map) any {
 		return t.OnMap(v)
 	}
 	return t.Default
+}
+
+// mkunion-extension:json
+type SchemaUnionJSON struct {
+	Type string          `json:"$type,omitempty"`
+	None json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.None,omitempty"`
+
+	Bool json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Bool,omitempty"`
+
+	Number json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Number,omitempty"`
+
+	String json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.String,omitempty"`
+
+	Binary json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Binary,omitempty"`
+
+	List json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.List,omitempty"`
+
+	Map json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Map,omitempty"`
+}
+
+func SchemaFromJSON(x []byte) (Schema, error) {
+	var data SchemaUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "github.com/widmogrod/mkunion/x/schema.None":
+		return NoneFromJSON(data.None)
+
+	case "github.com/widmogrod/mkunion/x/schema.Bool":
+		return BoolFromJSON(data.Bool)
+
+	case "github.com/widmogrod/mkunion/x/schema.Number":
+		return NumberFromJSON(data.Number)
+
+	case "github.com/widmogrod/mkunion/x/schema.String":
+		return StringFromJSON(data.String)
+
+	case "github.com/widmogrod/mkunion/x/schema.Binary":
+		return BinaryFromJSON(data.Binary)
+
+	case "github.com/widmogrod/mkunion/x/schema.List":
+		return ListFromJSON(data.List)
+
+	case "github.com/widmogrod/mkunion/x/schema.Map":
+		return MapFromJSON(data.Map)
+	}
+
+	if data.None != nil {
+		return NoneFromJSON(data.None)
+	} else if data.Bool != nil {
+		return BoolFromJSON(data.Bool)
+	} else if data.Number != nil {
+		return NumberFromJSON(data.Number)
+	} else if data.String != nil {
+		return StringFromJSON(data.String)
+	} else if data.Binary != nil {
+		return BinaryFromJSON(data.Binary)
+	} else if data.List != nil {
+		return ListFromJSON(data.List)
+	} else if data.Map != nil {
+		return MapFromJSON(data.Map)
+	}
+
+	return nil, fmt.Errorf("unknown type %s", data.Type)
+}
+
+func SchemaToJSON(x Schema) ([]byte, error) {
+	return MustMatchSchemaR2(
+		x,
+
+		func(x *None) ([]byte, error) {
+			body, err := NoneToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.None",
+				None: body,
+			})
+		},
+
+		func(x *Bool) ([]byte, error) {
+			body, err := BoolToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.Bool",
+				Bool: body,
+			})
+		},
+
+		func(x *Number) ([]byte, error) {
+			body, err := NumberToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type:   "github.com/widmogrod/mkunion/x/schema.Number",
+				Number: body,
+			})
+		},
+
+		func(x *String) ([]byte, error) {
+			body, err := StringToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type:   "github.com/widmogrod/mkunion/x/schema.String",
+				String: body,
+			})
+		},
+
+		func(x *Binary) ([]byte, error) {
+			body, err := BinaryToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type:   "github.com/widmogrod/mkunion/x/schema.Binary",
+				Binary: body,
+			})
+		},
+
+		func(x *List) ([]byte, error) {
+			body, err := ListToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.List",
+				List: body,
+			})
+		},
+
+		func(x *Map) ([]byte, error) {
+			body, err := MapToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(SchemaUnionJSON{
+				Type: "github.com/widmogrod/mkunion/x/schema.Map",
+				Map:  body,
+			})
+		},
+	)
+}
+
+func NoneFromJSON(x []byte) (*None, error) {
+	var result *None = &None{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		}
+
+		return fmt.Errorf("schema.NoneFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func NoneToJSON(x *None) ([]byte, error) {
+	return json.Marshal(map[string]json.RawMessage{})
+}
+
+func (self *None) MarshalJSON() ([]byte, error) {
+	return NoneToJSON(self)
+}
+
+func (self *None) UnmarshalJSON(x []byte) error {
+	n, err := NoneFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func BoolFromJSON(x []byte) (*Bool, error) {
+	var result *Bool = &Bool{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "B":
+			return json.Unmarshal(value, &result.B)
+
+		}
+
+		return fmt.Errorf("schema.BoolFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func BoolToJSON(x *Bool) ([]byte, error) {
+	field_B, err := json.Marshal(x.B)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"B": field_B,
+	})
+}
+
+func (self *Bool) MarshalJSON() ([]byte, error) {
+	return BoolToJSON(self)
+}
+
+func (self *Bool) UnmarshalJSON(x []byte) error {
+	n, err := BoolFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func NumberFromJSON(x []byte) (*Number, error) {
+	var result *Number = &Number{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "N":
+			return json.Unmarshal(value, &result.N)
+
+		}
+
+		return fmt.Errorf("schema.NumberFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func NumberToJSON(x *Number) ([]byte, error) {
+	field_N, err := json.Marshal(x.N)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"N": field_N,
+	})
+}
+
+func (self *Number) MarshalJSON() ([]byte, error) {
+	return NumberToJSON(self)
+}
+
+func (self *Number) UnmarshalJSON(x []byte) error {
+	n, err := NumberFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func StringFromJSON(x []byte) (*String, error) {
+	var result *String = &String{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "S":
+			return json.Unmarshal(value, &result.S)
+
+		}
+
+		return fmt.Errorf("schema.StringFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func StringToJSON(x *String) ([]byte, error) {
+	field_S, err := json.Marshal(x.S)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"S": field_S,
+	})
+}
+
+func (self *String) MarshalJSON() ([]byte, error) {
+	return StringToJSON(self)
+}
+
+func (self *String) UnmarshalJSON(x []byte) error {
+	n, err := StringFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func BinaryFromJSON(x []byte) (*Binary, error) {
+	var result *Binary = &Binary{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "B":
+			return json.Unmarshal(value, &result.B)
+
+		}
+
+		return fmt.Errorf("schema.BinaryFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func BinaryToJSON(x *Binary) ([]byte, error) {
+	field_B, err := json.Marshal(x.B)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"B": field_B,
+	})
+}
+
+func (self *Binary) MarshalJSON() ([]byte, error) {
+	return BinaryToJSON(self)
+}
+
+func (self *Binary) UnmarshalJSON(x []byte) error {
+	n, err := BinaryFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func ListFromJSON(x []byte) (*List, error) {
+	var result *List = &List{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "Items":
+			return json.Unmarshal(value, &result.Items)
+
+		}
+
+		return fmt.Errorf("schema.ListFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func ListToJSON(x *List) ([]byte, error) {
+	field_Items, err := json.Marshal(x.Items)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"Items": field_Items,
+	})
+}
+
+func (self *List) MarshalJSON() ([]byte, error) {
+	return ListToJSON(self)
+}
+
+func (self *List) UnmarshalJSON(x []byte) error {
+	n, err := ListFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
+}
+
+func MapFromJSON(x []byte) (*Map, error) {
+	var result *Map = &Map{}
+
+	// if is Struct
+	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+		switch key {
+		case "Field":
+			return json.Unmarshal(value, &result.Field)
+
+		}
+
+		return fmt.Errorf("schema.MapFromJSON: unknown key %s", key)
+	})
+
+	return result, err
+}
+
+func MapToJSON(x *Map) ([]byte, error) {
+	field_Field, err := json.Marshal(x.Field)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"Field": field_Field,
+	})
+}
+
+func (self *Map) MarshalJSON() ([]byte, error) {
+	return MapToJSON(self)
+}
+
+func (self *Map) UnmarshalJSON(x []byte) error {
+	n, err := MapFromJSON(x)
+	if err != nil {
+		return err
+	}
+	*self = *n
+	return nil
 }

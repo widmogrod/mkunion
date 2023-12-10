@@ -28,13 +28,6 @@ type DeSerJSONGenerator struct {
 	template *template.Template
 }
 
-func (g *DeSerJSONGenerator) ImportPkg() []string {
-	return []string{
-		"encoding/json",
-		"fmt",
-	}
-}
-
 func (g *DeSerJSONGenerator) ident(d int) string {
 	return strings.Repeat("\t", d)
 }
@@ -100,7 +93,7 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 	return shape.MustMatchShape(
 		field.Type,
 		func(x *shape.Any) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.RefName) string {
 			// check if reference is union,
@@ -116,33 +109,33 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 				result.WriteString(fmt.Sprintf("\treturn fmt.Errorf(\"%s.%sFromJSON: %%w\", err)\n", g.Union.PkgName, z.Name))
 				result.WriteString(fmt.Sprintf("}\n"))
 				result.WriteString(fmt.Sprintf("result.%s = res\n", field.Name))
-				result.WriteString(fmt.Sprintf("return nil\n"))
+				result.WriteString(fmt.Sprintf("return nil"))
 
 				return g.padLeft(depth+1, result.String())
 			}
 
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.BooleanLike) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.StringLike) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.NumberLike) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.ListLike) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.MapLike) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.StructLike) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.UnionLike) string {
-			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)\n", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 	)
 }

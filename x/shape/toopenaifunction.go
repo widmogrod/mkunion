@@ -70,7 +70,14 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 					def.Description = *field.Desc
 				}
 
-				properties[field.Name] = *def
+				name := field.Name
+				if field.Tags != nil {
+					if v, ok := field.Tags["name"]; ok {
+						name = v.Value
+					}
+				}
+
+				properties[name] = *def
 			}
 
 			return &jsonschema.Definition{

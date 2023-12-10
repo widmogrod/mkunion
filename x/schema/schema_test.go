@@ -140,7 +140,7 @@ func TestMaxScalars(t *testing.T) {
 			t.Skip("skipping test that are for ARM64")
 		}
 
-		var m = Number(math.MaxFloat64)
+		var m = *MkFloat(math.MaxFloat64)
 		var s Schema = &Map{
 			Field: []Field{
 				{Name: "Int", Value: &m},
@@ -177,7 +177,7 @@ func TestMaxScalars(t *testing.T) {
 		assert.Equal(t, uint64(math.Inf(1)), r.Uint64)
 	})
 	t.Run("test lossy conversion from small float 64 to respective scalars", func(t *testing.T) {
-		var m = Number(float64(3))
+		var m = *MkFloat(float64(3))
 		var s Schema = &Map{
 			Field: []Field{
 				{Name: "Int", Value: &m},

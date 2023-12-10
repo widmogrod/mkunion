@@ -1,6 +1,6 @@
 package shape
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Shape
+// go:generate go run ../../cmd/mkunion/main.go -name=Shape
 type (
 	Any     struct{}
 	RefName struct {
@@ -57,7 +57,7 @@ type FieldTag struct {
 	Options []string
 }
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Guard
+// go:generate go run ../../cmd/mkunion/main.go -name=Guard
 type (
 	Enum struct {
 		Val []string

@@ -4,5 +4,5 @@ package ast
 type (
 	EqTo     struct{ V any }
 	GrThan   struct{ V any }
-	OrFields map[string]SyntaxSugar
+	OrFields struct{ M map[string]SyntaxSugar }
 )

@@ -16,17 +16,17 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 		},
 		func(x *Bool) types.AttributeValue {
 			return &types.AttributeValueMemberBOOL{
-				Value: bool(*x),
+				Value: x.B,
 			}
 		},
 		func(x *Number) types.AttributeValue {
 			return &types.AttributeValueMemberN{
-				Value: fmt.Sprintf("%f", *x),
+				Value: fmt.Sprintf("%f", x.N),
 			}
 		},
 		func(x *String) types.AttributeValue {
 			return &types.AttributeValueMemberS{
-				Value: string(*x),
+				Value: x.S,
 			}
 		},
 		func(x *Binary) types.AttributeValue {
@@ -79,8 +79,7 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 				return nil, err
 			}
 
-			v := Number(num)
-			result.Items = append(result.Items, &v)
+			result.Items = append(result.Items, MkFloat(num))
 		}
 		return result, nil
 
@@ -97,8 +96,7 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 		return &None{}, nil
 
 	case *types.AttributeValueMemberBOOL:
-		v := Bool(y.Value)
-		return &v, nil
+		return MkBool(y.Value), nil
 
 	case *types.AttributeValueMemberN:
 		num, err := strconv.ParseFloat(y.Value, 64)
@@ -106,8 +104,7 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 			return nil, err
 		}
 
-		v := Number(num)
-		return &v, nil
+		return MkFloat(num), nil
 
 	case *types.AttributeValueMemberS:
 		return MkString(y.Value), nil
