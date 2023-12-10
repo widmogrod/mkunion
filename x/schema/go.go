@@ -491,21 +491,21 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 				return x, nil
 			}
 
-			return x.B, nil
+			return bool(*x), nil
 		},
 		func(x *Number) (any, error) {
 			if _, ok := c.activeBuilder.(*UnionMap); ok {
 				return x, nil
 			}
 
-			return x.N, nil
+			return float64(*x), nil
 		},
 		func(x *String) (any, error) {
 			if _, ok := c.activeBuilder.(*UnionMap); ok {
 				return x, nil
 			}
 
-			return x.S, nil
+			return string(*x), nil
 		},
 		func(x *Binary) (any, error) {
 			if _, ok := c.activeBuilder.(*UnionMap); ok {

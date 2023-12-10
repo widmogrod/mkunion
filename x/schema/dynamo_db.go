@@ -16,17 +16,17 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 		},
 		func(x *Bool) types.AttributeValue {
 			return &types.AttributeValueMemberBOOL{
-				Value: x.B,
+				Value: bool(*x),
 			}
 		},
 		func(x *Number) types.AttributeValue {
 			return &types.AttributeValueMemberN{
-				Value: fmt.Sprintf("%f", x.N),
+				Value: fmt.Sprintf("%f", *x),
 			}
 		},
 		func(x *String) types.AttributeValue {
 			return &types.AttributeValueMemberS{
-				Value: x.S,
+				Value: string(*x),
 			}
 		},
 		func(x *Binary) types.AttributeValue {

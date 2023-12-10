@@ -30,7 +30,7 @@ func As[A int | int8 | int16 | int32 | int64 |
 		func(x *Bool) (A, bool) {
 			switch any(def).(type) {
 			case bool:
-				return any(x.B).(A), true
+				return any(bool(*x)).(A), true
 			}
 
 			return def, false
@@ -38,76 +38,76 @@ func As[A int | int8 | int16 | int32 | int64 |
 		func(x *Number) (A, bool) {
 			switch any(def).(type) {
 			case float32:
-				return any(float32(x.N)).(A), true
+				return any(float32(*x)).(A), true
 			case float64:
-				return any(float64(x.N)).(A), true
+				return any(float64(*x)).(A), true
 			case int:
-				return any(int(x.N)).(A), true
+				return any(int(*x)).(A), true
 			case int8:
-				return any(int8(x.N)).(A), true
+				return any(int8(*x)).(A), true
 			case int16:
-				return any(int16(x.N)).(A), true
+				return any(int16(*x)).(A), true
 			case int32:
-				return any(int32(x.N)).(A), true
+				return any(int32(*x)).(A), true
 			case int64:
-				return any(int64(x.N)).(A), true
+				return any(int64(*x)).(A), true
 			case uint:
-				return any(uint(x.N)).(A), true
+				return any(uint(*x)).(A), true
 			case uint8:
-				return any(uint8(x.N)).(A), true
+				return any(uint8(*x)).(A), true
 			case uint16:
-				return any(uint16(x.N)).(A), true
+				return any(uint16(*x)).(A), true
 			case uint32:
-				return any(uint32(x.N)).(A), true
+				return any(uint32(*x)).(A), true
 			case uint64:
-				return any(uint64(x.N)).(A), true
+				return any(uint64(*x)).(A), true
 			}
 			return def, false
 		},
 		func(x *String) (A, bool) {
 			switch any(def).(type) {
 			case string:
-				return any(x.S).(A), true
+				return any(string(*x)).(A), true
 			case []byte:
-				return any([]byte(x.S)).(A), true
+				return any([]byte((*x))).(A), true
 			case float64:
-				v, err := strconv.ParseFloat(x.S, 64)
+				v, err := strconv.ParseFloat(string(*x), 64)
 				if err != nil {
 					return def, false
 				}
 				return any(v).(A), true
 			case float32:
-				v, err := strconv.ParseFloat(x.S, 32)
+				v, err := strconv.ParseFloat(string(*x), 32)
 				if err != nil {
 					return def, false
 				}
 				return any(float32(v)).(A), true
 			case int:
-				v, err := strconv.Atoi(x.S)
+				v, err := strconv.Atoi(string(*x))
 				if err != nil {
 					return def, false
 				}
 				return any(v).(A), true
 			case int8:
-				v, err := strconv.ParseInt(x.S, 10, 8)
+				v, err := strconv.ParseInt(string(*x), 10, 8)
 				if err != nil {
 					return def, false
 				}
 				return any(int8(v)).(A), true
 			case int16:
-				v, err := strconv.ParseInt(x.S, 10, 16)
+				v, err := strconv.ParseInt(string(*x), 10, 16)
 				if err != nil {
 					return def, false
 				}
 				return any(int16(v)).(A), true
 			case int32:
-				v, err := strconv.ParseInt(x.S, 10, 32)
+				v, err := strconv.ParseInt(string(*x), 10, 32)
 				if err != nil {
 					return def, false
 				}
 				return any(int32(v)).(A), true
 			case int64:
-				v, err := strconv.ParseInt(x.S, 10, 64)
+				v, err := strconv.ParseInt(string(*x), 10, 64)
 				if err != nil {
 					return def, false
 				}
@@ -286,7 +286,7 @@ func Compare(a, b Schema) int {
 				if *x == *y {
 					return 0
 				}
-				if x.B {
+				if *x {
 					return 1
 				}
 				return -1
@@ -299,7 +299,7 @@ func Compare(a, b Schema) int {
 			case *None, *Bool:
 				return 1
 			case *Number:
-				return int(x.N - y.N)
+				return int(*x - *y)
 			}
 
 			return -1
@@ -309,7 +309,7 @@ func Compare(a, b Schema) int {
 			case *None, *Bool, *Number:
 				return 1
 			case *String:
-				return strings.Compare(x.S, y.S)
+				return strings.Compare(string(*x), string(*y))
 			}
 
 			return -1

@@ -657,27 +657,13 @@ func (self *None) UnmarshalJSON(x []byte) error {
 
 func BoolFromJSON(x []byte) (*Bool, error) {
 	var result *Bool = new(Bool)
-	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
-		switch key {
-		case "B":
-			return json.Unmarshal(value, &result.B)
-		}
-
-		return fmt.Errorf("schema.BoolFromJSON: unknown key %s", key)
-	})
+	err := json.Unmarshal(x, result)
 
 	return result, err
 }
 
 func BoolToJSON(x *Bool) ([]byte, error) {
-	field_B, err := json.Marshal(x.B)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(map[string]json.RawMessage{
-		"B": field_B,
-	})
+	return json.Marshal(x)
 }
 
 func (self *Bool) MarshalJSON() ([]byte, error) {
@@ -695,27 +681,13 @@ func (self *Bool) UnmarshalJSON(x []byte) error {
 
 func NumberFromJSON(x []byte) (*Number, error) {
 	var result *Number = new(Number)
-	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
-		switch key {
-		case "N":
-			return json.Unmarshal(value, &result.N)
-		}
-
-		return fmt.Errorf("schema.NumberFromJSON: unknown key %s", key)
-	})
+	err := json.Unmarshal(x, result)
 
 	return result, err
 }
 
 func NumberToJSON(x *Number) ([]byte, error) {
-	field_N, err := json.Marshal(x.N)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(map[string]json.RawMessage{
-		"N": field_N,
-	})
+	return json.Marshal(x)
 }
 
 func (self *Number) MarshalJSON() ([]byte, error) {
@@ -733,27 +705,13 @@ func (self *Number) UnmarshalJSON(x []byte) error {
 
 func StringFromJSON(x []byte) (*String, error) {
 	var result *String = new(String)
-	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
-		switch key {
-		case "S":
-			return json.Unmarshal(value, &result.S)
-		}
-
-		return fmt.Errorf("schema.StringFromJSON: unknown key %s", key)
-	})
+	err := json.Unmarshal(x, result)
 
 	return result, err
 }
 
 func StringToJSON(x *String) ([]byte, error) {
-	field_S, err := json.Marshal(x.S)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(map[string]json.RawMessage{
-		"S": field_S,
-	})
+	return json.Marshal(x)
 }
 
 func (self *String) MarshalJSON() ([]byte, error) {

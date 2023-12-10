@@ -37,7 +37,7 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 			return nil
 		},
 		func(x *Bool) error {
-			if x.B {
+			if *x {
 				res.WriteString("true")
 			} else {
 				res.WriteString("false")
@@ -45,14 +45,14 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 			return nil
 		},
 		func(x *Number) error {
-			_, err := fmt.Fprintf(res, "%f", x.N)
+			_, err := fmt.Fprintf(res, "%f", *x)
 			if err != nil {
 				return err
 			}
 			return nil
 		},
 		func(x *String) error {
-			_, err := fmt.Fprintf(res, "%q", x.S)
+			_, err := fmt.Fprintf(res, "%q", *x)
 			if err != nil {
 				return err
 			}

@@ -9,7 +9,7 @@ func init() {
 		},
 		func(x Schema) time.Duration {
 			if v, ok := x.(*Number); ok {
-				return time.Duration(int64(v.N))
+				return time.Duration(int64(*v))
 			}
 
 			panic("invalid type")
@@ -21,7 +21,7 @@ func init() {
 		},
 		func(x Schema) time.Time {
 			if v, ok := x.(*String); ok {
-				t, _ := time.Parse(time.RFC3339Nano, v.S)
+				t, _ := time.Parse(time.RFC3339Nano, string(*v))
 				return t
 			}
 

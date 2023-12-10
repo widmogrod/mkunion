@@ -11,15 +11,16 @@ func MkNone() *None {
 }
 
 func MkBool(b bool) *Bool {
-	return &Bool{B: b}
+	return (*Bool)(&b)
 }
 
 func MkInt(x int) *Number {
-	return &Number{N: float64(x)}
+	v := float64(x)
+	return (*Number)(&v)
 }
 
 func MkFloat(x float64) *Number {
-	return &Number{N: x}
+	return (*Number)(&x)
 }
 
 func MkBinary(b []byte) *Binary {
@@ -27,7 +28,7 @@ func MkBinary(b []byte) *Binary {
 }
 
 func MkString(s string) *String {
-	return &String{S: s}
+	return (*String)(&s)
 }
 
 func MkList(items ...Schema) *List {
@@ -79,9 +80,9 @@ type (
 //go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema,shape
 type (
 	None   struct{}
-	Bool   struct{ B bool }
-	Number struct{ N float64 }
-	String struct{ S string }
+	Bool   bool
+	Number float64
+	String string
 	Binary struct{ B []byte }
 	List   struct {
 		Items []Schema
