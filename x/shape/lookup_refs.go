@@ -34,7 +34,7 @@ func LookupShape(x *RefName) (Shape, bool) {
 
 	pkgPath, err := findPackagePath(x.PkgImportName)
 	if err != nil {
-		log.Errorf("shape.LookupShape: could not find package path %s", err.Error())
+		log.Warnf("shape.LookupShape: could not find package path %s", err.Error())
 		return nil, false
 	}
 
@@ -71,7 +71,7 @@ func LookupShape(x *RefName) (Shape, bool) {
 		})
 
 	if err != nil {
-		log.Errorf("shape.LookupShape: error during walk %s", err.Error())
+		log.Warnf("shape.LookupShape: error during walk %s", err.Error())
 		return nil, false
 	}
 
