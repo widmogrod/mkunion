@@ -15,7 +15,7 @@ func TestInferFromFile(t *testing.T) {
 	assert.Equal(t, "Example", union.Name)
 	assert.Equal(t, "testasset", union.PkgName)
 	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset", union.PkgImportName)
-	assert.Equal(t, 2, len(union.Variant))
+	assert.Equal(t, 10, len(union.Variant))
 
 	expected := &UnionLike{
 		Name:          "Example",
@@ -85,6 +85,79 @@ func TestInferFromFile(t *testing.T) {
 						IsPointer: true,
 						Tags:      nil,
 					},
+				},
+			},
+			&StringLike{
+				Named: &Named{
+					Name:          "C",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&NumberLike{
+				Named: &Named{
+					Name:          "D",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&NumberLike{
+				Named: &Named{
+					Name:          "E",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&BooleanLike{
+				Named: &Named{
+					Name:          "F",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&Any{
+				Named: &Named{
+					Name:          "G",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&MapLike{
+				Key: &StringLike{},
+				Val: &RefName{
+					Name:          "Example",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+				KeyIsPointer: false,
+				ValIsPointer: false,
+				Named: &Named{
+					Name:          "H",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&ListLike{
+				Element: &RefName{
+					Name:          "Example",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+				ElementIsPointer: false,
+				Named: &Named{
+					Name:          "I",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&ListLike{
+				Element:          &StringLike{},
+				ElementIsPointer: false,
+				ArrayLen:         ptr(2),
+				Named: &Named{
+					Name:          "J",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
 			},
 		},

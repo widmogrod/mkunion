@@ -2,26 +2,39 @@ package shape
 
 // go:generate go run ../../cmd/mkunion/main.go -name=Shape
 type (
-	Any     struct{}
+	Any struct {
+		Named *Named
+	}
 	RefName struct {
 		Name          string
 		PkgName       string
 		PkgImportName string
 	}
-	BooleanLike struct{}
-	StringLike  struct {
+	BooleanLike struct {
+		Named *Named
+	}
+	// StringLike is a string type, and when it has name, it means it named type.
+	// For example:
+	// 	type C string
+	StringLike struct {
+		Named *Named
 		//Guard Guard
 	}
 	NumberLike struct {
+		Named *Named
 		//Guard Guard
 	}
 	ListLike struct {
+		Named *Named
 		//Extend *ListLike
 		//Guard  Guard
 		Element          Shape
 		ElementIsPointer bool
+		// ArrayLen is a pointer to int, when it's nil, it means it's a slice.
+		ArrayLen *int
 	}
 	MapLike struct {
+		Named *Named
 		//Extend *MapLike
 		//Guard  Guard
 		Key          Shape
@@ -42,6 +55,12 @@ type (
 		Variant       []Shape
 	}
 )
+
+type Named struct {
+	Name          string
+	PkgName       string
+	PkgImportName string
+}
 
 type FieldLike struct {
 	Name      string

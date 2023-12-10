@@ -15,6 +15,40 @@ func ptr[A any](a A) *A {
 }
 
 func TestFromGoo(t *testing.T) {
+	named := &FieldLike{
+		Name: "Named",
+		Type: &StructLike{
+			Name:          "Named",
+			PkgName:       "shape",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+			Fields: []*FieldLike{
+				{
+					Name: "Name",
+					Type: &StringLike{},
+				},
+				{
+					Name: "PkgName",
+					Type: &StringLike{},
+				},
+				{
+					Name: "PkgImportName",
+					Type: &StringLike{},
+				},
+			},
+		},
+		IsPointer: true,
+	}
+
+	namedRef := &FieldLike{
+		Name: "Named",
+		Type: &RefName{
+			Name:          "Named",
+			PkgName:       "shape",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		},
+		IsPointer: true,
+	}
+
 	result := FromGo(structA{})
 	expected := &StructLike{
 		Name:          "structA",
@@ -41,7 +75,9 @@ func TestFromGoo(t *testing.T) {
 							Name:          "Any",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        []*FieldLike{},
+							Fields: []*FieldLike{
+								named,
+							},
 						},
 						&StructLike{
 							Name:          "RefName",
@@ -66,25 +102,32 @@ func TestFromGoo(t *testing.T) {
 							Name:          "BooleanLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        []*FieldLike{},
+							Fields: []*FieldLike{
+								namedRef,
+							},
 						},
 						&StructLike{
 							Name:          "StringLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        []*FieldLike{},
+							Fields: []*FieldLike{
+								namedRef,
+							},
 						},
 						&StructLike{
 							Name:          "NumberLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        []*FieldLike{},
+							Fields: []*FieldLike{
+								namedRef,
+							},
 						},
 						&StructLike{
 							Name:          "ListLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 							Fields: []*FieldLike{
+								namedRef,
 								{
 									Name: "Element",
 									Type: &RefName{
@@ -97,6 +140,11 @@ func TestFromGoo(t *testing.T) {
 									Name: "ElementIsPointer",
 									Type: &BooleanLike{},
 								},
+								{
+									Name:      "ArrayLen",
+									Type:      &NumberLike{},
+									IsPointer: true,
+								},
 							},
 						},
 						&StructLike{
@@ -104,6 +152,7 @@ func TestFromGoo(t *testing.T) {
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 							Fields: []*FieldLike{
+								namedRef,
 								{
 									Name: "Key",
 									Type: &RefName{

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 	result := &InferredInfo{
 		PkgImportName:        tryToPkgImportName(filename),
 		possibleVariantTypes: map[string][]string{},
-		shapes:               make(map[string]*StructLike),
+		shapes:               make(map[string]Shape),
 	}
 
 	fset := token.NewFileSet()
@@ -42,7 +43,7 @@ func tryToPkgImportName(filename string) string {
 	for {
 		filename = path.Dir(filename)
 		if filename == "." || filename == "/" {
-			log.Infof("infer_defaults: could not find go.mod file in %s, returning empty pkg name", filename)
+			log.Infof("shape.InferFromFile: could not find go.mod file in %s, returning empty pkg name", filename)
 			return ""
 		}
 
@@ -53,18 +54,18 @@ func tryToPkgImportName(filename string) string {
 
 			data, err := io.ReadAll(f)
 			if err != nil {
-				log.Infof("infer_defaults: could not read go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
+				log.Infof("shape.InferFromFile: could not read go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
 				return ""
 			}
 
 			parsed, err := modfile.Parse(modpath, data, nil)
 			if err != nil {
-				log.Infof("infer_defaults: could not parse go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
+				log.Infof("shape.InferFromFile: could not parse go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
 				return ""
 			}
 
 			if parsed.Module == nil {
-				log.Infof("infer_defaults: could not find module name in go.mod file in %s, returning empty pkg name", filename)
+				log.Infof("shape.InferFromFile: could not find module name in go.mod file in %s, returning empty pkg name", filename)
 				return ""
 			}
 
@@ -83,7 +84,7 @@ type InferredInfo struct {
 	PackageName                string
 	PkgImportName              string
 	possibleVariantTypes       map[string][]string
-	shapes                     map[string]*StructLike
+	shapes                     map[string]Shape
 	packageNameToPackageImport map[string]string
 	currentType                string
 }
@@ -101,7 +102,12 @@ func (f *InferredInfo) PossibleVariantsTypes(unionName string) []string {
 }
 
 func (f *InferredInfo) StructShapeWith(name string) *StructLike {
-	return f.shapes[name]
+	result, ok := f.shapes[name].(*StructLike)
+	if !ok {
+		return nil
+	}
+
+	return result
 }
 
 func (f *InferredInfo) RetrieveUnions() []*UnionLike {
@@ -131,7 +137,10 @@ func (f *InferredInfo) RetrieveUnion(name string) UnionLike {
 func (f *InferredInfo) RetrieveStruct() []*StructLike {
 	structs := make(map[string]*StructLike)
 	for _, structShape := range f.shapes {
-		structs[structShape.Name] = structShape
+		switch x := structShape.(type) {
+		case *StructLike:
+			structs[x.Name] = x
+		}
 	}
 
 	for union, variants := range f.possibleVariantTypes {
@@ -198,6 +207,54 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	case *ast.TypeSpec:
 		f.currentType = t.Name.Name
 
+		// Detect named literal types like:
+		// type A string
+		// type B int
+		// type C bool
+		switch next := t.Type.(type) {
+		case *ast.Ident:
+			switch next.Name {
+			case "string":
+				f.shapes[f.currentType] = &StringLike{
+					Named: f.named(),
+				}
+
+			case "int", "int8", "int16", "int32", "int64",
+				"uint", "uint8", "uint16", "uint32", "uint64",
+				"float64", "float32":
+				f.shapes[f.currentType] = &NumberLike{
+					Named: f.named(),
+				}
+
+			case "bool":
+				f.shapes[f.currentType] = &BooleanLike{
+					Named: f.named(),
+				}
+
+			case "any":
+				f.shapes[f.currentType] = &Any{
+					Named: f.named(),
+				}
+			}
+
+		case *ast.MapType:
+			f.shapes[f.currentType] = &MapLike{
+				Key:          FromAst(next.Key, InjectPkgName(f.PkgImportName, f.PackageName)),
+				Val:          FromAst(next.Value, InjectPkgName(f.PkgImportName, f.PackageName)),
+				KeyIsPointer: IsStarExpr(next.Key),
+				ValIsPointer: IsStarExpr(next.Value),
+				Named:        f.named(),
+			}
+
+		case *ast.ArrayType:
+			f.shapes[f.currentType] = &ListLike{
+				Element:          FromAst(next.Elt, InjectPkgName(f.PkgImportName, f.PackageName)),
+				ElementIsPointer: IsStarExpr(next.Elt),
+				Named:            f.named(),
+				ArrayLen:         tryGetArrayLen(next.Len),
+			}
+		}
+
 	case *ast.StructType:
 		if t.Struct.IsValid() {
 			if _, ok := f.shapes[f.currentType]; !ok {
@@ -208,7 +265,12 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				}
 			}
 
-			structShape := f.shapes[f.currentType]
+			structShape, ok := f.shapes[f.currentType].(*StructLike)
+			if !ok {
+				log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
+				return f
+			}
+
 			for _, field := range t.Fields.List {
 				// this happens when field is embedded in struct
 				// something like `type A struct { B }`
@@ -221,7 +283,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 						})
 						break
 					default:
-						log.Warnf("infer_defaults: unknown ast type embedded in struct: %T\n", typ)
+						log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
 						continue
 					}
 				}
@@ -240,7 +302,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 							pkgImportName := f.packageNameToPackageImport[pkgName]
 							typ = FromAst(ttt.Sel, InjectPkgName(pkgImportName, pkgName))
 						} else {
-							log.Infof("infer_defaults: unknown selector X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+							log.Infof("shape.InferFromFile: unknown selector X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
 							typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
 						}
 					// this is reference to other struct in the same package or other package
@@ -253,12 +315,12 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 								typ = FromAst(selector.Sel, InjectPkgName(pkgImportName, pkgName))
 							} else {
 								// same package
-								log.Infof("infer_defaults: unknown star X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+								log.Infof("shape.InferFromFile: unknown star X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
 								typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
 							}
 						} else {
 							// same package
-							log.Infof("infer_defaults: unknown star-else in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+							log.Infof("shape.InferFromFile: unknown star-else in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
 							typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
 						}
 
@@ -266,7 +328,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 						typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
 
 					default:
-						log.Warnf("infer_defaults: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+						log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
 						typ = &Any{}
 					}
 
@@ -292,9 +354,33 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 
 			f.shapes[f.currentType] = structShape
 
-			log.Infof("infer_defaults: struct %s: %s\n", f.currentType, ToStr(structShape))
+			log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
 		}
 	}
 
 	return f
+}
+
+func (f *InferredInfo) named() *Named {
+	return &Named{
+		Name:          f.currentType,
+		PkgName:       f.PackageName,
+		PkgImportName: f.PkgImportName,
+	}
+}
+
+func tryGetArrayLen(expr ast.Expr) *int {
+	if expr == nil {
+		return nil
+	}
+
+	switch x := expr.(type) {
+	case *ast.BasicLit:
+		if x.Kind == token.INT {
+			n, _ := strconv.Atoi(x.Value)
+			return &n
+		}
+	}
+
+	return nil
 }

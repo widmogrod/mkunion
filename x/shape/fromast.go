@@ -12,7 +12,12 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 		case "any":
 			return &Any{}
 		case "string":
-			return &StringLike{}
+			result := &StringLike{}
+			for _, f := range fx {
+				f(result)
+			}
+			return result
+
 		case "bool":
 			return &BooleanLike{}
 		case "int", "int8", "int16", "int32", "int64",
@@ -67,10 +72,110 @@ func IsStarExpr(x ast.Expr) bool {
 
 func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {
 	return func(x Shape) {
-		y, ok := x.(*RefName)
-		if ok && y.PkgName == "" {
-			y.PkgName = pkgName
-			y.PkgImportName = pkgImportName
+		if !isNamed(x) {
+			return
+		}
+
+		switch y := x.(type) {
+		case *RefName:
+			isPkgNotSet := y.PkgName == ""
+			if isPkgNotSet {
+				y.PkgName = pkgName
+				y.PkgImportName = pkgImportName
+			}
+
+		case *StringLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *NumberLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *BooleanLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *ListLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *MapLike:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
+
+		case *Any:
+			isPkgNotSet := y.Named.PkgName == ""
+			if isPkgNotSet {
+				y.Named.PkgName = pkgName
+				y.Named.PkgImportName = pkgImportName
+			}
 		}
 	}
+}
+
+func isNamed(x Shape) bool {
+	switch y := x.(type) {
+	case *RefName, *StructLike, *UnionLike:
+		return true
+
+	case *StringLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name == ""
+
+	case *NumberLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name == ""
+
+	case *BooleanLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name == ""
+
+	case *ListLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name == ""
+
+	case *MapLike:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name == ""
+
+	case *Any:
+		if y.Named == nil {
+			return false
+		}
+
+		return y.Named.Name == ""
+	}
+
+	return false
 }
