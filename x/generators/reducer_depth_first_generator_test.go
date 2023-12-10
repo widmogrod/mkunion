@@ -9,11 +9,11 @@ import (
 
 func TestDepthFirstGenerator(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	inferred, err := shape.InferFromFile("testutils/tree_example_lit.go")
+	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
 	g := NewReducerDepthFirstGenerator(
-		inferred.RetrieveUnion("Tree2"),
+		inferred.RetrieveUnion("Tree"),
 		NewHelper(WithPackageName("testutils")),
 	)
 
@@ -23,35 +23,35 @@ func TestDepthFirstGenerator(t *testing.T) {
 package testutils
 
 type (
-	Tree2Reducer[A any] interface {
-		ReduceBranch2(x *Branch2, agg A) (result A, stop bool)
-		ReduceLeaf2(x *Leaf2, agg A) (result A, stop bool)
+	TreeReducer[A any] interface {
+		ReduceBranch(x *Branch, agg A) (result A, stop bool)
+		ReduceLeaf(x *Leaf, agg A) (result A, stop bool)
 	}
 )
 
-type Tree2DepthFirstVisitor[A any] struct {
+type TreeDepthFirstVisitor[A any] struct {
 	stop   bool
 	result A
-	reduce Tree2Reducer[A]
+	reduce TreeReducer[A]
 }
 
-var _ Tree2Visitor = (*Tree2DepthFirstVisitor[any])(nil)
+var _ TreeVisitor = (*TreeDepthFirstVisitor[any])(nil)
 
-func (d *Tree2DepthFirstVisitor[A]) VisitBranch2(v *Branch2) any {
-	d.result, d.stop = d.reduce.ReduceBranch2(v, d.result)
+func (d *TreeDepthFirstVisitor[A]) VisitBranch(v *Branch) any {
+	d.result, d.stop = d.reduce.ReduceBranch(v, d.result)
 	if d.stop {
 		return nil
 	}
-	if _ = v.Lit.AcceptTree2(d); d.stop {
+	if _ = v.Lit.AcceptTree(d); d.stop {
 		return nil
 	}
 	for idx := range v.List {
-		if _ = v.List[idx].AcceptTree2(d); d.stop {
+		if _ = v.List[idx].AcceptTree(d); d.stop {
 			return nil
 		}
 	}
 	for idx, _ := range v.Map {
-		if _ = v.Map[idx].AcceptTree2(d); d.stop {
+		if _ = v.Map[idx].AcceptTree(d); d.stop {
 			return nil
 		}
 	}
@@ -59,8 +59,8 @@ func (d *Tree2DepthFirstVisitor[A]) VisitBranch2(v *Branch2) any {
 	return nil
 }
 
-func (d *Tree2DepthFirstVisitor[A]) VisitLeaf2(v *Leaf2) any {
-	d.result, d.stop = d.reduce.ReduceLeaf2(v, d.result)
+func (d *TreeDepthFirstVisitor[A]) VisitLeaf(v *Leaf) any {
+	d.result, d.stop = d.reduce.ReduceLeaf(v, d.result)
 	if d.stop {
 		return nil
 	}
@@ -68,13 +68,13 @@ func (d *Tree2DepthFirstVisitor[A]) VisitLeaf2(v *Leaf2) any {
 	return nil
 }
 
-func ReduceTree2DepthFirst[A any](r Tree2Reducer[A], v Tree2, init A) A {
-	reducer := &Tree2DepthFirstVisitor[A]{
+func ReduceTreeDepthFirst[A any](r TreeReducer[A], v Tree, init A) A {
+	reducer := &TreeDepthFirstVisitor[A]{
 		result: init,
 		reduce: r,
 	}
 
-	_ = v.AcceptTree2(reducer)
+	_ = v.AcceptTree(reducer)
 
 	return reducer.result
 }`, string(result))

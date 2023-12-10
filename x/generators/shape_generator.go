@@ -71,7 +71,7 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			result := &bytes.Buffer{}
 
 			fmt.Fprintf(result, "&shape.ListLike{\n")
-			fmt.Fprintf(result, "\tElement: %s,\n", strings.TrimLeft(g.ShapeToString(x.Element, depth+1), "\t"))
+			fmt.Fprintf(result, "\tElement: %s,\n", strings.TrimLeft(g.ShapeToString(x.Element, 1), "\t"))
 			fmt.Fprintf(result, "\tElementIsPointer: %v,\n", x.ElementIsPointer)
 			fmt.Fprintf(result, "}")
 
@@ -81,9 +81,9 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			result := &bytes.Buffer{}
 
 			fmt.Fprintf(result, "&shape.MapLike{\n")
-			fmt.Fprintf(result, "\tKey: %s,\n", strings.TrimLeft(g.ShapeToString(x.Key, depth+1), "\t"))
+			fmt.Fprintf(result, "\tKey: %s,\n", strings.TrimLeft(g.ShapeToString(x.Key, 1), "\t"))
 			fmt.Fprintf(result, "\tKeyIsPointer: %v,\n", x.KeyIsPointer)
-			fmt.Fprintf(result, "\tVal: %s,\n", strings.TrimLeft(g.ShapeToString(x.Val, depth+1), "\t"))
+			fmt.Fprintf(result, "\tVal: %s,\n", strings.TrimLeft(g.ShapeToString(x.Val, 1), "\t"))
 			fmt.Fprintf(result, "\tValIsPointer: %v,\n", x.ValIsPointer)
 			fmt.Fprintf(result, "}")
 
@@ -102,7 +102,7 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 				for _, field := range x.Fields {
 					fmt.Fprintf(result, "\t\t{\n")
 					fmt.Fprintf(result, "\t\t\tName: %q,\n", field.Name)
-					fmt.Fprintf(result, "\t\t\tType: %s,\n", strings.TrimLeft(g.ShapeToString(field.Type, depth+2), "\t"))
+					fmt.Fprintf(result, "\t\t\tType: %s,\n", strings.TrimLeft(g.ShapeToString(field.Type, 3), "\t"))
 					fmt.Fprintf(result, "\t\t},\n")
 				}
 				fmt.Fprintf(result, "\t},\n")
@@ -122,7 +122,7 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			if len(x.Variant) > 0 {
 				fmt.Fprintf(result, "\tVariant: []shape.Shape{\n")
 				for _, variant := range x.Variant {
-					fmt.Fprintf(result, "\t\t%s,\n", strings.TrimLeft(g.ShapeToString(variant, depth+2), "\t"))
+					fmt.Fprintf(result, "\t\t%s,\n", strings.TrimLeft(g.ShapeToString(variant, 2), "\t"))
 				}
 				fmt.Fprintf(result, "\t},\n")
 			}

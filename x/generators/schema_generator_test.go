@@ -9,11 +9,11 @@ import (
 
 func TestDeSerJsonGeneration(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	inferred, err := shape.InferFromFile("testutils/tree_example_lit.go")
+	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
 	g := NewSchemaGenerator(
-		inferred.RetrieveUnion("Tree2"),
+		inferred.RetrieveUnion("Tree"),
 		NewHelper(WithPackageName("visitor")),
 	)
 
@@ -25,13 +25,13 @@ package visitor
 import "github.com/widmogrod/mkunion/x/schema"
 
 func init() {
-	schema.RegisterUnionTypes(Tree2SchemaDef())
+	schema.RegisterUnionTypes(TreeSchemaDef())
 }
 
-func Tree2SchemaDef() *schema.UnionVariants[Tree2] {
-	return schema.MustDefineUnion[Tree2](
-		&Branch2{},
-		&Leaf2{},
+func TreeSchemaDef() *schema.UnionVariants[Tree] {
+	return schema.MustDefineUnion[Tree](
+		&Branch{},
+		&Leaf{},
 	)
 }
 `, string(result))

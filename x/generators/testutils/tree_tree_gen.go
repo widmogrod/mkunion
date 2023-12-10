@@ -101,7 +101,7 @@ func BranchShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 		Fields: []*shape.FieldLike{
 			{
-				Name: "L",
+				Name: "Lit",
 				Type: &shape.RefName{
 					Name:          "Tree",
 					PkgName:       "testutils",
@@ -109,11 +109,27 @@ func BranchShape() shape.Shape {
 				},
 			},
 			{
-				Name: "R",
-				Type: &shape.RefName{
-					Name:          "Tree",
-					PkgName:       "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				Name: "List",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name:          "Tree",
+						PkgName:       "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					},
+					ElementIsPointer: false,
+				},
+			},
+			{
+				Name: "Map",
+				Type: &shape.MapLike{
+					Key:          &shape.StringLike{},
+					KeyIsPointer: false,
+					Val: &shape.RefName{
+						Name:          "Tree",
+						PkgName:       "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					},
+					ValIsPointer: false,
 				},
 			},
 		},
@@ -198,20 +214,17 @@ func BranchFromJSON(x []byte) (*Branch, error) {
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
-		case "L":
+		case "Lit":
 			res, err := TreeFromJSON(value)
 			if err != nil {
 				return fmt.Errorf("testutils.TreeFromJSON: %w", err)
 			}
-			result.L = res
+			result.Lit = res
 			return nil
-		case "R":
-			res, err := TreeFromJSON(value)
-			if err != nil {
-				return fmt.Errorf("testutils.TreeFromJSON: %w", err)
-			}
-			result.R = res
-			return nil
+		case "List":
+			return json.Unmarshal(value, &result.List)
+		case "Map":
+			return json.Unmarshal(value, &result.Map)
 		}
 
 		return fmt.Errorf("testutils.BranchFromJSON: unknown key %s", key)
@@ -221,17 +234,22 @@ func BranchFromJSON(x []byte) (*Branch, error) {
 }
 
 func BranchToJSON(x *Branch) ([]byte, error) {
-	field_L, err := TreeToJSON(x.L)
+	field_Lit, err := TreeToJSON(x.Lit)
 	if err != nil {
 		return nil, err
 	}
-	field_R, err := TreeToJSON(x.R)
+	field_List, err := json.Marshal(x.List)
+	if err != nil {
+		return nil, err
+	}
+	field_Map, err := json.Marshal(x.Map)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(map[string]json.RawMessage{
-		"L": field_L,
-		"R": field_R,
+		"Lit":  field_Lit,
+		"List": field_List,
+		"Map":  field_Map,
 	})
 }
 

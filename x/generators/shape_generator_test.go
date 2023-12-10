@@ -9,7 +9,7 @@ import (
 
 func TestShapeGenerator(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	inferred, err := shape.InferFromFile("testutils/tree_example.go")
+	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
 	g := NewShapeGenerator(
@@ -43,7 +43,7 @@ func BranchShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 		Fields: []*shape.FieldLike{
 			{
-				Name: "L",
+				Name: "Lit",
 				Type: &shape.RefName{
 					Name: "Tree",
 					PkgName: "testutils",
@@ -51,11 +51,27 @@ func BranchShape() shape.Shape {
 				},
 			},
 			{
-				Name: "R",
-				Type: &shape.RefName{
-					Name: "Tree",
-					PkgName: "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				Name: "List",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name: "Tree",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					},
+					ElementIsPointer: false,
+				},
+			},
+			{
+				Name: "Map",
+				Type: &shape.MapLike{
+					Key: &shape.StringLike{},
+					KeyIsPointer: false,
+					Val: &shape.RefName{
+						Name: "Tree",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					},
+					ValIsPointer: false,
 				},
 			},
 		},

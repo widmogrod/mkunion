@@ -9,11 +9,11 @@ import (
 
 func TestGeneration(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	inferred, err := shape.InferFromFile("testutils/tree_example_lit.go")
+	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
 	g := NewVisitorGenerator(
-		inferred.RetrieveUnion("Tree2"),
+		inferred.RetrieveUnion("Tree"),
 		NewHelper(WithPackageName("testutils")),
 	)
 
@@ -25,61 +25,61 @@ package testutils
 import "github.com/widmogrod/mkunion/f"
 
 
-type Tree2Visitor interface {
-	VisitBranch2(v *Branch2) any
-	VisitLeaf2(v *Leaf2) any
+type TreeVisitor interface {
+	VisitBranch(v *Branch) any
+	VisitLeaf(v *Leaf) any
 }
 
-type Tree2 interface {
-	AcceptTree2(g Tree2Visitor) any
+type Tree interface {
+	AcceptTree(g TreeVisitor) any
 }
 
-func (r *Branch2) AcceptTree2(v Tree2Visitor) any { return v.VisitBranch2(r) }
-func (r *Leaf2) AcceptTree2(v Tree2Visitor) any { return v.VisitLeaf2(r) }
+func (r *Branch) AcceptTree(v TreeVisitor) any { return v.VisitBranch(r) }
+func (r *Leaf) AcceptTree(v TreeVisitor) any { return v.VisitLeaf(r) }
 
 var (
-	_ Tree2 = (*Branch2)(nil)
-	_ Tree2 = (*Leaf2)(nil)
+	_ Tree = (*Branch)(nil)
+	_ Tree = (*Leaf)(nil)
 )
 
-func MatchTree2[TOut any](
-	x Tree2,
-	f1 func(x *Branch2) TOut,
-	f2 func(x *Leaf2) TOut,
-	df func(x Tree2) TOut,
+func MatchTree[TOut any](
+	x Tree,
+	f1 func(x *Branch) TOut,
+	f2 func(x *Leaf) TOut,
+	df func(x Tree) TOut,
 ) TOut {
 	return f.Match2(x, f1, f2, df)
 }
 
-func MatchTree2R2[TOut1, TOut2 any](
-	x Tree2,
-	f1 func(x *Branch2) (TOut1, TOut2),
-	f2 func(x *Leaf2) (TOut1, TOut2),
-	df func(x Tree2) (TOut1, TOut2),
+func MatchTreeR2[TOut1, TOut2 any](
+	x Tree,
+	f1 func(x *Branch) (TOut1, TOut2),
+	f2 func(x *Leaf) (TOut1, TOut2),
+	df func(x Tree) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.Match2R2(x, f1, f2, df)
 }
 
-func MustMatchTree2[TOut any](
-	x Tree2,
-	f1 func(x *Branch2) TOut,
-	f2 func(x *Leaf2) TOut,
+func MustMatchTree[TOut any](
+	x Tree,
+	f1 func(x *Branch) TOut,
+	f2 func(x *Leaf) TOut,
 ) TOut {
 	return f.MustMatch2(x, f1, f2)
 }
 
-func MustMatchTree2R0(
-	x Tree2,
-	f1 func(x *Branch2),
-	f2 func(x *Leaf2),
+func MustMatchTreeR0(
+	x Tree,
+	f1 func(x *Branch),
+	f2 func(x *Leaf),
 ) {
 	f.MustMatch2R0(x, f1, f2)
 }
 
-func MustMatchTree2R2[TOut1, TOut2 any](
-	x Tree2,
-	f1 func(x *Branch2) (TOut1, TOut2),
-	f2 func(x *Leaf2) (TOut1, TOut2),
+func MustMatchTreeR2[TOut1, TOut2 any](
+	x Tree,
+	f1 func(x *Branch) (TOut1, TOut2),
+	f2 func(x *Leaf) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.MustMatch2R2(x, f1, f2)
 }`, string(result))

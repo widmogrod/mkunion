@@ -10,7 +10,7 @@ import (
 
 func TestDeSerJSONGenerator(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	inferred, err := shape.InferFromFile("testutils/tree_example.go")
+	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
 	g := NewDeSerJSONGenerator(
