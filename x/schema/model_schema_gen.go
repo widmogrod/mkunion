@@ -626,8 +626,7 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 }
 
 func NoneFromJSON(x []byte) (*None, error) {
-	var result *None = &None{}
-
+	var result *None = new(None)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -657,8 +656,7 @@ func (self *None) UnmarshalJSON(x []byte) error {
 }
 
 func BoolFromJSON(x []byte) (*Bool, error) {
-	var result *Bool = &Bool{}
-
+	var result *Bool = new(Bool)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -696,8 +694,7 @@ func (self *Bool) UnmarshalJSON(x []byte) error {
 }
 
 func NumberFromJSON(x []byte) (*Number, error) {
-	var result *Number = &Number{}
-
+	var result *Number = new(Number)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -735,8 +732,7 @@ func (self *Number) UnmarshalJSON(x []byte) error {
 }
 
 func StringFromJSON(x []byte) (*String, error) {
-	var result *String = &String{}
-
+	var result *String = new(String)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -774,8 +770,7 @@ func (self *String) UnmarshalJSON(x []byte) error {
 }
 
 func BinaryFromJSON(x []byte) (*Binary, error) {
-	var result *Binary = &Binary{}
-
+	var result *Binary = new(Binary)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -813,8 +808,7 @@ func (self *Binary) UnmarshalJSON(x []byte) error {
 }
 
 func ListFromJSON(x []byte) (*List, error) {
-	var result *List = &List{}
-
+	var result *List = new(List)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -852,8 +846,7 @@ func (self *List) UnmarshalJSON(x []byte) error {
 }
 
 func MapFromJSON(x []byte) (*Map, error) {
-	var result *Map = &Map{}
-
+	var result *Map = new(Map)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {

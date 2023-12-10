@@ -84,9 +84,9 @@ func init() {
 
 func AlphabetSchemaDef() *schema.UnionVariants[Alphabet] {
 	return schema.MustDefineUnion[Alphabet](
-		&A1{},
-		&B2{},
-		&C3{},
+		new(A1),
+		new(B2),
+		new(C3),
 	)
 }
 
@@ -203,8 +203,7 @@ func AlphabetToJSON(x Alphabet) ([]byte, error) {
 }
 
 func A1FromJSON(x []byte) (*A1, error) {
-	var result *A1 = &A1{}
-
+	var result *A1 = new(A1)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -234,8 +233,7 @@ func (self *A1) UnmarshalJSON(x []byte) error {
 }
 
 func B2FromJSON(x []byte) (*B2, error) {
-	var result *B2 = &B2{}
-
+	var result *B2 = new(B2)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -265,8 +263,7 @@ func (self *B2) UnmarshalJSON(x []byte) error {
 }
 
 func C3FromJSON(x []byte) (*C3, error) {
-	var result *C3 = &C3{}
-
+	var result *C3 = new(C3)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {

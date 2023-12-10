@@ -76,8 +76,8 @@ func init() {
 
 func NumberSchemaDef() *schema.UnionVariants[Number] {
 	return schema.MustDefineUnion[Number](
-		&N0{},
-		&N1{},
+		new(N0),
+		new(N1),
 	)
 }
 
@@ -169,8 +169,7 @@ func NumberToJSON(x Number) ([]byte, error) {
 }
 
 func N0FromJSON(x []byte) (*N0, error) {
-	var result *N0 = &N0{}
-
+	var result *N0 = new(N0)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -200,8 +199,7 @@ func (self *N0) UnmarshalJSON(x []byte) error {
 }
 
 func N1FromJSON(x []byte) (*N1, error) {
-	var result *N1 = &N1{}
-
+	var result *N1 = new(N1)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {

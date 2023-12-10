@@ -362,8 +362,7 @@ func LocationToJSON(x Location) ([]byte, error) {
 }
 
 func LocationFieldFromJSON(x []byte) (*LocationField, error) {
-	var result *LocationField = &LocationField{}
-
+	var result *LocationField = new(LocationField)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -401,8 +400,7 @@ func (self *LocationField) UnmarshalJSON(x []byte) error {
 }
 
 func LocationIndexFromJSON(x []byte) (*LocationIndex, error) {
-	var result *LocationIndex = &LocationIndex{}
-
+	var result *LocationIndex = new(LocationIndex)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -440,8 +438,7 @@ func (self *LocationIndex) UnmarshalJSON(x []byte) error {
 }
 
 func LocationAnythingFromJSON(x []byte) (*LocationAnything, error) {
-	var result *LocationAnything = &LocationAnything{}
-
+	var result *LocationAnything = new(LocationAnything)
 	// if is Struct
 	err := shared.JsonParseObject(x, func(key string, value []byte) error {
 		switch key {
