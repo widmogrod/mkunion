@@ -19,7 +19,7 @@ Have fun! I hope you will find it useful.
 ### Install mkunion
 Make sure that you have installed mkunion and is in GOPATH/bin
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.19
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.20
 ```
 
 ### Create your first union
@@ -479,6 +479,11 @@ go test ./...
 - [x] `mkunion` allows to generate code for multiple unions in one file. Use `--no-compact` to change behaviour to previous one
 
 ### V1.20.x
+- [x] `mkunion` significant refactoring to use internally x/shape for generation of types including union
+- [x] `mkunion` introduce new `json` extension that generates json serialisation/deserialisation code which will replace `schema` extension in future
+- [x] `mkunion` breaking change: remove -variants flag. Disable possibility to recompose union types from command line. In feature type aliases could be used for this purpose.
+
+### V1.21.x
 - [ ] Exhaustive pattern matching checks during generation
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!
