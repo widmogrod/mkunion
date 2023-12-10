@@ -1,4 +1,4 @@
-package mkunion
+package generators
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -6,9 +6,9 @@ import (
 )
 
 func TestInferDeriveFuncMatchFromFile(t *testing.T) {
-	out, err := InferDeriveFuncMatchFromFile("example/derive_func_match.go")
+	out, err := InferDeriveFuncMatchFromFile("testutils/derive_func_match.go")
 	assert.NoError(t, err)
-	assert.Equal(t, "example", out.PackageName)
+	assert.Equal(t, "testutils", out.PackageName)
 
 	spec, err := out.MatchSpec("MatchAlphabetNumberTuple")
 	assert.NoError(t, err)

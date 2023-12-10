@@ -1,4 +1,4 @@
-package mkunion
+package generators
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -10,10 +10,13 @@ import (
 
 func TestDeSerJSONGenerator(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	inferred, err := shape.InferFromFile("example/tree_example.go")
+	inferred, err := shape.InferFromFile("testutils/tree_example.go")
 	assert.NoError(t, err)
 
-	g := NewDeSerJSONGenerator(inferred.RetrieveUnion("Tree"), NewHelper(WithPackageName("example")))
+	g := NewDeSerJSONGenerator(
+		inferred.RetrieveUnion("Tree"),
+		NewHelper(WithPackageName("testutils")),
+	)
 
 	result, err := g.Generate()
 	assert.NoError(t, err)

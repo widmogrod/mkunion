@@ -1,4 +1,4 @@
-package mkunion
+package generators
 
 import (
 	"github.com/stretchr/testify/assert"

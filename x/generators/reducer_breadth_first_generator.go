@@ -1,4 +1,4 @@
-package mkunion
+package generators
 
 import (
 	"bytes"
