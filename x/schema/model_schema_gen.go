@@ -489,20 +489,14 @@ func (t *SchemaDefaultVisitor[A]) VisitMap(v *Map) any {
 
 // mkunion-extension:json
 type SchemaUnionJSON struct {
-	Type string          `json:"$type,omitempty"`
-	None json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.None,omitempty"`
-
-	Bool json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Bool,omitempty"`
-
+	Type   string          `json:"$type,omitempty"`
+	None   json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.None,omitempty"`
+	Bool   json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Bool,omitempty"`
 	Number json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Number,omitempty"`
-
 	String json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.String,omitempty"`
-
 	Binary json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Binary,omitempty"`
-
-	List json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.List,omitempty"`
-
-	Map json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Map,omitempty"`
+	List   json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.List,omitempty"`
+	Map    json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.Map,omitempty"`
 }
 
 func SchemaFromJSON(x []byte) (Schema, error) {
@@ -515,22 +509,16 @@ func SchemaFromJSON(x []byte) (Schema, error) {
 	switch data.Type {
 	case "github.com/widmogrod/mkunion/x/schema.None":
 		return NoneFromJSON(data.None)
-
 	case "github.com/widmogrod/mkunion/x/schema.Bool":
 		return BoolFromJSON(data.Bool)
-
 	case "github.com/widmogrod/mkunion/x/schema.Number":
 		return NumberFromJSON(data.Number)
-
 	case "github.com/widmogrod/mkunion/x/schema.String":
 		return StringFromJSON(data.String)
-
 	case "github.com/widmogrod/mkunion/x/schema.Binary":
 		return BinaryFromJSON(data.Binary)
-
 	case "github.com/widmogrod/mkunion/x/schema.List":
 		return ListFromJSON(data.List)
-
 	case "github.com/widmogrod/mkunion/x/schema.Map":
 		return MapFromJSON(data.Map)
 	}
@@ -557,7 +545,6 @@ func SchemaFromJSON(x []byte) (Schema, error) {
 func SchemaToJSON(x Schema) ([]byte, error) {
 	return MustMatchSchemaR2(
 		x,
-
 		func(x *None) ([]byte, error) {
 			body, err := NoneToJSON(x)
 			if err != nil {
@@ -569,7 +556,6 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 				None: body,
 			})
 		},
-
 		func(x *Bool) ([]byte, error) {
 			body, err := BoolToJSON(x)
 			if err != nil {
@@ -581,7 +567,6 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 				Bool: body,
 			})
 		},
-
 		func(x *Number) ([]byte, error) {
 			body, err := NumberToJSON(x)
 			if err != nil {
@@ -593,7 +578,6 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 				Number: body,
 			})
 		},
-
 		func(x *String) ([]byte, error) {
 			body, err := StringToJSON(x)
 			if err != nil {
@@ -605,7 +589,6 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 				String: body,
 			})
 		},
-
 		func(x *Binary) ([]byte, error) {
 			body, err := BinaryToJSON(x)
 			if err != nil {
@@ -617,7 +600,6 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 				Binary: body,
 			})
 		},
-
 		func(x *List) ([]byte, error) {
 			body, err := ListToJSON(x)
 			if err != nil {
@@ -629,7 +611,6 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 				List: body,
 			})
 		},
-
 		func(x *Map) ([]byte, error) {
 			body, err := MapToJSON(x)
 			if err != nil {
@@ -683,7 +664,6 @@ func BoolFromJSON(x []byte) (*Bool, error) {
 		switch key {
 		case "B":
 			return json.Unmarshal(value, &result.B)
-
 		}
 
 		return fmt.Errorf("schema.BoolFromJSON: unknown key %s", key)
@@ -697,7 +677,6 @@ func BoolToJSON(x *Bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"B": field_B,
 	})
@@ -724,7 +703,6 @@ func NumberFromJSON(x []byte) (*Number, error) {
 		switch key {
 		case "N":
 			return json.Unmarshal(value, &result.N)
-
 		}
 
 		return fmt.Errorf("schema.NumberFromJSON: unknown key %s", key)
@@ -738,7 +716,6 @@ func NumberToJSON(x *Number) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"N": field_N,
 	})
@@ -765,7 +742,6 @@ func StringFromJSON(x []byte) (*String, error) {
 		switch key {
 		case "S":
 			return json.Unmarshal(value, &result.S)
-
 		}
 
 		return fmt.Errorf("schema.StringFromJSON: unknown key %s", key)
@@ -779,7 +755,6 @@ func StringToJSON(x *String) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"S": field_S,
 	})
@@ -806,7 +781,6 @@ func BinaryFromJSON(x []byte) (*Binary, error) {
 		switch key {
 		case "B":
 			return json.Unmarshal(value, &result.B)
-
 		}
 
 		return fmt.Errorf("schema.BinaryFromJSON: unknown key %s", key)
@@ -820,7 +794,6 @@ func BinaryToJSON(x *Binary) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"B": field_B,
 	})
@@ -847,7 +820,6 @@ func ListFromJSON(x []byte) (*List, error) {
 		switch key {
 		case "Items":
 			return json.Unmarshal(value, &result.Items)
-
 		}
 
 		return fmt.Errorf("schema.ListFromJSON: unknown key %s", key)
@@ -861,7 +833,6 @@ func ListToJSON(x *List) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"Items": field_Items,
 	})
@@ -888,7 +859,6 @@ func MapFromJSON(x []byte) (*Map, error) {
 		switch key {
 		case "Field":
 			return json.Unmarshal(value, &result.Field)
-
 		}
 
 		return fmt.Errorf("schema.MapFromJSON: unknown key %s", key)
@@ -902,7 +872,6 @@ func MapToJSON(x *Map) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"Field": field_Field,
 	})
