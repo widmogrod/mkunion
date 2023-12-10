@@ -126,23 +126,14 @@ func main() {
 					shapeGenerator := mkunion.NewShapeGenerator(union, helper)
 					visitor := mkunion.NewVisitorGenerator(unionName, types, helper)
 					schema := mkunion.NewSchemaGenerator(visitor.Name, visitor.Types, helper)
-					depthFirstGenerator := mkunion.NewReducerDepthFirstGenerator(
-						visitor.Name,
-						visitor.Types,
-						inferred.ForVariantType(visitor.Name, visitor.Types),
-						helper,
-					)
+					depthFirstGenerator := mkunion.NewReducerDepthFirstGenerator(union, helper)
 					breadthFirstGenerator := mkunion.NewReducerBreadthFirstGenerator(
 						visitor.Name,
 						visitor.Types,
 						inferred.ForVariantType(visitor.Name, visitor.Types),
 						helper,
 					)
-					defaultReduction := mkunion.NewReducerDefaultReductionGenerator(
-						visitor.Name,
-						visitor.Types,
-						helper,
-					)
+					defaultReduction := mkunion.NewReducerDefaultReductionGenerator(union, helper)
 					defaultVisitor := mkunion.NewVisitorDefaultGenerator(visitor.Name, visitor.Types, helper)
 
 					// ensures that order of generators is always the same

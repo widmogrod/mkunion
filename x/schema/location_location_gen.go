@@ -235,7 +235,7 @@ func (t *LocationDefaultReduction[A]) ReduceLocationField(x *LocationField, agg 
 		return t.OnLocationField(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceLocationField")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -245,7 +245,7 @@ func (t *LocationDefaultReduction[A]) ReduceLocationIndex(x *LocationIndex, agg 
 		return t.OnLocationIndex(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceLocationIndex")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -255,7 +255,7 @@ func (t *LocationDefaultReduction[A]) ReduceLocationAnything(x *LocationAnything
 		return t.OnLocationAnything(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceLocationAnything")
 	}
 	return agg, t.DefaultStopReduction
 }

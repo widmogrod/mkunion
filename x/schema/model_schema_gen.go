@@ -367,7 +367,7 @@ func (t *SchemaDefaultReduction[A]) ReduceNone(x *None, agg A) (result A, stop b
 		return t.OnNone(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceNone")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -377,7 +377,7 @@ func (t *SchemaDefaultReduction[A]) ReduceBool(x *Bool, agg A) (result A, stop b
 		return t.OnBool(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceBool")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -387,7 +387,7 @@ func (t *SchemaDefaultReduction[A]) ReduceNumber(x *Number, agg A) (result A, st
 		return t.OnNumber(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceNumber")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -397,7 +397,7 @@ func (t *SchemaDefaultReduction[A]) ReduceString(x *String, agg A) (result A, st
 		return t.OnString(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceString")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -407,7 +407,7 @@ func (t *SchemaDefaultReduction[A]) ReduceBinary(x *Binary, agg A) (result A, st
 		return t.OnBinary(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceBinary")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -417,7 +417,7 @@ func (t *SchemaDefaultReduction[A]) ReduceList(x *List, agg A) (result A, stop b
 		return t.OnList(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceList")
 	}
 	return agg, t.DefaultStopReduction
 }
@@ -427,7 +427,7 @@ func (t *SchemaDefaultReduction[A]) ReduceMap(x *Map, agg A) (result A, stop boo
 		return t.OnMap(x, agg)
 	}
 	if t.PanicOnFallback {
-		panic("no fallback allowed on undefined ReduceBranch")
+		panic("no fallback allowed on undefined ReduceMap")
 	}
 	return agg, t.DefaultStopReduction
 }
