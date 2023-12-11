@@ -538,7 +538,7 @@ func AnyFromJSON(x []byte) (*Any, error) {
 	var result *Any = &Any{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -569,7 +569,7 @@ func RefNameFromJSON(x []byte) (*RefName, error) {
 	var result *RefName = &RefName{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Name":
 			return json.Unmarshal(value, &result.Name)
@@ -628,7 +628,7 @@ func BooleanLikeFromJSON(x []byte) (*BooleanLike, error) {
 	var result *BooleanLike = &BooleanLike{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -659,7 +659,7 @@ func StringLikeFromJSON(x []byte) (*StringLike, error) {
 	var result *StringLike = &StringLike{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -690,7 +690,7 @@ func NumberLikeFromJSON(x []byte) (*NumberLike, error) {
 	var result *NumberLike = &NumberLike{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -721,7 +721,7 @@ func ListLikeFromJSON(x []byte) (*ListLike, error) {
 	var result *ListLike = &ListLike{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Element":
 			res, err := ShapeFromJSON(value)
@@ -776,7 +776,7 @@ func MapLikeFromJSON(x []byte) (*MapLike, error) {
 	var result *MapLike = &MapLike{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Key":
 			res, err := ShapeFromJSON(value)
@@ -854,7 +854,7 @@ func StructLikeFromJSON(x []byte) (*StructLike, error) {
 	var result *StructLike = &StructLike{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Name":
 			return json.Unmarshal(value, &result.Name)
@@ -922,7 +922,7 @@ func UnionLikeFromJSON(x []byte) (*UnionLike, error) {
 	var result *UnionLike = &UnionLike{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Name":
 			return json.Unmarshal(value, &result.Name)

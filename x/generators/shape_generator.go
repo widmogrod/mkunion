@@ -26,13 +26,6 @@ type ShapeGenerator struct {
 	template *template.Template
 }
 
-func (g *ShapeGenerator) ImportPkg() []string {
-	return []string{
-		"encoding/json",
-		"fmt",
-	}
-}
-
 func (g *ShapeGenerator) ident(d int) string {
 	return strings.Repeat("\t", d)
 }
@@ -93,6 +86,7 @@ func TemplateHelperShapeVariantToName(x shape.Shape) string {
 		},
 	)
 }
+
 func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 	return shape.MustMatchShape(
 		x,

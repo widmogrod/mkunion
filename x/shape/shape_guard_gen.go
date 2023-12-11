@@ -234,7 +234,7 @@ func EnumFromJSON(x []byte) (*Enum, error) {
 	var result *Enum = &Enum{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Val":
 			return json.Unmarshal(value, &result.Val)
@@ -275,7 +275,7 @@ func RequiredFromJSON(x []byte) (*Required, error) {
 	var result *Required = &Required{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -306,7 +306,7 @@ func AndGuardFromJSON(x []byte) (*AndGuard, error) {
 	var result *AndGuard = &AndGuard{}
 
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "L":
 			return json.Unmarshal(value, &result.L)

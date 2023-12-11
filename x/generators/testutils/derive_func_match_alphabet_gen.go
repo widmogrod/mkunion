@@ -131,9 +131,9 @@ func C3Shape() shape.Shape {
 // mkunion-extension:json
 type AlphabetUnionJSON struct {
 	Type string          `json:"$type,omitempty"`
-	A1   json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.A1,omitempty"`
-	B2   json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.B2,omitempty"`
-	C3   json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.C3,omitempty"`
+	A1   json.RawMessage `json:"testutils.A1,omitempty"`
+	B2   json.RawMessage `json:"testutils.B2,omitempty"`
+	C3   json.RawMessage `json:"testutils.C3,omitempty"`
 }
 
 func AlphabetFromJSON(x []byte) (Alphabet, error) {
@@ -144,11 +144,11 @@ func AlphabetFromJSON(x []byte) (Alphabet, error) {
 	}
 
 	switch data.Type {
-	case "github.com/widmogrod/mkunion/x/generators/testutils.A1":
+	case "testutils.A1":
 		return A1FromJSON(data.A1)
-	case "github.com/widmogrod/mkunion/x/generators/testutils.B2":
+	case "testutils.B2":
 		return B2FromJSON(data.B2)
-	case "github.com/widmogrod/mkunion/x/generators/testutils.C3":
+	case "testutils.C3":
 		return C3FromJSON(data.C3)
 	}
 
@@ -164,6 +164,9 @@ func AlphabetFromJSON(x []byte) (Alphabet, error) {
 }
 
 func AlphabetToJSON(x Alphabet) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
 	return MustMatchAlphabetR2(
 		x,
 		func(x *A1) ([]byte, error) {
@@ -173,7 +176,7 @@ func AlphabetToJSON(x Alphabet) ([]byte, error) {
 			}
 
 			return json.Marshal(AlphabetUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/generators/testutils.A1",
+				Type: "testutils.A1",
 				A1:   body,
 			})
 		},
@@ -184,7 +187,7 @@ func AlphabetToJSON(x Alphabet) ([]byte, error) {
 			}
 
 			return json.Marshal(AlphabetUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/generators/testutils.B2",
+				Type: "testutils.B2",
 				B2:   body,
 			})
 		},
@@ -195,7 +198,7 @@ func AlphabetToJSON(x Alphabet) ([]byte, error) {
 			}
 
 			return json.Marshal(AlphabetUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/generators/testutils.C3",
+				Type: "testutils.C3",
 				C3:   body,
 			})
 		},
@@ -205,7 +208,7 @@ func AlphabetToJSON(x Alphabet) ([]byte, error) {
 func A1FromJSON(x []byte) (*A1, error) {
 	var result *A1 = new(A1)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -218,7 +221,6 @@ func A1FromJSON(x []byte) (*A1, error) {
 func A1ToJSON(x *A1) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{})
 }
-
 func (self *A1) MarshalJSON() ([]byte, error) {
 	return A1ToJSON(self)
 }
@@ -235,7 +237,7 @@ func (self *A1) UnmarshalJSON(x []byte) error {
 func B2FromJSON(x []byte) (*B2, error) {
 	var result *B2 = new(B2)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -248,7 +250,6 @@ func B2FromJSON(x []byte) (*B2, error) {
 func B2ToJSON(x *B2) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{})
 }
-
 func (self *B2) MarshalJSON() ([]byte, error) {
 	return B2ToJSON(self)
 }
@@ -265,7 +266,7 @@ func (self *B2) UnmarshalJSON(x []byte) error {
 func C3FromJSON(x []byte) (*C3, error) {
 	var result *C3 = new(C3)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -278,7 +279,6 @@ func C3FromJSON(x []byte) (*C3, error) {
 func C3ToJSON(x *C3) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{})
 }
-
 func (self *C3) MarshalJSON() ([]byte, error) {
 	return C3ToJSON(self)
 }

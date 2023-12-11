@@ -1,10 +1,9 @@
 import React, {useEffect, useState} from 'react';
 import './App.css';
-import * as workflow from './workflow/workflow'
-import {dediscriminateCommand} from './workflow/workflow'
+import * as workflow from './workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
 import {Chat} from "./Chat";
-import {GenerateImage, ListWorkflowsFn} from "./workflow/main";
+import {GenerateImage, ListWorkflowsFn} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
 
 function flowCreate(flow: workflow.Flow) {
     console.log("save-flow", flow)
@@ -58,8 +57,10 @@ function listFlows(onData: (data: { Items: recordFlow[] }) => void) {
 
 function runFlow(flowID: string, input: string, onData?: (data: workflow.State) => void) {
     const cmd: workflow.Command = {
+        "$type": "workflow.Run",
         "workflow.Run": {
             Flow: {
+                "$type": "workflow.FlowRef",
                 "workflow.FlowRef": {
                     FlowID: flowID,
                 }
@@ -71,7 +72,7 @@ function runFlow(flowID: string, input: string, onData?: (data: workflow.State) 
     }
     fetch('http://localhost:8080/', {
         method: 'POST',
-        body: JSON.stringify(dediscriminateCommand(cmd)),
+        body: JSON.stringify(cmd),
     })
         .then(res => res.json())
         .then(data => {
@@ -82,24 +83,30 @@ function runFlow(flowID: string, input: string, onData?: (data: workflow.State) 
 
 function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) => void) {
     const cmd: workflow.Command = {
+        "$type": "workflow.Run",
         "workflow.Run": {
             Flow: {
+                "$type": "workflow.Flow",
                 "workflow.Flow": {
                     Name: "hello_world",
                     Arg: "input",
                     Body: [
                         {
+                            "$type": "workflow.Choose",
                             "workflow.Choose": {
                                 ID: "choose1",
                                 If: {
+                                    "$type": "workflow.Compare",
                                     "workflow.Compare": {
                                         Operation: "=",
                                         Left: {
+                                            "$type": "workflow.GetValue",
                                             "workflow.GetValue": {
                                                 Path: "input",
                                             }
                                         },
                                         Right: {
+                                            "$type": "workflow.SetValue",
                                             "workflow.SetValue": {
                                                 Value: {
                                                     "schema.String": "666",
@@ -110,9 +117,11 @@ function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) =>
                                 },
                                 Then: [
                                     {
+                                        "$type": "workflow.End",
                                         "workflow.End": {
                                             ID: "end2",
                                             Result: {
+                                                "$type": "workflow.SetValue",
                                                 "workflow.SetValue": {
                                                     Value: {
                                                         "schema.String": "Do no evil",
@@ -125,15 +134,19 @@ function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) =>
                             }
                         },
                         {
+                            "$type": "workflow.Assign",
                             "workflow.Assign": {
                                 ID: "assign1",
                                 VarOk: "res",
+                                VarErr: "",
                                 Val: {
+                                    "$type": "workflow.Apply",
                                     "workflow.Apply": {
                                         ID: "apply1",
                                         Name: "concat",
                                         Args: [
                                             {
+                                                "$type": "workflow.SetValue",
                                                 "workflow.SetValue": {
                                                     Value: {
                                                         "schema.String": "hello ",
@@ -141,6 +154,7 @@ function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) =>
                                                 }
                                             },
                                             {
+                                                "$type": "workflow.GetValue",
                                                 "workflow.GetValue": {
                                                     Path: "input",
                                                 }
@@ -151,9 +165,11 @@ function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) =>
                             },
                         },
                         {
+                            "$type": "workflow.End",
                             "workflow.End": {
                                 ID: "end1",
                                 Result: {
+                                    "$type": "workflow.GetValue",
                                     "workflow.GetValue": {
                                         Path: "res",
                                     }
@@ -175,7 +191,7 @@ function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) =>
 
     fetch('http://localhost:8080/', {
         method: 'POST',
-        body: JSON.stringify(dediscriminateCommand(cmd)),
+        body: JSON.stringify(cmd),
     })
         .then(res => res.json())
         .then(data => onData && onData(data))
@@ -183,22 +199,28 @@ function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) =>
 
 function generateImage(imageWidth: number, imageHeight: number, onData?: (data: workflow.State) => void) {
     const cmd: workflow.Command = {
+        "$type": "workflow.Run",
         "workflow.Run": {
             Flow: {
+                "$type": "workflow.Flow",
                 "workflow.Flow": {
                     Name: "generateandresizeimage",
                     Arg: "input",
                     Body: [
                         {
+                            "$type": "workflow.Assign",
                             "workflow.Assign": {
                                 ID: "assign1",
                                 VarOk: "res",
+                                VarErr: "",
                                 Val: {
+                                    "$type": "workflow.Apply",
                                     "workflow.Apply": {
                                         ID: "apply1",
                                         Name: "genimageb64",
                                         Args: [
                                             {
+                                                "$type": "workflow.GetValue",
                                                 "workflow.GetValue": {
                                                     Path: "input.prompt",
                                                 }
@@ -209,25 +231,31 @@ function generateImage(imageWidth: number, imageHeight: number, onData?: (data: 
                             },
                         },
                         {
+                            "$type": "workflow.Assign",
                             "workflow.Assign": {
                                 ID: "assign2",
                                 VarOk: "res_small",
+                                VarErr: "",
                                 Val: {
+                                    "$type": "workflow.Apply",
                                     "workflow.Apply": {
                                         ID: "apply2",
                                         Name: "resizeimgb64",
                                         Args: [
                                             {
+                                                "$type": "workflow.GetValue",
                                                 "workflow.GetValue": {
                                                     Path: "res",
                                                 }
                                             },
                                             {
+                                                "$type": "workflow.GetValue",
                                                 "workflow.GetValue": {
                                                     Path: "input.width",
                                                 }
                                             },
                                             {
+                                                "$type": "workflow.GetValue",
                                                 "workflow.GetValue": {
                                                     Path: "input.height",
                                                 }
@@ -238,9 +266,11 @@ function generateImage(imageWidth: number, imageHeight: number, onData?: (data: 
                             },
                         },
                         {
+                            "$type": "workflow.End",
                             "workflow.End": {
                                 ID: "end1",
                                 Result: {
+                                    "$type": "workflow.GetValue",
                                     "workflow.GetValue": {
                                         Path: "res_small",
                                     }
@@ -252,10 +282,27 @@ function generateImage(imageWidth: number, imageHeight: number, onData?: (data: 
             },
             Input: {
                 "schema.Map": {
-                    "prompt": "no text",
-                    "width": imageWidth,
-                    "height": imageHeight,
-                },
+                    Field: [
+                        {
+                            Name: "prompt",
+                            Value: {
+                                "schema.String": "no text",
+                            }
+                        },
+                        {
+                            Name: "width",
+                            Value: {
+                                "schema.Number": imageWidth,
+                            }
+                        },
+                        {
+                            Name: "height",
+                            Value: {
+                                "schema.Number": imageHeight,
+                            }
+                        },
+                    ]
+                } as schema.Map,
             },
         }
     }
@@ -266,7 +313,7 @@ function generateImage(imageWidth: number, imageHeight: number, onData?: (data: 
 
     fetch('http://localhost:8080/', {
         method: 'POST',
-        body: JSON.stringify(dediscriminateCommand(cmd)),
+        body: JSON.stringify(cmd),
     })
         .then(res => res.json())
         .then((data: workflow.State) => {
@@ -277,22 +324,28 @@ function generateImage(imageWidth: number, imageHeight: number, onData?: (data: 
 
 function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data: workflow.State) => void) {
     const cmd: workflow.Command = {
+        "$type": "workflow.Run",
         "workflow.Run": {
             Flow: {
+                "$type": "workflow.Flow",
                 "workflow.Flow": {
                     Name: "concat_await",
                     Arg: "input",
                     Body: [
                         {
+                            "$type": "workflow.Assign",
                             "workflow.Assign": {
                                 ID: "assign1",
                                 VarOk: "res",
+                                VarErr: "",
                                 Val: {
+                                    "$type": "workflow.Apply",
                                     "workflow.Apply": {
                                         ID: "apply1",
                                         Name: "concat",
                                         Args: [
                                             {
+                                                "$type": "workflow.SetValue",
                                                 "workflow.SetValue": {
                                                     Value: {
                                                         "schema.String": "await hello ",
@@ -300,6 +353,7 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
                                                 }
                                             },
                                             {
+                                                "$type": "workflow.GetValue",
                                                 "workflow.GetValue": {
                                                     Path: "input.prompt",
                                                 }
@@ -313,9 +367,11 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
                             },
                         },
                         {
+                            "$type": "workflow.End",
                             "workflow.End": {
                                 ID: "end1",
                                 Result: {
+                                    "$type": "workflow.GetValue",
                                     "workflow.GetValue": {
                                         Path: "res",
                                     }
@@ -327,9 +383,26 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
             },
             Input: {
                 "schema.Map": {
-                    "prompt": "no text",
-                    "width": imageWidth,
-                    "height": imageHeight,
+                    Field: [
+                        {
+                            Name: "prompt",
+                            Value: {
+                                "schema.String": "no text",
+                            }
+                        },
+                        {
+                            Name: "width",
+                            Value: {
+                                "schema.Number": imageWidth,
+                            }
+                        },
+                        {
+                            Name: "height",
+                            Value: {
+                                "schema.Number": imageHeight,
+                            }
+                        },
+                    ]
                 },
             },
         }
@@ -341,7 +414,7 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
 
     fetch('http://localhost:8080/', {
         method: 'POST',
-        body: JSON.stringify(dediscriminateCommand(cmd)),
+        body: JSON.stringify(cmd),
     })
         .then(res => res.json())
         .then((data: workflow.State) => {
@@ -351,6 +424,7 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
 
 function submitCallbackResult(onData?: (data: workflow.State) => void) {
     const cmd: workflow.Command = {
+        "$type": "workflow.Callback",
         "workflow.Callback": {
             CallbackID: "callback_id",
             Result: {
@@ -361,7 +435,7 @@ function submitCallbackResult(onData?: (data: workflow.State) => void) {
 
     fetch('http://localhost:8080/callback', {
         method: 'POST',
-        body: JSON.stringify(dediscriminateCommand(cmd)),
+        body: JSON.stringify(cmd),
     })
         .then(res => res.json())
         .then((data: workflow.State) => {
@@ -385,6 +459,21 @@ function App() {
 
     const [flows, setFlows] = React.useState({Items: [] as recordFlow[]});
 
+
+    const setImageFromState = (data: workflow.State) => {
+        if ("workflow.Done" in data) {
+            if (data["workflow.Done"].Result) {
+                let result = data["workflow.Done"].Result
+                if ("schema.Binary" in result) {
+                    if (typeof result["schema.Binary"]?.B === "string") {
+                        setImage(result["schema.Binary"]?.B)
+                    }
+                }
+            }
+        } else if ("workflow.Error" in data) {
+            console.log(data["workflow.Error"])
+        }
+    }
 
     return (
         <div className="App">
@@ -411,11 +500,7 @@ function App() {
                     onSubmit={(e) => {
                         e.preventDefault()
                         generateImage(imageWidth, imageHeight, (data) => {
-                            if ("workflow.Done" in data) {
-                                setImage(data["workflow.Done"].Result["schema.Binary"]);
-                            } else if ("workflow.Error" in data) {
-                                console.log(data["workflow.Error"])
-                            }
+                            setImageFromState(data)
                         })
                     }}
                 >
@@ -457,11 +542,7 @@ function App() {
                     onSubmit={(e) => {
                         e.preventDefault()
                         runFlow(selectedFlow, input, (data) => {
-                            if ("workflow.Done" in data) {
-                                setImage(data["workflow.Done"].Result["schema.Binary"]);
-                            } else if ("workflow.Error" in data) {
-                                console.log(data["workflow.Error"])
-                            }
+                            setImageFromState(data)
                         })
                     }}
                 >
@@ -485,11 +566,7 @@ function App() {
                     <button onClick={(e) => {
                         e.preventDefault()
                         runContactAwait(imageWidth, imageHeight, (data) => {
-                            if ("workflow.Done" in data) {
-                                setImage(data["workflow.Done"].Result["schema.Binary"]);
-                            } else if ("workflow.Error" in data) {
-                                console.log(data["workflow.Error"])
-                            }
+                            setImageFromState(data)
                         })
                     }
                     }>
@@ -499,11 +576,7 @@ function App() {
                     <button onClick={(e) => {
                         e.preventDefault()
                         submitCallbackResult((data) => {
-                            if ("workflow.Done" in data) {
-                                setImage(data["workflow.Done"].Result["schema.Binary"]);
-                            } else if ("workflow.Error" in data) {
-                                console.log(data["workflow.Error"])
-                            }
+                            setImageFromState(data)
                         })
                     }}>
                         Submit callback result
@@ -555,11 +628,7 @@ function App() {
                                             case "generate_image":
                                                 let args2 = JSON.parse(x.Arguments) as GenerateImage;
                                                 generateImage(args2?.Width || 100, args2?.Height || 100, (data) => {
-                                                    if ("workflow.Done" in data) {
-                                                        setImage(data["workflow.Done"].Result["schema.Binary"]);
-                                                    } else if ("workflow.Error" in data) {
-                                                        console.log(data["workflow.Error"])
-                                                    }
+                                                    setImageFromState(data)
                                                     listStates(setTable)
                                                     listFlows(setFlows)
                                                 })
@@ -570,12 +639,14 @@ function App() {
                             />
                         </td>
                         <td>
-                            <PaginatedTable table={flows} mapData={(data: workflow.Flow) => {
-                                return <WorkflowToString flow={{
-                                    "workflow.Flow": data,
-                                }}/>
-                                // return <SchemaValue data={data}/>
-                            }}/>
+                            <PaginatedTable table={flows}
+                                            mapData={(data: workflow.Flow) => {
+                                                return <WorkflowToString flow={{
+                                                    "$type": "workflow.Flow",
+                                                    "workflow.Flow": data,
+                                                }}/>
+                                                // return <SchemaValue data={data}/>
+                                            }}/>
                         </td>
                         <td>
                             <PaginatedTable table={table} mapData={(data) => {
@@ -649,7 +720,8 @@ function App() {
                 </table>
             </main>
         </div>
-    );
+    )
+        ;
 }
 
 export default App;
@@ -703,7 +775,7 @@ function ListVariables(props: { data: workflow.BaseState }) {
     );
 }
 
-function SchemaValue(props: { data: schema.Schema }) {
+function SchemaValue(props: { data?: schema.Schema }) {
     // check if props.data is an object
     if (typeof props.data !== 'object') {
         return <>{JSON.stringify(props.data)}</>
@@ -715,9 +787,9 @@ function SchemaValue(props: { data: schema.Schema }) {
         return <>binary</>
     } else if ("schema.Map" in props.data) {
         const mapData = props.data["schema.Map"];
-        const keys = Object.keys(mapData);
+        const keys = mapData.Field
 
-        if (keys.length === 0) {
+        if (keys && keys.length === 0) {
             return null; // If the map is empty, return null (no table to display)
         }
 
@@ -730,11 +802,11 @@ function SchemaValue(props: { data: schema.Schema }) {
                 </tr>
                 </thead>
                 <tbody>
-                {keys.map((key) => (
-                    <tr key={key}>
-                        <td className="key">{key}</td>
+                {keys && keys.map((key) => (
+                    <tr key={key.Name}>
+                        <td className="key">{key.Name}</td>
                         <td>
-                            <SchemaValue data={mapData[key]}/>
+                            <SchemaValue data={key.Value}/>
                         </td>
                     </tr>
                 ))}
@@ -816,23 +888,29 @@ function SchedguledRun(props: { input: string }) {
     * }
     */
     const cmd: workflow.Command = {
+        "$type": "workflow.Run",
         "workflow.Run": {
             Flow: {
+                "$type": "workflow.Flow",
                 "workflow.Flow": {
                     Name: "create_attachment",
                     Arg: "input",
                     Body: [
                         {
+                            "$type": "workflow.Choose",
                             "workflow.Choose": {
                                 If: {
+                                    "$type": "workflow.Compare",
                                     "workflow.Compare": {
                                         Operation: "=",
                                         Left: {
+                                            "$type": "workflow.GetValue",
                                             "workflow.GetValue": {
                                                 Path: "input",
                                             }
                                         },
                                         Right: {
+                                            "$type": "workflow.SetValue",
                                             "workflow.SetValue": {
                                                 Value: {
                                                     "schema.String": "666",
@@ -843,8 +921,10 @@ function SchedguledRun(props: { input: string }) {
                                 },
                                 Then: [
                                     {
+                                        "$type": "workflow.End",
                                         "workflow.End": {
                                             Result: {
+                                                "$type": "workflow.SetValue",
                                                 "workflow.SetValue": {
                                                     Value: {
                                                         "schema.String": "Do no evil",
@@ -857,13 +937,16 @@ function SchedguledRun(props: { input: string }) {
                             }
                         },
                         {
+                            "$type": "workflow.Assign",
                             "workflow.Assign": {
                                 VarOk: "res",
                                 Val: {
+                                    "$type": "workflow.Apply",
                                     "workflow.Apply": {
                                         Name: "concat",
                                         Args: [
                                             {
+                                                "$type": "workflow.SetValue",
                                                 "workflow.SetValue": {
                                                     Value: {
                                                         "schema.String": "hello ",
@@ -871,6 +954,7 @@ function SchedguledRun(props: { input: string }) {
                                                 }
                                             },
                                             {
+                                                "$type": "workflow.GetValue",
                                                 "workflow.GetValue": {
                                                     Path: "input",
                                                 }
@@ -881,8 +965,10 @@ function SchedguledRun(props: { input: string }) {
                             },
                         },
                         {
+                            "$type": "workflow.End",
                             "workflow.End": {
                                 Result: {
+                                    "$type": "workflow.GetValue",
                                     "workflow.GetValue": {
                                         Path: "res",
                                     }
@@ -896,6 +982,7 @@ function SchedguledRun(props: { input: string }) {
                 "schema.String": props.input,
             },
             RunOption: {
+                "$type": "workflow.ScheduleRun",
                 "workflow.ScheduleRun": {
                     Interval: "@every 10s"
                 },
@@ -913,7 +1000,7 @@ function SchedguledRun(props: { input: string }) {
 
         fetch('http://localhost:8080/', {
             method: 'POST',
-            body: JSON.stringify(dediscriminateCommand(cmd)),
+            body: JSON.stringify(cmd),
         })
             .then(res => res.json())
         // .then(data => setState(data))
@@ -927,6 +1014,7 @@ function SchedguledRun(props: { input: string }) {
 
 function stopSchedule(parentRunID: string) {
     const cmd: workflow.Command = {
+        "$type": "workflow.StopSchedule",
         "workflow.StopSchedule": {
             ParentRunID: parentRunID,
         }
@@ -934,7 +1022,7 @@ function stopSchedule(parentRunID: string) {
 
     return fetch('http://localhost:8080/', {
         method: 'POST',
-        body: JSON.stringify(dediscriminateCommand(cmd)),
+        body: JSON.stringify(cmd),
     })
         .then(res => res.json())
         .then(data => data as workflow.State)
@@ -943,6 +1031,7 @@ function stopSchedule(parentRunID: string) {
 
 function resumeSchedule(parentRunID: string) {
     const cmd: workflow.Command = {
+        "$type": "workflow.ResumeSchedule",
         "workflow.ResumeSchedule": {
             ParentRunID: parentRunID,
         }
@@ -950,7 +1039,7 @@ function resumeSchedule(parentRunID: string) {
 
     return fetch('http://localhost:8080/', {
         method: 'POST',
-        body: JSON.stringify(dediscriminateCommand(cmd)),
+        body: JSON.stringify(cmd),
     })
         .then(res => res.json())
         .then(data => data as workflow.State)

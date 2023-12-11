@@ -4,9 +4,10 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
-type (
-	Function func(args *FunctionInput) (*FunctionOutput, error)
+type Function func(args *FunctionInput) (*FunctionOutput, error)
 
+//go:generate go run ../../cmd/mkunion/main.go -name=FunctionDSL
+type (
 	//FunctionDef struct {
 	//	Name string
 	//	Input schema.ShapeDef

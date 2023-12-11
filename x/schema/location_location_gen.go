@@ -290,9 +290,9 @@ func (t *LocationDefaultVisitor[A]) VisitLocationAnything(v *LocationAnything) a
 // mkunion-extension:json
 type LocationUnionJSON struct {
 	Type             string          `json:"$type,omitempty"`
-	LocationField    json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.LocationField,omitempty"`
-	LocationIndex    json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.LocationIndex,omitempty"`
-	LocationAnything json.RawMessage `json:"github.com/widmogrod/mkunion/x/schema.LocationAnything,omitempty"`
+	LocationField    json.RawMessage `json:"schema.LocationField,omitempty"`
+	LocationIndex    json.RawMessage `json:"schema.LocationIndex,omitempty"`
+	LocationAnything json.RawMessage `json:"schema.LocationAnything,omitempty"`
 }
 
 func LocationFromJSON(x []byte) (Location, error) {
@@ -303,11 +303,11 @@ func LocationFromJSON(x []byte) (Location, error) {
 	}
 
 	switch data.Type {
-	case "github.com/widmogrod/mkunion/x/schema.LocationField":
+	case "schema.LocationField":
 		return LocationFieldFromJSON(data.LocationField)
-	case "github.com/widmogrod/mkunion/x/schema.LocationIndex":
+	case "schema.LocationIndex":
 		return LocationIndexFromJSON(data.LocationIndex)
-	case "github.com/widmogrod/mkunion/x/schema.LocationAnything":
+	case "schema.LocationAnything":
 		return LocationAnythingFromJSON(data.LocationAnything)
 	}
 
@@ -323,6 +323,9 @@ func LocationFromJSON(x []byte) (Location, error) {
 }
 
 func LocationToJSON(x Location) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
 	return MustMatchLocationR2(
 		x,
 		func(x *LocationField) ([]byte, error) {
@@ -332,7 +335,7 @@ func LocationToJSON(x Location) ([]byte, error) {
 			}
 
 			return json.Marshal(LocationUnionJSON{
-				Type:          "github.com/widmogrod/mkunion/x/schema.LocationField",
+				Type:          "schema.LocationField",
 				LocationField: body,
 			})
 		},
@@ -343,7 +346,7 @@ func LocationToJSON(x Location) ([]byte, error) {
 			}
 
 			return json.Marshal(LocationUnionJSON{
-				Type:          "github.com/widmogrod/mkunion/x/schema.LocationIndex",
+				Type:          "schema.LocationIndex",
 				LocationIndex: body,
 			})
 		},
@@ -354,7 +357,7 @@ func LocationToJSON(x Location) ([]byte, error) {
 			}
 
 			return json.Marshal(LocationUnionJSON{
-				Type:             "github.com/widmogrod/mkunion/x/schema.LocationAnything",
+				Type:             "schema.LocationAnything",
 				LocationAnything: body,
 			})
 		},
@@ -364,7 +367,7 @@ func LocationToJSON(x Location) ([]byte, error) {
 func LocationFieldFromJSON(x []byte) (*LocationField, error) {
 	var result *LocationField = new(LocationField)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Name":
 			return json.Unmarshal(value, &result.Name)
@@ -385,7 +388,6 @@ func LocationFieldToJSON(x *LocationField) ([]byte, error) {
 		"Name": field_Name,
 	})
 }
-
 func (self *LocationField) MarshalJSON() ([]byte, error) {
 	return LocationFieldToJSON(self)
 }
@@ -402,7 +404,7 @@ func (self *LocationField) UnmarshalJSON(x []byte) error {
 func LocationIndexFromJSON(x []byte) (*LocationIndex, error) {
 	var result *LocationIndex = new(LocationIndex)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Index":
 			return json.Unmarshal(value, &result.Index)
@@ -423,7 +425,6 @@ func LocationIndexToJSON(x *LocationIndex) ([]byte, error) {
 		"Index": field_Index,
 	})
 }
-
 func (self *LocationIndex) MarshalJSON() ([]byte, error) {
 	return LocationIndexToJSON(self)
 }
@@ -440,7 +441,7 @@ func (self *LocationIndex) UnmarshalJSON(x []byte) error {
 func LocationAnythingFromJSON(x []byte) (*LocationAnything, error) {
 	var result *LocationAnything = new(LocationAnything)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -453,7 +454,6 @@ func LocationAnythingFromJSON(x []byte) (*LocationAnything, error) {
 func LocationAnythingToJSON(x *LocationAnything) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{})
 }
-
 func (self *LocationAnything) MarshalJSON() ([]byte, error) {
 	return LocationAnythingToJSON(self)
 }

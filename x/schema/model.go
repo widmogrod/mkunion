@@ -1,6 +1,9 @@
 package schema
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
 	"reflect"
 )
 
@@ -106,6 +109,42 @@ type Field struct {
 	Name  string
 	Value Schema
 }
+
+func (f *Field) MarshalJSON() ([]byte, error) {
+	field_Name, err := json.Marshal(f.Name)
+	if err != nil {
+		return nil, fmt.Errorf("schema.Field.MarshalJSON: Name; %w", err)
+	}
+
+	field_Value, err := SchemaToJSON(f.Value)
+	if err != nil {
+		return nil, fmt.Errorf("schema.Field.MarshalJSON: Value; %w", err)
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"Name":  field_Name,
+		"Value": field_Value,
+	})
+}
+
+func (f *Field) UnmarshalJSON(bytes []byte) error {
+	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
+		switch key {
+		case "Name":
+			return json.Unmarshal(value, &f.Name)
+		case "Value":
+			field, err := SchemaFromJSON(value)
+			if err != nil {
+				return fmt.Errorf("schema.Field.UnmarshalJSON: Value; %w", err)
+			}
+			f.Value = field
+		}
+		return nil
+	})
+}
+
+var _ json.Unmarshaler = (*Field)(nil)
+var _ json.Marshaler = (*Field)(nil)
 
 type UnionInformationRule interface {
 	UnionType() reflect.Type

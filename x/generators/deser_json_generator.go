@@ -63,43 +63,76 @@ func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
 			panic(fmt.Errorf("generators.JSONVariantName: %T not suported", y))
 		},
 		func(y *shape.RefName) string {
-			return fmt.Sprintf("%s.%s", y.PkgImportName, y.Name)
+			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
 		func(y *shape.BooleanLike) string {
 			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
 			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StringLike) string {
 			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
 			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.NumberLike) string {
 			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
 			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.ListLike) string {
 			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
 			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.MapLike) string {
 			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgImportName, y.Named.Name)
+				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
 			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StructLike) string {
-			return fmt.Sprintf("%s.%s", y.PkgImportName, y.Name)
+			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
 		func(y *shape.UnionLike) string {
-			return fmt.Sprintf("%s.%s", y.PkgImportName, y.Name)
+			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
+		},
+	)
+}
+
+func (g *DeSerJSONGenerator) SupportNativeJSONMarshal(x shape.Shape) bool {
+	return shape.MustMatchShape(
+		x,
+		func(y *shape.Any) bool {
+			return false
+		},
+		func(y *shape.RefName) bool {
+			return false
+		},
+		func(y *shape.BooleanLike) bool {
+			return false
+		},
+		func(y *shape.StringLike) bool {
+			return false
+		},
+		func(y *shape.NumberLike) bool {
+			return false
+		},
+		func(y *shape.ListLike) bool {
+			return false
+		},
+		func(y *shape.MapLike) bool {
+			return false
+		},
+		func(y *shape.StructLike) bool {
+			return true
+		},
+		func(y *shape.UnionLike) bool {
+			return false
 		},
 	)
 }
@@ -125,12 +158,12 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 			y, _ := shape.LookupShape(x)
 			z, ok := y.(*shape.UnionLike)
 			if ok {
-				result := bytes.Buffer{}
 				pkgName := g.pkgNameAndImport(z)
 
+				result := bytes.Buffer{}
 				result.WriteString(fmt.Sprintf("res, err := %s%sFromJSON(value)\n", pkgName, z.Name))
 				result.WriteString(fmt.Sprintf("if err != nil {\n"))
-				result.WriteString(fmt.Sprintf("\treturn fmt.Errorf(\"%s.%sFromJSON: %%w\", err)\n", g.Union.PkgName, z.Name))
+				result.WriteString(fmt.Sprintf("\treturn fmt.Errorf(\"%s._FromJSON: field %s %%w\", err)\n", g.Union.PkgName, z.Name))
 				result.WriteString(fmt.Sprintf("}\n"))
 				result.WriteString(fmt.Sprintf("result.%s = res\n", field.Name))
 				result.WriteString(fmt.Sprintf("return nil"))
@@ -150,9 +183,47 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.ListLike) string {
+			ref, ok := x.Element.(*shape.RefName)
+			if ok {
+				y, _ := shape.LookupShape(ref)
+				z, ok := y.(*shape.UnionLike)
+				if ok {
+					pkgName := g.pkgNameAndImport(z)
+
+					result := bytes.Buffer{}
+					result.WriteString(fmt.Sprintf("res, err := shared.JSONToListWithDeserializer(value, result.%s, %s%sFromJSON)\n", field.Name, pkgName, z.Name))
+					result.WriteString(fmt.Sprintf("if err != nil {\n"))
+					result.WriteString(fmt.Sprintf("\treturn fmt.Errorf(\"%s._FromJSON: field %s %%w\", err)\n", g.Union.PkgName, z.Name))
+					result.WriteString(fmt.Sprintf("}\n"))
+					result.WriteString(fmt.Sprintf("result.%s = res\n", field.Name))
+					result.WriteString(fmt.Sprintf("return nil"))
+
+					return g.padLeft(depth+1, result.String())
+				}
+			}
+
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.MapLike) string {
+			ref, ok := x.Val.(*shape.RefName)
+			if ok {
+				y, _ := shape.LookupShape(ref)
+				z, ok := y.(*shape.UnionLike)
+				if ok {
+					pkgName := g.pkgNameAndImport(z)
+
+					result := bytes.Buffer{}
+					result.WriteString(fmt.Sprintf("res, err := shared.JSONToMapWithDeserializer(value, result.%s, %s%sFromJSON)\n", field.Name, pkgName, z.Name))
+					result.WriteString(fmt.Sprintf("if err != nil {\n"))
+					result.WriteString(fmt.Sprintf("\treturn fmt.Errorf(\"%s._FromJSON: field %s %%w\", err)\n", g.Union.PkgName, z.Name))
+					result.WriteString(fmt.Sprintf("}\n"))
+					result.WriteString(fmt.Sprintf("result.%s = res\n", field.Name))
+					result.WriteString(fmt.Sprintf("return nil"))
+
+					return g.padLeft(depth+1, result.String())
+				}
+			}
+
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.StructLike) string {
@@ -190,9 +261,29 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
 		},
 		func(x *shape.ListLike) string {
+			ref, ok := x.Element.(*shape.RefName)
+			if ok {
+				y, _ := shape.LookupShape(ref)
+				z, ok := y.(*shape.UnionLike)
+				if ok {
+					pkgName := g.pkgNameAndImport(z)
+					return g.padLeft(depth+1, fmt.Sprintf("shared.JSONListFromSerializer(x.%s, %s%sToJSON)", field.Name, pkgName, z.Name))
+				}
+			}
+
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
 		},
 		func(x *shape.MapLike) string {
+			ref, ok := x.Val.(*shape.RefName)
+			if ok {
+				y, _ := shape.LookupShape(ref)
+				z, ok := y.(*shape.UnionLike)
+				if ok {
+					pkgName := g.pkgNameAndImport(z)
+					return g.padLeft(depth+1, fmt.Sprintf("shared.JSONMapFromSerializer(x.%s, %s%sToJSON)", field.Name, pkgName, z.Name))
+				}
+			}
+
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
 		},
 		func(x *shape.StructLike) string {
