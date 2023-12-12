@@ -115,6 +115,12 @@ type GenerateImage struct {
 	Height int `desc:"height of image as int between 50 and 500"`
 }
 
+//go:generate mkunion -name=QueryDSL
+type (
+	FindState schemaless.FindingRecords[schemaless.Record[workflow.State]]
+	FindFlow  schemaless.FindingRecords[schemaless.Record[workflow.Flow]]
+)
+
 func main() {
 	schema.RegisterUnionTypes(ChatResultSchemaDef())
 	schema.RegisterUnionTypes(ChatCMDSchemaDef())
