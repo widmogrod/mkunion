@@ -431,8 +431,8 @@ function App() {
             if (data["workflow.Done"].Result) {
                 let result = data["workflow.Done"].Result
                 if ("schema.Binary" in result) {
-                    if (typeof result["schema.Binary"]?.B === "string") {
-                        setImage(result["schema.Binary"]?.B)
+                    if (typeof result["schema.Binary"] === "string") {
+                        setImage(result["schema.Binary"])
                     }
                 }
             }

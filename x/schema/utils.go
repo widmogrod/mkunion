@@ -119,9 +119,9 @@ func As[A int | int8 | int16 | int32 | int64 |
 		func(x *Binary) (A, bool) {
 			switch any(def).(type) {
 			case []byte:
-				return any(x.B).(A), true
+				return any([]byte(*x)).(A), true
 			case string:
-				return any(string(x.B)).(A), true
+				return any(string(*x)).(A), true
 			}
 
 			return def, false
@@ -319,7 +319,7 @@ func Compare(a, b Schema) int {
 			case *None, *Bool, *Number, *String:
 				return 1
 			case *Binary:
-				return bytes.Compare(x.B, y.B)
+				return bytes.Compare(*x, *y)
 			}
 
 			return -1

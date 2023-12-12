@@ -27,7 +27,8 @@ func MkFloat(x float64) *Number {
 }
 
 func MkBinary(b []byte) *Binary {
-	return &Binary{B: b}
+	v := Binary(b)
+	return &v
 }
 
 func MkString(s string) *String {
@@ -88,7 +89,7 @@ type (
 	Bool   bool
 	Number float64
 	String string
-	Binary struct{ B []byte }
+	Binary []byte
 	List   []Schema
 	Map    map[string]Schema
 )

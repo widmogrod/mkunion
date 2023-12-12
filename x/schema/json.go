@@ -60,7 +60,7 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 
 		},
 		func(x *Binary) error {
-			_, err := fmt.Fprintf(res, "%q", base64.StdEncoding.EncodeToString(x.B))
+			_, err := fmt.Fprintf(res, "%q", base64.StdEncoding.EncodeToString(*x))
 			if err != nil {
 				return err
 			}

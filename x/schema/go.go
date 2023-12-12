@@ -254,12 +254,12 @@ func goToSchema(x any, c *goConfig) Schema {
 		}
 
 	case []byte:
-		return &Binary{B: y}
+		return MkBinary(y)
 	case *[]byte:
 		if y == nil {
 			return &None{}
 		} else {
-			return &Binary{B: *y}
+			return MkBinary(*y)
 		}
 
 	case float64:
@@ -503,7 +503,7 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 				return x, nil
 			}
 
-			return x.B, nil
+			return *x, nil
 		},
 		func(x *List) (any, error) {
 			build := c.ListDefFor(x, path).NewListBuilder()

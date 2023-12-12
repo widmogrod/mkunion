@@ -31,7 +31,7 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 		},
 		func(x *Binary) types.AttributeValue {
 			return &types.AttributeValueMemberB{
-				Value: x.B,
+				Value: *x,
 			}
 		},
 		func(x *List) types.AttributeValue {
@@ -58,12 +58,12 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 	switch y := x.(type) {
 	case *types.AttributeValueMemberB:
-		return &Binary{B: y.Value}, nil
+		return MkBinary(y.Value), nil
 
 	case *types.AttributeValueMemberBS:
 		result := List{}
 		for _, item := range y.Value {
-			result = append(result, &Binary{B: item})
+			result = append(result, MkBinary(item))
 		}
 		return &result, nil
 

@@ -684,39 +684,13 @@ func StringToJSON(x *String) ([]byte, error) {
 
 func BinaryFromJSON(x []byte) (*Binary, error) {
 	var result *Binary = new(Binary)
-	// if is Struct
-	err := shared.JSONParseObject(x, func(key string, value []byte) error {
-		switch key {
-		case "B":
-			return json.Unmarshal(value, &result.B)
-		}
-
-		return fmt.Errorf("schema.BinaryFromJSON: unknown key %s", key)
-	})
+	err := json.Unmarshal(x, result)
 
 	return result, err
 }
 
 func BinaryToJSON(x *Binary) ([]byte, error) {
-	field_B, err := json.Marshal(x.B)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(map[string]json.RawMessage{
-		"B": field_B,
-	})
-}
-func (self *Binary) MarshalJSON() ([]byte, error) {
-	return BinaryToJSON(self)
-}
-
-func (self *Binary) UnmarshalJSON(x []byte) error {
-	n, err := BinaryFromJSON(x)
-	if err != nil {
-		return err
-	}
-	*self = *n
-	return nil
+	return json.Marshal(x)
 }
 
 func ListFromJSON(x []byte) (*List, error) {
