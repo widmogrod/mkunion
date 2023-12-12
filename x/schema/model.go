@@ -40,9 +40,11 @@ func MkList(items ...Schema) *List {
 	}
 }
 func MkMap(fields ...Field) *Map {
-	return &Map{
-		Field: fields,
+	var result = make(Map)
+	for _, field := range fields {
+		result[field.Name] = field.Value
 	}
+	return &result
 }
 
 func MkField(name string, value Schema) Field {
@@ -90,10 +92,23 @@ type (
 	List   struct {
 		Items []Schema
 	}
-	Map struct {
-		Field []Field
-	}
+	Map map[string]Schema
 )
+
+var _ json.Unmarshaler = (*Map)(nil)
+
+func (x *Map) UnmarshalJSON(bytes []byte) error {
+	*x = make(Map)
+	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
+		val, err := SchemaFromJSON(value)
+		if err != nil {
+			return fmt.Errorf("schema.Map.UnmarshalJSON: %w", err)
+		}
+
+		(*x)[key] = val
+		return nil
+	})
+}
 
 type (
 	Marshaler interface {

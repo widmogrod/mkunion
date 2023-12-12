@@ -379,14 +379,11 @@ func goToSchema(x any, c *goConfig) Schema {
 		return r
 
 	case map[string]any:
-		var r = &Map{}
+		var r = make(Map)
 		for k, v := range y {
-			r.Field = append(r.Field, Field{
-				Name:  k,
-				Value: goToSchema(v, c),
-			})
+			r[k] = goToSchema(v, c)
 		}
-		return r
+		return &r
 
 	case reflect.Value:
 		return goToSchema(y.Interface(), c)
@@ -406,18 +403,15 @@ func goToSchema(x any, c *goConfig) Schema {
 		}
 
 		if v.Kind() == reflect.Map {
-			var r = &Map{}
+			var r = make(Map)
 			for _, k := range v.MapKeys() {
-				r.Field = append(r.Field, Field{
-					Name:  k.String(),
-					Value: goToSchema(v.MapIndex(k), c),
-				})
+				r[k.String()] = goToSchema(v.MapIndex(k), c)
 			}
-			return r
+			return &r
 		}
 
 		if v.Kind() == reflect.Struct {
-			var r = &Map{}
+			var r = make(Map)
 			for i := 0; i < v.NumField(); i++ {
 				if !v.Type().Field(i).IsExported() {
 					continue
@@ -428,13 +422,10 @@ func goToSchema(x any, c *goConfig) Schema {
 					name = v.Type().Field(i).Name
 				}
 
-				r.Field = append(r.Field, Field{
-					Name:  name,
-					Value: goToSchema(v.Field(i), c),
-				})
+				r[name] = goToSchema(v.Field(i), c)
 			}
 
-			return c.Transform(x, r)
+			return c.Transform(x, &r)
 		}
 
 		if v.Kind() == reflect.Slice {
@@ -544,14 +535,14 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 				inject.WithWellDefinedTypesConversion(c.WellDefinedTypeToGo)
 			}
 
-			for _, field := range x.Field {
+			for key, value := range *x {
 				c.activeBuilder = build
-				value, err := schemaToGo(field.Value, c, append(path, field.Name))
+				value, err := schemaToGo(value, c, append(path, key))
 				if err != nil {
 					return nil, err
 				}
 
-				err = build.Set(field.Name, value)
+				err = build.Set(key, value)
 				if err != nil {
 					return nil, fmt.Errorf("schema.schemaToGo: at path %s, at type %T, cause %w", strings.Join(path, "."), x, err)
 				}

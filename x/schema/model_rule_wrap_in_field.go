@@ -17,11 +17,6 @@ func (w *WrapInMap[A]) SchemaToUnionType(x any, schema Schema, config *goConfig)
 	}
 
 	return &Map{
-		Field: []Field{
-			{
-				Name:  w.InField,
-				Value: schema,
-			},
-		},
+		w.InField: schema,
 	}, true
 }

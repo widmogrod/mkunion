@@ -83,15 +83,18 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 		},
 		func(x *Map) error {
 			res.WriteString("{")
-			for i, item := range x.Field {
+			var i int
+			for key, value := range *x {
 				if i > 0 {
 					res.WriteString(",")
 				}
-				_, err := fmt.Fprintf(res, "%q:", item.Name)
+				i++
+
+				_, err := fmt.Fprintf(res, "%q:", key)
 				if err != nil {
 					return err
 				}
-				err = toJSON(item.Value, res)
+				err = toJSON(value, res)
 				if err != nil {
 					return err
 				}

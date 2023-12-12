@@ -174,9 +174,9 @@ func GetLocation(data Schema, locations []Location) Schema {
 					return nil, locations
 				}
 
-				for _, item := range mapData.Field {
-					if item.Name == x.Name {
-						return item.Value, locations
+				for key, value := range *mapData {
+					if key == x.Name {
+						return value, locations
 					}
 				}
 
@@ -203,8 +203,8 @@ func GetLocation(data Schema, locations []Location) Schema {
 					return nil, locations
 
 				case *Map:
-					for _, item := range data.(*Map).Field {
-						newData := GetLocation(item.Value, locations)
+					for _, value := range *data.(*Map) {
+						newData := GetLocation(value, locations)
 						if newData != nil {
 							return newData, nil
 						}
@@ -251,8 +251,8 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 			return init
 		},
 		func(x *Map) A {
-			for _, y := range x.Field {
-				init = fn(y.Value, init)
+			for _, value := range *x {
+				init = fn(value, init)
 			}
 
 			return init
@@ -353,13 +353,13 @@ func Compare(a, b Schema) int {
 			case *None, *Bool, *Number, *String, *Binary, *List:
 				return 1
 			case *Map:
-				if len(x.Field) == len(y.Field) {
-					for _, xField := range x.Field {
+				if len(*x) == len(*y) {
+					for xName, xField := range *x {
 						var found bool
-						for _, yField := range y.Field {
-							if yField.Name == xField.Name {
+						for yName, yField := range *y {
+							if xName == yName {
 								found = true
-								cmp := Compare(xField.Value, yField.Value)
+								cmp := Compare(xField, yField)
 								if cmp != 0 {
 									return cmp
 								}
@@ -373,7 +373,7 @@ func Compare(a, b Schema) int {
 					return 0
 				}
 
-				if len(x.Field) > len(y.Field) {
+				if len(*x) > len(*y) {
 					return 1
 				}
 

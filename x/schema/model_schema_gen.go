@@ -771,37 +771,11 @@ func (self *List) UnmarshalJSON(x []byte) error {
 
 func MapFromJSON(x []byte) (*Map, error) {
 	var result *Map = new(Map)
-	// if is Struct
-	err := shared.JSONParseObject(x, func(key string, value []byte) error {
-		switch key {
-		case "Field":
-			return json.Unmarshal(value, &result.Field)
-		}
-
-		return fmt.Errorf("schema.MapFromJSON: unknown key %s", key)
-	})
+	err := json.Unmarshal(x, result)
 
 	return result, err
 }
 
 func MapToJSON(x *Map) ([]byte, error) {
-	field_Field, err := json.Marshal(x.Field)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(map[string]json.RawMessage{
-		"Field": field_Field,
-	})
-}
-func (self *Map) MarshalJSON() ([]byte, error) {
-	return MapToJSON(self)
-}
-
-func (self *Map) UnmarshalJSON(x []byte) error {
-	n, err := MapFromJSON(x)
-	if err != nil {
-		return err
-	}
-	*self = *n
-	return nil
+	return json.Marshal(x)
 }

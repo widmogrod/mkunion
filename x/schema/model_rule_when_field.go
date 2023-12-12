@@ -53,8 +53,8 @@ func (r *WhenField[A]) MapDefFor(x *Map, path []string, config *goConfig) (TypeM
 		}
 
 		found := false
-		for _, f := range x.Field {
-			if f.Name == parts[1] {
+		for key := range *x {
+			if key == parts[1] {
 				found = true
 				break
 			}

@@ -202,26 +202,9 @@ func TestSecond(t *testing.T) {
     },
     "Input": {
       "schema.Map": {
-        "Field": [
-          {
-            "Name": "prompt",
-            "Value": {
-              "schema.String": "no text"
-            }
-          },
-          {
-            "Name": "width",
-            "Value": {
-              "schema.Number": 100
-            }
-          },
-          {
-            "Name": "height",
-            "Value": {
-              "schema.Number": 100
-            }
-          }
-        ]
+		"prompt": {"schema.String": "hello world"},
+		"width": {"schema.Number": 100},
+		"height": {"schema.Number": 100}
       }
     }
   }
