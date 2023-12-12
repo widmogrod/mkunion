@@ -386,7 +386,9 @@ func LeafShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Value",
-				Type: &shape.NumberLike{},
+				Type: &shape.NumberLike{
+					Kind: &shape.Int64{},
+				},
 			},
 		},
 	}
