@@ -26,13 +26,6 @@ type ShapeGenerator struct {
 	template *template.Template
 }
 
-func (g *ShapeGenerator) ImportPkg() []string {
-	return []string{
-		"encoding/json",
-		"fmt",
-	}
-}
-
 func (g *ShapeGenerator) ident(d int) string {
 	return strings.Repeat("\t", d)
 }
@@ -93,6 +86,7 @@ func TemplateHelperShapeVariantToName(x shape.Shape) string {
 		},
 	)
 }
+
 func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 	return shape.MustMatchShape(
 		x,
@@ -138,10 +132,16 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			result := &bytes.Buffer{}
 			if shape.IsNamed(x) {
 				fmt.Fprintf(result, "&shape.NumberLike{\n")
+				g.fprintNumberKind(result, x.Kind, 1)
 				g.fprintNamedFields(result, x.Named, 1)
 				fmt.Fprintf(result, "}")
 			} else {
-				fmt.Fprintf(result, "&shape.NumberLike{}")
+				fmt.Fprintf(result, "&shape.NumberLike{")
+				if x.Kind != nil {
+					fmt.Fprintf(result, "\n")
+					g.fprintNumberKind(result, x.Kind, 1)
+				}
+				fmt.Fprintf(result, "}")
 			}
 
 			return g.padLeft(depth, result.String())
@@ -221,6 +221,46 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			return g.padLeft(depth, result.String())
 		},
 	)
+}
+
+func (g *ShapeGenerator) kindToGoName(kind shape.NumberKind) string {
+	return shape.MustMatchNumberKind(
+		kind,
+		func(x *shape.UInt8) string {
+			return "shape.UInt8{}"
+		},
+		func(x *shape.UInt16) string {
+			return "shape.UInt16{}"
+		},
+		func(x *shape.UInt32) string {
+			return "shape.UInt32{}"
+		},
+		func(x *shape.UInt64) string {
+			return "shape.UInt64{}"
+		},
+		func(x *shape.Int8) string {
+			return "shape.Int8{}"
+		},
+		func(x *shape.Int16) string {
+			return "shape.Int16{}"
+		},
+		func(x *shape.Int32) string {
+			return "shape.Int32{}"
+		},
+		func(x *shape.Int64) string {
+			return "shape.Int64{}"
+		},
+		func(x *shape.Float32) string {
+			return "shape.Float32{}"
+		},
+		func(x *shape.Float64) string {
+			return "shape.Float64{}"
+		},
+	)
+}
+
+func (g *ShapeGenerator) fprintNumberKind(result *bytes.Buffer, kind shape.NumberKind, depth int) {
+	fmt.Fprintf(result, strings.Repeat("\t", depth)+"Kind: &%s,\n", g.kindToGoName(kind))
 }
 
 func (g *ShapeGenerator) fprintNamedFields(result *bytes.Buffer, x *shape.Named, depth int) {

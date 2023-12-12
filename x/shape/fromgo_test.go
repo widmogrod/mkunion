@@ -117,6 +117,76 @@ func TestFromGoo(t *testing.T) {
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 							Fields: []*FieldLike{
+								{
+									Name: "Kind",
+									Type: &UnionLike{
+										Name:          "NumberKind",
+										PkgName:       "shape",
+										PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										Variant: []Shape{
+											&StructLike{
+												Name:          "UInt8",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "UInt16",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "UInt32",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "UInt64",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "Int8",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "Int16",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "Int32",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "Int64",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "Float32",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+											&StructLike{
+												Name:          "Float64",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+												Fields:        []*FieldLike{},
+											},
+										},
+									},
+								},
 								namedRef,
 							},
 						},

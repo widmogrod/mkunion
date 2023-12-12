@@ -31,14 +31,14 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 		},
 		func(x *Binary) types.AttributeValue {
 			return &types.AttributeValueMemberB{
-				Value: x.B,
+				Value: *x,
 			}
 		},
 		func(x *List) types.AttributeValue {
 			result := &types.AttributeValueMemberL{
 				Value: []types.AttributeValue{},
 			}
-			for _, item := range x.Items {
+			for _, item := range *x {
 				result.Value = append(result.Value, ToDynamoDB(item))
 			}
 			return result
@@ -47,8 +47,8 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 			result := &types.AttributeValueMemberM{
 				Value: map[string]types.AttributeValue{},
 			}
-			for _, item := range x.Field {
-				result.Value[item.Name] = ToDynamoDB(item.Value)
+			for key, value := range *x {
+				result.Value[key] = ToDynamoDB(value)
 			}
 			return result
 		},
@@ -58,39 +58,33 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 	switch y := x.(type) {
 	case *types.AttributeValueMemberB:
-		return &Binary{B: y.Value}, nil
+		return MkBinary(y.Value), nil
 
 	case *types.AttributeValueMemberBS:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
-			result.Items = append(result.Items, &Binary{B: item})
+			result = append(result, MkBinary(item))
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberNS:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
 			num, err := strconv.ParseFloat(item, 64)
 			if err != nil {
 				return nil, err
 			}
 
-			result.Items = append(result.Items, MkFloat(num))
+			result = append(result, MkFloat(num))
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberSS:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
-			result.Items = append(result.Items, MkString(item))
+			result = append(result, MkString(item))
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberNULL:
 		return &None{}, nil
@@ -110,35 +104,28 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 		return MkString(y.Value), nil
 
 	case *types.AttributeValueMemberL:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
 			v, err := FromDynamoDB(item)
 			if err != nil {
 				return nil, err
 			}
-			result.Items = append(result.Items, v)
+			result = append(result, v)
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberM:
-		result := &Map{
-			Field: []Field{},
-		}
+		result := make(Map)
 		for name, item := range y.Value {
 			v, err := FromDynamoDB(item)
 			if err != nil {
 				return nil, err
 			}
 
-			result.Field = append(result.Field, Field{
-				Name:  name,
-				Value: v,
-			})
+			result[name] = v
 		}
 
-		return result, nil
+		return &result, nil
 	}
 
 	panic("unreachable")
@@ -147,40 +134,40 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 func UnwrapDynamoDB(data Schema) (Schema, error) {
 	switch x := data.(type) {
 	case *Map:
-		if len(x.Field) == 1 {
-			for _, field := range x.Field {
-				switch field.Name {
+		if len(*x) == 1 {
+			for name, value := range *x {
+				switch name {
 				case "S":
-					value := AsDefault[string](field.Value, "")
+					value := AsDefault[string](value, "")
 					return FromDynamoDB(&types.AttributeValueMemberS{
 						Value: value,
 					})
 				case "SS":
-					switch y := field.Value.(type) {
+					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
-							result.Items = append(result.Items, MkString(AsDefault[string](item, "")))
+						result := List{}
+						for _, item := range *y {
+							result = append(result, MkString(AsDefault[string](item, "")))
 						}
-						return result, nil
+						return &result, nil
 					default:
-						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}
 				case "N":
-					value := AsDefault[string](field.Value, "")
+					value := AsDefault[string](value, "")
 					return FromDynamoDB(&types.AttributeValueMemberN{
 						Value: value,
 					})
 				case "NS":
-					switch y := field.Value.(type) {
+					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
-							result.Items = append(result.Items, MkFloat(AsDefault[float64](item, 0)))
+						result := List{}
+						for _, item := range *y {
+							result = append(result, MkFloat(AsDefault[float64](item, 0)))
 						}
-						return result, nil
+						return &result, nil
 					default:
-						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}
 				case "B":
 					// Assumption is that here we have base64 encoded string from DynamoDB
@@ -188,22 +175,22 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 					// pas it as is. This assumption, makse only sence, when it's used on values that
 					// require unwrapping DynamoDB format.
 					//Which may imply, that those values are ie from other medium than DynamoDB.
-					return field.Value, nil
+					return value, nil
 
 				case "BS":
-					switch y := field.Value.(type) {
+					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
-							result.Items = append(result.Items, item)
+						result := List{}
+						for _, item := range *y {
+							result = append(result, item)
 						}
-						return result, nil
+						return &result, nil
 					default:
-						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}
 
 				case "BOOL":
-					value := AsDefault[bool](field.Value, false)
+					value := AsDefault[bool](value, false)
 					return FromDynamoDB(&types.AttributeValueMemberBOOL{
 						Value: value,
 					})
@@ -211,31 +198,31 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 					return &None{}, nil
 
 				case "M":
-					switch y := field.Value.(type) {
+					switch y := value.(type) {
 					case *Map:
 						return assumeMap(y)
 					default:
-						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (1): %s=%T", field.Name, field.Value)
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (1): %s=%T", name, value)
 					}
 
 				case "L":
-					switch y := field.Value.(type) {
+					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
+						result := List{}
+						for _, item := range *y {
 							unwrapped, err := UnwrapDynamoDB(item)
 							if err != nil {
 								return nil, err
 							}
-							result.Items = append(result.Items, unwrapped)
+							result = append(result, unwrapped)
 						}
-						return result, nil
+						return &result, nil
 					default:
-						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", field.Name, field.Value)
+						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}
 
 				default:
-					return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (3): %s=%T", field.Name, field.Value)
+					return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (3): %s=%T", name, value)
 				}
 			}
 		} else {
@@ -247,16 +234,13 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 }
 
 func assumeMap(x *Map) (Schema, error) {
-	result := &Map{}
-	for _, field := range x.Field {
-		value, err := UnwrapDynamoDB(field.Value)
+	result := make(Map)
+	for key, value := range *x {
+		value, err := UnwrapDynamoDB(value)
 		if err != nil {
 			return nil, err
 		}
-		result.Field = append(result.Field, Field{
-			Name:  field.Name,
-			Value: value,
-		})
+		result[key] = value
 	}
-	return result, nil
+	return &result, nil
 }

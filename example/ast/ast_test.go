@@ -10,8 +10,8 @@ func TestAstJsonConversionOnSimpleType(t *testing.T) {
 	jsonData, err := ValueToJSON(in)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{
-  "$type": "github.com/widmogrod/mkunion/example/ast.Lit",
-  "github.com/widmogrod/mkunion/example/ast.Lit": {
+  "$type": "ast.Lit",
+  "ast.Lit": {
     "Value": 12
   }
 }`, string(jsonData))
@@ -26,19 +26,19 @@ func TestAstToJSONOnSumTypes(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(string(jsonData))
 	assert.JSONEq(t, `{
-  "$type": "github.com/widmogrod/mkunion/example/ast.Eq",
-  "github.com/widmogrod/mkunion/example/ast.Eq": {
+  "$type": "ast.Eq",
+  "ast.Eq": {
     "L": {
-      "$type": "github.com/widmogrod/mkunion/example/ast.Accessor",
-      "github.com/widmogrod/mkunion/example/ast.Accessor": {
+      "$type": "ast.Accessor",
+      "ast.Accessor": {
         "Path": [
           "foo"
         ]
       }
     },
     "R": {
-      "$type": "github.com/widmogrod/mkunion/example/ast.Lit",
-      "github.com/widmogrod/mkunion/example/ast.Lit": {
+      "$type": "ast.Lit",
+      "ast.Lit": {
         "Value": "baz"
       }
     }

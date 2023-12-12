@@ -22,8 +22,10 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 			return &BooleanLike{}
 		case "int", "int8", "int16", "int32", "int64",
 			"uint", "uint8", "uint16", "uint32", "uint64",
-			"float64", "float32":
-			return &NumberLike{}
+			"float64", "float32", "byte", "rune":
+			return &NumberLike{
+				Kind: TypeStringToNumberKindMap[y.Name],
+			}
 		default:
 			if !y.IsExported() {
 				log.Infof("formast: skipping non exported type %s", y.Name)

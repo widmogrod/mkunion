@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 import './Chat.css';
-import {ChatCMD, ChatResult, dediscriminateChatCMD} from "./workflow/main";
+import {ChatCMD, ChatResult} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
 
 type Message = {
     text: string,
@@ -65,6 +65,7 @@ export function Chat({props}: ChatParams) {
         }
 
         let cmd: ChatCMD = {
+            "$type": "main.UserMessage",
             "main.UserMessage": {
                 "Message": lastMessage.text,
             },
@@ -75,7 +76,7 @@ export function Chat({props}: ChatParams) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(dediscriminateChatCMD(cmd)),
+            body: JSON.stringify(cmd),
         })
             .then(res => res.json() as Promise<ChatResult>)
             .then(data => {

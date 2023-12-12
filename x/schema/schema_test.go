@@ -142,21 +142,18 @@ func TestMaxScalars(t *testing.T) {
 
 		var m = *MkFloat(math.MaxFloat64)
 		var s Schema = &Map{
-			Field: []Field{
-				{Name: "Int", Value: &m},
-				{Name: "Int8", Value: &m},
-				{Name: "Int16", Value: &m},
-				{Name: "Int32", Value: &m},
-				{Name: "Int64", Value: &m},
-				{Name: "Float32", Value: &m},
-				{Name: "Float64", Value: &m},
-				{Name: "Uint", Value: &m},
-				{Name: "Uint", Value: &m},
-				{Name: "Uint8", Value: &m},
-				{Name: "Uint16", Value: &m},
-				{Name: "Uint32", Value: &m},
-				{Name: "Uint64", Value: &m},
-			},
+			"Int":     &m,
+			"Int8":    &m,
+			"Int16":   &m,
+			"Int32":   &m,
+			"Int64":   &m,
+			"Float32": &m,
+			"Float64": &m,
+			"Uint":    &m,
+			"Uint8":   &m,
+			"Uint16":  &m,
+			"Uint32":  &m,
+			"Uint64":  &m,
 		}
 		r := MustToGo(s, WithOnlyTheseRules(WhenPath(nil, UseStruct(Max{})))).(Max)
 		// Ints
@@ -179,21 +176,18 @@ func TestMaxScalars(t *testing.T) {
 	t.Run("test lossy conversion from small float 64 to respective scalars", func(t *testing.T) {
 		var m = *MkFloat(float64(3))
 		var s Schema = &Map{
-			Field: []Field{
-				{Name: "Int", Value: &m},
-				{Name: "Int8", Value: &m},
-				{Name: "Int16", Value: &m},
-				{Name: "Int32", Value: &m},
-				{Name: "Int64", Value: &m},
-				{Name: "Float32", Value: &m},
-				{Name: "Float64", Value: &m},
-				{Name: "Uint", Value: &m},
-				{Name: "Uint", Value: &m},
-				{Name: "Uint8", Value: &m},
-				{Name: "Uint16", Value: &m},
-				{Name: "Uint32", Value: &m},
-				{Name: "Uint64", Value: &m},
-			},
+			"Int":     &m,
+			"Int8":    &m,
+			"Int16":   &m,
+			"Int32":   &m,
+			"Int64":   &m,
+			"Float32": &m,
+			"Float64": &m,
+			"Uint":    &m,
+			"Uint8":   &m,
+			"Uint16":  &m,
+			"Uint32":  &m,
+			"Uint64":  &m,
 		}
 		r := MustToGo(s, WithOnlyTheseRules(WhenPath(nil, UseStruct(Max{})))).(Max)
 		// Ints
@@ -225,13 +219,11 @@ func TestSchemaConversions(t *testing.T) {
 		{
 			name: "go list to schema and back",
 			in:   []int{1, 2, 3},
-			out: &List{
-				Items: []Schema{
-					MkInt(1),
-					MkInt(2),
-					MkInt(3),
-				},
-			},
+			out: MkList(
+				MkInt(1),
+				MkInt(2),
+				MkInt(3),
+			),
 			// Yes, back conversion always normalise to floats and []any
 			// To map back to correct type use WellDefinedTypeToGo(_, WhenPath(nil, UseSlice(int)))
 			back: []interface{}{
@@ -247,16 +239,8 @@ func TestSchemaConversions(t *testing.T) {
 				"bar": "str",
 			},
 			out: &Map{
-				Field: []Field{
-					{
-						Name:  "foo",
-						Value: MkInt(1),
-					},
-					{
-						Name:  "bar",
-						Value: MkString("str"),
-					},
-				},
+				"foo": MkInt(1),
+				"bar": MkString("str"),
 			},
 			back: map[string]interface{}{
 				"foo": float64(1),
@@ -305,16 +289,8 @@ func TestSchemaToGoStructs(t *testing.T) {
 	}{
 		"schema struct to go struct": {
 			in: &Map{
-				Field: []Field{
-					{
-						Name:  "Foo",
-						Value: MkInt(1),
-					},
-					{
-						Name:  "Bar",
-						Value: MkString("baz"),
-					},
-				},
+				"Foo": MkInt(1),
+				"Bar": MkString("baz"),
 			},
 			rules: []RuleMatcher{
 				WhenPath([]string{}, UseStruct(TestStruct1{})),
@@ -325,34 +301,16 @@ func TestSchemaToGoStructs(t *testing.T) {
 			},
 		},
 		"schema with list of structs": {
-			in: &List{
-				Items: []Schema{
-					&Map{
-						Field: []Field{
-							{
-								Name:  "Foo",
-								Value: MkInt(1),
-							},
-							{
-								Name:  "Bar",
-								Value: MkString("baz"),
-							},
-						},
-					},
-					&Map{
-						Field: []Field{
-							{
-								Name:  "Foo",
-								Value: MkInt(13),
-							},
-							{
-								Name:  "Bar",
-								Value: MkString("baz3"),
-							},
-						},
-					},
+			in: MkList(
+				&Map{
+					"Foo": MkInt(1),
+					"Bar": MkString("baz"),
 				},
-			},
+				&Map{
+					"Foo": MkInt(13),
+					"Bar": MkString("baz3"),
+				},
+			),
 			rules: []RuleMatcher{
 				WhenPath([]string{"[*]"}, UseStruct(TestStruct1{})),
 			},
@@ -363,29 +321,11 @@ func TestSchemaToGoStructs(t *testing.T) {
 		},
 		"struct with nested struct ": {
 			in: &Map{
-				Field: []Field{
-					{
-						Name:  "Foo",
-						Value: MkInt(1),
-					},
-					{
-						Name:  "Bar",
-						Value: MkString("baz"),
-					}, {
-						Name: "Other",
-						Value: &Map{
-							Field: []Field{
-								{
-									Name:  "Count",
-									Value: MkInt(41),
-								},
-								{
-									Name:  "Baz",
-									Value: MkString("baz2"),
-								},
-							},
-						},
-					},
+				"Foo": MkInt(1),
+				"Bar": MkString("baz"),
+				"Other": &Map{
+					"Baz":   MkString("baz2"),
+					"Count": MkInt(41),
 				},
 			},
 			rules: []RuleMatcher{
@@ -402,60 +342,23 @@ func TestSchemaToGoStructs(t *testing.T) {
 			},
 		},
 		"schema with list of structs with nested struct": {
-			in: &List{
-				Items: []Schema{
-					&Map{
-						Field: []Field{
-							{
-								Name:  "Foo",
-								Value: MkInt(1),
-							},
-							{
-								Name:  "Bar",
-								Value: MkString("baz"),
-							},
-							{
-								Name: "Other",
-								Value: &Map{
-									Field: []Field{
-										{
-											Name:  "Baz",
-											Value: MkString("baz2"),
-										},
-									},
-								},
-							},
-						},
-					},
-					&Map{
-						Field: []Field{
-							{
-								Name:  "Foo",
-								Value: MkInt(55),
-							},
-							{
-								Name:  "Bar",
-								Value: MkString("baz55"),
-							},
-							{
-								Name: "Other",
-								Value: &Map{
-									Field: []Field{
-										{
-											Name:  "Foo",
-											Value: MkInt(66),
-										},
-										{
-											Name:  "Bar",
-											Value: MkString("baz66"),
-										},
-									},
-								},
-							},
-						},
+			in: MkList(
+				&Map{
+					"Foo": MkInt(1),
+					"Bar": MkString("baz"),
+					"Other": &Map{
+						"Baz": MkString("baz2"),
 					},
 				},
-			},
+				&Map{
+					"Foo": MkInt(55),
+					"Bar": MkString("baz55"),
+					"Other": &Map{
+						"Foo": MkInt(66),
+						"Bar": MkString("baz66"),
+					},
+				},
+			),
 			rules: []RuleMatcher{
 				WhenPath([]string{"[*]"}, UseStruct(TestStruct1{})),
 				WhenPath([]string{"[*]", "Other?.Foo"}, UseStruct(&TestStruct1{})),
@@ -506,28 +409,20 @@ func (record *recordInTest[T]) MarshalSchema() (*Map, error) {
 	}
 
 	return &Map{
-		Field: []Field{
-			{
-				Name:  "ID",
-				Value: MkString(record.ID),
-			},
-			{
-				Name:  "Data",
-				Value: schemed,
-			},
-		},
+		"ID":   MkString(record.ID),
+		"Data": schemed,
 	}, nil
 }
 
 func (record *recordInTest[T]) UnmarshalSchema(x *Map) error {
-	for _, field := range x.Field {
-		switch field.Name {
+	for key, value := range *x {
+		switch key {
 		case "ID":
-			if value, ok := As[string](field.Value); ok {
+			if value, ok := As[string](value); ok {
 				record.ID = value
 			}
 		case "Data":
-			data, err := ToGoG[T](field.Value)
+			data, err := ToGoG[T](value)
 			if err != nil {
 				return fmt.Errorf(`recordInTest[T] BuildFromMapSchema: failed to convert "Data" value: %w`, err)
 			}

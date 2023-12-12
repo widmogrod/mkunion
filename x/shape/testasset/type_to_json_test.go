@@ -11,7 +11,7 @@ func TestExampleToJSON_A(t *testing.T) {
 		Name: "not-angel",
 	})
 	assert.NoError(t, err)
-	assert.JSONEq(t, `{"$type":"github.com/widmogrod/mkunion/x/shape/testasset.A", "github.com/widmogrod/mkunion/x/shape/testasset.A": {"name":"not-angel"}}`, string(result))
+	assert.JSONEq(t, `{"$type":"testasset.A", "testasset.A": {"name":"not-angel"}}`, string(result))
 
 	example, err := ExampleFromJSON(result)
 	assert.NoError(t, err)
@@ -33,8 +33,8 @@ func TestExampleToJSON_B(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{
-  "$type":"github.com/widmogrod/mkunion/x/shape/testasset.B", 
-  "github.com/widmogrod/mkunion/x/shape/testasset.B": {
+  "$type":"testasset.B", 
+  "testasset.B": {
 	"age":123,
     "A": {
         "name":"not-angel"
@@ -69,11 +69,11 @@ func TestOtherToJSON_A(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{
-  "$type": "github.com/widmogrod/mkunion/x/shape/testasset.Explain",
-  "github.com/widmogrod/mkunion/x/shape/testasset.Explain": {
+  "$type": "testasset.Explain",
+  "testasset.Explain": {
 	"example": {
-	  "$type":"github.com/widmogrod/mkunion/x/shape/testasset.B", 
-	  "github.com/widmogrod/mkunion/x/shape/testasset.B": {
+	  "$type":"testasset.B", 
+	  "testasset.B": {
 		"age":123,
 		"A": {
 			"name":"not-angel"
@@ -95,4 +95,59 @@ func TestOtherToJSON_A(t *testing.T) {
 			T: &now,
 		},
 	}, example)
+}
+
+func TestGraphDSL(t *testing.T) {
+	graph := &Graph[int]{}
+	graph.Vertices = map[string]*Vertex[int]{
+		"1": {
+			Value: 1,
+			Edges: []*Edge[int]{
+				{
+					Weight: 1.0,
+				},
+			},
+		},
+		"2": {
+			Value: 2,
+			Edges: []*Edge[int]{
+				{
+					Weight: 2.0,
+				},
+			},
+		},
+	}
+
+	result, err := GraphDSLToJSON[int](graph)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+  "$type": "testasset.Graph",
+  "testasset.Graph": {
+    "Vertices": {
+      "1": {
+        "Edges": [
+          {
+            "Weight": 1
+          }
+        ],
+        "Value": 1
+      },
+      "2": {
+        "Edges": [
+          {
+            "Weight": 2
+          }
+        ],
+        "Value": 2
+      }
+    }
+  }
+}`, string(result))
+
+	t.Log(string(result))
+
+	example, err := GraphDSLFromJSON[int](result)
+	assert.NoError(t, err)
+	assert.Equal(t, graph, example)
+
 }

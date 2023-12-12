@@ -9,40 +9,14 @@ import (
 
 type (
 	TypeScriptOptions struct {
-		currentPkgName string
-		imports        map[packageName]packageImportName
+		currentPkgName       string
+		currentPkgImportName packageImportName
+		imports              map[packageName]packageImportName
 	}
 
 	packageImportName = string
 	packageName       = string
 )
-
-var helperTSFunctions = `/**
-* This function is used to remove $type field from {name}, so it can be understood by mkunion, 
-* that is assuming unions have one field in object, that is used to discriminate between variants.
-*/
-export function dediscriminate{name}(x: {name}): {name} {
-    if (x["$type"] !== undefined) {
-        delete x["$type"]
-        return x
-    }
-    return x
-}
-
-/**
-* This function is used to populate $type field in {name}, so it can be used as discriminative switch statement
-* @example https://www.typescriptlang.org/play#example/discriminate-types
-*/
-export function discriminate{name}(x: {name}): {name} {
-    if (x["$type"] === undefined) {
-        let keyx = Object.keys(x)
-        if (keyx.length === 1) {
-            x["$type"] = keyx[0] as any
-        }
-    }
-    return x
-}
-`
 
 func (o *TypeScriptOptions) IsCurrentPkgName(pkgName string) bool {
 	return o.currentPkgName == pkgName
@@ -56,7 +30,63 @@ func (o *TypeScriptOptions) NeedsToImportPkgName(pkg packageName, imp packageImp
 	o.imports[pkg] = imp
 }
 
+func ToTypeScriptOptimisation(x Shape) Shape {
+	return MustMatchShape(
+		x,
+		func(x *Any) Shape {
+			return x
+		},
+		func(x *RefName) Shape {
+			return x
+		},
+		func(x *BooleanLike) Shape {
+			return x
+		},
+		func(x *StringLike) Shape {
+			return x
+		},
+		func(x *NumberLike) Shape {
+			return x
+		},
+		func(x *ListLike) Shape {
+			// do forward lookup and detect if we can optimise and convert to string
+			switch y := x.Element.(type) {
+			case *NumberLike:
+				switch y.Kind.(type) {
+				// byte is uint8
+				// rune is int32
+				case *UInt8, *Int32:
+					return &StringLike{
+						Named: x.Named,
+					}
+				}
+			}
+
+			x.Element = ToTypeScriptOptimisation(x.Element)
+			return x
+		},
+		func(x *MapLike) Shape {
+			x.Val = ToTypeScriptOptimisation(x.Val)
+			x.Key = ToTypeScriptOptimisation(x.Key)
+			return x
+		},
+		func(x *StructLike) Shape {
+			for _, field := range x.Fields {
+				field.Type = ToTypeScriptOptimisation(field.Type)
+			}
+			return x
+		},
+		func(x *UnionLike) Shape {
+			for _, variant := range x.Variant {
+				variant = ToTypeScriptOptimisation(variant)
+			}
+			return x
+		},
+	)
+}
+
 func ToTypeScript(x Shape, option *TypeScriptOptions) string {
+	x = ToTypeScriptOptimisation(x)
 	return MustMatchShape(
 		x,
 		func(x *Any) string {
@@ -72,19 +102,36 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
 		func(x *BooleanLike) string {
-			return "bool"
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = boolean", x.Named.Name)
+			}
+			return "boolean"
 		},
 		func(x *StringLike) string {
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = string", x.Named.Name)
+			}
 			return "string"
 		},
 		func(x *NumberLike) string {
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = number", x.Named.Name)
+			}
 			return "number"
 		},
 		func(x *ListLike) string {
-			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
+			result := fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = %s", x.Named.Name, result)
+			}
+			return result
 		},
 		func(x *MapLike) string {
-			return fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
+			result := fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = %s", x.Named.Name, result)
+			}
+			return result
 		},
 		func(x *StructLike) string {
 			result := &strings.Builder{}
@@ -99,11 +146,6 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 		},
 		func(x *UnionLike) string {
 			result := &strings.Builder{}
-			// build helper functions for typescript
-			result.WriteString("\n")
-			_, _ = fmt.Fprintf(result, strings.ReplaceAll(helperTSFunctions, "{name}", x.Name))
-			result.WriteString("\n")
-
 			// build union type in typescript
 			_, _ = fmt.Fprintf(result, "export type %s = ", x.Name)
 			result.WriteString(toTypeTypeScriptTypeName(x, option))
@@ -133,25 +175,27 @@ type TypeScriptRenderer struct {
 }
 
 func (r *TypeScriptRenderer) AddUnion(x *UnionLike) {
-	if _, ok := r.contents[x.PkgName]; !ok {
-		r.contents[x.PkgName] = &strings.Builder{}
+	key := x.PkgImportName
+	if _, ok := r.contents[key]; !ok {
+		r.contents[key] = &strings.Builder{}
 	}
 
-	if _, ok := r.imports[x.PkgName]; !ok {
-		r.imports[x.PkgName] = &TypeScriptOptions{
-			currentPkgName: x.PkgName,
-			imports:        make(map[packageName]packageImportName),
+	if _, ok := r.imports[key]; !ok {
+		r.imports[key] = &TypeScriptOptions{
+			currentPkgName:       x.PkgName,
+			currentPkgImportName: x.PkgImportName,
+			imports:              make(map[packageName]packageImportName),
 		}
 	}
 
-	res := ToTypeScript(x, r.imports[x.PkgName])
-	r.contents[x.PkgName].WriteString("//generated by mkunion\n")
-	r.contents[x.PkgName].WriteString(res)
+	res := ToTypeScript(x, r.imports[key])
+	r.contents[key].WriteString("//generated by mkunion\n")
+	r.contents[key].WriteString(res)
 }
 
 func (r *TypeScriptRenderer) WriteToDir(dir string) error {
-	for pkgName, content := range r.contents {
-		imports := r.imports[pkgName]
+	for pkgImportName, content := range r.contents {
+		imports := r.imports[pkgImportName]
 		if imports == nil {
 			continue
 		}
@@ -170,7 +214,7 @@ func (r *TypeScriptRenderer) WriteToDir(dir string) error {
 			return fmt.Errorf("totypescript: WriteToDir failed to write imports: %w", err)
 		}
 
-		err = r.writeToFile(dir, pkgName, content.String())
+		err = r.writeToFile(dir, r.normaliseImport(pkgImportName), content.String())
 		if err != nil {
 			return fmt.Errorf("totypescript: WriteToDir failed to write file %s: %w", dir, err)
 		}
@@ -195,19 +239,21 @@ func (r *TypeScriptRenderer) writeToFile(dir string, name packageName, content s
 }
 
 func (r *TypeScriptRenderer) AddStruct(like *StructLike) {
-	if _, ok := r.contents[like.PkgName]; !ok {
-		r.contents[like.PkgName] = &strings.Builder{}
+	key := like.PkgImportName
+	if _, ok := r.contents[key]; !ok {
+		r.contents[key] = &strings.Builder{}
 	}
 
-	if _, ok := r.imports[like.PkgName]; !ok {
-		r.imports[like.PkgName] = &TypeScriptOptions{
-			currentPkgName: like.PkgName,
-			imports:        make(map[packageName]packageImportName),
+	if _, ok := r.imports[key]; !ok {
+		r.imports[key] = &TypeScriptOptions{
+			currentPkgName:       like.PkgName,
+			currentPkgImportName: like.PkgImportName,
+			imports:              make(map[packageName]packageImportName),
 		}
 	}
 
-	res := ToTypeScript(like, r.imports[like.PkgName])
-	r.contents[like.PkgName].WriteString(res)
+	res := ToTypeScript(like, r.imports[key])
+	r.contents[key].WriteString(res)
 }
 
 func (r *TypeScriptRenderer) normaliseImport(imp packageImportName) string {
@@ -227,18 +273,86 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 			return x.Name
 		},
 		func(x *BooleanLike) string {
+			if IsNamed(x) {
+				typeName := x.Named.Name
+				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
+
+				result := &strings.Builder{}
+				result.WriteString("{\n")
+				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
+				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
+				result.WriteString("\n}")
+
+				return result.String()
+			}
 			return "boolean"
 		},
 		func(x *StringLike) string {
+			if IsNamed(x) {
+				typeName := x.Named.Name
+				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
+
+				result := &strings.Builder{}
+				result.WriteString("{\n")
+				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
+				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
+				result.WriteString("\n}")
+
+				return result.String()
+			}
+
 			return "string"
 		},
 		func(x *NumberLike) string {
+			if IsNamed(x) {
+				typeName := x.Named.Name
+				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
+
+				result := &strings.Builder{}
+				result.WriteString("{\n")
+				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
+				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
+				result.WriteString("\n}")
+
+				return result.String()
+			}
 			return "number"
 		},
 		func(x *ListLike) string {
+			if IsNamed(x) {
+				typeName := x.Named.Name
+				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
+
+				result := &strings.Builder{}
+				result.WriteString("{\n")
+				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
+				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
+				result.WriteString("\n}")
+
+				return result.String()
+			}
+
 			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
 		},
 		func(x *MapLike) string {
+			if IsNamed(x) {
+				typeName := x.Named.Name
+				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
+
+				result := &strings.Builder{}
+				result.WriteString("{\n")
+				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
+				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
+				result.WriteString("\n}")
+
+				return result.String()
+			}
+
 			return fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
 		},
 		func(x *StructLike) string {

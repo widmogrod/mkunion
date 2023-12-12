@@ -104,8 +104,8 @@ func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schem
 			panic(fmt.Errorf("expected list, got %T", schemed))
 		}
 
-		afterSearch := make([]string, len(list.Items))
-		for i, item := range list.Items {
+		afterSearch := make([]string, len(*list))
+		for i, item := range *list {
 			str, ok := schema.As[string](item)
 			if !ok {
 				panic(fmt.Errorf("expected string, got %T", item))

@@ -1,6 +1,9 @@
 package schema
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
 	"reflect"
 )
 
@@ -24,7 +27,8 @@ func MkFloat(x float64) *Number {
 }
 
 func MkBinary(b []byte) *Binary {
-	return &Binary{B: b}
+	v := Binary(b)
+	return &v
 }
 
 func MkString(s string) *String {
@@ -32,14 +36,16 @@ func MkString(s string) *String {
 }
 
 func MkList(items ...Schema) *List {
-	return &List{
-		Items: items,
-	}
+	result := make(List, len(items))
+	copy(result, items)
+	return &result
 }
 func MkMap(fields ...Field) *Map {
-	return &Map{
-		Field: fields,
+	var result = make(Map)
+	for _, field := range fields {
+		result[field.Name] = field.Value
 	}
+	return &result
 }
 
 func MkField(name string, value Schema) Field {
@@ -83,14 +89,25 @@ type (
 	Bool   bool
 	Number float64
 	String string
-	Binary struct{ B []byte }
-	List   struct {
-		Items []Schema
-	}
-	Map struct {
-		Field []Field
-	}
+	Binary []byte
+	List   []Schema
+	Map    map[string]Schema
 )
+
+var _ json.Unmarshaler = (*Map)(nil)
+
+func (x *Map) UnmarshalJSON(bytes []byte) error {
+	*x = make(Map)
+	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
+		val, err := SchemaFromJSON(value)
+		if err != nil {
+			return fmt.Errorf("schema.Map.UnmarshalJSON: %w", err)
+		}
+
+		(*x)[key] = val
+		return nil
+	})
+}
 
 type (
 	Marshaler interface {
@@ -106,6 +123,42 @@ type Field struct {
 	Name  string
 	Value Schema
 }
+
+func (f *Field) MarshalJSON() ([]byte, error) {
+	field_Name, err := json.Marshal(f.Name)
+	if err != nil {
+		return nil, fmt.Errorf("schema.Field.MarshalJSON: Name; %w", err)
+	}
+
+	field_Value, err := SchemaToJSON(f.Value)
+	if err != nil {
+		return nil, fmt.Errorf("schema.Field.MarshalJSON: Value; %w", err)
+	}
+
+	return json.Marshal(map[string]json.RawMessage{
+		"Name":  field_Name,
+		"Value": field_Value,
+	})
+}
+
+func (f *Field) UnmarshalJSON(bytes []byte) error {
+	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
+		switch key {
+		case "Name":
+			return json.Unmarshal(value, &f.Name)
+		case "Value":
+			field, err := SchemaFromJSON(value)
+			if err != nil {
+				return fmt.Errorf("schema.Field.UnmarshalJSON: Value; %w", err)
+			}
+			f.Value = field
+		}
+		return nil
+	})
+}
+
+var _ json.Unmarshaler = (*Field)(nil)
+var _ json.Marshaler = (*Field)(nil)
 
 type UnionInformationRule interface {
 	UnionType() reflect.Type

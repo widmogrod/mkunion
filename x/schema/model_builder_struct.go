@@ -208,6 +208,17 @@ func (s *StructBuilder) set(f reflect.Value, value any) error {
 			return nil
 		}
 
+		if f.Type().Elem().Kind() == reflect.Uint8 { // Check if the field is a byte slice
+			switch vv := v.Interface().(type) {
+			case []byte:
+				f.SetBytes(vv)
+				return nil
+			case Binary:
+				f.SetBytes(vv)
+				return nil
+			}
+		}
+
 		if v.Kind() == reflect.Slice {
 			st := reflect.SliceOf(f.Type().Elem())
 			ss := reflect.MakeSlice(st, v.Len(), v.Len())

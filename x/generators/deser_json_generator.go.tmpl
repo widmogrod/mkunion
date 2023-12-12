@@ -36,6 +36,9 @@ func {{ .Union.Name }}FromJSON(x []byte) ({{ .Union.Name }}, error) {
 }
 
 func {{ .Union.Name }}ToJSON(x {{ .Union.Name }}) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
 	return MustMatch{{ .Union.Name }}R2(
 		x,
 		{{- range $index, $variant := .Union.Variant }}
@@ -59,7 +62,7 @@ func {{ $self.VariantName $variant }}FromJSON(x []byte) (*{{ $self.VariantName $
 
 	{{- if $self.IsStruct $variant }}
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		{{- range $index, $field := $variant.Fields }}
 		case "{{ $self.JSONFieldName $field }}":
@@ -93,7 +96,7 @@ func {{ $self.VariantName $variant }}ToJSON(x *{{ $self.VariantName $variant }})
 	return json.Marshal(x)
 	{{- end }}
 }
-
+{{- if $self.SupportNativeJSONMarshal $variant }}
 func (self *{{ $self.VariantName $variant }}) MarshalJSON() ([]byte, error) {
 	return {{ $self.VariantName $variant }}ToJSON(self)
 }
@@ -106,4 +109,5 @@ func (self *{{ $self.VariantName $variant }}) UnmarshalJSON(x []byte) error {
 	*self = *n
 	return nil
 }
+{{- end}}
 {{end}}

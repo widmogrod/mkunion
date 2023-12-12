@@ -78,12 +78,7 @@ func (u *UnionVariants[A]) SchemaToUnionType(x any, schema Schema, config *goCon
 	t := reflect.TypeOf(x)
 	if t.Implements(u.UnionType()) {
 		return &Map{
-			Field: []Field{
-				{
-					Name:  config.variantName(t),
-					Value: schema,
-				},
-			},
+			config.variantName(t): schema,
 		}, true
 	}
 
@@ -118,12 +113,13 @@ func (u *UnionVariants[A]) MapDefFor(x *Map, path []string, config *goConfig) (T
 	}
 	u.lock.RUnlock()
 
-	if len(x.Field) != 1 {
+	if len(*x) != 1 {
 		return nil, false
 	}
 
 	for i := range u.variants {
-		if x.Field[0].Name == config.variantName(u.reflections[i]) {
+		variantKey := config.variantName(u.reflections[i])
+		if _, ok := (*x)[variantKey]; ok {
 			ss := make([]string, len(path)+1)
 			copy(ss, path)
 			ss[len(path)] = config.variantName(u.reflections[i])

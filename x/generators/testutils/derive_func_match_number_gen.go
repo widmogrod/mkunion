@@ -113,8 +113,8 @@ func N1Shape() shape.Shape {
 // mkunion-extension:json
 type NumberUnionJSON struct {
 	Type string          `json:"$type,omitempty"`
-	N0   json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.N0,omitempty"`
-	N1   json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.N1,omitempty"`
+	N0   json.RawMessage `json:"testutils.N0,omitempty"`
+	N1   json.RawMessage `json:"testutils.N1,omitempty"`
 }
 
 func NumberFromJSON(x []byte) (Number, error) {
@@ -125,9 +125,9 @@ func NumberFromJSON(x []byte) (Number, error) {
 	}
 
 	switch data.Type {
-	case "github.com/widmogrod/mkunion/x/generators/testutils.N0":
+	case "testutils.N0":
 		return N0FromJSON(data.N0)
-	case "github.com/widmogrod/mkunion/x/generators/testutils.N1":
+	case "testutils.N1":
 		return N1FromJSON(data.N1)
 	}
 
@@ -141,6 +141,9 @@ func NumberFromJSON(x []byte) (Number, error) {
 }
 
 func NumberToJSON(x Number) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
 	return MustMatchNumberR2(
 		x,
 		func(x *N0) ([]byte, error) {
@@ -150,7 +153,7 @@ func NumberToJSON(x Number) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/generators/testutils.N0",
+				Type: "testutils.N0",
 				N0:   body,
 			})
 		},
@@ -161,7 +164,7 @@ func NumberToJSON(x Number) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/generators/testutils.N1",
+				Type: "testutils.N1",
 				N1:   body,
 			})
 		},
@@ -171,7 +174,7 @@ func NumberToJSON(x Number) ([]byte, error) {
 func N0FromJSON(x []byte) (*N0, error) {
 	var result *N0 = new(N0)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -184,7 +187,6 @@ func N0FromJSON(x []byte) (*N0, error) {
 func N0ToJSON(x *N0) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{})
 }
-
 func (self *N0) MarshalJSON() ([]byte, error) {
 	return N0ToJSON(self)
 }
@@ -201,7 +203,7 @@ func (self *N0) UnmarshalJSON(x []byte) error {
 func N1FromJSON(x []byte) (*N1, error) {
 	var result *N1 = new(N1)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		}
 
@@ -214,7 +216,6 @@ func N1FromJSON(x []byte) (*N1, error) {
 func N1ToJSON(x *N1) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{})
 }
-
 func (self *N1) MarshalJSON() ([]byte, error) {
 	return N1ToJSON(self)
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 )
 
+// deprecated FromJSON
 func FromJSON(data []byte) (Schema, error) {
 	if len(data) == 0 {
 		return nil, nil
@@ -20,6 +21,7 @@ func FromJSON(data []byte) (Schema, error) {
 	return FromGo(x), nil
 }
 
+// deprecated: ToJSON use SchemaToJSON
 func ToJSON(schema Schema) ([]byte, error) {
 	res := bytes.Buffer{}
 	err := toJSON(schema, &res)
@@ -60,7 +62,7 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 
 		},
 		func(x *Binary) error {
-			_, err := fmt.Fprintf(res, "%q", base64.StdEncoding.EncodeToString(x.B))
+			_, err := fmt.Fprintf(res, "%q", base64.StdEncoding.EncodeToString(*x))
 			if err != nil {
 				return err
 			}
@@ -68,7 +70,7 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 		},
 		func(x *List) error {
 			res.WriteString("[")
-			for i, item := range x.Items {
+			for i, item := range *x {
 				if i > 0 {
 					res.WriteString(",")
 				}
@@ -83,15 +85,18 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 		},
 		func(x *Map) error {
 			res.WriteString("{")
-			for i, item := range x.Field {
+			var i int
+			for key, value := range *x {
 				if i > 0 {
 					res.WriteString(",")
 				}
-				_, err := fmt.Fprintf(res, "%q:", item.Name)
+				i++
+
+				_, err := fmt.Fprintf(res, "%q:", key)
 				if err != nil {
 					return err
 				}
-				err = toJSON(item.Value, res)
+				err = toJSON(value, res)
 				if err != nil {
 					return err
 				}

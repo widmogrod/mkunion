@@ -12,15 +12,8 @@ func TestGoToSchema(t *testing.T) {
 		Bar: 333,
 	}
 	expected := &Map{
-		Field: []Field{
-			{
-				Name:  "Foo",
-				Value: MkInt(123),
-			}, {
-				Name:  "Bar",
-				Value: MkInt(333),
-			},
-		},
+		"Foo": MkInt(123),
+		"Bar": MkInt(333),
 	}
 	schema := FromGo(data)
 
@@ -64,98 +57,33 @@ func TestGoToSchemaComplex(t *testing.T) {
 		},
 	}
 	expected := &Map{
-		Field: []Field{
-			{
-				Name: "BStruct",
-				Value: &Map{
-					Field: []Field{
-						{
-							Name:  "Foo",
-							Value: MkInt(123),
-						}, {
-							Name: "Bars",
-							Value: &List{
-								Items: []Schema{
-									MkString("bar"),
-									MkString("baz"),
-								},
-							},
-						}, {
-							Name: "Taz",
-							Value: &Map{
-								Field: []Field{
-									{
-										Name:  "taz1",
-										Value: MkString("taz2"),
-									},
-								},
-							},
-						}, {
-							Name: "BaseStruct",
-							Value: &Map{
-								Field: []Field{
-									{
-										Name:  "Age",
-										Value: MkInt(123),
-									},
-								},
-							},
-						}, {
-							Name:  "S",
-							Value: MkString("some string"),
-						},
-						{
-							Name: "List",
-							Value: &List{
-								Items: []Schema{
-									&Map{
-										Field: []Field{
-											{
-												Name:  "Foo",
-												Value: MkInt(444),
-											},
-											{
-												Name:  "Bar",
-												Value: MkInt(0),
-											},
-										},
-									},
-								},
-							},
-						},
-						{
-							Name: "Ma",
-							Value: &Map{
-								Field: []Field{
-									{
-										Name: "key",
-										Value: &Map{
-											Field: []Field{
-												{
-													Name:  "Foo",
-													Value: MkInt(666),
-												},
-												{
-													Name:  "Bar",
-													Value: MkInt(555),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						{
-							Name:  "Bi",
-							Value: MkBinary([]byte("some bytes")),
-						},
-						{
-							Name:  "Bip",
-							Value: MkBinary([]byte{1, 2, 3, 4, 5}),
-						},
-					},
+		"BStruct": &Map{
+			"Foo": MkInt(123),
+			"Bars": MkList(
+				MkString("bar"),
+				MkString("baz"),
+			),
+			"Taz": &Map{
+				"taz1": MkString("taz2"),
+			},
+			"BaseStruct": &Map{
+				"Age": MkInt(123),
+			},
+			"S": MkString("some string"),
+			"List": MkList(
+				&Map{
+					"Foo": MkInt(444),
+					"Bar": MkInt(0),
+				},
+			),
+			"Ma": &Map{
+				"key": &Map{
+					"Foo": MkInt(666),
+					"Bar": MkInt(555),
 				},
 			},
+			"Bi":  MkBinary([]byte("some bytes")),
+			"Bip": MkBinary([]byte{1, 2, 3, 4, 5}),
 		},
 	}
 	schema := FromGo(data, WithOnlyTheseRules(

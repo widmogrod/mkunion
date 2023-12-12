@@ -386,7 +386,9 @@ func LeafShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Value",
-				Type: &shape.NumberLike{},
+				Type: &shape.NumberLike{
+					Kind: &shape.Int64{},
+				},
 			},
 		},
 	}
@@ -405,9 +407,9 @@ func KShape() shape.Shape {
 // mkunion-extension:json
 type TreeUnionJSON struct {
 	Type   string          `json:"$type,omitempty"`
-	Branch json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.Branch,omitempty"`
-	Leaf   json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.Leaf,omitempty"`
-	K      json.RawMessage `json:"github.com/widmogrod/mkunion/x/generators/testutils.K,omitempty"`
+	Branch json.RawMessage `json:"testutils.Branch,omitempty"`
+	Leaf   json.RawMessage `json:"testutils.Leaf,omitempty"`
+	K      json.RawMessage `json:"testutils.K,omitempty"`
 }
 
 func TreeFromJSON(x []byte) (Tree, error) {
@@ -418,11 +420,11 @@ func TreeFromJSON(x []byte) (Tree, error) {
 	}
 
 	switch data.Type {
-	case "github.com/widmogrod/mkunion/x/generators/testutils.Branch":
+	case "testutils.Branch":
 		return BranchFromJSON(data.Branch)
-	case "github.com/widmogrod/mkunion/x/generators/testutils.Leaf":
+	case "testutils.Leaf":
 		return LeafFromJSON(data.Leaf)
-	case "github.com/widmogrod/mkunion/x/generators/testutils.K":
+	case "testutils.K":
 		return KFromJSON(data.K)
 	}
 
@@ -438,6 +440,9 @@ func TreeFromJSON(x []byte) (Tree, error) {
 }
 
 func TreeToJSON(x Tree) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
 	return MustMatchTreeR2(
 		x,
 		func(x *Branch) ([]byte, error) {
@@ -447,7 +452,7 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			}
 
 			return json.Marshal(TreeUnionJSON{
-				Type:   "github.com/widmogrod/mkunion/x/generators/testutils.Branch",
+				Type:   "testutils.Branch",
 				Branch: body,
 			})
 		},
@@ -458,7 +463,7 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			}
 
 			return json.Marshal(TreeUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/generators/testutils.Leaf",
+				Type: "testutils.Leaf",
 				Leaf: body,
 			})
 		},
@@ -469,7 +474,7 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			}
 
 			return json.Marshal(TreeUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/generators/testutils.K",
+				Type: "testutils.K",
 				K:    body,
 			})
 		},
@@ -479,19 +484,29 @@ func TreeToJSON(x Tree) ([]byte, error) {
 func BranchFromJSON(x []byte) (*Branch, error) {
 	var result *Branch = new(Branch)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Lit":
 			res, err := TreeFromJSON(value)
 			if err != nil {
-				return fmt.Errorf("testutils.TreeFromJSON: %w", err)
+				return fmt.Errorf("testutils._FromJSON: field Tree %w", err)
 			}
 			result.Lit = res
 			return nil
 		case "List":
-			return json.Unmarshal(value, &result.List)
+			res, err := shared.JSONToListWithDeserializer(value, result.List, TreeFromJSON)
+			if err != nil {
+				return fmt.Errorf("testutils._FromJSON: field Tree %w", err)
+			}
+			result.List = res
+			return nil
 		case "Map":
-			return json.Unmarshal(value, &result.Map)
+			res, err := shared.JSONToMapWithDeserializer(value, result.Map, TreeFromJSON)
+			if err != nil {
+				return fmt.Errorf("testutils._FromJSON: field Tree %w", err)
+			}
+			result.Map = res
+			return nil
 		}
 
 		return fmt.Errorf("testutils.BranchFromJSON: unknown key %s", key)
@@ -505,11 +520,11 @@ func BranchToJSON(x *Branch) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	field_List, err := json.Marshal(x.List)
+	field_List, err := shared.JSONListFromSerializer(x.List, TreeToJSON)
 	if err != nil {
 		return nil, err
 	}
-	field_Map, err := json.Marshal(x.Map)
+	field_Map, err := shared.JSONMapFromSerializer(x.Map, TreeToJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +534,6 @@ func BranchToJSON(x *Branch) ([]byte, error) {
 		"Map":  field_Map,
 	})
 }
-
 func (self *Branch) MarshalJSON() ([]byte, error) {
 	return BranchToJSON(self)
 }
@@ -536,7 +550,7 @@ func (self *Branch) UnmarshalJSON(x []byte) error {
 func LeafFromJSON(x []byte) (*Leaf, error) {
 	var result *Leaf = new(Leaf)
 	// if is Struct
-	err := shared.JsonParseObject(x, func(key string, value []byte) error {
+	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Value":
 			return json.Unmarshal(value, &result.Value)
@@ -557,7 +571,6 @@ func LeafToJSON(x *Leaf) ([]byte, error) {
 		"Value": field_Value,
 	})
 }
-
 func (self *Leaf) MarshalJSON() ([]byte, error) {
 	return LeafToJSON(self)
 }
@@ -580,17 +593,4 @@ func KFromJSON(x []byte) (*K, error) {
 
 func KToJSON(x *K) ([]byte, error) {
 	return json.Marshal(x)
-}
-
-func (self *K) MarshalJSON() ([]byte, error) {
-	return KToJSON(self)
-}
-
-func (self *K) UnmarshalJSON(x []byte) error {
-	n, err := KFromJSON(x)
-	if err != nil {
-		return err
-	}
-	*self = *n
-	return nil
 }
