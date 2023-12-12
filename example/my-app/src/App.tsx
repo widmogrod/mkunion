@@ -282,27 +282,10 @@ function generateImage(imageWidth: number, imageHeight: number, onData?: (data: 
             },
             Input: {
                 "schema.Map": {
-                    Field: [
-                        {
-                            Name: "prompt",
-                            Value: {
-                                "schema.String": "no text",
-                            }
-                        },
-                        {
-                            Name: "width",
-                            Value: {
-                                "schema.Number": imageWidth,
-                            }
-                        },
-                        {
-                            Name: "height",
-                            Value: {
-                                "schema.Number": imageHeight,
-                            }
-                        },
-                    ]
-                } as schema.Map,
+                    "prompt": {"schema.String": "no text"},
+                    "width": {"schema.Number": imageWidth},
+                    "height": {"schema.Number": imageHeight},
+                },
             },
         }
     }
@@ -383,26 +366,9 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
             },
             Input: {
                 "schema.Map": {
-                    Field: [
-                        {
-                            Name: "prompt",
-                            Value: {
-                                "schema.String": "no text",
-                            }
-                        },
-                        {
-                            Name: "width",
-                            Value: {
-                                "schema.Number": imageWidth,
-                            }
-                        },
-                        {
-                            Name: "height",
-                            Value: {
-                                "schema.Number": imageHeight,
-                            }
-                        },
-                    ]
+                    "prompt": {"schema.String": "no text"},
+                    "width": {"schema.Number": imageWidth},
+                    "height": {"schema.Number": imageHeight},
                 },
             },
         }
@@ -787,7 +753,7 @@ function SchemaValue(props: { data?: schema.Schema }) {
         return <>binary</>
     } else if ("schema.Map" in props.data) {
         const mapData = props.data["schema.Map"];
-        const keys = mapData.Field
+        const keys = Object.keys(mapData);
 
         if (keys && keys.length === 0) {
             return null; // If the map is empty, return null (no table to display)
@@ -803,10 +769,10 @@ function SchemaValue(props: { data?: schema.Schema }) {
                 </thead>
                 <tbody>
                 {keys && keys.map((key) => (
-                    <tr key={key.Name}>
-                        <td className="key">{key.Name}</td>
+                    <tr key={key}>
+                        <td className="key">{key}</td>
                         <td>
-                            <SchemaValue data={key.Value}/>
+                            <SchemaValue data={mapData[key]}/>
                         </td>
                     </tr>
                 ))}
