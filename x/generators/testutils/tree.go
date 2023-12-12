@@ -7,6 +7,6 @@ type (
 		List []Tree
 		Map  map[string]Tree
 	}
-	Leaf struct{ Value int }
+	Leaf struct{ Value int64 }
 	K    string
 )
