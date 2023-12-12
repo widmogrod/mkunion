@@ -223,7 +223,7 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 	)
 }
 
-func (g *ShapeGenerator) kintToGoName(kind shape.NumberKind) string {
+func (g *ShapeGenerator) kindToGoName(kind shape.NumberKind) string {
 	return shape.MustMatchNumberKind(
 		kind,
 		func(x *shape.UInt8) string {
@@ -260,7 +260,7 @@ func (g *ShapeGenerator) kintToGoName(kind shape.NumberKind) string {
 }
 
 func (g *ShapeGenerator) fprintNumberKind(result *bytes.Buffer, kind shape.NumberKind, depth int) {
-	fmt.Fprintf(result, strings.Repeat("\t", depth)+"Kind: &%s,\n", g.kintToGoName(kind))
+	fmt.Fprintf(result, strings.Repeat("\t", depth)+"Kind: &%s,\n", g.kindToGoName(kind))
 }
 
 func (g *ShapeGenerator) fprintNamedFields(result *bytes.Buffer, x *shape.Named, depth int) {
