@@ -178,11 +178,6 @@ func (d *SchemaDepthFirstVisitor[A]) VisitList(v *List) any {
 	if d.stop {
 		return nil
 	}
-	for idx := range v.Items {
-		if _ = v.Items[idx].AcceptSchema(d); d.stop {
-			return nil
-		}
-	}
 
 	return nil
 }
@@ -282,9 +277,6 @@ func (d *SchemaBreadthFirstVisitor[A]) VisitBinary(v *Binary) any {
 
 func (d *SchemaBreadthFirstVisitor[A]) VisitList(v *List) any {
 	d.queue = append(d.queue, v)
-	for idx := range v.Items {
-		d.queue = append(d.queue, v.Items[idx])
-	}
 
 	if d.shouldExecute[v] {
 		d.shouldExecute[v] = false
@@ -729,44 +721,13 @@ func (self *Binary) UnmarshalJSON(x []byte) error {
 
 func ListFromJSON(x []byte) (*List, error) {
 	var result *List = new(List)
-	// if is Struct
-	err := shared.JSONParseObject(x, func(key string, value []byte) error {
-		switch key {
-		case "Items":
-			res, err := shared.JSONToListWithDeserializer(value, result.Items, SchemaFromJSON)
-			if err != nil {
-				return fmt.Errorf("schema._FromJSON: field Schema %w", err)
-			}
-			result.Items = res
-			return nil
-		}
-
-		return fmt.Errorf("schema.ListFromJSON: unknown key %s", key)
-	})
+	err := json.Unmarshal(x, result)
 
 	return result, err
 }
 
 func ListToJSON(x *List) ([]byte, error) {
-	field_Items, err := shared.JSONListFromSerializer(x.Items, SchemaToJSON)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(map[string]json.RawMessage{
-		"Items": field_Items,
-	})
-}
-func (self *List) MarshalJSON() ([]byte, error) {
-	return ListToJSON(self)
-}
-
-func (self *List) UnmarshalJSON(x []byte) error {
-	n, err := ListFromJSON(x)
-	if err != nil {
-		return err
-	}
-	*self = *n
-	return nil
+	return json.Marshal(x)
 }
 
 func MapFromJSON(x []byte) (*Map, error) {

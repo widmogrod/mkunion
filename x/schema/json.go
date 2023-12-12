@@ -68,7 +68,7 @@ func toJSON(schema Schema, res *bytes.Buffer) error {
 		},
 		func(x *List) error {
 			res.WriteString("[")
-			for i, item := range x.Items {
+			for i, item := range *x {
 				if i > 0 {
 					res.WriteString(",")
 				}

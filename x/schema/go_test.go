@@ -59,12 +59,10 @@ func TestGoToSchemaComplex(t *testing.T) {
 	expected := &Map{
 		"BStruct": &Map{
 			"Foo": MkInt(123),
-			"Bars": &List{
-				Items: []Schema{
-					MkString("bar"),
-					MkString("baz"),
-				},
-			},
+			"Bars": MkList(
+				MkString("bar"),
+				MkString("baz"),
+			),
 			"Taz": &Map{
 				"taz1": MkString("taz2"),
 			},
@@ -72,14 +70,12 @@ func TestGoToSchemaComplex(t *testing.T) {
 				"Age": MkInt(123),
 			},
 			"S": MkString("some string"),
-			"List": &List{
-				Items: []Schema{
-					&Map{
-						"Foo": MkInt(444),
-						"Bar": MkInt(0),
-					},
+			"List": MkList(
+				&Map{
+					"Foo": MkInt(444),
+					"Bar": MkInt(0),
 				},
-			},
+			),
 			"Ma": &Map{
 				"key": &Map{
 					"Foo": MkInt(666),

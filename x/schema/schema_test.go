@@ -219,13 +219,11 @@ func TestSchemaConversions(t *testing.T) {
 		{
 			name: "go list to schema and back",
 			in:   []int{1, 2, 3},
-			out: &List{
-				Items: []Schema{
-					MkInt(1),
-					MkInt(2),
-					MkInt(3),
-				},
-			},
+			out: MkList(
+				MkInt(1),
+				MkInt(2),
+				MkInt(3),
+			),
 			// Yes, back conversion always normalise to floats and []any
 			// To map back to correct type use WellDefinedTypeToGo(_, WhenPath(nil, UseSlice(int)))
 			back: []interface{}{
@@ -303,18 +301,16 @@ func TestSchemaToGoStructs(t *testing.T) {
 			},
 		},
 		"schema with list of structs": {
-			in: &List{
-				Items: []Schema{
-					&Map{
-						"Foo": MkInt(1),
-						"Bar": MkString("baz"),
-					},
-					&Map{
-						"Foo": MkInt(13),
-						"Bar": MkString("baz3"),
-					},
+			in: MkList(
+				&Map{
+					"Foo": MkInt(1),
+					"Bar": MkString("baz"),
 				},
-			},
+				&Map{
+					"Foo": MkInt(13),
+					"Bar": MkString("baz3"),
+				},
+			),
 			rules: []RuleMatcher{
 				WhenPath([]string{"[*]"}, UseStruct(TestStruct1{})),
 			},
@@ -346,25 +342,23 @@ func TestSchemaToGoStructs(t *testing.T) {
 			},
 		},
 		"schema with list of structs with nested struct": {
-			in: &List{
-				Items: []Schema{
-					&Map{
-						"Foo": MkInt(1),
-						"Bar": MkString("baz"),
-						"Other": &Map{
-							"Baz": MkString("baz2"),
-						},
-					},
-					&Map{
-						"Foo": MkInt(55),
-						"Bar": MkString("baz55"),
-						"Other": &Map{
-							"Foo": MkInt(66),
-							"Bar": MkString("baz66"),
-						},
+			in: MkList(
+				&Map{
+					"Foo": MkInt(1),
+					"Bar": MkString("baz"),
+					"Other": &Map{
+						"Baz": MkString("baz2"),
 					},
 				},
-			},
+				&Map{
+					"Foo": MkInt(55),
+					"Bar": MkString("baz55"),
+					"Other": &Map{
+						"Foo": MkInt(66),
+						"Bar": MkString("baz66"),
+					},
+				},
+			),
 			rules: []RuleMatcher{
 				WhenPath([]string{"[*]"}, UseStruct(TestStruct1{})),
 				WhenPath([]string{"[*]", "Other?.Foo"}, UseStruct(&TestStruct1{})),

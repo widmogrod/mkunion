@@ -22,7 +22,7 @@ export type Schema = {
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.List",
-	"schema.List": List
+	"schema.List": Schema[]
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.Map",
@@ -34,10 +34,6 @@ export type None = {
 
 export type Binary = {
 	B?: any[],
-}
-
-export type List = {
-	Items?: Schema[],
 }
 
 export type Field = {

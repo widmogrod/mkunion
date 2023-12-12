@@ -184,16 +184,16 @@ func GetLocation(data Schema, locations []Location) Schema {
 			},
 			func(x *LocationIndex) (Schema, []Location) {
 				listData, ok := data.(*List)
-				if ok && len(listData.Items) > x.Index {
-					return listData.Items[x.Index], locations
+				if ok && len(*listData) > x.Index {
+					return (*listData)[x.Index], locations
 				}
 
 				return nil, locations
 			},
 			func(x *LocationAnything) (Schema, []Location) {
-				switch data.(type) {
+				switch y := data.(type) {
 				case *List:
-					for _, item := range data.(*List).Items {
+					for _, item := range *y {
 						newData := GetLocation(item, locations)
 						if newData != nil {
 							return newData, nil
@@ -244,7 +244,7 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 			return fn(x, init)
 		},
 		func(x *List) A {
-			for _, y := range x.Items {
+			for _, y := range *x {
 				init = fn(y, init)
 			}
 
@@ -329,16 +329,16 @@ func Compare(a, b Schema) int {
 			case *None, *Bool, *Number, *String, *Binary:
 				return 1
 			case *List:
-				if len(x.Items) == len(y.Items) {
-					for i := range x.Items {
-						cmp := Compare(x.Items[i], y.Items[i])
+				if len(*x) == len(*y) {
+					for i := range *x {
+						cmp := Compare((*x)[i], (*y)[i])
 						if cmp != 0 {
 							return cmp
 						}
 					}
 					return 0
 				}
-				if len(x.Items) > len(y.Items) {
+				if len(*x) > len(*y) {
 					return 1
 				}
 

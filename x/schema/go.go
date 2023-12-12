@@ -372,11 +372,11 @@ func goToSchema(x any, c *goConfig) Schema {
 		}
 
 	case []any:
-		var r = &List{}
+		var r = List{}
 		for _, v := range y {
-			r.Items = append(r.Items, goToSchema(v, c))
+			r = append(r, goToSchema(v, c))
 		}
-		return r
+		return &r
 
 	case map[string]any:
 		var r = make(Map)
@@ -429,11 +429,11 @@ func goToSchema(x any, c *goConfig) Schema {
 		}
 
 		if v.Kind() == reflect.Slice {
-			var r = &List{}
+			var r = List{}
 			for i := 0; i < v.Len(); i++ {
-				r.Items = append(r.Items, goToSchema(v.Index(i), c))
+				r = append(r, goToSchema(v.Index(i), c))
 			}
-			return r
+			return &r
 		}
 	}
 
@@ -507,7 +507,7 @@ func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
 		},
 		func(x *List) (any, error) {
 			build := c.ListDefFor(x, path).NewListBuilder()
-			for _, v := range x.Items {
+			for _, v := range *x {
 				c.activeBuilder = build
 				value, err := schemaToGo(v, c, append(path, "[*]"))
 				if err != nil {

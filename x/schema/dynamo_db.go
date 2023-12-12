@@ -38,7 +38,7 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 			result := &types.AttributeValueMemberL{
 				Value: []types.AttributeValue{},
 			}
-			for _, item := range x.Items {
+			for _, item := range *x {
 				result.Value = append(result.Value, ToDynamoDB(item))
 			}
 			return result
@@ -61,36 +61,30 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 		return &Binary{B: y.Value}, nil
 
 	case *types.AttributeValueMemberBS:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
-			result.Items = append(result.Items, &Binary{B: item})
+			result = append(result, &Binary{B: item})
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberNS:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
 			num, err := strconv.ParseFloat(item, 64)
 			if err != nil {
 				return nil, err
 			}
 
-			result.Items = append(result.Items, MkFloat(num))
+			result = append(result, MkFloat(num))
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberSS:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
-			result.Items = append(result.Items, MkString(item))
+			result = append(result, MkString(item))
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberNULL:
 		return &None{}, nil
@@ -110,17 +104,15 @@ func FromDynamoDB(x types.AttributeValue) (Schema, error) {
 		return MkString(y.Value), nil
 
 	case *types.AttributeValueMemberL:
-		result := &List{
-			Items: []Schema{},
-		}
+		result := List{}
 		for _, item := range y.Value {
 			v, err := FromDynamoDB(item)
 			if err != nil {
 				return nil, err
 			}
-			result.Items = append(result.Items, v)
+			result = append(result, v)
 		}
-		return result, nil
+		return &result, nil
 
 	case *types.AttributeValueMemberM:
 		result := make(Map)
@@ -153,11 +145,11 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 				case "SS":
 					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
-							result.Items = append(result.Items, MkString(AsDefault[string](item, "")))
+						result := List{}
+						for _, item := range *y {
+							result = append(result, MkString(AsDefault[string](item, "")))
 						}
-						return result, nil
+						return &result, nil
 					default:
 						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}
@@ -169,11 +161,11 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 				case "NS":
 					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
-							result.Items = append(result.Items, MkFloat(AsDefault[float64](item, 0)))
+						result := List{}
+						for _, item := range *y {
+							result = append(result, MkFloat(AsDefault[float64](item, 0)))
 						}
-						return result, nil
+						return &result, nil
 					default:
 						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}
@@ -188,11 +180,11 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 				case "BS":
 					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
-							result.Items = append(result.Items, item)
+						result := List{}
+						for _, item := range *y {
+							result = append(result, item)
 						}
-						return result, nil
+						return &result, nil
 					default:
 						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}
@@ -216,15 +208,15 @@ func UnwrapDynamoDB(data Schema) (Schema, error) {
 				case "L":
 					switch y := value.(type) {
 					case *List:
-						result := &List{}
-						for _, item := range y.Items {
+						result := List{}
+						for _, item := range *y {
 							unwrapped, err := UnwrapDynamoDB(item)
 							if err != nil {
 								return nil, err
 							}
-							result.Items = append(result.Items, unwrapped)
+							result = append(result, unwrapped)
 						}
-						return result, nil
+						return &result, nil
 					default:
 						return nil, fmt.Errorf("schema.UnwrapDynamoDB: unknown type (2): %s=%T", name, value)
 					}

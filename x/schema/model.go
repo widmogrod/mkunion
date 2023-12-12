@@ -35,9 +35,9 @@ func MkString(s string) *String {
 }
 
 func MkList(items ...Schema) *List {
-	return &List{
-		Items: items,
-	}
+	result := make(List, len(items))
+	copy(result, items)
+	return &result
 }
 func MkMap(fields ...Field) *Map {
 	var result = make(Map)
@@ -89,10 +89,8 @@ type (
 	Number float64
 	String string
 	Binary struct{ B []byte }
-	List   struct {
-		Items []Schema
-	}
-	Map map[string]Schema
+	List   []Schema
+	Map    map[string]Schema
 )
 
 var _ json.Unmarshaler = (*Map)(nil)
