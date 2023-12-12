@@ -7,6 +7,7 @@ import (
 	"fmt"
 )
 
+// deprecated FromJSON
 func FromJSON(data []byte) (Schema, error) {
 	if len(data) == 0 {
 		return nil, nil
@@ -20,6 +21,7 @@ func FromJSON(data []byte) (Schema, error) {
 	return FromGo(x), nil
 }
 
+// deprecated: ToJSON use SchemaToJSON
 func ToJSON(schema Schema) ([]byte, error) {
 	res := bytes.Buffer{}
 	err := toJSON(schema, &res)

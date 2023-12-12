@@ -6,32 +6,38 @@ export type Schema = {
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.Bool",
-	"schema.Bool": boolean
+	"schema.Bool": Bool
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.Number",
-	"schema.Number": number
+	"schema.Number": Number
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.String",
-	"schema.String": string
+	"schema.String": String
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.Binary",
-	"schema.Binary": any[]
+	"schema.Binary": Binary
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.List",
-	"schema.List": Schema[]
+	"schema.List": List
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "schema.Map",
-	"schema.Map": {[key: string]: Schema}
+	"schema.Map": Map
 }
 
 export type None = {
 }
 
+export type Bool = boolean
+export type Number = number
+export type String = string
+export type Binary = string
+export type List = Schema[]
+export type Map = {[key: string]: Schema}
 export type Field = {
 	Name?: string,
 	Value?: Schema,

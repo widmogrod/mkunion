@@ -95,6 +95,7 @@ func TestInferFromFile(t *testing.T) {
 				},
 			},
 			&NumberLike{
+				Kind: &Int64{},
 				Named: &Named{
 					Name:          "D",
 					PkgName:       "testasset",
@@ -102,6 +103,7 @@ func TestInferFromFile(t *testing.T) {
 				},
 			},
 			&NumberLike{
+				Kind: &Float64{},
 				Named: &Named{
 					Name:          "E",
 					PkgName:       "testasset",

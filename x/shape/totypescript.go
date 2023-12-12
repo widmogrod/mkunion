@@ -30,7 +30,63 @@ func (o *TypeScriptOptions) NeedsToImportPkgName(pkg packageName, imp packageImp
 	o.imports[pkg] = imp
 }
 
+func ToTypeScriptOptimisation(x Shape) Shape {
+	return MustMatchShape(
+		x,
+		func(x *Any) Shape {
+			return x
+		},
+		func(x *RefName) Shape {
+			return x
+		},
+		func(x *BooleanLike) Shape {
+			return x
+		},
+		func(x *StringLike) Shape {
+			return x
+		},
+		func(x *NumberLike) Shape {
+			return x
+		},
+		func(x *ListLike) Shape {
+			// do forward lookup and detect if we can optimise and convert to string
+			switch y := x.Element.(type) {
+			case *NumberLike:
+				switch y.Kind.(type) {
+				// byte is uint8
+				// rune is int32
+				case *UInt8, *Int32:
+					return &StringLike{
+						Named: x.Named,
+					}
+				}
+			}
+
+			x.Element = ToTypeScriptOptimisation(x.Element)
+			return x
+		},
+		func(x *MapLike) Shape {
+			x.Val = ToTypeScriptOptimisation(x.Val)
+			x.Key = ToTypeScriptOptimisation(x.Key)
+			return x
+		},
+		func(x *StructLike) Shape {
+			for _, field := range x.Fields {
+				field.Type = ToTypeScriptOptimisation(field.Type)
+			}
+			return x
+		},
+		func(x *UnionLike) Shape {
+			for _, variant := range x.Variant {
+				variant = ToTypeScriptOptimisation(variant)
+			}
+			return x
+		},
+	)
+}
+
 func ToTypeScript(x Shape, option *TypeScriptOptions) string {
+	x = ToTypeScriptOptimisation(x)
 	return MustMatchShape(
 		x,
 		func(x *Any) string {
@@ -46,19 +102,36 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
 		func(x *BooleanLike) string {
-			return "bool"
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = boolean", x.Named.Name)
+			}
+			return "boolean"
 		},
 		func(x *StringLike) string {
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = string", x.Named.Name)
+			}
 			return "string"
 		},
 		func(x *NumberLike) string {
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = number", x.Named.Name)
+			}
 			return "number"
 		},
 		func(x *ListLike) string {
-			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
+			result := fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = %s", x.Named.Name, result)
+			}
+			return result
 		},
 		func(x *MapLike) string {
-			return fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
+			result := fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
+			if IsNamed(x) {
+				return fmt.Sprintf("export type %s = %s", x.Named.Name, result)
+			}
+			return result
 		},
 		func(x *StructLike) string {
 			result := &strings.Builder{}
@@ -201,7 +274,7 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 		},
 		func(x *BooleanLike) string {
 			if IsNamed(x) {
-				typeName := "boolean"
+				typeName := x.Named.Name
 				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
 
 				result := &strings.Builder{}
@@ -217,7 +290,7 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 		},
 		func(x *StringLike) string {
 			if IsNamed(x) {
-				typeName := "string"
+				typeName := x.Named.Name
 				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
 
 				result := &strings.Builder{}
@@ -234,7 +307,7 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 		},
 		func(x *NumberLike) string {
 			if IsNamed(x) {
-				typeName := "number"
+				typeName := x.Named.Name
 				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
 
 				result := &strings.Builder{}
@@ -250,7 +323,7 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 		},
 		func(x *ListLike) string {
 			if IsNamed(x) {
-				typeName := fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
+				typeName := x.Named.Name
 				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
 
 				result := &strings.Builder{}
@@ -267,7 +340,7 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 		},
 		func(x *MapLike) string {
 			if IsNamed(x) {
-				typeName := fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
+				typeName := x.Named.Name
 				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
 
 				result := &strings.Builder{}

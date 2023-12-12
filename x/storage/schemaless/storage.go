@@ -25,6 +25,8 @@ var (
 // data records, which is current implementation
 // index records, which is future implementation
 //   - when two replicas have same aggregator rules, then during replication of logs, index can be reused
+//
+// go:generate go run ../../../cmd/mkunion/main.go -name RecordDSL
 type Record[A any] struct {
 	ID      string
 	Type    string
@@ -41,19 +43,13 @@ const (
 	PolicyOverwriteServerChanges
 )
 
+// go:generate go run ../../../cmd/mkunion/main.go -name RecordsDSL
 type (
 	UpdateRecords[T any] struct {
 		UpdatingPolicy UpdatingPolicy
 		Saving         map[string]T
 		Deleting       map[string]T
 	}
-)
-
-func (s UpdateRecords[T]) IsEmpty() bool {
-	return len(s.Saving) == 0 && len(s.Deleting) == 0
-}
-
-type (
 	FindingRecords[T any] struct {
 		RecordType string
 		Where      *predicate.WherePredicates
@@ -62,7 +58,13 @@ type (
 		After      *Cursor
 		//Before *Cursor
 	}
+)
 
+func (s UpdateRecords[T]) IsEmpty() bool {
+	return len(s.Saving) == 0 && len(s.Deleting) == 0
+}
+
+type (
 	SortField struct {
 		Field      string
 		Descending bool

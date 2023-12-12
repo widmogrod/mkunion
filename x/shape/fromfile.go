@@ -219,10 +219,16 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Named: f.named(),
 				}
 
+			//case "byte", "rune":
+			//	f.shapes[f.currentType] = &NumberLike{
+			//		Named: f.named(),
+			//	}
+
 			case "int", "int8", "int16", "int32", "int64",
 				"uint", "uint8", "uint16", "uint32", "uint64",
-				"float64", "float32":
+				"float64", "float32", "byte", "rune":
 				f.shapes[f.currentType] = &NumberLike{
+					Kind:  TypeStringToNumberKindMap[next.Name],
 					Named: f.named(),
 				}
 

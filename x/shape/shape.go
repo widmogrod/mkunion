@@ -19,6 +19,7 @@ type (
 		//Guard Guard
 	}
 	NumberLike struct {
+		Kind  NumberKind
 		Named *Named
 		//Guard Guard
 	}
@@ -53,6 +54,35 @@ type (
 		Variant       []Shape
 	}
 )
+
+// go:generate go run ../../cmd/mkunion/main.go -name=NumberKind
+type (
+	UInt8   struct{}
+	UInt16  struct{}
+	UInt32  struct{}
+	UInt64  struct{}
+	Int8    struct{}
+	Int16   struct{}
+	Int32   struct{}
+	Int64   struct{}
+	Float32 struct{}
+	Float64 struct{}
+)
+
+var TypeStringToNumberKindMap = map[string]NumberKind{
+	"uint8":   &UInt8{},
+	"uint16":  &UInt16{},
+	"uint32":  &UInt32{},
+	"uint64":  &UInt64{},
+	"int8":    &Int8{},
+	"int16":   &Int16{},
+	"int32":   &Int32{},
+	"int64":   &Int64{},
+	"float32": &Float32{},
+	"float64": &Float64{},
+	"byte":    &UInt8{},
+	"rune":    &Int32{},
+}
 
 type Named struct {
 	Name          string
