@@ -96,3 +96,58 @@ func TestOtherToJSON_A(t *testing.T) {
 		},
 	}, example)
 }
+
+func TestGraphDSL(t *testing.T) {
+	graph := &Graph[int]{}
+	graph.Vertices = map[string]*Vertex[int]{
+		"1": {
+			Value: 1,
+			Edges: []*Edge[int]{
+				{
+					Weight: 1.0,
+				},
+			},
+		},
+		"2": {
+			Value: 2,
+			Edges: []*Edge[int]{
+				{
+					Weight: 2.0,
+				},
+			},
+		},
+	}
+
+	result, err := GraphDSLToJSON[int](graph)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+  "$type": "testasset.Graph",
+  "testasset.Graph": {
+    "Vertices": {
+      "1": {
+        "Edges": [
+          {
+            "Weight": 1
+          }
+        ],
+        "Value": 1
+      },
+      "2": {
+        "Edges": [
+          {
+            "Weight": 2
+          }
+        ],
+        "Value": 2
+      }
+    }
+  }
+}`, string(result))
+
+	t.Log(string(result))
+
+	example, err := GraphDSLFromJSON[int](result)
+	assert.NoError(t, err)
+	assert.Equal(t, graph, example)
+
+}
