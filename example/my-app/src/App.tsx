@@ -6,7 +6,6 @@ import {Chat} from "./Chat";
 import {GenerateImage, ListWorkflowsFn} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
 
 function flowCreate(flow: workflow.Flow) {
-    console.log("save-flow", flow)
     return fetch('http://localhost:8080/flow', {
         method: 'POST',
         body: JSON.stringify(flow),
@@ -431,9 +430,7 @@ function App() {
             if (data["workflow.Done"].Result) {
                 let result = data["workflow.Done"].Result
                 if ("schema.Binary" in result) {
-                    if (typeof result["schema.Binary"] === "string") {
-                        setImage(result["schema.Binary"])
-                    }
+                    setImage(result["schema.Binary"])
                 }
             }
         } else if ("workflow.Error" in data) {
