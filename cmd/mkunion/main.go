@@ -38,7 +38,7 @@ func main() {
 			&cli.StringFlag{
 				Name:     "skip-extension",
 				Aliases:  []string{"skip-ext"},
-				Value:    "reducer_bfs,reducer_dfs,default_visitor,default_reducer",
+				Value:    "",
 				Required: false,
 			},
 			&cli.StringFlag{
@@ -114,32 +114,20 @@ func main() {
 					shapeGenerator := generators.NewShapeGenerator(union, helper)
 					visitor := generators.NewVisitorGenerator(union, helper)
 					schema := generators.NewSchemaGenerator(union, helper)
-					depthFirstGenerator := generators.NewReducerDepthFirstGenerator(union, helper)
-					breadthFirstGenerator := generators.NewReducerBreadthFirstGenerator(union, helper)
-					defaultReduction := generators.NewReducerDefaultReductionGenerator(union, helper)
-					defaultVisitor := generators.NewVisitorDefaultGenerator(union, helper)
 
 					// ensures that order of generators is always the same
 					generatorsList := []string{
 						"visitor",
-						"reducer_dfs",
-						"reducer_bfs",
-						"default_reducer",
-						"default_visitor",
 						"schema",
 						"shape",
 						"json",
 					}
 
 					generators := map[string]generators.Generator{
-						"visitor":         visitor,
-						"reducer_dfs":     depthFirstGenerator,
-						"reducer_bfs":     breadthFirstGenerator,
-						"default_reducer": defaultReduction,
-						"default_visitor": defaultVisitor,
-						"schema":          schema,
-						"shape":           shapeGenerator,
-						"json":            jsonGenerator,
+						"visitor": visitor,
+						"schema":  schema,
+						"shape":   shapeGenerator,
+						"json":    jsonGenerator,
 					}
 
 					skipExtension := strings.Split(c.String("skip-extension"), ",")
