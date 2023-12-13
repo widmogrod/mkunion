@@ -160,7 +160,7 @@ func main() {
 								return err
 							}
 
-							fileName := baseName + "_" + shared.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
+							fileName := baseName + "_" + shared.Program + "_" + strings.ToLower(union.Name) + "_" + name + ".go"
 							log.Infof("writing %s", fileName)
 
 							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
@@ -190,7 +190,7 @@ func main() {
 						header.WriteString(helper.RenderBufferedImport())
 						log.Infof(helper.RenderBufferedImport())
 
-						fileName := baseName + "_" + strings.ToLower(visitor.Name) + "_gen.go"
+						fileName := baseName + "_" + strings.ToLower(union.Name) + "_gen.go"
 						log.Infof("writing %s", fileName)
 
 						header.Write(body.Bytes())

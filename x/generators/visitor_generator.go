@@ -143,20 +143,19 @@ var (
 )
 
 func NewVisitorGenerator(union shape.UnionLike, helper *Helpers) *VisitorGenerator {
-	types, _ := AdaptUnionToOldVersionOfGenerator(union)
 	return &VisitorGenerator{
-		Name:     union.Name,
-		Types:    types,
-		Helper:   helper,
+		Union:    union,
 		template: template.Must(template.New("visitor_generator.go.tmpl").Funcs(helper.Func()).Parse(visitorTmpl)),
 	}
 }
 
 type VisitorGenerator struct {
-	Types    []string
-	Name     string
-	Helper   *Helpers
+	Union    shape.UnionLike
 	template *template.Template
+}
+
+func (g *VisitorGenerator) VariantName(x shape.Shape) string {
+	return TemplateHelperShapeVariantToName(x)
 }
 
 func (g *VisitorGenerator) Generate() ([]byte, error) {

@@ -1,68 +1,70 @@
+{{- $self := . -}}
+
 {{ RenderHeader -}}
 {{ RenderImport "github.com/widmogrod/mkunion/f" -}}
 
-{{- $name := .Name }}
+{{- $name := $self.Union.Name }}
 type {{ $name }}Visitor interface {
-	{{- range .Types }}
-	Visit{{ . }}(v *{{ . }}) any
+	{{- range $index, $variant := .Union.Variant }}
+	Visit{{ $self.VariantName $variant }}(v *{{ $self.VariantName $variant }}) any
 	{{- end }}
 }
 
 type {{ $name }} interface {
 	Accept{{ $name }}(g {{ $name }}Visitor) any
 }
-{{ range .Types }}
-func (r *{{ . }}) Accept{{ $name }}(v {{ $name }}Visitor) any { return v.Visit{{ . }}(r) }
+{{ range $index, $variant := .Union.Variant }}
+func (r *{{ $self.VariantName $variant }}) Accept{{ $name }}(v {{ $name }}Visitor) any { return v.Visit{{ $self.VariantName $variant }}(r) }
 {{- end }}
 
 var (
-	{{- range .Types }}
-	_ {{ $name }} = (*{{ . }})(nil)
+	{{- range $index, $variant := .Union.Variant }}
+	_ {{ $name }} = (*{{ $self.VariantName $variant }})(nil)
 	{{- end }}
 )
-{{ $i := len .Types}}
+{{ $i := len .Union.Variant }}
 func Match{{ $name }}[TOut any](
 	x {{ $name }},
-	{{- range $k, $t := .Types }}
-	f{{ Add $k 1}} func(x *{{ $t }}) TOut,
+	{{- range $index, $variant := .Union.Variant }}
+	f{{ Add $index 1}} func(x *{{ $self.VariantName $variant }}) TOut,
     {{- end }}
 	df func(x {{ $name }}) TOut,
 ) TOut {
 	return f.Match{{ $i }}(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }}, df)
 }
-{{ $i := len .Types}}
+{{ $i := len .Union.Variant }}
 func Match{{ $name }}R2[TOut1, TOut2 any](
 	x {{ $name }},
-	{{- range $k, $t := .Types }}
-	f{{ Add $k 1}} func(x *{{ $t }}) (TOut1, TOut2),
+	{{- range $index, $variant := .Union.Variant }}
+	f{{ Add $index 1}} func(x *{{ $self.VariantName $variant }}) (TOut1, TOut2),
     {{- end }}
 	df func(x {{ $name }}) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.Match{{ $i }}R2(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }}, df)
 }
-{{ $i := len .Types}}
+{{ $i := len .Union.Variant }}
 func MustMatch{{ $name }}[TOut any](
 	x {{ $name }},
-	{{- range $k, $t := .Types }}
-	f{{ Add $k 1}} func(x *{{ $t }}) TOut,
+	{{- range $index, $variant := .Union.Variant }}
+	f{{ Add $index 1}} func(x *{{ $self.VariantName $variant }}) TOut,
     {{- end }}
 ) TOut {
 	return f.MustMatch{{ $i }}(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }})
 }
-{{ $i := len .Types}}
+{{ $i := len .Union.Variant }}
 func MustMatch{{ $name }}R0(
 	x {{ $name }},
-	{{- range $k, $t := .Types }}
-	f{{ Add $k 1}} func(x *{{ $t }}),
+	{{- range $index, $variant := .Union.Variant }}
+	f{{ Add $index 1}} func(x *{{ $self.VariantName $variant }}),
     {{- end }}
 ) {
 	f.MustMatch{{ $i }}R0(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }})
 }
-{{ $i := len .Types}}
+{{ $i := len .Union.Variant }}
 func MustMatch{{ $name }}R2[TOut1, TOut2 any](
 	x {{ $name }},
-	{{- range $k, $t := .Types }}
-	f{{ Add $k 1}} func(x *{{ $t }}) (TOut1, TOut2),
+	{{- range $index, $variant := .Union.Variant }}
+	f{{ Add $index 1}} func(x *{{ $self.VariantName $variant }}) (TOut1, TOut2),
     {{- end }}
 ) (TOut1, TOut2) {
 	return f.MustMatch{{ $i }}R2(x {{- range $k := GenIntSlice 1 $i }}, f{{ $k }} {{- end }})

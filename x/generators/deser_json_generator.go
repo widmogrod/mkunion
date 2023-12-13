@@ -153,7 +153,7 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.RefName) string {
-			// check if reference is union,
+			// check if reference is Union,
 			// if yes, then we need to use function from the package called {VariantName}FromJSON
 			y, _ := shape.LookupShape(x)
 			z, ok := y.(*shape.UnionLike)
@@ -242,7 +242,7 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
 		},
 		func(x *shape.RefName) string {
-			// check if reference is union,
+			// check if reference is Union,
 			y, _ := shape.LookupShape(x)
 			if z, ok := y.(*shape.UnionLike); ok {
 				pkgName := g.pkgNameAndImport(z)
