@@ -48,34 +48,22 @@ func TemplateHelperShapeVariantToName(x shape.Shape) string {
 		func(x *shape.RefName) string {
 			return x.Name
 		},
+		func(x *shape.AliasLike) string {
+			return x.Name
+		},
 		func(x *shape.BooleanLike) string {
-			if shape.IsNamed(x) {
-				return x.Named.Name
-			}
 			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
 		},
 		func(x *shape.StringLike) string {
-			if shape.IsNamed(x) {
-				return x.Named.Name
-			}
 			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
 		},
 		func(x *shape.NumberLike) string {
-			if shape.IsNamed(x) {
-				return x.Named.Name
-			}
 			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
 		},
 		func(x *shape.ListLike) string {
-			if shape.IsNamed(x) {
-				return x.Named.Name
-			}
 			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
 		},
 		func(x *shape.MapLike) string {
-			if shape.IsNamed(x) {
-				return x.Named.Name
-			}
 			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
 		},
 		func(x *shape.StructLike) string {
@@ -104,45 +92,34 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 
 			return g.padLeft(depth, result.String())
 		},
-		func(x *shape.BooleanLike) string {
+		func(x *shape.AliasLike) string {
 			result := &bytes.Buffer{}
-			if shape.IsNamed(x) {
-				fmt.Fprintf(result, "&shape.BooleanLike{\n")
-				g.fprintNamedFields(result, x.Named, 1)
-				fmt.Fprintf(result, "}")
-			} else {
-				fmt.Fprintf(result, "&shape.BooleanLike{}")
-			}
+
+			fmt.Fprintf(result, "&shape.AliasLike{\n")
+			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
+			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
+			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
+			fmt.Fprintf(result, "\tIsAlias: %v,\n", x.IsAlias)
+			fmt.Fprintf(result, "\tType: %s,\n", g.ShapeToString(x.Type, 0))
+			fmt.Fprintf(result, "}")
 
 			return g.padLeft(depth, result.String())
 		},
+		func(x *shape.BooleanLike) string {
+			return g.padLeft(depth, "&shape.BooleanLike{}")
+		},
 		func(x *shape.StringLike) string {
-			result := &bytes.Buffer{}
-			if shape.IsNamed(x) {
-				fmt.Fprintf(result, "&shape.StringLike{\n")
-				g.fprintNamedFields(result, x.Named, 1)
-				fmt.Fprintf(result, "}")
-			} else {
-				fmt.Fprintf(result, "&shape.StringLike{}")
-			}
-
-			return g.padLeft(depth, result.String())
+			return g.padLeft(depth, "&shape.StringLike{}")
 		},
 		func(x *shape.NumberLike) string {
 			result := &bytes.Buffer{}
-			if shape.IsNamed(x) {
-				fmt.Fprintf(result, "&shape.NumberLike{\n")
+
+			fmt.Fprintf(result, "&shape.NumberLike{")
+			if x.Kind != nil {
+				fmt.Fprintf(result, "\n")
 				g.fprintNumberKind(result, x.Kind, 1)
-				g.fprintNamedFields(result, x.Named, 1)
-				fmt.Fprintf(result, "}")
-			} else {
-				fmt.Fprintf(result, "&shape.NumberLike{")
-				if x.Kind != nil {
-					fmt.Fprintf(result, "\n")
-					g.fprintNumberKind(result, x.Kind, 1)
-				}
-				fmt.Fprintf(result, "}")
 			}
+			fmt.Fprintf(result, "}")
 
 			return g.padLeft(depth, result.String())
 		},
@@ -152,11 +129,6 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			fmt.Fprintf(result, "&shape.ListLike{\n")
 			fmt.Fprintf(result, "\tElement: %s,\n", strings.TrimLeft(g.ShapeToString(x.Element, 1), "\t"))
 			fmt.Fprintf(result, "\tElementIsPointer: %v,\n", x.ElementIsPointer)
-
-			if shape.IsNamed(x) {
-				g.fprintNamedFields(result, x.Named, 2)
-			}
-
 			fmt.Fprintf(result, "}")
 
 			return g.padLeft(depth, result.String())
@@ -169,10 +141,6 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			fmt.Fprintf(result, "\tKeyIsPointer: %v,\n", x.KeyIsPointer)
 			fmt.Fprintf(result, "\tVal: %s,\n", strings.TrimLeft(g.ShapeToString(x.Val, 1), "\t"))
 			fmt.Fprintf(result, "\tValIsPointer: %v,\n", x.ValIsPointer)
-
-			if shape.IsNamed(x) {
-				g.fprintNamedFields(result, x.Named, 2)
-			}
 
 			fmt.Fprintf(result, "}")
 
@@ -261,14 +229,6 @@ func (g *ShapeGenerator) kindToGoName(kind shape.NumberKind) string {
 
 func (g *ShapeGenerator) fprintNumberKind(result *bytes.Buffer, kind shape.NumberKind, depth int) {
 	fmt.Fprintf(result, strings.Repeat("\t", depth)+"Kind: &%s,\n", g.kindToGoName(kind))
-}
-
-func (g *ShapeGenerator) fprintNamedFields(result *bytes.Buffer, x *shape.Named, depth int) {
-	fmt.Fprintf(result, strings.Repeat("\t", depth)+"Named: &shape.Named{\n")
-	fmt.Fprintf(result, strings.Repeat("\t", depth)+"\tName: %q,\n", x.Name)
-	fmt.Fprintf(result, strings.Repeat("\t", depth)+"\tPkgName: %q,\n", x.PkgName)
-	fmt.Fprintf(result, strings.Repeat("\t", depth)+"\tPkgImportName: %q,\n", x.PkgImportName)
-	fmt.Fprintf(result, strings.Repeat("\t", depth)+"},\n")
 }
 
 func (g *ShapeGenerator) Generate() ([]byte, error) {

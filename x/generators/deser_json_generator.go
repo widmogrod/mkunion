@@ -65,34 +65,22 @@ func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
 		func(y *shape.RefName) string {
 			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
+		func(x *shape.AliasLike) string {
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
 		func(y *shape.BooleanLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StringLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.NumberLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.ListLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.MapLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StructLike) string {
@@ -111,6 +99,9 @@ func (g *DeSerJSONGenerator) SupportNativeJSONMarshal(x shape.Shape) bool {
 			return false
 		},
 		func(y *shape.RefName) bool {
+			return false
+		},
+		func(y *shape.AliasLike) bool {
 			return false
 		},
 		func(y *shape.BooleanLike) bool {
@@ -172,6 +163,9 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 			}
 
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
+		},
+		func(x *shape.AliasLike) string {
+			panic(fmt.Errorf("generators.UnmarshalTemplate: %T not suported", x))
 		},
 		func(x *shape.BooleanLike) string {
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
@@ -250,6 +244,9 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 			}
 
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
+		},
+		func(x *shape.AliasLike) string {
+			panic(fmt.Errorf("generators.MarshalTemplate: %T not suported", x))
 		},
 		func(x *shape.BooleanLike) string {
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))

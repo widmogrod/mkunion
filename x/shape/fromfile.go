@@ -213,46 +213,122 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		// type C bool
 		switch next := t.Type.(type) {
 		case *ast.Ident:
+
 			switch next.Name {
 			case "string":
-				f.shapes[f.currentType] = &StringLike{
-					Named: f.named(),
+				f.shapes[f.currentType] = &AliasLike{
+					Name:          f.currentType,
+					PkgName:       f.PackageName,
+					PkgImportName: f.PkgImportName,
+					IsAlias:       false,
+					Type:          &StringLike{},
 				}
-
-			//case "byte", "rune":
-			//	f.shapes[f.currentType] = &NumberLike{
-			//		Named: f.named(),
-			//	}
 
 			case "int", "int8", "int16", "int32", "int64",
 				"uint", "uint8", "uint16", "uint32", "uint64",
 				"float64", "float32", "byte", "rune":
-				f.shapes[f.currentType] = &NumberLike{
-					Kind:  TypeStringToNumberKindMap[next.Name],
-					Named: f.named(),
+				f.shapes[f.currentType] = &AliasLike{
+					Name:          f.currentType,
+					PkgName:       f.PackageName,
+					PkgImportName: f.PkgImportName,
+					IsAlias:       false,
+					Type: &NumberLike{
+						Kind: TypeStringToNumberKindMap[next.Name],
+					},
 				}
 
 			case "bool":
-				f.shapes[f.currentType] = &BooleanLike{
-					Named: f.named(),
+				f.shapes[f.currentType] = &AliasLike{
+					Name:          f.currentType,
+					PkgName:       f.PackageName,
+					PkgImportName: f.PkgImportName,
+					IsAlias:       false,
+					Type:          &BooleanLike{},
 				}
+
+				//default:
+				//	// TODO everything else is an alias
+				//	//  TODO not true what about complex types!?
+				//
+				//	// This is type alias but of type that is in the same package
+				//	// this is alias, example
+				//	// type A = SomeOtherType
+				//	if t.Assign != 0 {
+				//		log.Warnf("shape.InferFromFile: not implemented for alias %#v\n", next)
+				//		ref := &RefName{
+				//			//Kind: &AliasOf{
+				//			//	Name: next.Name,
+				//			//	PkgName:       f.PackageName,
+				//			//	PkgImportName: f.PkgImportName,
+				//			//},
+				//			Name:          next.Name,
+				//			PkgName:       f.PackageName,
+				//			PkgImportName: f.PkgImportName,
+				//		}
+				//		f.shapes[f.currentType] = ref
+				//		//return nil
+				//	} else {
+				//		// this is reference to other type, example
+				//		// type A SomeOtherType
+				//		log.Warnf("shape.InferFromFile: not implemented for reference %#v\n", next)
+				//		ref := &RefName{
+				//			Name:          next.Name,
+				//			PkgName:       f.PackageName,
+				//			PkgImportName: f.PkgImportName,
+				//		}
+				//		//shape, found := LookupShape(ref)
+				//		//if !found {
+				//		//	log.Warnf("shape.InferFromFile: could not lookup shape for %#v\n", ref)
+				//		//	return f
+				//		//}
+				//
+				//		f.shapes[f.currentType] = ref
+				//
+				//	}
+				//	//panic("not implemented for alias")
 			}
 
+		//case *ast.SelectorExpr:
+		//	// this is reference to other type, example
+		//	// type A time.Time
+		//	// type A = time.Time
+		//	if ident, ok := next.X.(*ast.Ident); ok {
+		//		pkgName := ident.Name
+		//		pkgImportName := f.packageNameToPackageImport[pkgName]
+		//		f.shapes[f.currentType] = &RefName{
+		//			Name:          next.Sel.Name,
+		//			PkgName:       pkgName,
+		//			PkgImportName: pkgImportName,
+		//		}
+		//	} else {
+		//		log.Warnf("shape.InferFromFile: unknown selector X in  %s: %T\n", f.currentType, next)
+		//	}
+
 		case *ast.MapType:
-			f.shapes[f.currentType] = &MapLike{
-				Key:          FromAst(next.Key, InjectPkgName(f.PkgImportName, f.PackageName)),
-				Val:          FromAst(next.Value, InjectPkgName(f.PkgImportName, f.PackageName)),
-				KeyIsPointer: IsStarExpr(next.Key),
-				ValIsPointer: IsStarExpr(next.Value),
-				Named:        f.named(),
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       false,
+				Type: &MapLike{
+					Key:          FromAst(next.Key, InjectPkgName(f.PkgImportName, f.PackageName)),
+					Val:          FromAst(next.Value, InjectPkgName(f.PkgImportName, f.PackageName)),
+					KeyIsPointer: IsStarExpr(next.Key),
+					ValIsPointer: IsStarExpr(next.Value),
+				},
 			}
 
 		case *ast.ArrayType:
-			f.shapes[f.currentType] = &ListLike{
-				Element:          FromAst(next.Elt, InjectPkgName(f.PkgImportName, f.PackageName)),
-				ElementIsPointer: IsStarExpr(next.Elt),
-				Named:            f.named(),
-				ArrayLen:         tryGetArrayLen(next.Len),
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       false,
+				Type: &ListLike{
+					Element:          FromAst(next.Elt, InjectPkgName(f.PkgImportName, f.PackageName)),
+					ElementIsPointer: IsStarExpr(next.Elt),
+					ArrayLen:         tryGetArrayLen(next.Len),
+				},
 			}
 		}
 
@@ -360,14 +436,6 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	}
 
 	return f
-}
-
-func (f *InferredInfo) named() *Named {
-	return &Named{
-		Name:          f.currentType,
-		PkgName:       f.PackageName,
-		PkgImportName: f.PkgImportName,
-	}
 }
 
 func tryGetArrayLen(expr ast.Expr) *int {

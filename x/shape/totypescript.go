@@ -39,6 +39,9 @@ func ToTypeScriptOptimisation(x Shape) Shape {
 		func(x *RefName) Shape {
 			return x
 		},
+		func(x *AliasLike) Shape {
+			return x
+		},
 		func(x *BooleanLike) Shape {
 			return x
 		},
@@ -56,9 +59,7 @@ func ToTypeScriptOptimisation(x Shape) Shape {
 				// byte is uint8
 				// rune is int32
 				case *UInt8, *Int32:
-					return &StringLike{
-						Named: x.Named,
-					}
+					return &StringLike{}
 				}
 			}
 
@@ -101,37 +102,23 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
+		func(x *AliasLike) string {
+			return fmt.Sprintf("export type %s = %s", x.Name, ToTypeScript(x.Type, option))
+		},
 		func(x *BooleanLike) string {
-			if IsNamed(x) {
-				return fmt.Sprintf("export type %s = boolean", x.Named.Name)
-			}
 			return "boolean"
 		},
 		func(x *StringLike) string {
-			if IsNamed(x) {
-				return fmt.Sprintf("export type %s = string", x.Named.Name)
-			}
 			return "string"
 		},
 		func(x *NumberLike) string {
-			if IsNamed(x) {
-				return fmt.Sprintf("export type %s = number", x.Named.Name)
-			}
 			return "number"
 		},
 		func(x *ListLike) string {
-			result := fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
-			if IsNamed(x) {
-				return fmt.Sprintf("export type %s = %s", x.Named.Name, result)
-			}
-			return result
+			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
 		},
 		func(x *MapLike) string {
-			result := fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
-			if IsNamed(x) {
-				return fmt.Sprintf("export type %s = %s", x.Named.Name, result)
-			}
-			return result
+			return fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
 		},
 		func(x *StructLike) string {
 			result := &strings.Builder{}
@@ -272,87 +259,32 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 		func(x *RefName) string {
 			return x.Name
 		},
+		func(x *AliasLike) string {
+			typeName := x.Name
+			typeNameFul := fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+
+			result := &strings.Builder{}
+			result.WriteString("{\n")
+			_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
+			_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
+			_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
+			result.WriteString("\n}")
+
+			return result.String()
+		},
 		func(x *BooleanLike) string {
-			if IsNamed(x) {
-				typeName := x.Named.Name
-				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
-
-				result := &strings.Builder{}
-				result.WriteString("{\n")
-				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
-				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
-				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
-				result.WriteString("\n}")
-
-				return result.String()
-			}
 			return "boolean"
 		},
 		func(x *StringLike) string {
-			if IsNamed(x) {
-				typeName := x.Named.Name
-				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
-
-				result := &strings.Builder{}
-				result.WriteString("{\n")
-				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
-				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
-				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
-				result.WriteString("\n}")
-
-				return result.String()
-			}
-
 			return "string"
 		},
 		func(x *NumberLike) string {
-			if IsNamed(x) {
-				typeName := x.Named.Name
-				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
-
-				result := &strings.Builder{}
-				result.WriteString("{\n")
-				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
-				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
-				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
-				result.WriteString("\n}")
-
-				return result.String()
-			}
 			return "number"
 		},
 		func(x *ListLike) string {
-			if IsNamed(x) {
-				typeName := x.Named.Name
-				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
-
-				result := &strings.Builder{}
-				result.WriteString("{\n")
-				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
-				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
-				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
-				result.WriteString("\n}")
-
-				return result.String()
-			}
-
 			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
 		},
 		func(x *MapLike) string {
-			if IsNamed(x) {
-				typeName := x.Named.Name
-				typeNameFul := fmt.Sprintf("%s.%s", x.Named.PkgName, x.Named.Name)
-
-				result := &strings.Builder{}
-				result.WriteString("{\n")
-				_, _ = fmt.Fprintf(result, "\t"+`// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema`+"\n")
-				_, _ = fmt.Fprintf(result, "\t"+`"$type"?: "%s",`+"\n", typeNameFul)
-				_, _ = fmt.Fprintf(result, "\t"+`"%s": %s`, typeNameFul, typeName)
-				result.WriteString("\n}")
-
-				return result.String()
-			}
-
 			return fmt.Sprintf("{[key: %s]: %s}", ToTypeScript(x.Key, option), ToTypeScript(x.Val, option))
 		},
 		func(x *StructLike) string {

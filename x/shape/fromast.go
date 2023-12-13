@@ -86,86 +86,34 @@ func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {
 				y.PkgImportName = pkgImportName
 			}
 
-		case *StringLike:
-			isPkgNotSet := y.Named.PkgName == ""
+		case *StructLike:
+			isPkgNotSet := y.PkgName == ""
 			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
+				y.PkgName = pkgName
+				y.PkgImportName = pkgImportName
 			}
 
-		case *NumberLike:
-			isPkgNotSet := y.Named.PkgName == ""
+		case *UnionLike:
+			isPkgNotSet := y.PkgName == ""
 			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
+				y.PkgName = pkgName
+				y.PkgImportName = pkgImportName
 			}
 
-		case *BooleanLike:
-			isPkgNotSet := y.Named.PkgName == ""
+		case *AliasLike:
+			isPkgNotSet := y.PkgName == ""
 			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
-			}
-
-		case *ListLike:
-			isPkgNotSet := y.Named.PkgName == ""
-			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
-			}
-
-		case *MapLike:
-			isPkgNotSet := y.Named.PkgName == ""
-			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
+				y.PkgName = pkgName
+				y.PkgImportName = pkgImportName
 			}
 		}
 	}
 }
 
 func IsNamed(x Shape) bool {
-	switch y := x.(type) {
-	case *RefName, *StructLike, *UnionLike:
+	switch x.(type) {
+	case *RefName, *StructLike, *UnionLike, *AliasLike:
 		return true
-
-	case *StringLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *NumberLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *BooleanLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *ListLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *MapLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *Any:
-		return false
 	}
 
 	return false
