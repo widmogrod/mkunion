@@ -163,7 +163,13 @@ func LeafShape() shape.Shape {
 }
 
 func KShape() shape.Shape {
-	return &shape.StringLike{}
+	return &shape.AliasLike{
+		Name:          "K",
+		PkgName:       "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias:       false,
+		Type:          &shape.StringLike{},
+	}
 }
 
 // mkunion-extension:json
