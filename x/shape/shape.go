@@ -1,6 +1,6 @@
 package shape
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Shape
+// go:generate go run ../../cmd/mkunion/main.go -name=Shape
 type (
 	Any     struct{}
 	RefName struct {

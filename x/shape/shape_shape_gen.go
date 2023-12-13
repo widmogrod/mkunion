@@ -242,16 +242,6 @@ func BooleanLikeShape() Shape {
 		Name:          "BooleanLike",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Named",
-				Type: &RefName{
-					Name:          "Named",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-		},
 	}
 }
 
@@ -260,16 +250,6 @@ func StringLikeShape() Shape {
 		Name:          "StringLike",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Named",
-				Type: &RefName{
-					Name:          "Named",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-		},
 	}
 }
 
@@ -287,14 +267,6 @@ func NumberLikeShape() Shape {
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 				},
 			},
-			{
-				Name: "Named",
-				Type: &RefName{
-					Name:          "Named",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
 		},
 	}
 }
@@ -305,14 +277,6 @@ func ListLikeShape() Shape {
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 		Fields: []*FieldLike{
-			{
-				Name: "Named",
-				Type: &RefName{
-					Name:          "Named",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
 			{
 				Name: "Element",
 				Type: &RefName{
@@ -339,14 +303,6 @@ func MapLikeShape() Shape {
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 		Fields: []*FieldLike{
-			{
-				Name: "Named",
-				Type: &RefName{
-					Name:          "Named",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
 			{
 				Name: "Key",
 				Type: &RefName{
@@ -444,16 +400,16 @@ func UnionLikeShape() Shape {
 // mkunion-extension:json
 type ShapeUnionJSON struct {
 	Type        string          `json:"$type,omitempty"`
-	Any         json.RawMessage `json:"Any,omitempty"`
-	RefName     json.RawMessage `json:"RefName,omitempty"`
-	AliasLike   json.RawMessage `json:"AliasLike,omitempty"`
-	BooleanLike json.RawMessage `json:"BooleanLike,omitempty"`
-	StringLike  json.RawMessage `json:"StringLike,omitempty"`
-	NumberLike  json.RawMessage `json:"NumberLike,omitempty"`
-	ListLike    json.RawMessage `json:"ListLike,omitempty"`
-	MapLike     json.RawMessage `json:"MapLike,omitempty"`
-	StructLike  json.RawMessage `json:"StructLike,omitempty"`
-	UnionLike   json.RawMessage `json:"UnionLike,omitempty"`
+	Any         json.RawMessage `json:"shape.Any,omitempty"`
+	RefName     json.RawMessage `json:"shape.RefName,omitempty"`
+	AliasLike   json.RawMessage `json:"shape.AliasLike,omitempty"`
+	BooleanLike json.RawMessage `json:"shape.BooleanLike,omitempty"`
+	StringLike  json.RawMessage `json:"shape.StringLike,omitempty"`
+	NumberLike  json.RawMessage `json:"shape.NumberLike,omitempty"`
+	ListLike    json.RawMessage `json:"shape.ListLike,omitempty"`
+	MapLike     json.RawMessage `json:"shape.MapLike,omitempty"`
+	StructLike  json.RawMessage `json:"shape.StructLike,omitempty"`
+	UnionLike   json.RawMessage `json:"shape.UnionLike,omitempty"`
 }
 
 func ShapeFromJSON(x []byte) (Shape, error) {
@@ -464,25 +420,25 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 	}
 
 	switch data.Type {
-	case "Any":
+	case "shape.Any":
 		return AnyFromJSON(data.Any)
-	case "RefName":
+	case "shape.RefName":
 		return RefNameFromJSON(data.RefName)
-	case "AliasLike":
+	case "shape.AliasLike":
 		return AliasLikeFromJSON(data.AliasLike)
-	case "BooleanLike":
+	case "shape.BooleanLike":
 		return BooleanLikeFromJSON(data.BooleanLike)
-	case "StringLike":
+	case "shape.StringLike":
 		return StringLikeFromJSON(data.StringLike)
-	case "NumberLike":
+	case "shape.NumberLike":
 		return NumberLikeFromJSON(data.NumberLike)
-	case "ListLike":
+	case "shape.ListLike":
 		return ListLikeFromJSON(data.ListLike)
-	case "MapLike":
+	case "shape.MapLike":
 		return MapLikeFromJSON(data.MapLike)
-	case "StructLike":
+	case "shape.StructLike":
 		return StructLikeFromJSON(data.StructLike)
-	case "UnionLike":
+	case "shape.UnionLike":
 		return UnionLikeFromJSON(data.UnionLike)
 	}
 
@@ -524,7 +480,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type: "Any",
+				Type: "shape.Any",
 				Any:  body,
 			})
 		},
@@ -535,7 +491,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:    "RefName",
+				Type:    "shape.RefName",
 				RefName: body,
 			})
 		},
@@ -546,7 +502,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:      "AliasLike",
+				Type:      "shape.AliasLike",
 				AliasLike: body,
 			})
 		},
@@ -557,7 +513,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:        "BooleanLike",
+				Type:        "shape.BooleanLike",
 				BooleanLike: body,
 			})
 		},
@@ -568,7 +524,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:       "StringLike",
+				Type:       "shape.StringLike",
 				StringLike: body,
 			})
 		},
@@ -579,7 +535,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:       "NumberLike",
+				Type:       "shape.NumberLike",
 				NumberLike: body,
 			})
 		},
@@ -590,7 +546,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:     "ListLike",
+				Type:     "shape.ListLike",
 				ListLike: body,
 			})
 		},
@@ -601,7 +557,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:    "MapLike",
+				Type:    "shape.MapLike",
 				MapLike: body,
 			})
 		},
@@ -612,7 +568,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:       "StructLike",
+				Type:       "shape.StructLike",
 				StructLike: body,
 			})
 		},
@@ -623,7 +579,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:      "UnionLike",
+				Type:      "shape.UnionLike",
 				UnionLike: body,
 			})
 		},
@@ -637,7 +593,7 @@ func AnyFromJSON(x []byte) (*Any, error) {
 		switch key {
 		}
 
-		return fmt.Errorf("AnyFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.AnyFromJSON: unknown key %s", key)
 	})
 
 	return result, err
@@ -672,7 +628,7 @@ func RefNameFromJSON(x []byte) (*RefName, error) {
 			return json.Unmarshal(value, &result.PkgImportName)
 		}
 
-		return fmt.Errorf("RefNameFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.RefNameFromJSON: unknown key %s", key)
 	})
 
 	return result, err
@@ -726,13 +682,13 @@ func AliasLikeFromJSON(x []byte) (*AliasLike, error) {
 		case "Type":
 			res, err := ShapeFromJSON(value)
 			if err != nil {
-				return fmt.Errorf("_FromJSON: field Shape %w", err)
+				return fmt.Errorf("shape._FromJSON: field Shape %w", err)
 			}
 			result.Type = res
 			return nil
 		}
 
-		return fmt.Errorf("AliasLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.AliasLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
@@ -785,19 +741,16 @@ func BooleanLikeFromJSON(x []byte) (*BooleanLike, error) {
 	// if is Struct
 	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
-		case "Named":
 		}
 
-		return fmt.Errorf("BooleanLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.BooleanLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
 }
 
 func BooleanLikeToJSON(x *BooleanLike) ([]byte, error) {
-	return json.Marshal(map[string]json.RawMessage{
-		"Named": nil,
-	})
+	return json.Marshal(map[string]json.RawMessage{})
 }
 func (self *BooleanLike) MarshalJSON() ([]byte, error) {
 	return BooleanLikeToJSON(self)
@@ -817,23 +770,16 @@ func StringLikeFromJSON(x []byte) (*StringLike, error) {
 	// if is Struct
 	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
-		case "Named":
 		}
 
-		return fmt.Errorf("StringLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.StringLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
 }
 
 func StringLikeToJSON(x *StringLike) ([]byte, error) {
-	field_Named, err := json.Marshal(nil)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(map[string]json.RawMessage{
-		"Named": field_Named,
-	})
+	return json.Marshal(map[string]json.RawMessage{})
 }
 func (self *StringLike) MarshalJSON() ([]byte, error) {
 	return StringLikeToJSON(self)
@@ -856,14 +802,13 @@ func NumberLikeFromJSON(x []byte) (*NumberLike, error) {
 		case "Kind":
 			res, err := NumberKindFromJSON(value)
 			if err != nil {
-				return fmt.Errorf("_FromJSON: field NumberKind %w", err)
+				return fmt.Errorf("shape._FromJSON: field NumberKind %w", err)
 			}
 			result.Kind = res
 			return nil
-		case "Named":
 		}
 
-		return fmt.Errorf("NumberLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.NumberLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
@@ -874,13 +819,8 @@ func NumberLikeToJSON(x *NumberLike) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	field_Named, err := json.Marshal(nil)
-	if err != nil {
-		return nil, err
-	}
 	return json.Marshal(map[string]json.RawMessage{
-		"Kind":  field_Kind,
-		"Named": field_Named,
+		"Kind": field_Kind,
 	})
 }
 func (self *NumberLike) MarshalJSON() ([]byte, error) {
@@ -901,11 +841,10 @@ func ListLikeFromJSON(x []byte) (*ListLike, error) {
 	// if is Struct
 	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
-		case "Named":
 		case "Element":
 			res, err := ShapeFromJSON(value)
 			if err != nil {
-				return fmt.Errorf("_FromJSON: field Shape %w", err)
+				return fmt.Errorf("shape._FromJSON: field Shape %w", err)
 			}
 			result.Element = res
 			return nil
@@ -915,17 +854,13 @@ func ListLikeFromJSON(x []byte) (*ListLike, error) {
 			return json.Unmarshal(value, &result.ArrayLen)
 		}
 
-		return fmt.Errorf("ListLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.ListLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
 }
 
 func ListLikeToJSON(x *ListLike) ([]byte, error) {
-	field_Named, err := json.Marshal(nil)
-	if err != nil {
-		return nil, err
-	}
 	field_Element, err := ShapeToJSON(x.Element)
 	if err != nil {
 		return nil, err
@@ -939,7 +874,6 @@ func ListLikeToJSON(x *ListLike) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(map[string]json.RawMessage{
-		"Named":            field_Named,
 		"Element":          field_Element,
 		"ElementIsPointer": field_ElementIsPointer,
 		"ArrayLen":         field_ArrayLen,
@@ -963,18 +897,17 @@ func MapLikeFromJSON(x []byte) (*MapLike, error) {
 	// if is Struct
 	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
-		case "Named":
 		case "Key":
 			res, err := ShapeFromJSON(value)
 			if err != nil {
-				return fmt.Errorf("_FromJSON: field Shape %w", err)
+				return fmt.Errorf("shape._FromJSON: field Shape %w", err)
 			}
 			result.Key = res
 			return nil
 		case "Val":
 			res, err := ShapeFromJSON(value)
 			if err != nil {
-				return fmt.Errorf("_FromJSON: field Shape %w", err)
+				return fmt.Errorf("shape._FromJSON: field Shape %w", err)
 			}
 			result.Val = res
 			return nil
@@ -984,17 +917,13 @@ func MapLikeFromJSON(x []byte) (*MapLike, error) {
 			return json.Unmarshal(value, &result.ValIsPointer)
 		}
 
-		return fmt.Errorf("MapLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.MapLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
 }
 
 func MapLikeToJSON(x *MapLike) ([]byte, error) {
-	field_Named, err := json.Marshal(nil)
-	if err != nil {
-		return nil, err
-	}
 	field_Key, err := ShapeToJSON(x.Key)
 	if err != nil {
 		return nil, err
@@ -1012,7 +941,6 @@ func MapLikeToJSON(x *MapLike) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(map[string]json.RawMessage{
-		"Named":        field_Named,
 		"Key":          field_Key,
 		"Val":          field_Val,
 		"KeyIsPointer": field_KeyIsPointer,
@@ -1047,7 +975,7 @@ func StructLikeFromJSON(x []byte) (*StructLike, error) {
 			return json.Unmarshal(value, &result.Fields)
 		}
 
-		return fmt.Errorf("StructLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.StructLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
@@ -1104,13 +1032,13 @@ func UnionLikeFromJSON(x []byte) (*UnionLike, error) {
 		case "Variant":
 			res, err := shared.JSONToListWithDeserializer(value, result.Variant, ShapeFromJSON)
 			if err != nil {
-				return fmt.Errorf("_FromJSON: field Shape %w", err)
+				return fmt.Errorf("shape._FromJSON: field Shape %w", err)
 			}
 			result.Variant = res
 			return nil
 		}
 
-		return fmt.Errorf("UnionLikeFromJSON: unknown key %s", key)
+		return fmt.Errorf("shape.UnionLikeFromJSON: unknown key %s", key)
 	})
 
 	return result, err
