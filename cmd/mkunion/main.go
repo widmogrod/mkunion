@@ -298,7 +298,7 @@ func main() {
 							tsr.AddUnion(union)
 						}
 
-						for _, structLike := range inferred.RetrieveStruct() {
+						for _, structLike := range inferred.RetrieveStructs() {
 							tsr.AddStruct(structLike)
 						}
 					}

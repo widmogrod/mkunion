@@ -142,9 +142,9 @@ var (
 	visitorTmpl string
 )
 
-func NewVisitorGenerator(union shape.UnionLike, helper *Helpers) *VisitorGenerator {
+func NewVisitorGenerator(union *shape.UnionLike, helper *Helpers) *VisitorGenerator {
 	return &VisitorGenerator{
-		Union:    union,
+		Union:    *union,
 		template: template.Must(template.New("visitor_generator.go.tmpl").Funcs(helper.Func()).Parse(visitorTmpl)),
 	}
 }

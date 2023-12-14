@@ -12,7 +12,7 @@ var (
 	visitorSchemaTmpl string
 )
 
-func NewSchemaGenerator(union shape.UnionLike, helper *Helpers) *SchemaGenerator {
+func NewSchemaGenerator(union *shape.UnionLike, helper *Helpers) *SchemaGenerator {
 	return &SchemaGenerator{
 		Union:    union,
 		template: template.Must(template.New("schema_generator.go.tmpl").Funcs(helper.Func()).Parse(visitorSchemaTmpl)),
@@ -20,7 +20,7 @@ func NewSchemaGenerator(union shape.UnionLike, helper *Helpers) *SchemaGenerator
 }
 
 type SchemaGenerator struct {
-	Union    shape.UnionLike
+	Union    *shape.UnionLike
 	template *template.Template
 }
 

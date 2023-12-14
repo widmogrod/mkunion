@@ -14,9 +14,9 @@ var (
 	shapeTmpl string
 )
 
-func NewShapeGenerator(union shape.UnionLike, helper *Helpers) *ShapeGenerator {
+func NewShapeGenerator(union *shape.UnionLike, helper *Helpers) *ShapeGenerator {
 	return &ShapeGenerator{
-		Union:    union,
+		Union:    *union,
 		template: template.Must(template.New("shape_generator.go.tmpl").Funcs(helper.Func()).Parse(shapeTmpl)),
 	}
 }

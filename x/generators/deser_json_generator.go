@@ -14,7 +14,7 @@ var (
 	deserJSONTmpl string
 )
 
-func NewDeSerJSONGenerator(union shape.UnionLike, helper *Helpers) *DeSerJSONGenerator {
+func NewDeSerJSONGenerator(union *shape.UnionLike, helper *Helpers) *DeSerJSONGenerator {
 	return &DeSerJSONGenerator{
 		Union:    union,
 		helper:   helper,
@@ -23,7 +23,7 @@ func NewDeSerJSONGenerator(union shape.UnionLike, helper *Helpers) *DeSerJSONGen
 }
 
 type DeSerJSONGenerator struct {
-	Union    shape.UnionLike
+	Union    *shape.UnionLike
 	helper   *Helpers
 	template *template.Template
 }
