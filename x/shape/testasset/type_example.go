@@ -24,7 +24,11 @@ type (
 	// and interface cannot have methods implemented as Visitor pattern requires
 	L = List
 	M List
-	O time.Duration
+	N time.Duration
+	O ListOf[time.Duration]
+	P ListOf2[ListOf[any], *ListOf2[int64, *time.Duration]]
 )
 
 type List struct{}
+type ListOf[T any] struct{}
+type ListOf2[T1, T2 any] struct{}

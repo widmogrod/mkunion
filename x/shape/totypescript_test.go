@@ -12,10 +12,9 @@ func TestTypeScriptSchemaGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	union := inferred.RetrieveUnion("Example")
-
 	tsr := NewTypeScriptRenderer()
-	tsr.AddUnion(&union)
+	tsr.AddUnion(inferred.RetrieveUnion("Example"))
+	tsr.AddStruct(inferred.RetrieveStruct("ListOf2"))
 
 	tsr.AddStruct(&StructLike{
 		Name:          "SomeStruct",
@@ -83,8 +82,16 @@ export type Example = {
 	"testasset.M": M
 } | {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
+	"$type"?: "testasset.N",
+	"testasset.N": N
+} | {
+	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "testasset.O",
 	"testasset.O": O
+} | {
+	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
+	"$type"?: "testasset.P",
+	"testasset.P": P
 }
 
 export type A = {
@@ -107,8 +114,13 @@ export type J = string[]
 export type K = A
 export type L = List
 export type M = List
-export type O = time.Duration
+export type N = time.Duration
+export type O = ListOf<time.Duration>
+export type P = ListOf2<ListOf<any>, ListOf2<number, time.Duration>>
+export type ListOf2<T1, T2> = {}
 
+//eslint-disable-next-line
+import * as testasset from './github_com_widmogrod_mkunion_x_shape_testasset'
 //eslint-disable-next-line
 import * as time from './time'
 `

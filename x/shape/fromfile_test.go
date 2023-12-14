@@ -67,6 +67,7 @@ func TestInferFromFile(t *testing.T) {
 							Name:          "A",
 							PkgName:       "testasset",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							IsPointer:     true,
 						},
 						Desc:      nil,
 						Guard:     nil,
@@ -79,6 +80,7 @@ func TestInferFromFile(t *testing.T) {
 							Name:          "Time",
 							PkgName:       "time",
 							PkgImportName: "time",
+							IsPointer:     true,
 						},
 						Desc:      nil,
 						Guard:     nil,
@@ -192,7 +194,7 @@ func TestInferFromFile(t *testing.T) {
 				},
 			},
 			&AliasLike{
-				Name:          "O",
+				Name:          "N",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				IsAlias:       false,
@@ -202,10 +204,90 @@ func TestInferFromFile(t *testing.T) {
 					PkgImportName: "time",
 				},
 			},
+			&AliasLike{
+				Name:          "O",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					IsPointer:     false,
+					Indexed: []Shape{
+						&RefName{
+							Name:          "Duration",
+							PkgName:       "time",
+							PkgImportName: "time",
+						},
+					},
+				},
+			},
+			&AliasLike{
+				Name:          "P",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "ListOf2",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					IsPointer:     false,
+					Indexed: []Shape{
+						&RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							IsPointer:     false,
+							Indexed: []Shape{
+								&Any{},
+							},
+						},
+						&RefName{
+							Name:          "ListOf2",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							IsPointer:     true,
+							Indexed: []Shape{
+								&NumberLike{
+									Kind: &Int64{},
+								},
+								&RefName{
+									Name:          "Duration",
+									PkgName:       "time",
+									PkgImportName: "time",
+									IsPointer:     true,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
-	if diff := cmp.Diff(expected, &union); diff != "" {
+	if diff := cmp.Diff(expected, union); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+
+	strut := inferred.RetrieveStruct("ListOf2")
+	expected2 := &StructLike{
+		Name:          "ListOf2",
+		PkgName:       "testasset",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+		TypeParams: []TypeParam{
+			{
+				Name: "T1",
+				Type: &Any{},
+			},
+			{
+				Name: "T2",
+				Type: &Any{},
+			},
+		},
+		Fields: nil,
+	}
+	if diff := cmp.Diff(expected2, strut); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
 }

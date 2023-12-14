@@ -1,6 +1,7 @@
 package shape
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"go/ast"
 )
@@ -33,7 +34,10 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 			}
 
 			result := &RefName{
-				Name: y.String(),
+				Name:          y.String(),
+				PkgName:       "",
+				PkgImportName: "",
+				Indexed:       nil,
 			}
 
 			for _, f := range fx {
@@ -41,6 +45,26 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 			}
 
 			return result
+		}
+
+	case *ast.IndexExpr:
+		result := FromAst(y.X, fx...)
+		switch z := result.(type) {
+		case *RefName:
+			z.Indexed = append(z.Indexed, FromAst(y.Index, fx...))
+			return z
+		}
+
+		panic(fmt.Errorf("shape.FromAst: unsupported IndexExpr: %#v", y))
+
+	case *ast.IndexListExpr:
+		result := FromAst(y.X, fx...)
+		switch z := result.(type) {
+		case *RefName:
+			for _, x := range y.Indices {
+				z.Indexed = append(z.Indexed, FromAst(x, fx...))
+			}
+			return z
 		}
 
 	case *ast.ArrayType:
@@ -58,10 +82,42 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 		}
 
 	case *ast.SelectorExpr:
-		return FromAst(y.X, fx...)
+		switch z := y.X.(type) {
+		case *ast.Ident:
+			var result Shape
+			if y.Sel != nil {
+				result = &RefName{
+					Name:          y.Sel.String(),
+					PkgName:       z.Name,
+					PkgImportName: "",
+					//IsPointer: IsStarExpr(y),
+					Indexed: nil,
+				}
+			} else {
+				result = &RefName{
+					Name:          z.Name,
+					PkgName:       "",
+					PkgImportName: "",
+					Indexed:       nil,
+				}
+			}
+			for _, f := range fx {
+				f(result)
+			}
+
+			return result
+		}
+
+		panic(fmt.Errorf("shape.FromAst: unsupported SelectorExpr: %#v", y))
 
 	case *ast.StarExpr:
-		return FromAst(y.X, fx...)
+		result := FromAst(y.X, fx...)
+		switch z := result.(type) {
+		case *RefName:
+			z.IsPointer = true
+		}
+
+		return result
 	}
 
 	return &Any{}
@@ -72,6 +128,35 @@ func IsStarExpr(x ast.Expr) bool {
 	return ok
 }
 
+func InjectPkgImportName(pkgNameToImportName map[string]string) func(x Shape) {
+	return func(x Shape) {
+		switch y := x.(type) {
+		case *RefName:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				y.PkgImportName = pkgNameToImportName[y.PkgName]
+			}
+
+		case *StructLike:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				y.PkgImportName = pkgNameToImportName[y.PkgName]
+			}
+
+		case *UnionLike:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				y.PkgImportName = pkgNameToImportName[y.PkgName]
+			}
+
+		case *AliasLike:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				y.PkgImportName = pkgNameToImportName[y.PkgName]
+			}
+		}
+	}
+}
 func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {
 	return func(x Shape) {
 		if !IsNamed(x) {

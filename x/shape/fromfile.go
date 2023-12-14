@@ -101,7 +101,19 @@ func (f *InferredInfo) PossibleVariantsTypes(unionName string) []string {
 	return f.possibleVariantTypes[unionName]
 }
 
-func (f *InferredInfo) StructShapeWith(name string) *StructLike {
+func (f *InferredInfo) RetrieveUnions() []*UnionLike {
+	result := make([]*UnionLike, 0)
+	for unionName := range f.possibleVariantTypes {
+		union := f.RetrieveUnion(unionName)
+		if union != nil {
+			result = append(result, union)
+		}
+	}
+
+	return result
+}
+
+func (f *InferredInfo) RetrieveStruct(name string) *StructLike {
 	result, ok := f.shapes[name].(*StructLike)
 	if !ok {
 		return nil
@@ -110,23 +122,17 @@ func (f *InferredInfo) StructShapeWith(name string) *StructLike {
 	return result
 }
 
-func (f *InferredInfo) RetrieveUnions() []*UnionLike {
-	result := make([]*UnionLike, 0)
-	for unionName := range f.possibleVariantTypes {
-		union := f.RetrieveUnion(unionName)
-		result = append(result, &union)
-	}
-
-	return result
-}
-
-func (f *InferredInfo) RetrieveUnion(name string) UnionLike {
+func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 	var variants []Shape
 	for _, variant := range f.possibleVariantTypes[name] {
 		variants = append(variants, f.shapes[variant])
 	}
 
-	return UnionLike{
+	if len(variants) == 0 {
+		return nil
+	}
+
+	return &UnionLike{
 		Name:          name,
 		PkgName:       f.PackageName,
 		PkgImportName: f.PkgImportName,
@@ -134,7 +140,7 @@ func (f *InferredInfo) RetrieveUnion(name string) UnionLike {
 	}
 }
 
-func (f *InferredInfo) RetrieveStruct() []*StructLike {
+func (f *InferredInfo) RetrieveStructs() []*StructLike {
 	structs := make(map[string]*StructLike)
 	for _, structShape := range f.shapes {
 		switch x := structShape.(type) {
@@ -219,7 +225,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
-					IsAlias:       t.Assign != 0,
+					IsAlias:       IsAlias(t),
 					Type:          &StringLike{},
 				}
 
@@ -230,7 +236,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
-					IsAlias:       t.Assign != 0,
+					IsAlias:       IsAlias(t),
 					Type: &NumberLike{
 						Kind: TypeStringToNumberKindMap[next.Name],
 					},
@@ -241,16 +247,19 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
-					IsAlias:       t.Assign != 0,
+					IsAlias:       IsAlias(t),
 					Type:          &BooleanLike{},
 				}
 
 			default:
+				// alias type from the same package
+				// example
+				//  type A ListOf
 				f.shapes[f.currentType] = &AliasLike{
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
-					IsAlias:       t.Assign != 0,
+					IsAlias:       IsAlias(t),
 					Type: &RefName{
 						Name:          next.Name,
 						PkgName:       f.PackageName,
@@ -260,20 +269,52 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			}
 
 		case *ast.SelectorExpr:
+			// alias type from other packages
+			// example:
+			//  type A time.Time
 			f.shapes[f.currentType] = &AliasLike{
 				Name:          f.currentType,
 				PkgName:       f.PackageName,
 				PkgImportName: f.PkgImportName,
-				IsAlias:       t.Assign != 0,
+				IsAlias:       IsAlias(t),
 				Type:          f.selectExrToShape(next),
 			}
 
-		case *ast.MapType:
+		case *ast.IndexExpr:
+			// alias of type that has one type params initialized
+			// example:
+			//  type A ListOf[any]
+			//  type B ListOf[ListOf[any]]
 			f.shapes[f.currentType] = &AliasLike{
 				Name:          f.currentType,
 				PkgName:       f.PackageName,
 				PkgImportName: f.PkgImportName,
-				IsAlias:       false,
+				IsAlias:       IsAlias(t),
+				Type:          FromAst(next, InjectPkgImportName(f.packageNameToPackageImport), InjectPkgName(f.PkgImportName, f.PackageName)),
+			}
+
+		case *ast.IndexListExpr:
+			// alias of type that has two type params initialized
+			// example:
+			//  type A ListOf2[string, int]
+			//  type B ListOf2[ListOf2[string, int], ListOf2[string, int]]
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       IsAlias(t),
+				Type:          FromAst(next, InjectPkgImportName(f.packageNameToPackageImport), InjectPkgName(f.PkgImportName, f.PackageName)),
+			}
+
+		case *ast.MapType:
+			// example:
+			//  type A map[string]string
+			//  type B map[string]ListOf2[string, int]
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       IsAlias(t),
 				Type: &MapLike{
 					Key:          FromAst(next.Key, InjectPkgName(f.PkgImportName, f.PackageName)),
 					Val:          FromAst(next.Value, InjectPkgName(f.PkgImportName, f.PackageName)),
@@ -287,13 +328,22 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.PackageName,
 				PkgImportName: f.PkgImportName,
-				IsAlias:       false,
+				IsAlias:       IsAlias(t),
 				Type: &ListLike{
 					Element:          FromAst(next.Elt, InjectPkgName(f.PkgImportName, f.PackageName)),
 					ElementIsPointer: IsStarExpr(next.Elt),
 					ArrayLen:         tryGetArrayLen(next.Len),
 				},
 			}
+
+		case *ast.StructType:
+			f.shapes[f.currentType] = &StructLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
+			}
+
 		}
 
 	case *ast.StructType:
@@ -346,9 +396,11 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				case *ast.StarExpr:
 					if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
 						typ = f.selectExrToShape(selector)
+						switch x := typ.(type) {
+						case *RefName:
+							x.IsPointer = true
+						}
 					} else {
-						// same package
-						log.Infof("shape.InferFromFile: unknown star-else in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
 						typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
 					}
 
@@ -387,6 +439,10 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	return f
 }
 
+func IsAlias(t *ast.TypeSpec) bool {
+	return t.Assign != 0
+}
+
 func (f *InferredInfo) selectExrToShape(ttt *ast.SelectorExpr) Shape {
 	if ident, ok := ttt.X.(*ast.Ident); ok {
 		pkgName := ident.Name
@@ -395,6 +451,36 @@ func (f *InferredInfo) selectExrToShape(ttt *ast.SelectorExpr) Shape {
 	}
 
 	return FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
+}
+
+func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
+	if params == nil {
+		return nil
+	}
+
+	var result []TypeParam
+	for _, param := range params.List {
+		typ := FromAst(param.Type,
+			InjectPkgImportName(f.packageNameToPackageImport),
+			InjectPkgName(f.PkgImportName, f.PackageName))
+
+		if len(param.Names) == 0 {
+			result = append(result, TypeParam{
+				Name: param.Type.(*ast.Ident).Name,
+				Type: typ,
+			})
+			continue
+		}
+
+		for _, name := range param.Names {
+			result = append(result, TypeParam{
+				Name: name.Name,
+				Type: typ,
+			})
+		}
+	}
+
+	return result
 }
 
 func tryGetArrayLen(expr ast.Expr) *int {

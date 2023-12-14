@@ -7,7 +7,8 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
-		//Indexed []Shape
+		IsPointer     bool
+		Indexed       []Shape
 	}
 	AliasLike struct {
 		Name          string
@@ -47,6 +48,7 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
+		TypeParams    []TypeParam
 		Fields        []*FieldLike
 	}
 	UnionLike struct {
@@ -56,6 +58,11 @@ type (
 		Variant       []Shape
 	}
 )
+
+type TypeParam struct {
+	Name string
+	Type Shape
+}
 
 // go:generate go run ../../cmd/mkunion/main.go -name=NumberKind
 type (

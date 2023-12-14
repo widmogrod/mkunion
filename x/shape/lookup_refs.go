@@ -59,7 +59,7 @@ func LookupShape(x *RefName) (Shape, bool) {
 				return fmt.Errorf("shape.LookupShape: error during infer %w", err)
 			}
 
-			for _, y := range inferred.RetrieveStruct() {
+			for _, y := range inferred.RetrieveStructs() {
 				cache.Store(StructFullName(y), y)
 			}
 			for _, y := range inferred.RetrieveUnions() {

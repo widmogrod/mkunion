@@ -94,13 +94,22 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 			return "any"
 		},
 		func(x *RefName) string {
-			if option.IsCurrentPkgName(x.PkgName) {
-				return x.Name
+			prefix := ""
+			if !option.IsCurrentPkgName(x.PkgName) {
+				prefix = fmt.Sprintf("%s.", x.PkgName)
 			}
 
 			option.NeedsToImportPkgName(x.PkgName, x.PkgImportName)
 
-			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+			if len(x.Indexed) > 0 {
+				var names []string
+				for _, name := range x.Indexed {
+					names = append(names, toTypeTypeScriptTypeName(name, option))
+				}
+				return fmt.Sprintf("%s%s<%s>", prefix, x.Name, strings.Join(names, ", "))
+			}
+
+			return fmt.Sprintf("%s%s", prefix, x.Name)
 		},
 		func(x *AliasLike) string {
 			return fmt.Sprintf("export type %s = %s", x.Name, ToTypeScript(x.Type, option))
@@ -122,9 +131,25 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 		},
 		func(x *StructLike) string {
 			result := &strings.Builder{}
-			_, _ = fmt.Fprintf(result, "export type %s = {\n", x.Name)
-			for _, field := range x.Fields {
-				result.WriteString(fmt.Sprintf("\t%s?: %s,\n", field.Name, ToTypeScript(field.Type, option)))
+			_, _ = fmt.Fprintf(result, "export type %s", x.Name)
+			if len(x.TypeParams) > 0 {
+				_, _ = fmt.Fprintf(result, "<")
+				for i, params := range x.TypeParams {
+					if i > 0 {
+						_, _ = fmt.Fprintf(result, ", ")
+					}
+					_, _ = fmt.Fprintf(result, "%s", params.Name)
+
+				}
+				_, _ = fmt.Fprintf(result, ">")
+			}
+
+			_, _ = fmt.Fprintf(result, " = {")
+			if len(x.Fields) > 0 {
+				_, _ = fmt.Fprintf(result, "\n")
+				for _, field := range x.Fields {
+					result.WriteString(fmt.Sprintf("\t%s?: %s,\n", field.Name, ToTypeScript(field.Type, option)))
+				}
 			}
 			result.WriteString("}")
 			result.WriteString("\n")
@@ -257,9 +282,22 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 			return "any"
 		},
 		func(x *RefName) string {
-			return x.Name
+			prefix := ""
+			if !option.IsCurrentPkgName(x.PkgName) {
+				prefix = fmt.Sprintf("%s.", x.PkgName)
+			}
+
+			if len(x.Indexed) > 0 {
+				var names []string
+				for _, name := range x.Indexed {
+					names = append(names, toTypeTypeScriptTypeName(name, option))
+				}
+				return fmt.Sprintf("%s%s<%s>", prefix, x.Name, strings.Join(names, ", "))
+			}
+			return prefix + x.Name
 		},
 		func(x *AliasLike) string {
+			//typeName := toTypeTypeScriptTypeName(x.Type, option)
 			typeName := x.Name
 			typeNameFul := fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 

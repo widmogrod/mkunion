@@ -60,6 +60,20 @@ func TestFromGoo(t *testing.T) {
 									Name: "PkgImportName",
 									Type: &StringLike{},
 								},
+								{
+									Name: "IsPointer",
+									Type: &BooleanLike{},
+								},
+								{
+									Name: "Indexed",
+									Type: &ListLike{
+										Element: &RefName{
+											Name:          "Shape",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
+									},
+								},
 							},
 						},
 						&StructLike{
@@ -238,6 +252,30 @@ func TestFromGoo(t *testing.T) {
 								{
 									Name: "PkgImportName",
 									Type: &StringLike{},
+								},
+								{
+									Name: "TypeParams",
+									Type: &ListLike{
+										Element: &StructLike{
+											Name:          "TypeParam",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+											Fields: []*FieldLike{
+												{
+													Name: "Name",
+													Type: &StringLike{},
+												},
+												{
+													Name: "Type",
+													Type: &RefName{
+														Name:          "Shape",
+														PkgName:       "shape",
+														PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+													},
+												},
+											},
+										},
+									},
 								},
 								{
 									Name: "Fields",
