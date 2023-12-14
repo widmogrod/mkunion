@@ -12,6 +12,7 @@ type TreeUnionJSON struct {
 	Branch json.RawMessage `json:"testutils.Branch,omitempty"`
 	Leaf json.RawMessage `json:"testutils.Leaf,omitempty"`
 	K json.RawMessage `json:"testutils.K,omitempty"`
+	P json.RawMessage `json:"testutils.P,omitempty"`
 }
 
 func TreeFromJSON(x []byte) (Tree, error) {
@@ -28,6 +29,8 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return LeafFromJSON(data.Leaf)
 	case "testutils.K":
 		return KFromJSON(data.K)
+	case "testutils.P":
+		return PFromJSON(data.P)
 	}
 
 	if data.Branch != nil {
@@ -36,6 +39,8 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return LeafFromJSON(data.Leaf)
 	} else if data.K != nil {
 		return KFromJSON(data.K)
+	} else if data.P != nil {
+		return PFromJSON(data.P)
 	}
 
 	return nil, fmt.Errorf("unknown type %s", data.Type)
@@ -78,6 +83,17 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.K",
 				K: body,
+			})
+		},
+		func(x *P) ([]byte, error) {
+			body, err := PToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(TreeUnionJSON{
+				Type: "testutils.P",
+				P: body,
 			})
 		},
 	)
@@ -194,5 +210,16 @@ func KFromJSON(x []byte) (*K, error) {
 }
 
 func KToJSON(x *K) ([]byte, error) {
+	return json.Marshal(x)
+}
+
+func PFromJSON(x []byte) (*P, error) {
+	var result *P = new(P)
+	err := json.Unmarshal(x, result)
+
+	return result, err
+}
+
+func PToJSON(x *P) ([]byte, error) {
 	return json.Marshal(x)
 }

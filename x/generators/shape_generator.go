@@ -88,6 +88,16 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
 			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
 			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
+			fmt.Fprintf(result, "\tIsPointer: %v,\n", x.IsPointer)
+
+			if len(x.Indexed) > 0 {
+				fmt.Fprintf(result, "\tIndexed: []shape.Shape{\n")
+				for _, indexed := range x.Indexed {
+					fmt.Fprintf(result, "\t\t%s,\n", g.ShapeToString(indexed, 2))
+				}
+				fmt.Fprintf(result, "\t},\n")
+			}
+
 			fmt.Fprintf(result, "}")
 
 			return g.padLeft(depth, result.String())
@@ -100,7 +110,7 @@ func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
 			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
 			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
 			fmt.Fprintf(result, "\tIsAlias: %v,\n", x.IsAlias)
-			fmt.Fprintf(result, "\tType: %s,\n", g.ShapeToString(x.Type, 0))
+			fmt.Fprintf(result, "\tType: %s,\n", strings.TrimLeft(g.ShapeToString(x.Type, 1), "\t"))
 			fmt.Fprintf(result, "}")
 
 			return g.padLeft(depth, result.String())

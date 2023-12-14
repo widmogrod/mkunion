@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestDeSerJsonGeneration(t *testing.T) {
+func TestSchemaGenerator(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
@@ -33,6 +33,7 @@ func TreeSchemaDef() *schema.UnionVariants[Tree] {
 		new(Branch),
 		new(Leaf),
 		new(K),
+		new(P),
 	)
 }
 `, string(result))

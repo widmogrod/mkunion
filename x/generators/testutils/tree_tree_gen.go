@@ -14,6 +14,7 @@ type TreeVisitor interface {
 	VisitBranch(v *Branch) any
 	VisitLeaf(v *Leaf) any
 	VisitK(v *K) any
+	VisitP(v *P) any
 }
 
 type Tree interface {
@@ -23,11 +24,13 @@ type Tree interface {
 func (r *Branch) AcceptTree(v TreeVisitor) any { return v.VisitBranch(r) }
 func (r *Leaf) AcceptTree(v TreeVisitor) any   { return v.VisitLeaf(r) }
 func (r *K) AcceptTree(v TreeVisitor) any      { return v.VisitK(r) }
+func (r *P) AcceptTree(v TreeVisitor) any      { return v.VisitP(r) }
 
 var (
 	_ Tree = (*Branch)(nil)
 	_ Tree = (*Leaf)(nil)
 	_ Tree = (*K)(nil)
+	_ Tree = (*P)(nil)
 )
 
 func MatchTree[TOut any](
@@ -35,9 +38,10 @@ func MatchTree[TOut any](
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
 	f3 func(x *K) TOut,
+	f4 func(x *P) TOut,
 	df func(x Tree) TOut,
 ) TOut {
-	return f.Match3(x, f1, f2, f3, df)
+	return f.Match4(x, f1, f2, f3, f4, df)
 }
 
 func MatchTreeR2[TOut1, TOut2 any](
@@ -45,9 +49,10 @@ func MatchTreeR2[TOut1, TOut2 any](
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
 	f3 func(x *K) (TOut1, TOut2),
+	f4 func(x *P) (TOut1, TOut2),
 	df func(x Tree) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.Match3R2(x, f1, f2, f3, df)
+	return f.Match4R2(x, f1, f2, f3, f4, df)
 }
 
 func MustMatchTree[TOut any](
@@ -55,8 +60,9 @@ func MustMatchTree[TOut any](
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
 	f3 func(x *K) TOut,
+	f4 func(x *P) TOut,
 ) TOut {
-	return f.MustMatch3(x, f1, f2, f3)
+	return f.MustMatch4(x, f1, f2, f3, f4)
 }
 
 func MustMatchTreeR0(
@@ -64,8 +70,9 @@ func MustMatchTreeR0(
 	f1 func(x *Branch),
 	f2 func(x *Leaf),
 	f3 func(x *K),
+	f4 func(x *P),
 ) {
-	f.MustMatch3R0(x, f1, f2, f3)
+	f.MustMatch4R0(x, f1, f2, f3, f4)
 }
 
 func MustMatchTreeR2[TOut1, TOut2 any](
@@ -73,8 +80,9 @@ func MustMatchTreeR2[TOut1, TOut2 any](
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
 	f3 func(x *K) (TOut1, TOut2),
+	f4 func(x *P) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.MustMatch3R2(x, f1, f2, f3)
+	return f.MustMatch4R2(x, f1, f2, f3, f4)
 }
 
 // mkunion-extension:schema
@@ -87,6 +95,7 @@ func TreeSchemaDef() *schema.UnionVariants[Tree] {
 		new(Branch),
 		new(Leaf),
 		new(K),
+		new(P),
 	)
 }
 
@@ -100,6 +109,7 @@ func TreeShape() shape.Shape {
 			BranchShape(),
 			LeafShape(),
 			KShape(),
+			PShape(),
 		},
 	}
 }
@@ -116,6 +126,7 @@ func BranchShape() shape.Shape {
 					Name:          "Tree",
 					PkgName:       "testutils",
 					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer:     false,
 				},
 			},
 			{
@@ -125,6 +136,7 @@ func BranchShape() shape.Shape {
 						Name:          "Tree",
 						PkgName:       "testutils",
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						IsPointer:     false,
 					},
 					ElementIsPointer: false,
 				},
@@ -138,6 +150,7 @@ func BranchShape() shape.Shape {
 						Name:          "Tree",
 						PkgName:       "testutils",
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						IsPointer:     false,
 					},
 					ValIsPointer: false,
 				},
@@ -172,12 +185,56 @@ func KShape() shape.Shape {
 	}
 }
 
+func PShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "P",
+		PkgName:       "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias:       false,
+		Type: &shape.RefName{
+			Name:          "ListOf2",
+			PkgName:       "testutils",
+			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+			IsPointer:     false,
+			Indexed: []shape.Shape{
+				&shape.RefName{
+					Name:          "ListOf",
+					PkgName:       "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer:     false,
+					Indexed: []shape.Shape{
+						&shape.Any{},
+					},
+				},
+				&shape.RefName{
+					Name:          "ListOf2",
+					PkgName:       "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer:     true,
+					Indexed: []shape.Shape{
+						&shape.NumberLike{
+							Kind: &shape.Int64{},
+						},
+						&shape.RefName{
+							Name:          "Duration",
+							PkgName:       "time",
+							PkgImportName: "time",
+							IsPointer:     true,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 // mkunion-extension:json
 type TreeUnionJSON struct {
 	Type   string          `json:"$type,omitempty"`
 	Branch json.RawMessage `json:"testutils.Branch,omitempty"`
 	Leaf   json.RawMessage `json:"testutils.Leaf,omitempty"`
 	K      json.RawMessage `json:"testutils.K,omitempty"`
+	P      json.RawMessage `json:"testutils.P,omitempty"`
 }
 
 func TreeFromJSON(x []byte) (Tree, error) {
@@ -194,6 +251,8 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return LeafFromJSON(data.Leaf)
 	case "testutils.K":
 		return KFromJSON(data.K)
+	case "testutils.P":
+		return PFromJSON(data.P)
 	}
 
 	if data.Branch != nil {
@@ -202,6 +261,8 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return LeafFromJSON(data.Leaf)
 	} else if data.K != nil {
 		return KFromJSON(data.K)
+	} else if data.P != nil {
+		return PFromJSON(data.P)
 	}
 
 	return nil, fmt.Errorf("unknown type %s", data.Type)
@@ -244,6 +305,17 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.K",
 				K:    body,
+			})
+		},
+		func(x *P) ([]byte, error) {
+			body, err := PToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(TreeUnionJSON{
+				Type: "testutils.P",
+				P:    body,
 			})
 		},
 	)
@@ -360,5 +432,16 @@ func KFromJSON(x []byte) (*K, error) {
 }
 
 func KToJSON(x *K) ([]byte, error) {
+	return json.Marshal(x)
+}
+
+func PFromJSON(x []byte) (*P, error) {
+	var result *P = new(P)
+	err := json.Unmarshal(x, result)
+
+	return result, err
+}
+
+func PToJSON(x *P) ([]byte, error) {
 	return json.Marshal(x)
 }

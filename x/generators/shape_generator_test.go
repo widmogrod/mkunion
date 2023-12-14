@@ -33,6 +33,7 @@ func TreeShape() shape.Shape {
 			BranchShape(),
 			LeafShape(),
 			KShape(),
+			PShape(),
 		},
 	}
 }
@@ -49,6 +50,7 @@ func BranchShape() shape.Shape {
 					Name: "Tree",
 					PkgName: "testutils",
 					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer: false,
 				},
 			},
 			{
@@ -58,6 +60,7 @@ func BranchShape() shape.Shape {
 						Name: "Tree",
 						PkgName: "testutils",
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						IsPointer: false,
 					},
 					ElementIsPointer: false,
 				},
@@ -71,6 +74,7 @@ func BranchShape() shape.Shape {
 						Name: "Tree",
 						PkgName: "testutils",
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						IsPointer: false,
 					},
 					ValIsPointer: false,
 				},
@@ -102,6 +106,49 @@ func KShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 		IsAlias: false,
 		Type: &shape.StringLike{},
+	}
+}
+
+func PShape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "P",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias: false,
+		Type: &shape.RefName{
+			Name: "ListOf2",
+			PkgName: "testutils",
+			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+			IsPointer: false,
+			Indexed: []shape.Shape{
+				&shape.RefName{
+					Name: "ListOf",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer: false,
+					Indexed: []shape.Shape{
+						&shape.Any{},
+					},
+				},
+				&shape.RefName{
+					Name: "ListOf2",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer: true,
+					Indexed: []shape.Shape{
+						&shape.NumberLike{
+							Kind: &shape.Int64{},
+						},
+						&shape.RefName{
+							Name: "Duration",
+							PkgName: "time",
+							PkgImportName: "time",
+							IsPointer: true,
+						},
+					},
+				},
+			},
+		},
 	}
 }
 `, string(result))
