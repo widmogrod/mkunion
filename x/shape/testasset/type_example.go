@@ -19,4 +19,12 @@ type (
 	H map[string]Example
 	I []Example
 	J [2]string
+	K A
+	// L Example is not allowed, since Example is interface,
+	// and interface cannot have methods implemented as Visitor pattern requires
+	L = List
+	M List
+	O time.Duration
 )
+
+type List struct{}

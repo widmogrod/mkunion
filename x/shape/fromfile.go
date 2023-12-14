@@ -213,14 +213,13 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		// type C bool
 		switch next := t.Type.(type) {
 		case *ast.Ident:
-
 			switch next.Name {
 			case "string":
 				f.shapes[f.currentType] = &AliasLike{
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
-					IsAlias:       false,
+					IsAlias:       t.Assign != 0,
 					Type:          &StringLike{},
 				}
 
@@ -231,7 +230,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
-					IsAlias:       false,
+					IsAlias:       t.Assign != 0,
 					Type: &NumberLike{
 						Kind: TypeStringToNumberKindMap[next.Name],
 					},
@@ -242,67 +241,32 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
-					IsAlias:       false,
+					IsAlias:       t.Assign != 0,
 					Type:          &BooleanLike{},
 				}
 
-				//default:
-				//	// TODO everything else is an alias
-				//	//  TODO not true what about complex types!?
-				//
-				//	// This is type alias but of type that is in the same package
-				//	// this is alias, example
-				//	// type A = SomeOtherType
-				//	if t.Assign != 0 {
-				//		log.Warnf("shape.InferFromFile: not implemented for alias %#v\n", next)
-				//		ref := &RefName{
-				//			//Kind: &AliasOf{
-				//			//	Name: next.Name,
-				//			//	PkgName:       f.PackageName,
-				//			//	PkgImportName: f.PkgImportName,
-				//			//},
-				//			Name:          next.Name,
-				//			PkgName:       f.PackageName,
-				//			PkgImportName: f.PkgImportName,
-				//		}
-				//		f.shapes[f.currentType] = ref
-				//		//return nil
-				//	} else {
-				//		// this is reference to other type, example
-				//		// type A SomeOtherType
-				//		log.Warnf("shape.InferFromFile: not implemented for reference %#v\n", next)
-				//		ref := &RefName{
-				//			Name:          next.Name,
-				//			PkgName:       f.PackageName,
-				//			PkgImportName: f.PkgImportName,
-				//		}
-				//		//shape, found := LookupShape(ref)
-				//		//if !found {
-				//		//	log.Warnf("shape.InferFromFile: could not lookup shape for %#v\n", ref)
-				//		//	return f
-				//		//}
-				//
-				//		f.shapes[f.currentType] = ref
-				//
-				//	}
-				//	//panic("not implemented for alias")
+			default:
+				f.shapes[f.currentType] = &AliasLike{
+					Name:          f.currentType,
+					PkgName:       f.PackageName,
+					PkgImportName: f.PkgImportName,
+					IsAlias:       t.Assign != 0,
+					Type: &RefName{
+						Name:          next.Name,
+						PkgName:       f.PackageName,
+						PkgImportName: f.PkgImportName,
+					},
+				}
 			}
 
-		//case *ast.SelectorExpr:
-		//	// this is reference to other type, example
-		//	// type A time.Time
-		//	// type A = time.Time
-		//	if ident, ok := next.X.(*ast.Ident); ok {
-		//		pkgName := ident.Name
-		//		pkgImportName := f.packageNameToPackageImport[pkgName]
-		//		f.shapes[f.currentType] = &RefName{
-		//			Name:          next.Sel.Name,
-		//			PkgName:       pkgName,
-		//			PkgImportName: pkgImportName,
-		//		}
-		//	} else {
-		//		log.Warnf("shape.InferFromFile: unknown selector X in  %s: %T\n", f.currentType, next)
-		//	}
+		case *ast.SelectorExpr:
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       t.Assign != 0,
+				Type:          f.selectExrToShape(next),
+			}
 
 		case *ast.MapType:
 			f.shapes[f.currentType] = &AliasLike{
@@ -333,109 +297,104 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		}
 
 	case *ast.StructType:
-		if t.Struct.IsValid() {
-			if _, ok := f.shapes[f.currentType]; !ok {
-				f.shapes[f.currentType] = &StructLike{
-					Name:          f.currentType,
-					PkgName:       f.PackageName,
-					PkgImportName: f.PkgImportName,
-				}
-			}
-
-			structShape, ok := f.shapes[f.currentType].(*StructLike)
-			if !ok {
-				log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
-				return f
-			}
-
-			for _, field := range t.Fields.List {
-				// this happens when field is embedded in struct
-				// something like `type A struct { B }`
-				if len(field.Names) == 0 {
-					switch typ := field.Type.(type) {
-					case *ast.Ident:
-						structShape.Fields = append(structShape.Fields, &FieldLike{
-							Name: typ.Name,
-							Type: FromAst(typ, InjectPkgName(f.PkgImportName, f.PackageName)),
-						})
-						break
-					default:
-						log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
-						continue
-					}
-				}
-
-				for _, fieldName := range field.Names {
-					if !fieldName.IsExported() {
-						continue
-					}
-
-					var typ Shape
-					switch ttt := field.Type.(type) {
-					// selectors in struct, means that we are using type from other package
-					case *ast.SelectorExpr:
-						if ident, ok := ttt.X.(*ast.Ident); ok {
-							pkgName := ident.Name
-							pkgImportName := f.packageNameToPackageImport[pkgName]
-							typ = FromAst(ttt.Sel, InjectPkgName(pkgImportName, pkgName))
-						} else {
-							log.Infof("shape.InferFromFile: unknown selector X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-							typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-						}
-					// this is reference to other struct in the same package or other package
-					case *ast.StarExpr:
-						if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
-							// other package
-							if ident, ok := selector.X.(*ast.Ident); ok {
-								pkgName := ident.Name
-								pkgImportName := f.packageNameToPackageImport[pkgName]
-								typ = FromAst(selector.Sel, InjectPkgName(pkgImportName, pkgName))
-							} else {
-								// same package
-								log.Infof("shape.InferFromFile: unknown star X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-								typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-							}
-						} else {
-							// same package
-							log.Infof("shape.InferFromFile: unknown star-else in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-							typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-						}
-
-					case *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
-						typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-
-					default:
-						log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-						typ = &Any{}
-					}
-
-					tag := ""
-					if field.Tag != nil {
-						tag = field.Tag.Value
-					}
-
-					tags := ExtractTags(tag)
-					desc := TagsToDesc(tags)
-					guard := TagsToGuard(tags)
-
-					structShape.Fields = append(structShape.Fields, &FieldLike{
-						Name:      fieldName.Name,
-						Type:      typ,
-						Desc:      desc,
-						Guard:     guard,
-						Tags:      tags,
-						IsPointer: IsStarExpr(field.Type),
-					})
-				}
-			}
-
-			f.shapes[f.currentType] = structShape
-
-			log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
+		if !t.Struct.IsValid() {
+			break
 		}
+
+		if _, ok := f.shapes[f.currentType]; !ok {
+			f.shapes[f.currentType] = &StructLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+			}
+		}
+
+		structShape, ok := f.shapes[f.currentType].(*StructLike)
+		if !ok {
+			log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
+			return f
+		}
+
+		for _, field := range t.Fields.List {
+			// this happens when field is embedded in struct
+			// something like `type A struct { B }`
+			if len(field.Names) == 0 {
+				switch typ := field.Type.(type) {
+				case *ast.Ident:
+					structShape.Fields = append(structShape.Fields, &FieldLike{
+						Name: typ.Name,
+						Type: FromAst(typ, InjectPkgName(f.PkgImportName, f.PackageName)),
+					})
+					break
+				default:
+					log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
+					continue
+				}
+			}
+
+			for _, fieldName := range field.Names {
+				if !fieldName.IsExported() {
+					continue
+				}
+
+				var typ Shape
+				switch ttt := field.Type.(type) {
+				// selectors in struct, means that we are using type from other package
+				case *ast.SelectorExpr:
+					typ = f.selectExrToShape(ttt)
+				// this is reference to other struct in the same package or other package
+				case *ast.StarExpr:
+					if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
+						typ = f.selectExrToShape(selector)
+					} else {
+						// same package
+						log.Infof("shape.InferFromFile: unknown star-else in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+						typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
+					}
+
+				case *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
+					typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
+
+				default:
+					log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+					typ = &Any{}
+				}
+
+				tag := ""
+				if field.Tag != nil {
+					tag = field.Tag.Value
+				}
+
+				tags := ExtractTags(tag)
+				desc := TagsToDesc(tags)
+				guard := TagsToGuard(tags)
+
+				structShape.Fields = append(structShape.Fields, &FieldLike{
+					Name:      fieldName.Name,
+					Type:      typ,
+					Desc:      desc,
+					Guard:     guard,
+					Tags:      tags,
+					IsPointer: IsStarExpr(field.Type),
+				})
+			}
+		}
+
+		f.shapes[f.currentType] = structShape
+		log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
 	}
 
 	return f
+}
+
+func (f *InferredInfo) selectExrToShape(ttt *ast.SelectorExpr) Shape {
+	if ident, ok := ttt.X.(*ast.Ident); ok {
+		pkgName := ident.Name
+		pkgImportName := f.packageNameToPackageImport[pkgName]
+		return FromAst(ttt.Sel, InjectPkgName(pkgImportName, pkgName))
+	}
+
+	return FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
 }
 
 func tryGetArrayLen(expr ast.Expr) *int {

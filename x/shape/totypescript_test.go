@@ -69,6 +69,22 @@ export type Example = {
 	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
 	"$type"?: "testasset.J",
 	"testasset.J": J
+} | {
+	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
+	"$type"?: "testasset.K",
+	"testasset.K": K
+} | {
+	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
+	"$type"?: "testasset.L",
+	"testasset.L": L
+} | {
+	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
+	"$type"?: "testasset.M",
+	"testasset.M": M
+} | {
+	// $type this is optional field, that is used to enable discriminative switch-statement in TypeScript, its not part of mkunion schema
+	"$type"?: "testasset.O",
+	"testasset.O": O
 }
 
 export type A = {
@@ -88,6 +104,10 @@ export type F = boolean
 export type H = {[key: string]: Example}
 export type I = Example[]
 export type J = string[]
+export type K = A
+export type L = List
+export type M = List
+export type O = time.Duration
 
 //eslint-disable-next-line
 import * as time from './time'

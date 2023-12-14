@@ -16,7 +16,6 @@ func TestInferFromFile(t *testing.T) {
 	assert.Equal(t, "Example", union.Name)
 	assert.Equal(t, "testasset", union.PkgName)
 	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset", union.PkgImportName)
-	assert.Equal(t, 9, len(union.Variant))
 
 	expected := &UnionLike{
 		Name:          "Example",
@@ -157,6 +156,50 @@ func TestInferFromFile(t *testing.T) {
 					Element:          &StringLike{},
 					ElementIsPointer: false,
 					ArrayLen:         ptr(2),
+				},
+			},
+			&AliasLike{
+				Name:          "K",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "A",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&AliasLike{
+				Name:          "L",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       true,
+				Type: &RefName{
+					Name:          "List",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&AliasLike{
+				Name:          "M",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "List",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&AliasLike{
+				Name:          "O",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "Duration",
+					PkgName:       "time",
+					PkgImportName: "time",
 				},
 			},
 		},
