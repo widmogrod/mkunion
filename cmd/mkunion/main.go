@@ -93,14 +93,23 @@ func main() {
 					return err
 				}
 
-				unionNames := c.StringSlice("name")
-				if len(unionNames) == 0 {
-					unionNames = inferred.PossibleUnionTypes()
+				var unions []*shape.UnionLike
+				for _, unionName := range c.StringSlice("name") {
+					union := inferred.RetrieveUnion(unionName)
+					if union == nil {
+						return fmt.Errorf("union %s not found in %s", unionName, sourcePath)
+					}
+
+					unions = append(unions, union)
 				}
 
-				for _, unionName := range unionNames {
+				if len(unions) == 0 {
+					unions = inferred.RetrieveUnions()
+				}
+
+				for _, union := range unions {
 					options := []generators.GenerateOption{
-						generators.WithPackageName(inferred.PackageName),
+						generators.WithPackageName(inferred.PackageName()),
 					}
 
 					if !c.Bool("no-compact") {
@@ -108,9 +117,8 @@ func main() {
 					}
 
 					helper := generators.NewHelper(options...)
-					union := inferred.RetrieveUnion(unionName)
 					if union == nil {
-						return fmt.Errorf("union %s not found in %s", unionName, sourcePath)
+						return fmt.Errorf("union %s not found in %s", union.Name, sourcePath)
 					}
 
 					jsonGenerator := generators.NewDeSerJSONGenerator(union, helper)
