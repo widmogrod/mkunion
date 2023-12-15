@@ -3,6 +3,8 @@ package shape
 import (
 	"github.com/fatih/structtag"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
+	"go/ast"
 	"reflect"
 	"strings"
 )
@@ -141,11 +143,11 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 	return &Any{}
 }
 
-func TagsToGuard(tags map[string]FieldTag) Guard {
+func TagsToGuard(tags map[string]Tag) Guard {
 	var result Guard
 	if enum, ok := tags["enum"]; ok {
 		result = ConcatGuard(result, &Enum{
-			Val: strings.Split(enum.Value, ","),
+			Val: append(strings.Split(enum.Value, ","), enum.Options...),
 		})
 	}
 	if required, ok := tags["required"]; ok && required.Value == "true" {
@@ -155,9 +157,12 @@ func TagsToGuard(tags map[string]FieldTag) Guard {
 	return result
 }
 
-func TagsToDesc(tags map[string]FieldTag) *string {
+func TagsToDesc(tags map[string]Tag) *string {
 	if desc, ok := tags["desc"]; ok {
-		descStr := strings.Trim(desc.Value, `"`)
+		// because tags are parsed according to the spec, we need to normalize options
+		// since description field does not support options
+		value := strings.Join(append([]string{desc.Value}, desc.Options...), ",")
+		descStr := strings.Trim(value, `"`)
 		if descStr != "" {
 			return &descStr
 		}
@@ -166,7 +171,28 @@ func TagsToDesc(tags map[string]FieldTag) *string {
 	return nil
 }
 
-func ExtractTags(tag string) map[string]FieldTag {
+func ExtractDocumentTags(doc *ast.CommentGroup) map[string]Tag {
+	result := make(map[string]Tag)
+
+	comments := strings.Split(shared.Comment(doc), "\n")
+	for _, comment := range comments {
+		if strings.HasPrefix(comment, "go:tag") {
+			tagString := strings.TrimPrefix(comment, "go:tag")
+			tags := ExtractTags(tagString)
+			for k, v := range tags {
+				result[k] = v
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func ExtractTags(tag string) map[string]Tag {
 	tag = strings.Trim(tag, "`")
 	tags, err := structtag.Parse(tag)
 	if err != nil {
@@ -177,10 +203,10 @@ func ExtractTags(tag string) map[string]FieldTag {
 		return nil
 	}
 
-	result := make(map[string]FieldTag)
+	result := make(map[string]Tag)
 	for _, t := range tags.Tags() {
-		result[t.Key] = FieldTag{
-			Value:   t.Value(),
+		result[t.Key] = Tag{
+			Value:   t.Name,
 			Options: t.Options,
 		}
 	}

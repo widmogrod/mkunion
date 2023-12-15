@@ -25,7 +25,7 @@ func TestFromGoo(t *testing.T) {
 				Name: "Name",
 				Type: &StringLike{},
 				Desc: ptr("Name of the person"),
-				Tags: map[string]FieldTag{
+				Tags: map[string]Tag{
 					"desc": {Value: "Name of the person"},
 				},
 			},
@@ -89,6 +89,18 @@ func TestFromGoo(t *testing.T) {
 									Name:          "Shape",
 									PkgName:       "shape",
 									PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+								}},
+								{Name: "Tags", Type: &MapLike{
+									Key: &StringLike{},
+									Val: &StructLike{
+										Name:          "Tag",
+										PkgName:       "shape",
+										PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										Fields: []*FieldLike{
+											{Name: "Value", Type: &StringLike{}},
+											{Name: "Options", Type: &ListLike{Element: &StringLike{}}},
+										},
+									},
 								}},
 							},
 						},
@@ -349,26 +361,27 @@ func TestFromGoo(t *testing.T) {
 													Name: "Tags",
 													Type: &MapLike{
 														Key: &StringLike{},
-														Val: &StructLike{
-															Name:          "FieldTag",
+														Val: &RefName{
+															Name:          "Tag",
 															PkgName:       "shape",
 															PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-															Fields: []*FieldLike{
-																{
-																	Name: "Value",
-																	Type: &StringLike{},
-																},
-																{
-																	Name: "Options",
-																	Type: &ListLike{Element: &StringLike{}},
-																},
-															},
 														},
 													},
 												},
 											},
 										},
 										ElementIsPointer: true,
+									},
+								},
+								{
+									Name: "Tags",
+									Type: &MapLike{
+										Key: &StringLike{},
+										Val: &RefName{
+											Name:          "Tag",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
 									},
 								},
 							},
@@ -400,11 +413,22 @@ func TestFromGoo(t *testing.T) {
 										},
 									},
 								},
+								{
+									Name: "Tags",
+									Type: &MapLike{
+										Key: &StringLike{},
+										Val: &RefName{
+											Name:          "Tag",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
+									},
+								},
 							},
 						},
 					},
 				},
-				Tags: map[string]FieldTag{
+				Tags: map[string]Tag{
 					"desc": {Value: "Big bag of attributes"},
 				},
 			},

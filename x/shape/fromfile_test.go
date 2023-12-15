@@ -33,7 +33,7 @@ func TestInferFromFile(t *testing.T) {
 						Desc:      ptr("Name of the person"),
 						Guard:     nil,
 						IsPointer: false,
-						Tags: map[string]FieldTag{
+						Tags: map[string]Tag{
 							"json": {
 								Value: "name",
 							},
@@ -55,7 +55,7 @@ func TestInferFromFile(t *testing.T) {
 						Desc:      nil,
 						Guard:     nil,
 						IsPointer: false,
-						Tags: map[string]FieldTag{
+						Tags: map[string]Tag{
 							"json": {
 								Value: "age",
 							},
@@ -192,6 +192,15 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
+
+				Tags: map[string]Tag{
+					"json": {
+						Value: "m_list",
+						Options: []string{
+							"omitempty",
+						},
+					},
+				},
 			},
 			&AliasLike{
 				Name:          "N",
@@ -264,6 +273,11 @@ func TestInferFromFile(t *testing.T) {
 				},
 			},
 		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Example",
+			},
+		},
 	}
 
 	if diff := cmp.Diff(expected, union); diff != "" {
@@ -286,6 +300,17 @@ func TestInferFromFile(t *testing.T) {
 			},
 		},
 		Fields: nil,
+		Tags: map[string]Tag{
+			"serde": {
+				Value: "json",
+			},
+			"json": {
+				Value: "list_of_2",
+				Options: []string{
+					"omitempty",
+				},
+			},
+		},
 	}
 	if diff := cmp.Diff(expected2, strut); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
@@ -304,12 +329,12 @@ func TestInferFromFile(t *testing.T) {
 //	expected := &UnionLike{
 //		Name:          "FunctionDSL",
 //		PkgName:       "workflow",
-//		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+//		pkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 //		Variant: []Shape{
 //			&StructLike{
 //				Name:          "FunctionInput",
 //				PkgName:       "workflow",
-//				PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+//				pkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 //				Fields: []*FieldLike{
 //					{
 //						Name: "Name",
@@ -325,7 +350,7 @@ func TestInferFromFile(t *testing.T) {
 //							Element: &RefName{
 //								Name:          "Schema",
 //								PkgName:       "schema",
-//								PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+//								pkgImportName: "github.com/widmogrod/mkunion/x/schema",
 //							},
 //						},
 //					},

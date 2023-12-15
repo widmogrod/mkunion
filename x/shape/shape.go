@@ -16,6 +16,7 @@ type (
 		PkgImportName string
 		IsAlias       bool
 		Type          Shape
+		Tags          map[string]Tag
 	}
 	BooleanLike struct{}
 	// StringLike is a string type, and when it has name, it means it named type.
@@ -50,12 +51,14 @@ type (
 		PkgImportName string
 		TypeParams    []TypeParam
 		Fields        []*FieldLike
+		Tags          map[string]Tag
 	}
 	UnionLike struct {
 		Name          string
 		PkgName       string
 		PkgImportName string
 		Variant       []Shape
+		Tags          map[string]Tag
 	}
 )
 
@@ -99,10 +102,10 @@ type FieldLike struct {
 	Desc      *string
 	Guard     Guard
 	IsPointer bool
-	Tags      map[string]FieldTag
+	Tags      map[string]Tag
 }
 
-type FieldTag struct {
+type Tag struct {
 	Value   string
 	Options []string
 }

@@ -196,7 +196,7 @@ func RefNameShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "PkgImportName",
+				Name: "pkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -234,7 +234,7 @@ func AliasLikeShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "PkgImportName",
+				Name: "pkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -367,7 +367,7 @@ func StructLikeShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "PkgImportName",
+				Name: "pkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -413,7 +413,7 @@ func UnionLikeShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "PkgImportName",
+				Name: "pkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -659,7 +659,7 @@ func RefNameFromJSON(x []byte) (*RefName, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "PkgImportName":
+		case "pkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "IsPointer":
 			return json.Unmarshal(value, &result.IsPointer)
@@ -702,7 +702,7 @@ func RefNameToJSON(x *RefName) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"PkgImportName": field_PkgImportName,
+		"pkgImportName": field_PkgImportName,
 		"IsPointer":     field_IsPointer,
 		"Indexed":       field_Indexed,
 	})
@@ -729,7 +729,7 @@ func AliasLikeFromJSON(x []byte) (*AliasLike, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "PkgImportName":
+		case "pkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "IsAlias":
 			return json.Unmarshal(value, &result.IsAlias)
@@ -772,7 +772,7 @@ func AliasLikeToJSON(x *AliasLike) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"PkgImportName": field_PkgImportName,
+		"pkgImportName": field_PkgImportName,
 		"IsAlias":       field_IsAlias,
 		"Type":          field_Type,
 	})
@@ -1023,7 +1023,7 @@ func StructLikeFromJSON(x []byte) (*StructLike, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "PkgImportName":
+		case "pkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "TypeParams":
 			return json.Unmarshal(value, &result.TypeParams)
@@ -1061,7 +1061,7 @@ func StructLikeToJSON(x *StructLike) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"PkgImportName": field_PkgImportName,
+		"pkgImportName": field_PkgImportName,
 		"TypeParams":    field_TypeParams,
 		"Fields":        field_Fields,
 	})
@@ -1088,7 +1088,7 @@ func UnionLikeFromJSON(x []byte) (*UnionLike, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "PkgImportName":
+		case "pkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "Variant":
 			res, err := shared.JSONToListWithDeserializer(value, result.Variant, ShapeFromJSON)
@@ -1125,7 +1125,7 @@ func UnionLikeToJSON(x *UnionLike) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"PkgImportName": field_PkgImportName,
+		"pkgImportName": field_PkgImportName,
 		"Variant":       field_Variant,
 	})
 }
