@@ -77,7 +77,7 @@ func tryToPkgImportName(filename string) string {
 }
 
 var (
-	matchGoGenerateExtractUnionName = regexp.MustCompile(`go:generate .* -{1,2}name=(\w+)`)
+	matchGoGenerateExtractUnionName = regexp.MustCompile(`go:generate .* -{1,2}name=*\s*(\w+)`)
 )
 
 type InferredInfo struct {
@@ -165,6 +165,7 @@ func (f *InferredInfo) RetrieveStructs() []*StructLike {
 }
 
 func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
+	opt := f.optionAST()
 	switch t := n.(type) {
 	case *ast.GenDecl:
 		comment := shared.Comment(t.Doc)
@@ -201,7 +202,9 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			f.PackageName = t.Name.String()
 		}
 
-		f.packageNameToPackageImport = make(map[string]string)
+		f.packageNameToPackageImport = map[string]string{
+			f.PackageName: f.PkgImportName,
+		}
 		for _, imp := range t.Imports {
 			if imp.Name != nil {
 				f.packageNameToPackageImport[imp.Name.String()] = strings.Trim(imp.Path.Value, "\"")
@@ -290,7 +293,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				PkgName:       f.PackageName,
 				PkgImportName: f.PkgImportName,
 				IsAlias:       IsAlias(t),
-				Type:          FromAst(next, InjectPkgImportName(f.packageNameToPackageImport), InjectPkgName(f.PkgImportName, f.PackageName)),
+				Type:          FromAST(next, opt...),
 			}
 
 		case *ast.IndexListExpr:
@@ -303,7 +306,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				PkgName:       f.PackageName,
 				PkgImportName: f.PkgImportName,
 				IsAlias:       IsAlias(t),
-				Type:          FromAst(next, InjectPkgImportName(f.packageNameToPackageImport), InjectPkgName(f.PkgImportName, f.PackageName)),
+				Type:          FromAST(next, opt...),
 			}
 
 		case *ast.MapType:
@@ -316,8 +319,8 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				PkgImportName: f.PkgImportName,
 				IsAlias:       IsAlias(t),
 				Type: &MapLike{
-					Key:          FromAst(next.Key, InjectPkgName(f.PkgImportName, f.PackageName)),
-					Val:          FromAst(next.Value, InjectPkgName(f.PkgImportName, f.PackageName)),
+					Key:          FromAST(next.Key, opt...),
+					Val:          FromAST(next.Value, opt...),
 					KeyIsPointer: IsStarExpr(next.Key),
 					ValIsPointer: IsStarExpr(next.Value),
 				},
@@ -330,7 +333,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				PkgImportName: f.PkgImportName,
 				IsAlias:       IsAlias(t),
 				Type: &ListLike{
-					Element:          FromAst(next.Elt, InjectPkgName(f.PkgImportName, f.PackageName)),
+					Element:          FromAST(next.Elt, opt...),
 					ElementIsPointer: IsStarExpr(next.Elt),
 					ArrayLen:         tryGetArrayLen(next.Len),
 				},
@@ -373,7 +376,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				case *ast.Ident:
 					structShape.Fields = append(structShape.Fields, &FieldLike{
 						Name: typ.Name,
-						Type: FromAst(typ, InjectPkgName(f.PkgImportName, f.PackageName)),
+						Type: FromAST(typ, opt...),
 					})
 					break
 				default:
@@ -401,11 +404,11 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 							x.IsPointer = true
 						}
 					} else {
-						typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
+						typ = FromAST(ttt, opt...)
 					}
 
 				case *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
-					typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
+					typ = FromAST(ttt, opt...)
 
 				default:
 					log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
@@ -439,6 +442,13 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	return f
 }
 
+func (f *InferredInfo) optionAST() []FromASTOption {
+	return []FromASTOption{
+		InjectPkgName(f.PackageName),
+		InjectPkgImportName(f.packageNameToPackageImport),
+	}
+}
+
 func IsAlias(t *ast.TypeSpec) bool {
 	return t.Assign != 0
 }
@@ -446,11 +456,10 @@ func IsAlias(t *ast.TypeSpec) bool {
 func (f *InferredInfo) selectExrToShape(ttt *ast.SelectorExpr) Shape {
 	if ident, ok := ttt.X.(*ast.Ident); ok {
 		pkgName := ident.Name
-		pkgImportName := f.packageNameToPackageImport[pkgName]
-		return FromAst(ttt.Sel, InjectPkgName(pkgImportName, pkgName))
+		return FromAST(ttt.Sel, InjectPkgName(pkgName), InjectPkgImportName(f.packageNameToPackageImport))
 	}
 
-	return FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
+	return FromAST(ttt, f.optionAST()...)
 }
 
 func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
@@ -460,9 +469,9 @@ func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
 
 	var result []TypeParam
 	for _, param := range params.List {
-		typ := FromAst(param.Type,
+		typ := FromAST(param.Type,
 			InjectPkgImportName(f.packageNameToPackageImport),
-			InjectPkgName(f.PkgImportName, f.PackageName))
+			InjectPkgName(f.PackageName))
 
 		if len(param.Names) == 0 {
 			result = append(result, TypeParam{

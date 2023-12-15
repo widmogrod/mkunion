@@ -199,6 +199,22 @@ func RefNameShape() Shape {
 				Name: "PkgImportName",
 				Type: &StringLike{},
 			},
+			{
+				Name: "IsPointer",
+				Type: &BooleanLike{},
+			},
+			{
+				Name: "Indexed",
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "Shape",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     false,
+					},
+					ElementIsPointer: false,
+				},
+			},
 		},
 	}
 }
@@ -231,6 +247,7 @@ func AliasLikeShape() Shape {
 					Name:          "Shape",
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					IsPointer:     false,
 				},
 			},
 		},
@@ -265,6 +282,7 @@ func NumberLikeShape() Shape {
 					Name:          "NumberKind",
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					IsPointer:     false,
 				},
 			},
 		},
@@ -283,6 +301,7 @@ func ListLikeShape() Shape {
 					Name:          "Shape",
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					IsPointer:     false,
 				},
 			},
 			{
@@ -309,6 +328,7 @@ func MapLikeShape() Shape {
 					Name:          "Shape",
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					IsPointer:     false,
 				},
 			},
 			{
@@ -317,6 +337,7 @@ func MapLikeShape() Shape {
 					Name:          "Shape",
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					IsPointer:     false,
 				},
 			},
 			{
@@ -350,12 +371,25 @@ func StructLikeShape() Shape {
 				Type: &StringLike{},
 			},
 			{
+				Name: "TypeParams",
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "TypeParam",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     false,
+					},
+					ElementIsPointer: false,
+				},
+			},
+			{
 				Name: "Fields",
 				Type: &ListLike{
 					Element: &RefName{
 						Name:          "FieldLike",
 						PkgName:       "shape",
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     true,
 					},
 					ElementIsPointer: true,
 				},
@@ -389,6 +423,7 @@ func UnionLikeShape() Shape {
 						Name:          "Shape",
 						PkgName:       "shape",
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     false,
 					},
 					ElementIsPointer: false,
 				},
@@ -626,6 +661,15 @@ func RefNameFromJSON(x []byte) (*RefName, error) {
 			return json.Unmarshal(value, &result.PkgName)
 		case "PkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
+		case "IsPointer":
+			return json.Unmarshal(value, &result.IsPointer)
+		case "Indexed":
+			res, err := shared.JSONToListWithDeserializer(value, result.Indexed, ShapeFromJSON)
+			if err != nil {
+				return fmt.Errorf("shape._FromJSON: field Shape %w", err)
+			}
+			result.Indexed = res
+			return nil
 		}
 
 		return fmt.Errorf("shape.RefNameFromJSON: unknown key %s", key)
@@ -647,10 +691,20 @@ func RefNameToJSON(x *RefName) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	field_IsPointer, err := json.Marshal(x.IsPointer)
+	if err != nil {
+		return nil, err
+	}
+	field_Indexed, err := shared.JSONListFromSerializer(x.Indexed, ShapeToJSON)
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
 		"PkgImportName": field_PkgImportName,
+		"IsPointer":     field_IsPointer,
+		"Indexed":       field_Indexed,
 	})
 }
 func (self *RefName) MarshalJSON() ([]byte, error) {
@@ -971,6 +1025,8 @@ func StructLikeFromJSON(x []byte) (*StructLike, error) {
 			return json.Unmarshal(value, &result.PkgName)
 		case "PkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
+		case "TypeParams":
+			return json.Unmarshal(value, &result.TypeParams)
 		case "Fields":
 			return json.Unmarshal(value, &result.Fields)
 		}
@@ -994,6 +1050,10 @@ func StructLikeToJSON(x *StructLike) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	field_TypeParams, err := json.Marshal(x.TypeParams)
+	if err != nil {
+		return nil, err
+	}
 	field_Fields, err := json.Marshal(x.Fields)
 	if err != nil {
 		return nil, err
@@ -1002,6 +1062,7 @@ func StructLikeToJSON(x *StructLike) ([]byte, error) {
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
 		"PkgImportName": field_PkgImportName,
+		"TypeParams":    field_TypeParams,
 		"Fields":        field_Fields,
 	})
 }

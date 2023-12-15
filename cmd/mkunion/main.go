@@ -109,6 +109,9 @@ func main() {
 
 					helper := generators.NewHelper(options...)
 					union := inferred.RetrieveUnion(unionName)
+					if union == nil {
+						return fmt.Errorf("union %s not found in %s", unionName, sourcePath)
+					}
 
 					jsonGenerator := generators.NewDeSerJSONGenerator(union, helper)
 					shapeGenerator := generators.NewShapeGenerator(union, helper)
@@ -157,7 +160,7 @@ func main() {
 
 							b, err := g.Generate()
 							if err != nil {
-								return err
+								return fmt.Errorf("failed to generate %s for %s in %s: %w", name, union.Name, sourcePath, err)
 							}
 
 							fileName := baseName + "_" + shared.Program + "_" + strings.ToLower(union.Name) + "_" + name + ".go"
@@ -165,7 +168,7 @@ func main() {
 
 							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
 							if err != nil {
-								return err
+								return fmt.Errorf("failed to write %s for %s in %s: %w", name, union.Name, sourcePath, err)
 							}
 						}
 					} else {
@@ -178,7 +181,7 @@ func main() {
 
 							b, err := g.Generate()
 							if err != nil {
-								return err
+								return fmt.Errorf("failed to generate %s for %s in %s: %w", name, union.Name, sourcePath, err)
 							}
 							body.WriteString(fmt.Sprintf("//mkunion-extension:%s\n", name))
 							body.Write(b)
@@ -197,7 +200,7 @@ func main() {
 
 						err = os.WriteFile(path.Join(cwd, fileName), header.Bytes(), 0644)
 						if err != nil {
-							return err
+							return fmt.Errorf("failed to write %s for %s in %s: %w", "gen", union.Name, sourcePath, err)
 						}
 					}
 				}
@@ -247,7 +250,7 @@ func main() {
 						cwd,
 						baseName+"_match_"+strings.ToLower(derived.MatchSpec.Name)+".go"), b, 0644)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to write %s for %s in %s: %w", "gen", derived.MatchSpec.Name, sourcePath, err)
 					}
 
 					return nil
@@ -303,7 +306,12 @@ func main() {
 						}
 					}
 
-					return tsr.WriteToDir(c.String("output-dir"))
+					err := tsr.WriteToDir(c.String("output-dir"))
+					if err != nil {
+						return fmt.Errorf("failed to write to dir %s: %w", c.String("output-dir"), err)
+					}
+
+					return nil
 				},
 			},
 		},

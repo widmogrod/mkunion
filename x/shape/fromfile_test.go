@@ -293,24 +293,48 @@ func TestInferFromFile(t *testing.T) {
 }
 
 //func TestEmbeds(t *testing.T) {
-//	inferred, err := InferFromFile("testasset/type_embeds.go")
+//	inferred, err := InferFromFile("../workflow/workflow_other.go")
 //	if err != nil {
 //		t.Fatal(err)
 //	}
 //
-//	union := inferred.RetrieveUnion("EmbedsDSL")
-//	assert.Equal(t, "EmbedsDSL", union.Name)
-//	assert.Equal(t, "testasset", union.PkgName)
-//	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset", union.PkgImportName)
-//	assert.Equal(t, 10, len(union.Variant))
+//	union := inferred.RetrieveUnion("FunctionDSL")
+//	assert.Equal(t, "FunctionDSL", union.Name)
 //
 //	expected := &UnionLike{
-//		Name:          "EmbedsDSL",
-//		PkgName:       "testasset",
-//		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+//		Name:          "FunctionDSL",
+//		PkgName:       "workflow",
+//		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+//		Variant: []Shape{
+//			&StructLike{
+//				Name:          "FunctionInput",
+//				PkgName:       "workflow",
+//				PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+//				Fields: []*FieldLike{
+//					{
+//						Name: "Name",
+//						Type: &StringLike{},
+//					},
+//					{
+//						Name: "CallbackID",
+//						Type: &StringLike{},
+//					},
+//					{
+//						Name: "Args",
+//						Type: &ListLike{
+//							Element: &RefName{
+//								Name:          "Schema",
+//								PkgName:       "schema",
+//								PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+//							},
+//						},
+//					},
+//				},
+//			},
+//		},
 //	}
 //
-//	if diff := cmp.Diff(expected, &union); diff != "" {
+//	if diff := cmp.Diff(expected, union); diff != "" {
 //		t.Errorf("mismatch (-want +got):\n%s", diff)
 //	}
 //}

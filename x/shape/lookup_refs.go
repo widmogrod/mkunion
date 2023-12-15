@@ -84,6 +84,10 @@ func LookupShape(x *RefName) (Shape, bool) {
 }
 
 func findPackagePath(pkgImportName string) (string, error) {
+	if strings.Trim(pkgImportName, " ") == "" {
+		return "", fmt.Errorf("shape.findPackagePath: empty package name")
+	}
+
 	cwd := os.Getenv("PWD")
 	if cwd == "" {
 		cwd, _ = os.Getwd()
@@ -99,33 +103,33 @@ func findPackagePath(pkgImportName string) (string, error) {
 	for {
 		cwd = path.Dir(cwd)
 		if cwd == "." || cwd == "/" {
-			log.Infof("shape.findPackagePath: could not find go.mod file in CWD or parent directories %s, continue with other paths", cwd)
+			log.Infof("shape.findPackagePath: %s could not find go.mod file in CWD or parent directories %s, continue with other paths", pkgImportName, cwd)
 			break
 		}
 
 		modpath := path.Join(cwd, "go.mod")
 		_, err := os.Stat(modpath)
-		log.Infof("shape.findPackagePath: checking %s; %s", modpath, err)
+		log.Infof("shape.findPackagePath: %s checking modpath %s; %s", pkgImportName, modpath, err)
 		if err == nil {
 			f, err := os.Open(modpath)
 			if err != nil {
-				log.Infof("shape.findPackagePath: could not open %s", cwd)
+				log.Infof("shape.findPackagePath: %s could not open %s", pkgImportName, cwd)
 				continue
 			}
 			defer f.Close()
 
 			data, err := io.ReadAll(f)
 			if err != nil {
-				log.Infof("shape.findPackagePath: could not read %s", cwd)
+				log.Infof("shape.findPackagePath: %s could not read %s", pkgImportName, cwd)
 				continue
 				//return "", fmt.Errorf("shape.findPackagePath: could not read %s; %w", cwd, err)
 			} else {
 				parsed, err := modfile.Parse(modpath, data, nil)
 				if err != nil {
-					log.Infof("shape.findPackagePath: could not parse go.mod %s", cwd)
+					log.Infof("shape.findPackagePath: %s could not parse go.mod %s", pkgImportName, cwd)
 					break
 				} else {
-					log.Infof("shape.findPackagePath: parsed go.mod %s", parsed.Module.Mod.Path)
+					log.Infof("shape.findPackagePath: %s parsed go.mod %s", pkgImportName, parsed.Module.Mod.Path)
 					if strings.Contains(pkgImportName, parsed.Module.Mod.Path) {
 						return filepath.Join(cwd, strings.TrimPrefix(pkgImportName, parsed.Module.Mod.Path)), nil
 					}
