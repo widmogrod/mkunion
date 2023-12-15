@@ -144,13 +144,13 @@ var (
 
 func NewVisitorGenerator(union *shape.UnionLike, helper *Helpers) *VisitorGenerator {
 	return &VisitorGenerator{
-		Union:    *union,
+		Union:    union,
 		template: template.Must(template.New("visitor_generator.go.tmpl").Funcs(helper.Func()).Parse(visitorTmpl)),
 	}
 }
 
 type VisitorGenerator struct {
-	Union    shape.UnionLike
+	Union    *shape.UnionLike
 	template *template.Template
 }
 

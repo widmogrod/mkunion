@@ -16,13 +16,13 @@ var (
 
 func NewShapeGenerator(union *shape.UnionLike, helper *Helpers) *ShapeGenerator {
 	return &ShapeGenerator{
-		Union:    *union,
+		Union:    union,
 		template: template.Must(template.New("shape_generator.go.tmpl").Funcs(helper.Func()).Parse(shapeTmpl)),
 	}
 }
 
 type ShapeGenerator struct {
-	Union    shape.UnionLike
+	Union    *shape.UnionLike
 	template *template.Template
 }
 
