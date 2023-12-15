@@ -14,6 +14,9 @@ func ToStr(x Shape) string {
 		func(x *RefName) string {
 			return fmt.Sprintf("%s:%s.%s", x.PkgImportName, x.PkgName, x.Name)
 		},
+		func(x *AliasLike) string {
+			panic("not implemented")
+		},
 		func(x *BooleanLike) string {
 			return "bool"
 		},

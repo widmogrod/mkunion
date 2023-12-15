@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGeneration(t *testing.T) {
+func TestVisitorGenerator(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
@@ -29,6 +29,7 @@ type TreeVisitor interface {
 	VisitBranch(v *Branch) any
 	VisitLeaf(v *Leaf) any
 	VisitK(v *K) any
+	VisitP(v *P) any
 }
 
 type Tree interface {
@@ -38,11 +39,13 @@ type Tree interface {
 func (r *Branch) AcceptTree(v TreeVisitor) any { return v.VisitBranch(r) }
 func (r *Leaf) AcceptTree(v TreeVisitor) any { return v.VisitLeaf(r) }
 func (r *K) AcceptTree(v TreeVisitor) any { return v.VisitK(r) }
+func (r *P) AcceptTree(v TreeVisitor) any { return v.VisitP(r) }
 
 var (
 	_ Tree = (*Branch)(nil)
 	_ Tree = (*Leaf)(nil)
 	_ Tree = (*K)(nil)
+	_ Tree = (*P)(nil)
 )
 
 func MatchTree[TOut any](
@@ -50,9 +53,10 @@ func MatchTree[TOut any](
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
 	f3 func(x *K) TOut,
+	f4 func(x *P) TOut,
 	df func(x Tree) TOut,
 ) TOut {
-	return f.Match3(x, f1, f2, f3, df)
+	return f.Match4(x, f1, f2, f3, f4, df)
 }
 
 func MatchTreeR2[TOut1, TOut2 any](
@@ -60,9 +64,10 @@ func MatchTreeR2[TOut1, TOut2 any](
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
 	f3 func(x *K) (TOut1, TOut2),
+	f4 func(x *P) (TOut1, TOut2),
 	df func(x Tree) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.Match3R2(x, f1, f2, f3, df)
+	return f.Match4R2(x, f1, f2, f3, f4, df)
 }
 
 func MustMatchTree[TOut any](
@@ -70,8 +75,9 @@ func MustMatchTree[TOut any](
 	f1 func(x *Branch) TOut,
 	f2 func(x *Leaf) TOut,
 	f3 func(x *K) TOut,
+	f4 func(x *P) TOut,
 ) TOut {
-	return f.MustMatch3(x, f1, f2, f3)
+	return f.MustMatch4(x, f1, f2, f3, f4)
 }
 
 func MustMatchTreeR0(
@@ -79,8 +85,9 @@ func MustMatchTreeR0(
 	f1 func(x *Branch),
 	f2 func(x *Leaf),
 	f3 func(x *K),
+	f4 func(x *P),
 ) {
-	f.MustMatch3R0(x, f1, f2, f3)
+	f.MustMatch4R0(x, f1, f2, f3, f4)
 }
 
 func MustMatchTreeR2[TOut1, TOut2 any](
@@ -88,7 +95,8 @@ func MustMatchTreeR2[TOut1, TOut2 any](
 	f1 func(x *Branch) (TOut1, TOut2),
 	f2 func(x *Leaf) (TOut1, TOut2),
 	f3 func(x *K) (TOut1, TOut2),
+	f4 func(x *P) (TOut1, TOut2),
 ) (TOut1, TOut2) {
-	return f.MustMatch3R2(x, f1, f2, f3)
+	return f.MustMatch4R2(x, f1, f2, f3, f4)
 }`, string(result))
 }

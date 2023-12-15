@@ -19,6 +19,9 @@ func toJsonSchema(s Shape, definitions map[string]string, depth int, desc *strin
 		func(x *RefName) string {
 			return `{"$ref": "#/$defs/` + x.Name + `"` + toDescription(desc) + `}`
 		},
+		func(x *AliasLike) string {
+			panic("not implemented")
+		},
 		func(x *BooleanLike) string {
 			return `{"type": "boolean"` + toDescription(desc) + `}`
 		},

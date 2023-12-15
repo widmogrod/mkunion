@@ -38,7 +38,7 @@ func main() {
 			&cli.StringFlag{
 				Name:     "skip-extension",
 				Aliases:  []string{"skip-ext"},
-				Value:    "reducer_bfs,reducer_dfs,default_visitor,default_reducer",
+				Value:    "",
 				Required: false,
 			},
 			&cli.StringFlag{
@@ -109,37 +109,28 @@ func main() {
 
 					helper := generators.NewHelper(options...)
 					union := inferred.RetrieveUnion(unionName)
+					if union == nil {
+						return fmt.Errorf("union %s not found in %s", unionName, sourcePath)
+					}
 
 					jsonGenerator := generators.NewDeSerJSONGenerator(union, helper)
 					shapeGenerator := generators.NewShapeGenerator(union, helper)
 					visitor := generators.NewVisitorGenerator(union, helper)
 					schema := generators.NewSchemaGenerator(union, helper)
-					depthFirstGenerator := generators.NewReducerDepthFirstGenerator(union, helper)
-					breadthFirstGenerator := generators.NewReducerBreadthFirstGenerator(union, helper)
-					defaultReduction := generators.NewReducerDefaultReductionGenerator(union, helper)
-					defaultVisitor := generators.NewVisitorDefaultGenerator(union, helper)
 
 					// ensures that order of generators is always the same
 					generatorsList := []string{
 						"visitor",
-						"reducer_dfs",
-						"reducer_bfs",
-						"default_reducer",
-						"default_visitor",
 						"schema",
 						"shape",
 						"json",
 					}
 
 					generators := map[string]generators.Generator{
-						"visitor":         visitor,
-						"reducer_dfs":     depthFirstGenerator,
-						"reducer_bfs":     breadthFirstGenerator,
-						"default_reducer": defaultReduction,
-						"default_visitor": defaultVisitor,
-						"schema":          schema,
-						"shape":           shapeGenerator,
-						"json":            jsonGenerator,
+						"visitor": visitor,
+						"schema":  schema,
+						"shape":   shapeGenerator,
+						"json":    jsonGenerator,
 					}
 
 					skipExtension := strings.Split(c.String("skip-extension"), ",")
@@ -169,15 +160,15 @@ func main() {
 
 							b, err := g.Generate()
 							if err != nil {
-								return err
+								return fmt.Errorf("failed to generate %s for %s in %s: %w", name, union.Name, sourcePath, err)
 							}
 
-							fileName := baseName + "_" + shared.Program + "_" + strings.ToLower(visitor.Name) + "_" + name + ".go"
+							fileName := baseName + "_" + shared.Program + "_" + strings.ToLower(union.Name) + "_" + name + ".go"
 							log.Infof("writing %s", fileName)
 
 							err = os.WriteFile(path.Join(cwd, fileName), b, 0644)
 							if err != nil {
-								return err
+								return fmt.Errorf("failed to write %s for %s in %s: %w", name, union.Name, sourcePath, err)
 							}
 						}
 					} else {
@@ -190,7 +181,7 @@ func main() {
 
 							b, err := g.Generate()
 							if err != nil {
-								return err
+								return fmt.Errorf("failed to generate %s for %s in %s: %w", name, union.Name, sourcePath, err)
 							}
 							body.WriteString(fmt.Sprintf("//mkunion-extension:%s\n", name))
 							body.Write(b)
@@ -202,14 +193,14 @@ func main() {
 						header.WriteString(helper.RenderBufferedImport())
 						log.Infof(helper.RenderBufferedImport())
 
-						fileName := baseName + "_" + strings.ToLower(visitor.Name) + "_gen.go"
+						fileName := baseName + "_" + strings.ToLower(union.Name) + "_gen.go"
 						log.Infof("writing %s", fileName)
 
 						header.Write(body.Bytes())
 
 						err = os.WriteFile(path.Join(cwd, fileName), header.Bytes(), 0644)
 						if err != nil {
-							return err
+							return fmt.Errorf("failed to write %s for %s in %s: %w", "gen", union.Name, sourcePath, err)
 						}
 					}
 				}
@@ -259,7 +250,7 @@ func main() {
 						cwd,
 						baseName+"_match_"+strings.ToLower(derived.MatchSpec.Name)+".go"), b, 0644)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to write %s for %s in %s: %w", "gen", derived.MatchSpec.Name, sourcePath, err)
 					}
 
 					return nil
@@ -310,12 +301,17 @@ func main() {
 							tsr.AddUnion(union)
 						}
 
-						for _, structLike := range inferred.RetrieveStruct() {
+						for _, structLike := range inferred.RetrieveStructs() {
 							tsr.AddStruct(structLike)
 						}
 					}
 
-					return tsr.WriteToDir(c.String("output-dir"))
+					err := tsr.WriteToDir(c.String("output-dir"))
+					if err != nil {
+						return fmt.Errorf("failed to write to dir %s: %w", c.String("output-dir"), err)
+					}
+
+					return nil
 				},
 			},
 		},

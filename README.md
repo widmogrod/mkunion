@@ -105,53 +105,7 @@ result := MyReduceDepthFirstTree(tree, func (x, y int) int {
 assert.Equal(t, 10, result)
 ```
 
-
-### 2. Leverage generated default reduction with traversal strategies (depth first, breadth first)
-You should use this approach
- - When you need to traverse tree in different way than a depth first, like breadth first without writing your own code
- - When you need to stop traversing of a tree at some point. For example, when you want to find a value in a tree, or meet some condition.
-
-To demonstrate different traversal strategies, we will reduce a tree to a structure that will hold not only result of sum, but also order of nodes visited
-
-```go
-// This structure will hold order of nodes visited, and resulting sum
-type orderAgg struct {
-    Order  []int
-    Result int
-}
-
-// This is how we define reducer function for traversal of tree
-
-var red TreeReducer[orderAgg] = &TreeDefaultReduction[orderAgg]{
-    PanicOnFallback:      false,
-    DefaultStopReduction: false,
-    OnLeaf: func(x *Leaf, agg orderAgg) (orderAgg, bool) {
-        return orderAgg{
-            Order:  append(agg.Order, x.Value),
-            Result: agg.Result + x.Value,
-        }, false
-    },
-}
-
-// Dept first traversal
-result := ReduceTreeDepthFirst(red, tree, orderAgg{})
-assert.Equal(t, 10, result.Result)
-assert.Equal(t, []int{1, 2, 3, 4}, result.Order) // notice that order is different!
-
-// Breadth first traversal
-result = ReduceTreeBreadthFirst(red, tree, orderAgg{})
-assert.Equal(t, 10, result.Result)
-assert.Equal(t, []int{1, 4, 2, 3}, result.Order) // notice that order is different!
-```
-
-Note:
-- You can see that generated code knows how to traverse union recursively. 
-  - You can write flat code and don't worry about recursion. 
-- Generator assumes that if in structure is reference to union type `Tree`, then it's recursive. 
-  - Such code can also work on slices. You can take a look at `example/where_predicate_example.go` to see something more complex
-
-
-#### 3. Implement visitor interface
+#### 2. Implement visitor interface
 This is most open way to traverse tree.
 - You have to implement `TreeVisitor` interface that was generated for you by `mkunion` tool.
 - You have to define how traversal should happen
@@ -484,6 +438,9 @@ go test ./...
 - [x] `mkunion` breaking change: remove -variants flag. Disable possibility to recompose union types from command line. In feature type aliases could be used for this purpose.
 
 ### V1.21.x
+- [x] `mkunion` breaking change: remove depth_first and breadth_first reducers generation. No replacement is planned. Use MustMatch* functions instead to write your own traversals.
+
+### V1.22.x
 - [ ] Exhaustive pattern matching checks during generation
 - [ ] Allow extending (embedding) base Visitor interface with external interface
 - [ ] Schema Registry should reject registration of names that are already registered!

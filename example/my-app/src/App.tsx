@@ -5,6 +5,10 @@ import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
 import {Chat} from "./Chat";
 import {GenerateImage, ListWorkflowsFn} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
 
+// type ListOf<T> = {}
+// type ListOf2<T1,T2> = {}
+// type B<T1,T2> = ListOf2<T1,T2>
+// export type P = ListOf2<ListOf<any>, ListOf2<number, other>>
 function flowCreate(flow: workflow.Flow) {
     return fetch('http://localhost:8080/flow', {
         method: 'POST',

@@ -77,7 +77,7 @@ func tryToPkgImportName(filename string) string {
 }
 
 var (
-	matchGoGenerateExtractUnionName = regexp.MustCompile(`go:generate .* -{1,2}name=(\w+)`)
+	matchGoGenerateExtractUnionName = regexp.MustCompile(`go:generate .* -{1,2}name=*\s*(\w+)`)
 )
 
 type InferredInfo struct {
@@ -101,7 +101,19 @@ func (f *InferredInfo) PossibleVariantsTypes(unionName string) []string {
 	return f.possibleVariantTypes[unionName]
 }
 
-func (f *InferredInfo) StructShapeWith(name string) *StructLike {
+func (f *InferredInfo) RetrieveUnions() []*UnionLike {
+	result := make([]*UnionLike, 0)
+	for unionName := range f.possibleVariantTypes {
+		union := f.RetrieveUnion(unionName)
+		if union != nil {
+			result = append(result, union)
+		}
+	}
+
+	return result
+}
+
+func (f *InferredInfo) RetrieveStruct(name string) *StructLike {
 	result, ok := f.shapes[name].(*StructLike)
 	if !ok {
 		return nil
@@ -110,23 +122,17 @@ func (f *InferredInfo) StructShapeWith(name string) *StructLike {
 	return result
 }
 
-func (f *InferredInfo) RetrieveUnions() []*UnionLike {
-	result := make([]*UnionLike, 0)
-	for unionName := range f.possibleVariantTypes {
-		union := f.RetrieveUnion(unionName)
-		result = append(result, &union)
-	}
-
-	return result
-}
-
-func (f *InferredInfo) RetrieveUnion(name string) UnionLike {
+func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 	var variants []Shape
 	for _, variant := range f.possibleVariantTypes[name] {
 		variants = append(variants, f.shapes[variant])
 	}
 
-	return UnionLike{
+	if len(variants) == 0 {
+		return nil
+	}
+
+	return &UnionLike{
 		Name:          name,
 		PkgName:       f.PackageName,
 		PkgImportName: f.PkgImportName,
@@ -134,7 +140,7 @@ func (f *InferredInfo) RetrieveUnion(name string) UnionLike {
 	}
 }
 
-func (f *InferredInfo) RetrieveStruct() []*StructLike {
+func (f *InferredInfo) RetrieveStructs() []*StructLike {
 	structs := make(map[string]*StructLike)
 	for _, structShape := range f.shapes {
 		switch x := structShape.(type) {
@@ -159,6 +165,7 @@ func (f *InferredInfo) RetrieveStruct() []*StructLike {
 }
 
 func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
+	opt := f.optionAST()
 	switch t := n.(type) {
 	case *ast.GenDecl:
 		comment := shared.Comment(t.Doc)
@@ -195,7 +202,9 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			f.PackageName = t.Name.String()
 		}
 
-		f.packageNameToPackageImport = make(map[string]string)
+		f.packageNameToPackageImport = map[string]string{
+			f.PackageName: f.PkgImportName,
+		}
 		for _, imp := range t.Imports {
 			if imp.Name != nil {
 				f.packageNameToPackageImport[imp.Name.String()] = strings.Trim(imp.Path.Value, "\"")
@@ -215,159 +224,272 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		case *ast.Ident:
 			switch next.Name {
 			case "string":
-				f.shapes[f.currentType] = &StringLike{
-					Named: f.named(),
+				f.shapes[f.currentType] = &AliasLike{
+					Name:          f.currentType,
+					PkgName:       f.PackageName,
+					PkgImportName: f.PkgImportName,
+					IsAlias:       IsAlias(t),
+					Type:          &StringLike{},
 				}
-
-			//case "byte", "rune":
-			//	f.shapes[f.currentType] = &NumberLike{
-			//		Named: f.named(),
-			//	}
 
 			case "int", "int8", "int16", "int32", "int64",
 				"uint", "uint8", "uint16", "uint32", "uint64",
 				"float64", "float32", "byte", "rune":
-				f.shapes[f.currentType] = &NumberLike{
-					Kind:  TypeStringToNumberKindMap[next.Name],
-					Named: f.named(),
-				}
-
-			case "bool":
-				f.shapes[f.currentType] = &BooleanLike{
-					Named: f.named(),
-				}
-			}
-
-		case *ast.MapType:
-			f.shapes[f.currentType] = &MapLike{
-				Key:          FromAst(next.Key, InjectPkgName(f.PkgImportName, f.PackageName)),
-				Val:          FromAst(next.Value, InjectPkgName(f.PkgImportName, f.PackageName)),
-				KeyIsPointer: IsStarExpr(next.Key),
-				ValIsPointer: IsStarExpr(next.Value),
-				Named:        f.named(),
-			}
-
-		case *ast.ArrayType:
-			f.shapes[f.currentType] = &ListLike{
-				Element:          FromAst(next.Elt, InjectPkgName(f.PkgImportName, f.PackageName)),
-				ElementIsPointer: IsStarExpr(next.Elt),
-				Named:            f.named(),
-				ArrayLen:         tryGetArrayLen(next.Len),
-			}
-		}
-
-	case *ast.StructType:
-		if t.Struct.IsValid() {
-			if _, ok := f.shapes[f.currentType]; !ok {
-				f.shapes[f.currentType] = &StructLike{
+				f.shapes[f.currentType] = &AliasLike{
 					Name:          f.currentType,
 					PkgName:       f.PackageName,
 					PkgImportName: f.PkgImportName,
+					IsAlias:       IsAlias(t),
+					Type: &NumberLike{
+						Kind: TypeStringToNumberKindMap[next.Name],
+					},
+				}
+
+			case "bool":
+				f.shapes[f.currentType] = &AliasLike{
+					Name:          f.currentType,
+					PkgName:       f.PackageName,
+					PkgImportName: f.PkgImportName,
+					IsAlias:       IsAlias(t),
+					Type:          &BooleanLike{},
+				}
+
+			default:
+				// alias type from the same package
+				// example
+				//  type A ListOf
+				f.shapes[f.currentType] = &AliasLike{
+					Name:          f.currentType,
+					PkgName:       f.PackageName,
+					PkgImportName: f.PkgImportName,
+					IsAlias:       IsAlias(t),
+					Type: &RefName{
+						Name:          next.Name,
+						PkgName:       f.PackageName,
+						PkgImportName: f.PkgImportName,
+					},
 				}
 			}
 
-			structShape, ok := f.shapes[f.currentType].(*StructLike)
-			if !ok {
-				log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
-				return f
+		case *ast.SelectorExpr:
+			// alias type from other packages
+			// example:
+			//  type A time.Time
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       IsAlias(t),
+				Type:          f.selectExrToShape(next),
 			}
 
-			for _, field := range t.Fields.List {
-				// this happens when field is embedded in struct
-				// something like `type A struct { B }`
-				if len(field.Names) == 0 {
-					switch typ := field.Type.(type) {
-					case *ast.Ident:
-						structShape.Fields = append(structShape.Fields, &FieldLike{
-							Name: typ.Name,
-							Type: FromAst(typ, InjectPkgName(f.PkgImportName, f.PackageName)),
-						})
-						break
-					default:
-						log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
-						continue
-					}
-				}
-
-				for _, fieldName := range field.Names {
-					if !fieldName.IsExported() {
-						continue
-					}
-
-					var typ Shape
-					switch ttt := field.Type.(type) {
-					// selectors in struct, means that we are using type from other package
-					case *ast.SelectorExpr:
-						if ident, ok := ttt.X.(*ast.Ident); ok {
-							pkgName := ident.Name
-							pkgImportName := f.packageNameToPackageImport[pkgName]
-							typ = FromAst(ttt.Sel, InjectPkgName(pkgImportName, pkgName))
-						} else {
-							log.Infof("shape.InferFromFile: unknown selector X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-							typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-						}
-					// this is reference to other struct in the same package or other package
-					case *ast.StarExpr:
-						if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
-							// other package
-							if ident, ok := selector.X.(*ast.Ident); ok {
-								pkgName := ident.Name
-								pkgImportName := f.packageNameToPackageImport[pkgName]
-								typ = FromAst(selector.Sel, InjectPkgName(pkgImportName, pkgName))
-							} else {
-								// same package
-								log.Infof("shape.InferFromFile: unknown star X in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-								typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-							}
-						} else {
-							// same package
-							log.Infof("shape.InferFromFile: unknown star-else in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-							typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-						}
-
-					case *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
-						typ = FromAst(ttt, InjectPkgName(f.PkgImportName, f.PackageName))
-
-					default:
-						log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-						typ = &Any{}
-					}
-
-					tag := ""
-					if field.Tag != nil {
-						tag = field.Tag.Value
-					}
-
-					tags := ExtractTags(tag)
-					desc := TagsToDesc(tags)
-					guard := TagsToGuard(tags)
-
-					structShape.Fields = append(structShape.Fields, &FieldLike{
-						Name:      fieldName.Name,
-						Type:      typ,
-						Desc:      desc,
-						Guard:     guard,
-						Tags:      tags,
-						IsPointer: IsStarExpr(field.Type),
-					})
-				}
+		case *ast.IndexExpr:
+			// alias of type that has one type params initialized
+			// example:
+			//  type A ListOf[any]
+			//  type B ListOf[ListOf[any]]
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       IsAlias(t),
+				Type:          FromAST(next, opt...),
 			}
 
-			f.shapes[f.currentType] = structShape
+		case *ast.IndexListExpr:
+			// alias of type that has two type params initialized
+			// example:
+			//  type A ListOf2[string, int]
+			//  type B ListOf2[ListOf2[string, int], ListOf2[string, int]]
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       IsAlias(t),
+				Type:          FromAST(next, opt...),
+			}
 
-			log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
+		case *ast.MapType:
+			// example:
+			//  type A map[string]string
+			//  type B map[string]ListOf2[string, int]
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       IsAlias(t),
+				Type: &MapLike{
+					Key:          FromAST(next.Key, opt...),
+					Val:          FromAST(next.Value, opt...),
+					KeyIsPointer: IsStarExpr(next.Key),
+					ValIsPointer: IsStarExpr(next.Value),
+				},
+			}
+
+		case *ast.ArrayType:
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				IsAlias:       IsAlias(t),
+				Type: &ListLike{
+					Element:          FromAST(next.Elt, opt...),
+					ElementIsPointer: IsStarExpr(next.Elt),
+					ArrayLen:         tryGetArrayLen(next.Len),
+				},
+			}
+
+		case *ast.StructType:
+			f.shapes[f.currentType] = &StructLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
+			}
+
 		}
+
+	case *ast.StructType:
+		if !t.Struct.IsValid() {
+			break
+		}
+
+		if _, ok := f.shapes[f.currentType]; !ok {
+			f.shapes[f.currentType] = &StructLike{
+				Name:          f.currentType,
+				PkgName:       f.PackageName,
+				PkgImportName: f.PkgImportName,
+			}
+		}
+
+		structShape, ok := f.shapes[f.currentType].(*StructLike)
+		if !ok {
+			log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
+			return f
+		}
+
+		for _, field := range t.Fields.List {
+			// this happens when field is embedded in struct
+			// something like `type A struct { B }`
+			if len(field.Names) == 0 {
+				switch typ := field.Type.(type) {
+				case *ast.Ident:
+					structShape.Fields = append(structShape.Fields, &FieldLike{
+						Name: typ.Name,
+						Type: FromAST(typ, opt...),
+					})
+					break
+				default:
+					log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
+					continue
+				}
+			}
+
+			for _, fieldName := range field.Names {
+				if !fieldName.IsExported() {
+					continue
+				}
+
+				var typ Shape
+				switch ttt := field.Type.(type) {
+				// selectors in struct, means that we are using type from other package
+				case *ast.SelectorExpr:
+					typ = f.selectExrToShape(ttt)
+				// this is reference to other struct in the same package or other package
+				case *ast.StarExpr:
+					if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
+						typ = f.selectExrToShape(selector)
+						switch x := typ.(type) {
+						case *RefName:
+							x.IsPointer = true
+						}
+					} else {
+						typ = FromAST(ttt, opt...)
+					}
+
+				case *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
+					typ = FromAST(ttt, opt...)
+
+				default:
+					log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+					typ = &Any{}
+				}
+
+				tag := ""
+				if field.Tag != nil {
+					tag = field.Tag.Value
+				}
+
+				tags := ExtractTags(tag)
+				desc := TagsToDesc(tags)
+				guard := TagsToGuard(tags)
+
+				structShape.Fields = append(structShape.Fields, &FieldLike{
+					Name:      fieldName.Name,
+					Type:      typ,
+					Desc:      desc,
+					Guard:     guard,
+					Tags:      tags,
+					IsPointer: IsStarExpr(field.Type),
+				})
+			}
+		}
+
+		f.shapes[f.currentType] = structShape
+		log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
 	}
 
 	return f
 }
 
-func (f *InferredInfo) named() *Named {
-	return &Named{
-		Name:          f.currentType,
-		PkgName:       f.PackageName,
-		PkgImportName: f.PkgImportName,
+func (f *InferredInfo) optionAST() []FromASTOption {
+	return []FromASTOption{
+		InjectPkgName(f.PackageName),
+		InjectPkgImportName(f.packageNameToPackageImport),
 	}
+}
+
+func IsAlias(t *ast.TypeSpec) bool {
+	return t.Assign != 0
+}
+
+func (f *InferredInfo) selectExrToShape(ttt *ast.SelectorExpr) Shape {
+	if ident, ok := ttt.X.(*ast.Ident); ok {
+		pkgName := ident.Name
+		return FromAST(ttt.Sel, InjectPkgName(pkgName), InjectPkgImportName(f.packageNameToPackageImport))
+	}
+
+	return FromAST(ttt, f.optionAST()...)
+}
+
+func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
+	if params == nil {
+		return nil
+	}
+
+	var result []TypeParam
+	for _, param := range params.List {
+		typ := FromAST(param.Type,
+			InjectPkgImportName(f.packageNameToPackageImport),
+			InjectPkgName(f.PackageName))
+
+		if len(param.Names) == 0 {
+			result = append(result, TypeParam{
+				Name: param.Type.(*ast.Ident).Name,
+				Type: typ,
+			})
+			continue
+		}
+
+		for _, name := range param.Names {
+			result = append(result, TypeParam{
+				Name: name.Name,
+				Type: typ,
+			})
+		}
+	}
+
+	return result
 }
 
 func tryGetArrayLen(expr ast.Expr) *int {

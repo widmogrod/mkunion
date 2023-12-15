@@ -1,22 +1,21 @@
 package shape
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"go/ast"
 )
 
-func FromAst(x any, fx ...func(x Shape)) Shape {
+type FromASTOption func(x Shape)
+
+func FromAST(x any, fx ...FromASTOption) Shape {
 	switch y := x.(type) {
 	case *ast.Ident:
 		switch y.Name {
 		case "any":
 			return &Any{}
 		case "string":
-			result := &StringLike{}
-			for _, f := range fx {
-				f(result)
-			}
-			return result
+			return &StringLike{}
 
 		case "bool":
 			return &BooleanLike{}
@@ -33,7 +32,10 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 			}
 
 			result := &RefName{
-				Name: y.String(),
+				Name:          y.String(),
+				PkgName:       "",
+				PkgImportName: "",
+				Indexed:       nil,
 			}
 
 			for _, f := range fx {
@@ -43,25 +45,72 @@ func FromAst(x any, fx ...func(x Shape)) Shape {
 			return result
 		}
 
+	case *ast.IndexExpr:
+		result := FromAST(y.X, fx...)
+		switch z := result.(type) {
+		case *RefName:
+			z.Indexed = append(z.Indexed, FromAST(y.Index, fx...))
+			return z
+		}
+
+		panic(fmt.Errorf("shape.FromAST: unsupported IndexExpr: %#v", y))
+
+	case *ast.IndexListExpr:
+		result := FromAST(y.X, fx...)
+		switch z := result.(type) {
+		case *RefName:
+			for _, x := range y.Indices {
+				z.Indexed = append(z.Indexed, FromAST(x, fx...))
+			}
+			return z
+		}
+
 	case *ast.ArrayType:
 		return &ListLike{
-			Element:          FromAst(y.Elt, fx...),
+			Element:          FromAST(y.Elt, fx...),
 			ElementIsPointer: IsStarExpr(y.Elt),
 		}
 
 	case *ast.MapType:
 		return &MapLike{
-			Key:          FromAst(y.Key, fx...),
+			Key:          FromAST(y.Key, fx...),
 			KeyIsPointer: IsStarExpr(y.Key),
-			Val:          FromAst(y.Value, fx...),
+			Val:          FromAST(y.Value, fx...),
 			ValIsPointer: IsStarExpr(y.Value),
 		}
 
 	case *ast.SelectorExpr:
-		return FromAst(y.X, fx...)
+		switch z := y.X.(type) {
+		case *ast.Ident:
+			var result Shape
+			if y.Sel != nil {
+				result = &RefName{
+					Name:    y.Sel.String(),
+					PkgName: z.Name,
+				}
+			} else {
+				result = &RefName{
+					Name: z.Name,
+				}
+			}
+
+			for _, f := range fx {
+				f(result)
+			}
+
+			return result
+		}
+
+		panic(fmt.Errorf("shape.FromAST: unsupported SelectorExpr: %#v", y))
 
 	case *ast.StarExpr:
-		return FromAst(y.X, fx...)
+		result := FromAST(y.X, fx...)
+		switch z := result.(type) {
+		case *RefName:
+			z.IsPointer = true
+		}
+
+		return result
 	}
 
 	return &Any{}
@@ -72,101 +121,77 @@ func IsStarExpr(x ast.Expr) bool {
 	return ok
 }
 
-func InjectPkgName(pkgImportName, pkgName string) func(x Shape) {
+func InjectPkgImportName(pkgNameToImportName map[string]string) func(x Shape) {
 	return func(x Shape) {
-		if !IsNamed(x) {
-			return
-		}
+		switch y := x.(type) {
+		case *RefName:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
+					y.PkgImportName = pkgImportName
+				} else {
+					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				}
+			}
 
+		case *StructLike:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
+					y.PkgImportName = pkgImportName
+				} else {
+					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				}
+			}
+
+		case *UnionLike:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
+					y.PkgImportName = pkgImportName
+				} else {
+					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				}
+			}
+
+		case *AliasLike:
+			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+			if isPkgNotSet {
+				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
+					y.PkgImportName = pkgImportName
+				} else {
+					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				}
+			}
+		}
+	}
+}
+func InjectPkgName(pkgName string) func(x Shape) {
+	return func(x Shape) {
 		switch y := x.(type) {
 		case *RefName:
 			isPkgNotSet := y.PkgName == ""
 			if isPkgNotSet {
 				y.PkgName = pkgName
-				y.PkgImportName = pkgImportName
 			}
 
-		case *StringLike:
-			isPkgNotSet := y.Named.PkgName == ""
+		case *StructLike:
+			isPkgNotSet := y.PkgName == ""
 			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
+				y.PkgName = pkgName
 			}
 
-		case *NumberLike:
-			isPkgNotSet := y.Named.PkgName == ""
+		case *UnionLike:
+			isPkgNotSet := y.PkgName == ""
 			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
+				y.PkgName = pkgName
 			}
 
-		case *BooleanLike:
-			isPkgNotSet := y.Named.PkgName == ""
+		case *AliasLike:
+			isPkgNotSet := y.PkgName == ""
 			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
-			}
-
-		case *ListLike:
-			isPkgNotSet := y.Named.PkgName == ""
-			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
-			}
-
-		case *MapLike:
-			isPkgNotSet := y.Named.PkgName == ""
-			if isPkgNotSet {
-				y.Named.PkgName = pkgName
-				y.Named.PkgImportName = pkgImportName
+				y.PkgName = pkgName
 			}
 		}
 	}
-}
-
-func IsNamed(x Shape) bool {
-	switch y := x.(type) {
-	case *RefName, *StructLike, *UnionLike:
-		return true
-
-	case *StringLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *NumberLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *BooleanLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *ListLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *MapLike:
-		if y.Named == nil {
-			return false
-		}
-
-		return y.Named.Name != ""
-
-	case *Any:
-		return false
-	}
-
-	return false
 }

@@ -1,7 +1,7 @@
 {{- $self := . -}}
 
 {{ RenderHeader -}}
-{{ RenderImport "github.com/widmogrod/mkunion/x/shared" -}}
+{{ $self.OptionallyImport "github.com/widmogrod/mkunion/x/shared" -}}
 {{ RenderImport "encoding/json" -}}
 {{ RenderImport "fmt" -}}
 

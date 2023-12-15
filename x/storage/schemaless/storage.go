@@ -43,6 +43,12 @@ const (
 	PolicyOverwriteServerChanges
 )
 
+////go:generate go run ../../../cmd/mkunion/main.go -name UpdateRecordsDSL
+//type (
+//	FindState FindingRecords[Record[workflow.State]]
+//	FindFlow  FindingRecords[Record[workflow.Flow]]
+//)
+
 // go:generate go run ../../../cmd/mkunion/main.go -name RecordsDSL
 type (
 	UpdateRecords[T any] struct {

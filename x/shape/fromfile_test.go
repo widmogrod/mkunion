@@ -1,6 +1,7 @@
 package shape
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -15,7 +16,6 @@ func TestInferFromFile(t *testing.T) {
 	assert.Equal(t, "Example", union.Name)
 	assert.Equal(t, "testasset", union.PkgName)
 	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset", union.PkgImportName)
-	assert.Equal(t, 9, len(union.Variant))
 
 	expected := &UnionLike{
 		Name:          "Example",
@@ -67,6 +67,7 @@ func TestInferFromFile(t *testing.T) {
 							Name:          "A",
 							PkgName:       "testasset",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							IsPointer:     true,
 						},
 						Desc:      nil,
 						Guard:     nil,
@@ -79,6 +80,7 @@ func TestInferFromFile(t *testing.T) {
 							Name:          "Time",
 							PkgName:       "time",
 							PkgImportName: "time",
+							IsPointer:     true,
 						},
 						Desc:      nil,
 						Guard:     nil,
@@ -87,76 +89,252 @@ func TestInferFromFile(t *testing.T) {
 					},
 				},
 			},
-			&StringLike{
-				Named: &Named{
-					Name:          "C",
+			&AliasLike{
+				Name:          "C",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				Type:          &StringLike{},
+			},
+			&AliasLike{
+				Name:          "D",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				Type: &NumberLike{
+					Kind: &Int64{},
+				},
+			},
+			&AliasLike{
+				Name:          "E",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				Type: &NumberLike{
+					Kind: &Float64{},
+				},
+			},
+			&AliasLike{
+				Name:          "F",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				Type:          &BooleanLike{},
+			},
+
+			&AliasLike{
+				Name:          "H",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &MapLike{
+					Key: &StringLike{},
+					Val: &RefName{
+						Name:          "Example",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+					KeyIsPointer: false,
+					ValIsPointer: false,
+				},
+			},
+
+			&AliasLike{
+				Name:          "I",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "Example",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+					ElementIsPointer: false,
+				},
+			},
+			&AliasLike{
+				Name:          "J",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &ListLike{
+					Element:          &StringLike{},
+					ElementIsPointer: false,
+					ArrayLen:         ptr(2),
+				},
+			},
+			&AliasLike{
+				Name:          "K",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "A",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
 			},
-			&NumberLike{
-				Kind: &Int64{},
-				Named: &Named{
-					Name:          "D",
+			&AliasLike{
+				Name:          "L",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       true,
+				Type: &RefName{
+					Name:          "List",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
 			},
-			&NumberLike{
-				Kind: &Float64{},
-				Named: &Named{
-					Name:          "E",
+			&AliasLike{
+				Name:          "M",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "List",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
 			},
-			&BooleanLike{
-				Named: &Named{
-					Name:          "F",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			&AliasLike{
+				Name:          "N",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "Duration",
+					PkgName:       "time",
+					PkgImportName: "time",
 				},
 			},
-			&MapLike{
-				Key: &StringLike{},
-				Val: &RefName{
-					Name:          "Example",
+			&AliasLike{
+				Name:          "O",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "ListOf",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				},
-				KeyIsPointer: false,
-				ValIsPointer: false,
-				Named: &Named{
-					Name:          "H",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				},
-			},
-			&ListLike{
-				Element: &RefName{
-					Name:          "Example",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				},
-				ElementIsPointer: false,
-				Named: &Named{
-					Name:          "I",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					IsPointer:     false,
+					Indexed: []Shape{
+						&RefName{
+							Name:          "Duration",
+							PkgName:       "time",
+							PkgImportName: "time",
+						},
+					},
 				},
 			},
-			&ListLike{
-				Element:          &StringLike{},
-				ElementIsPointer: false,
-				ArrayLen:         ptr(2),
-				Named: &Named{
-					Name:          "J",
+			&AliasLike{
+				Name:          "P",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "ListOf2",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					IsPointer:     false,
+					Indexed: []Shape{
+						&RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							IsPointer:     false,
+							Indexed: []Shape{
+								&Any{},
+							},
+						},
+						&RefName{
+							Name:          "ListOf2",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							IsPointer:     true,
+							Indexed: []Shape{
+								&NumberLike{
+									Kind: &Int64{},
+								},
+								&RefName{
+									Name:          "Duration",
+									PkgName:       "time",
+									PkgImportName: "time",
+									IsPointer:     true,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 	}
 
-	assert.Equal(t, expected, &union)
+	if diff := cmp.Diff(expected, union); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+
+	strut := inferred.RetrieveStruct("ListOf2")
+	expected2 := &StructLike{
+		Name:          "ListOf2",
+		PkgName:       "testasset",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+		TypeParams: []TypeParam{
+			{
+				Name: "T1",
+				Type: &Any{},
+			},
+			{
+				Name: "T2",
+				Type: &Any{},
+			},
+		},
+		Fields: nil,
+	}
+	if diff := cmp.Diff(expected2, strut); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
 }
+
+//func TestEmbeds(t *testing.T) {
+//	inferred, err := InferFromFile("../workflow/workflow_other.go")
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	union := inferred.RetrieveUnion("FunctionDSL")
+//	assert.Equal(t, "FunctionDSL", union.Name)
+//
+//	expected := &UnionLike{
+//		Name:          "FunctionDSL",
+//		PkgName:       "workflow",
+//		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+//		Variant: []Shape{
+//			&StructLike{
+//				Name:          "FunctionInput",
+//				PkgName:       "workflow",
+//				PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+//				Fields: []*FieldLike{
+//					{
+//						Name: "Name",
+//						Type: &StringLike{},
+//					},
+//					{
+//						Name: "CallbackID",
+//						Type: &StringLike{},
+//					},
+//					{
+//						Name: "Args",
+//						Type: &ListLike{
+//							Element: &RefName{
+//								Name:          "Schema",
+//								PkgName:       "schema",
+//								PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+//							},
+//						},
+//					},
+//				},
+//			},
+//		},
+//	}
+//
+//	if diff := cmp.Diff(expected, union); diff != "" {
+//		t.Errorf("mismatch (-want +got):\n%s", diff)
+//	}
+//}

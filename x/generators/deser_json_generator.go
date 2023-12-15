@@ -14,7 +14,7 @@ var (
 	deserJSONTmpl string
 )
 
-func NewDeSerJSONGenerator(union shape.UnionLike, helper *Helpers) *DeSerJSONGenerator {
+func NewDeSerJSONGenerator(union *shape.UnionLike, helper *Helpers) *DeSerJSONGenerator {
 	return &DeSerJSONGenerator{
 		Union:    union,
 		helper:   helper,
@@ -23,7 +23,7 @@ func NewDeSerJSONGenerator(union shape.UnionLike, helper *Helpers) *DeSerJSONGen
 }
 
 type DeSerJSONGenerator struct {
-	Union    shape.UnionLike
+	Union    *shape.UnionLike
 	helper   *Helpers
 	template *template.Template
 }
@@ -65,34 +65,22 @@ func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
 		func(y *shape.RefName) string {
 			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
+		func(x *shape.AliasLike) string {
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
 		func(y *shape.BooleanLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StringLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.NumberLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.ListLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.MapLike) string {
-			if shape.IsNamed(y) {
-				return fmt.Sprintf("%s.%s", y.Named.PkgName, y.Named.Name)
-			}
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.StructLike) string {
@@ -111,6 +99,9 @@ func (g *DeSerJSONGenerator) SupportNativeJSONMarshal(x shape.Shape) bool {
 			return false
 		},
 		func(y *shape.RefName) bool {
+			return false
+		},
+		func(y *shape.AliasLike) bool {
 			return false
 		},
 		func(y *shape.BooleanLike) bool {
@@ -153,7 +144,7 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
 		},
 		func(x *shape.RefName) string {
-			// check if reference is union,
+			// check if reference is Union,
 			// if yes, then we need to use function from the package called {VariantName}FromJSON
 			y, _ := shape.LookupShape(x)
 			z, ok := y.(*shape.UnionLike)
@@ -172,6 +163,9 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 			}
 
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
+		},
+		func(x *shape.AliasLike) string {
+			panic(fmt.Errorf("generators.UnmarshalTemplate: %T not suported", x))
 		},
 		func(x *shape.BooleanLike) string {
 			return g.padLeft(depth, fmt.Sprintf("return json.Unmarshal(value, &result.%s)", field.Name))
@@ -242,7 +236,7 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
 		},
 		func(x *shape.RefName) string {
-			// check if reference is union,
+			// check if reference is Union,
 			y, _ := shape.LookupShape(x)
 			if z, ok := y.(*shape.UnionLike); ok {
 				pkgName := g.pkgNameAndImport(z)
@@ -250,6 +244,9 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 			}
 
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
+		},
+		func(x *shape.AliasLike) string {
+			panic(fmt.Errorf("generators.MarshalTemplate: %T not suported", x))
 		},
 		func(x *shape.BooleanLike) string {
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
@@ -295,6 +292,21 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 	)
 }
 
+func (g *DeSerJSONGenerator) OptionallyImport(x string) string {
+	hasStruct := false
+	for _, f := range g.Union.Variant {
+		if g.IsStruct(f) {
+			hasStruct = true
+			break
+		}
+	}
+
+	if hasStruct {
+		return g.helper.RenderImport(x)
+	}
+
+	return ""
+}
 func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
 	err := g.template.ExecuteTemplate(result, "deser_json_generator.go.tmpl", g)
