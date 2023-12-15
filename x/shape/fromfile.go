@@ -99,24 +99,11 @@ func (f *InferredInfo) PackageImportName() string {
 	return f.pkgImportName
 }
 
-func (f *InferredInfo) PossibleUnionTypes() []string {
-	result := make([]string, 0)
-	for unionName := range f.possibleVariantTypes {
-		result = append(result, unionName)
-	}
-	return result
-}
-
-func (f *InferredInfo) PossibleVariantsTypes(unionName string) []string {
-	return f.possibleVariantTypes[unionName]
-}
-
 func (f *InferredInfo) RetrieveUnions() []*UnionLike {
-	result := make([]*UnionLike, 0)
-	for unionName := range f.possibleVariantTypes {
-		union := f.RetrieveUnion(unionName)
-		if union != nil {
-			result = append(result, union)
+	var result []*UnionLike
+	for _, shape := range f.RetrieveShapes() {
+		if unionShape, ok := shape.(*UnionLike); ok {
+			result = append(result, unionShape)
 		}
 	}
 
@@ -180,24 +167,23 @@ func (f *InferredInfo) RetrieveShapes() []Shape {
 }
 
 func (f *InferredInfo) RetrieveStructs() []*StructLike {
-	structs := make(map[string]*StructLike)
-	for _, structShape := range f.shapes {
-		switch x := structShape.(type) {
-		case *StructLike:
-			structs[x.Name] = x
+	var result []*StructLike
+	for _, shape := range f.RetrieveShapes() {
+		if structShape, ok := shape.(*StructLike); ok {
+			result = append(result, structShape)
 		}
 	}
 
-	for union, variants := range f.possibleVariantTypes {
-		delete(structs, union)
-		for _, variant := range variants {
-			delete(structs, variant)
-		}
-	}
+	return result
+}
 
-	result := make([]*StructLike, 0)
-	for _, x := range structs {
-		result = append(result, x)
+func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
+	var result []Shape
+	for _, shape := range f.RetrieveShapes() {
+		tags := Tags(shape)
+		if _, ok := tags[tagName]; ok {
+			result = append(result, shape)
+		}
 	}
 
 	return result

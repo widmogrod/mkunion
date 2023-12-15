@@ -149,3 +149,39 @@ func ConcatGuard(a, b Guard) Guard {
 		L: append(result.L, b),
 	}
 }
+
+func Tags(x Shape) map[string]Tag {
+	return MustMatchShape(
+		x,
+		func(x *Any) map[string]Tag {
+			return nil
+		},
+		func(x *RefName) map[string]Tag {
+			return nil
+		},
+		func(x *AliasLike) map[string]Tag {
+			return x.Tags
+		},
+		func(x *BooleanLike) map[string]Tag {
+			return nil
+		},
+		func(x *StringLike) map[string]Tag {
+			return nil
+		},
+		func(x *NumberLike) map[string]Tag {
+			return nil
+		},
+		func(x *ListLike) map[string]Tag {
+			return nil
+		},
+		func(x *MapLike) map[string]Tag {
+			return nil
+		},
+		func(x *StructLike) map[string]Tag {
+			return x.Tags
+		},
+		func(x *UnionLike) map[string]Tag {
+			return x.Tags
+		},
+	)
+}
