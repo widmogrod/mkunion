@@ -292,6 +292,21 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 	)
 }
 
+func (g *DeSerJSONGenerator) OptionallyImport(x string) string {
+	hasStruct := false
+	for _, f := range g.Union.Variant {
+		if g.IsStruct(f) {
+			hasStruct = true
+			break
+		}
+	}
+
+	if hasStruct {
+		return g.helper.RenderImport(x)
+	}
+
+	return ""
+}
 func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
 	err := g.template.ExecuteTemplate(result, "deser_json_generator.go.tmpl", g)
