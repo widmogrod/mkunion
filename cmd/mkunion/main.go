@@ -297,12 +297,8 @@ func main() {
 							return err
 						}
 
-						for _, union := range inferred.RetrieveUnions() {
-							tsr.AddUnion(union)
-						}
-
-						for _, structLike := range inferred.RetrieveStructs() {
-							tsr.AddStruct(structLike)
+						for _, x := range inferred.RetrieveShapes() {
+							tsr.AddShape(x)
 						}
 					}
 
