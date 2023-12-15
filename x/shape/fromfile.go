@@ -140,6 +140,34 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 	}
 }
 
+func (f *InferredInfo) RetrieveShapes() []Shape {
+	shapes := make(map[string]Shape)
+	for name, shape := range f.shapes {
+		shapes[name] = shape
+	}
+
+	var result = make([]Shape, len(f.shapes))
+	for unionName, variantsNames := range f.possibleVariantTypes {
+		union := f.RetrieveUnion(unionName)
+		if union == nil {
+			continue
+		}
+
+		result = append(result, union)
+
+		delete(shapes, unionName)
+		for _, variantName := range variantsNames {
+			delete(shapes, variantName)
+		}
+	}
+
+	for _, shape := range shapes {
+		result = append(result, shape)
+	}
+
+	return result
+}
+
 func (f *InferredInfo) RetrieveStructs() []*StructLike {
 	structs := make(map[string]*StructLike)
 	for _, structShape := range f.shapes {
