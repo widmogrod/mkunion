@@ -1,8 +1,10 @@
 package testasset
 
-import "time"
+import (
+	"time"
+)
 
-//go:generate go run ../../../cmd/mkunion/main.go --name=Example
+//go:generate go run ../../../cmd/mkunion/main.go -name Example
 //go:tag mkunion:"Example"
 type (
 	A struct {
@@ -41,5 +43,9 @@ type ListOf[T any] struct{}
 
 // ListOf2 is a list of 2 elements
 //
-//go:tag serde:"json" json:"list_of_2,omitempty"
-type ListOf2[T1, T2 any] struct{}
+//go:tag serde:"json"
+//go:tag json:"list_of_2,omitempty"
+type ListOf2[T1, T2 any] struct {
+	Data   T1
+	ListOf ListOf[T1]
+}

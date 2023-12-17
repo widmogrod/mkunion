@@ -13,8 +13,27 @@ func JSONParseObject(x []byte, onElement func(key string, value []byte) error) e
 	}
 
 	for key, value := range jsonMap {
+		if value == nil || len(value) == 0 {
+			continue
+		}
 		if err := onElement(key, value); err != nil {
 			return fmt.Errorf("shared.JSONParseObject: onElement() for key=%s; %w", key, err)
+		}
+	}
+
+	return nil
+}
+
+func JSONParseList(x []byte, onElement func(index int, value []byte) error) error {
+	var jsonList []json.RawMessage
+	err := json.Unmarshal(x, &jsonList)
+	if err != nil {
+		return err
+	}
+
+	for idx, value := range jsonList {
+		if err := onElement(idx, value); err != nil {
+			return fmt.Errorf("shared.JSONParseList: onElement() for index=%d; %w", idx, err)
 		}
 	}
 
@@ -83,7 +102,7 @@ func JSONMapFromSerializer[K comparable, A any](
 	x map[K]A,
 	serialize func(x A) ([]byte, error),
 ) ([]byte, error) {
-	var result = make(map[K][]byte)
+	var result = make(map[K]json.RawMessage)
 	for key, value := range x {
 		out, err := serialize(value)
 		if err != nil {

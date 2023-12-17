@@ -111,6 +111,12 @@ func N1Shape() shape.Shape {
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Number", NumberFromJSON, NumberToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.N0", N0FromJSON, N0ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.N1", N1FromJSON, N1ToJSON)
+}
+
 type NumberUnionJSON struct {
 	Type string          `json:"$type,omitempty"`
 	N0   json.RawMessage `json:"testutils.N0,omitempty"`

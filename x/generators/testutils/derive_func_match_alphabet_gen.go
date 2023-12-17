@@ -129,6 +129,13 @@ func C3Shape() shape.Shape {
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Alphabet", AlphabetFromJSON, AlphabetToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.A1", A1FromJSON, A1ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.B2", B2FromJSON, B2ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.C3", C3FromJSON, C3ToJSON)
+}
+
 type AlphabetUnionJSON struct {
 	Type string          `json:"$type,omitempty"`
 	A1   json.RawMessage `json:"testutils.A1,omitempty"`

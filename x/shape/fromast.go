@@ -166,6 +166,7 @@ func InjectPkgImportName(pkgNameToImportName map[string]string) func(x Shape) {
 		}
 	}
 }
+
 func InjectPkgName(pkgName string) func(x Shape) {
 	return func(x Shape) {
 		switch y := x.(type) {

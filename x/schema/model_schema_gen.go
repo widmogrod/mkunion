@@ -108,6 +108,17 @@ func MustMatchSchemaR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Schema", SchemaFromJSON, SchemaToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.None", NoneFromJSON, NoneToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Bool", BoolFromJSON, BoolToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Number", NumberFromJSON, NumberToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.String", StringFromJSON, StringToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Binary", BinaryFromJSON, BinaryToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.List", ListFromJSON, ListToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Map", MapFromJSON, MapToJSON)
+}
+
 type SchemaUnionJSON struct {
 	Type   string          `json:"$type,omitempty"`
 	None   json.RawMessage `json:"schema.None,omitempty"`

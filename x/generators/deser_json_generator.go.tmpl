@@ -5,6 +5,13 @@
 {{ RenderImport "encoding/json" -}}
 {{ RenderImport "fmt" -}}
 
+func init() {
+	shared.JSONMarshallerRegister("{{ $self.Union.PkgImportName }}.{{ $self.Union.Name }}", {{ $self.Union.Name }}FromJSON, {{ .Union.Name }}ToJSON)
+	{{- range $index, $variant := .Union.Variant }}
+	shared.JSONMarshallerRegister("{{ $self.Union.PkgImportName }}.{{ $self.VariantName $variant }}", {{ $self.VariantName $variant }}FromJSON, {{ $self.VariantName $variant }}ToJSON)
+	{{- end }}
+}
+
 type {{ .Union.Name }}UnionJSON struct {
 	Type string `json:"$type,omitempty"`
 	{{- range $index, $variant := .Union.Variant }}
@@ -32,7 +39,7 @@ func {{ .Union.Name }}FromJSON(x []byte) ({{ .Union.Name }}, error) {
 		return {{ $self.VariantName $variant }}FromJSON(data.{{ $self.VariantName $variant }})
 	}{{ end }}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("{{ .Union.PkgName }}.{{ .Union.Name }}: unknown type %s", data.Type)
 }
 
 func {{ .Union.Name }}ToJSON(x {{ .Union.Name }}) ([]byte, error) {

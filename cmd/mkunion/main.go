@@ -265,6 +265,69 @@ func main() {
 				},
 			},
 			{
+				Name: "serde",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "type",
+						DefaultText: "json",
+					},
+					&cli.StringSliceFlag{
+						Name:      "input-go-file",
+						Aliases:   []string{"i", "input"},
+						Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:generate mkunion -name=MyUnionType`,
+						TakesFile: true,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					sourcePaths := c.StringSlice("input-go-file")
+					if len(sourcePaths) == 0 && os.Getenv("GOFILE") != "" {
+						cwd, _ := syscall.Getwd()
+						sourceName := path.Base(os.Getenv("GOFILE"))
+						sourcePaths = []string{
+							path.Join(cwd, sourceName),
+						}
+					}
+
+					if len(sourcePaths) == 0 {
+						// show usage
+						cli.ShowAppHelpAndExit(c, 1)
+					}
+
+					for _, sourcePath := range sourcePaths {
+						inferred, err := shape.InferFromFile(sourcePath)
+						if err != nil {
+							return fmt.Errorf("failed inferring shape in %s; %w", sourcePath, err)
+						}
+
+						shapes := inferred.RetrieveShapesTaggedAs("serde")
+						for _, x := range shapes {
+							generator := generators.NewSerdeJSONTagged(x)
+							contents, err := generator.Generate()
+							if err != nil {
+								return fmt.Errorf("failed to generate serialiser for %s in %s: %w", shape.ToGoTypeName(x), sourcePath, err)
+							}
+
+							sourceName := path.Base(sourcePath)
+							baseName := strings.TrimSuffix(sourceName, path.Ext(sourceName))
+							fileName := path.Join(
+								path.Dir(sourcePath),
+								fmt.Sprintf("%s_%s_serde_gen.go", baseName, shape.ToGoTypeName(x, shape.WithRootPackage(shape.ToGoPkgName(x)))),
+							)
+
+							log.Infof("writing %s", fileName)
+							err = os.WriteFile(fileName, []byte(contents), 0644)
+							if err != nil {
+								return fmt.Errorf("failed to write serialiser for %s in %s: %w", shape.ToGoTypeName(x), sourcePath, err)
+							}
+						}
+
+						return nil
+					}
+
+					return nil
+				},
+			},
+			{
 				Name: "shape-export",
 				Flags: []cli.Flag{
 					&cli.StringFlag{

@@ -96,6 +96,42 @@ var TypeStringToNumberKindMap = map[string]NumberKind{
 	"rune":    &Int32{},
 }
 
+func NumberKindToGoName(x NumberKind) string {
+	return MustMatchNumberKind(
+		x,
+		func(x *UInt8) string {
+			return "uint8"
+		},
+		func(x *UInt16) string {
+			return "uint16"
+		},
+		func(x *UInt32) string {
+			return "uint32"
+		},
+		func(x *UInt64) string {
+			return "uint64"
+		},
+		func(x *Int8) string {
+			return "int8"
+		},
+		func(x *Int16) string {
+			return "int16"
+		},
+		func(x *Int32) string {
+			return "int32"
+		},
+		func(x *Int64) string {
+			return "int64"
+		},
+		func(x *Float32) string {
+			return "float32"
+		},
+		func(x *Float64) string {
+			return "float64"
+		},
+	)
+}
+
 type FieldLike struct {
 	Name      string
 	Type      Shape
@@ -151,6 +187,7 @@ func ConcatGuard(a, b Guard) Guard {
 }
 
 func Tags(x Shape) map[string]Tag {
+
 	return MustMatchShape(
 		x,
 		func(x *Any) map[string]Tag {

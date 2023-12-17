@@ -229,6 +229,14 @@ func PShape() shape.Shape {
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Tree", TreeFromJSON, TreeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Branch", BranchFromJSON, BranchToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Leaf", LeafFromJSON, LeafToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.K", KFromJSON, KToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.P", PFromJSON, PToJSON)
+}
+
 type TreeUnionJSON struct {
 	Type   string          `json:"$type,omitempty"`
 	Branch json.RawMessage `json:"testutils.Branch,omitempty"`
@@ -265,7 +273,7 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return PFromJSON(data.P)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("testutils.Tree: unknown type %s", data.Type)
 }
 
 func TreeToJSON(x Tree) ([]byte, error) {

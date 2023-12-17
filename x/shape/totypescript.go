@@ -20,6 +20,10 @@ type (
 )
 
 func (o *TypeScriptOptions) IsCurrentPkgName(pkgName string) bool {
+	if pkgName == "" {
+		return true
+	}
+
 	return o.currentPkgName == pkgName
 }
 
@@ -104,6 +108,10 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 		func(x *RefName) string {
 			prefix := ""
 			if !option.IsCurrentPkgName(x.PkgName) {
+				if x.PkgName == "" {
+					return x.Name
+				}
+
 				prefix = fmt.Sprintf("%s.", x.PkgName)
 				option.NeedsToImportPkgName(x.PkgName, x.PkgImportName)
 			}

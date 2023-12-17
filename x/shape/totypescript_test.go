@@ -114,7 +114,10 @@ export type O = ListOf<time.Duration>
 
 export type P = ListOf2<ListOf<any>, ListOf2<number, time.Duration>>
 
-export type ListOf2<T1, T2> = {}
+export type ListOf2<T1, T2> = {
+	Data?: T1,
+	ListOf?: ListOf<T1>,
+}
 
 //eslint-disable-next-line
 import * as time from './time'

@@ -76,6 +76,13 @@ func MustMatchLocationR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Location", LocationFromJSON, LocationToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationField", LocationFieldFromJSON, LocationFieldToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationIndex", LocationIndexFromJSON, LocationIndexToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationAnything", LocationAnythingFromJSON, LocationAnythingToJSON)
+}
+
 type LocationUnionJSON struct {
 	Type             string          `json:"$type,omitempty"`
 	LocationField    json.RawMessage `json:"schema.LocationField,omitempty"`

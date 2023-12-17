@@ -144,7 +144,7 @@ func (f *InferredInfo) RetrieveShapes() []Shape {
 		shapes[name] = shape
 	}
 
-	var result = make([]Shape, len(f.shapes))
+	var result = make([]Shape, 0)
 	for unionName, variantsNames := range f.possibleVariantTypes {
 		union := f.RetrieveUnion(unionName)
 		if union == nil {
@@ -175,6 +175,10 @@ func (f *InferredInfo) RetrieveStructs() []*StructLike {
 	}
 
 	return result
+}
+
+func (f *InferredInfo) RetrieveShapeNamedAs(name string) Shape {
+	return f.shapes[name]
 }
 
 func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
@@ -433,15 +437,6 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			break
 		}
 
-		if _, ok := f.shapes[f.currentType]; !ok {
-			f.shapes[f.currentType] = &StructLike{
-				Name:          f.currentType,
-				PkgName:       f.packageName,
-				PkgImportName: f.pkgImportName,
-				Tags:          f.possibleTaggedTypes[f.currentType],
-			}
-		}
-
 		structShape, ok := f.shapes[f.currentType].(*StructLike)
 		if !ok {
 			log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
@@ -487,13 +482,15 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 						typ = FromAST(ttt, opt...)
 					}
 
-				case *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
+				case *ast.IndexExpr, *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
 					typ = FromAST(ttt, opt...)
 
 				default:
 					log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
 					typ = &Any{}
 				}
+
+				typ = CleanTypeThatAreOvershadowByTypeParam(typ, structShape.TypeParams)
 
 				tag := ""
 				if field.Tag != nil {
@@ -520,6 +517,86 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	}
 
 	return f
+}
+
+func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape {
+	return MustMatchShape(
+		typ,
+		func(x *Any) Shape {
+			return x
+		},
+		func(x *RefName) Shape {
+			if nameExistsInParams(x.Name, params) {
+				x.PkgName = ""
+				x.PkgImportName = ""
+			}
+
+			for i, name := range x.Indexed {
+				x.Indexed[i] = CleanTypeThatAreOvershadowByTypeParam(name, params)
+			}
+
+			return x
+		},
+		func(x *AliasLike) Shape {
+			if nameExistsInParams(x.Name, params) {
+				x.PkgName = ""
+				x.PkgImportName = ""
+			}
+
+			return x
+		},
+		func(x *BooleanLike) Shape {
+			return x
+		},
+		func(x *StringLike) Shape {
+			return x
+		},
+		func(x *NumberLike) Shape {
+			return x
+
+		},
+		func(x *ListLike) Shape {
+			x.Element = CleanTypeThatAreOvershadowByTypeParam(x.Element, params)
+			return x
+		},
+		func(x *MapLike) Shape {
+			x.Key = CleanTypeThatAreOvershadowByTypeParam(x.Key, params)
+			x.Val = CleanTypeThatAreOvershadowByTypeParam(x.Val, params)
+			return x
+		},
+		func(x *StructLike) Shape {
+			if nameExistsInParams(x.Name, params) {
+				x.PkgName = ""
+				x.PkgImportName = ""
+			}
+
+			for _, field := range x.Fields {
+				field.Type = CleanTypeThatAreOvershadowByTypeParam(field.Type, params)
+			}
+			return x
+		},
+		func(x *UnionLike) Shape {
+			if nameExistsInParams(x.Name, params) {
+				x.PkgName = ""
+				x.PkgImportName = ""
+			}
+
+			for _, variant := range x.Variant {
+				variant = CleanTypeThatAreOvershadowByTypeParam(variant, params)
+			}
+			return x
+		},
+	)
+}
+
+func nameExistsInParams(name string, params []TypeParam) bool {
+	for _, param := range params {
+		if param.Name == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (f *InferredInfo) optionAST() []FromASTOption {
@@ -551,7 +628,8 @@ func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
 	for _, param := range params.List {
 		typ := FromAST(param.Type,
 			InjectPkgImportName(f.packageNameToPackageImport),
-			InjectPkgName(f.packageName))
+			InjectPkgName(f.packageName),
+		)
 
 		if len(param.Names) == 0 {
 			result = append(result, TypeParam{
