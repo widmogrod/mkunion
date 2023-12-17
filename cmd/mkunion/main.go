@@ -124,19 +124,16 @@ func main() {
 					jsonGenerator := generators.NewDeSerJSONGenerator(union, helper)
 					shapeGenerator := generators.NewShapeGenerator(union, helper)
 					visitor := generators.NewVisitorGenerator(union, helper)
-					schema := generators.NewSchemaGenerator(union, helper)
 
 					// ensures that order of generators is always the same
 					generatorsList := []string{
 						"visitor",
-						"schema",
 						"shape",
 						"json",
 					}
 
 					generators := map[string]generators.Generator{
 						"visitor": visitor,
-						"schema":  schema,
 						"shape":   shapeGenerator,
 						"json":    jsonGenerator,
 					}
@@ -339,7 +336,7 @@ func main() {
 						log.Infof("writing %s", fileName)
 						err = os.WriteFile(fileName, []byte(contents), 0644)
 						if err != nil {
-							return fmt.Errorf("failed to write serialiser for %s in %s: %w", sourcePath, err)
+							return fmt.Errorf("failed to write serialiser in %s: %w", sourcePath, err)
 						}
 
 						return nil

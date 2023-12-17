@@ -2,7 +2,6 @@
 package testutils
 
 import "github.com/widmogrod/mkunion/f"
-import "github.com/widmogrod/mkunion/x/schema"
 import "github.com/widmogrod/mkunion/x/shape"
 import "github.com/widmogrod/mkunion/x/shared"
 import "encoding/json"
@@ -83,20 +82,6 @@ func MustMatchTreeR2[TOut1, TOut2 any](
 	f4 func(x *P) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.MustMatch4R2(x, f1, f2, f3, f4)
-}
-
-// mkunion-extension:schema
-func init() {
-	schema.RegisterUnionTypes(TreeSchemaDef())
-}
-
-func TreeSchemaDef() *schema.UnionVariants[Tree] {
-	return schema.MustDefineUnion[Tree](
-		new(Branch),
-		new(Leaf),
-		new(K),
-		new(P),
-	)
 }
 
 // mkunion-extension:shape

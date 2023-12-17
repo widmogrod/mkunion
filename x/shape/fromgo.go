@@ -2,7 +2,6 @@ package shape
 
 import (
 	"github.com/fatih/structtag"
-	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
 	"reflect"
@@ -60,8 +59,14 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		return FromGoReflect(x.Elem(), infiniteRecursionFix)
 
 	case reflect.Interface:
-		union, variantTypes, found := schema.UnionOf(x)
-		if found {
+		shape, found := LookupShape(&RefName{
+			Name:          x.Name(),
+			PkgName:       guessPkgName(x),
+			PkgImportName: x.PkgPath(),
+		})
+
+		union, isUnion := shape.(*UnionLike)
+		if isUnion {
 			if result, found := infiniteRecursionFix[x.String()]; found {
 				result2 := result.(*UnionLike)
 				return &RefName{
@@ -71,21 +76,14 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 				}
 			}
 
-			result := &UnionLike{
-				Name:          union.Name(),
-				PkgName:       guessPkgName(union),
-				PkgImportName: union.PkgPath(),
-			}
+			result := union
 
 			infiniteRecursionFix[x.String()] = result
-
-			variants := make([]Shape, 0, len(variantTypes))
-			for _, variant := range variantTypes {
-				variants = append(variants, FromGoReflect(variant.Elem(), infiniteRecursionFix))
-			}
-
-			result.Variant = variants
 			return result
+		}
+
+		if found {
+			return shape
 		}
 
 		return &Any{}
@@ -136,7 +134,9 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 			})
 		}
 
-		result.Fields = fields
+		if len(fields) > 0 {
+			result.Fields = fields
+		}
 		return result
 	}
 

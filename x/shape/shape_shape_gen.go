@@ -2,7 +2,6 @@
 package shape
 
 import "github.com/widmogrod/mkunion/f"
-import "github.com/widmogrod/mkunion/x/schema"
 import "github.com/widmogrod/mkunion/x/shared"
 import "encoding/json"
 import "fmt"
@@ -130,26 +129,6 @@ func MustMatchShapeR2[TOut1, TOut2 any](
 	f10 func(x *UnionLike) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.MustMatch10R2(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10)
-}
-
-// mkunion-extension:schema
-func init() {
-	schema.RegisterUnionTypes(ShapeSchemaDef())
-}
-
-func ShapeSchemaDef() *schema.UnionVariants[Shape] {
-	return schema.MustDefineUnion[Shape](
-		new(Any),
-		new(RefName),
-		new(AliasLike),
-		new(BooleanLike),
-		new(StringLike),
-		new(NumberLike),
-		new(ListLike),
-		new(MapLike),
-		new(StructLike),
-		new(UnionLike),
-	)
 }
 
 // mkunion-extension:shape

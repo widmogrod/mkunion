@@ -2,7 +2,6 @@
 package testutils
 
 import "github.com/widmogrod/mkunion/f"
-import "github.com/widmogrod/mkunion/x/schema"
 import "github.com/widmogrod/mkunion/x/shape"
 import "github.com/widmogrod/mkunion/x/shared"
 import "encoding/json"
@@ -67,18 +66,6 @@ func MustMatchNumberR2[TOut1, TOut2 any](
 	f2 func(x *N1) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.MustMatch2R2(x, f1, f2)
-}
-
-// mkunion-extension:schema
-func init() {
-	schema.RegisterUnionTypes(NumberSchemaDef())
-}
-
-func NumberSchemaDef() *schema.UnionVariants[Number] {
-	return schema.MustDefineUnion[Number](
-		new(N0),
-		new(N1),
-	)
 }
 
 // mkunion-extension:shape

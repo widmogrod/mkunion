@@ -2,7 +2,6 @@
 package testutils
 
 import "github.com/widmogrod/mkunion/f"
-import "github.com/widmogrod/mkunion/x/schema"
 import "github.com/widmogrod/mkunion/x/shape"
 import "github.com/widmogrod/mkunion/x/shared"
 import "encoding/json"
@@ -75,19 +74,6 @@ func MustMatchAlphabetR2[TOut1, TOut2 any](
 	f3 func(x *C3) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.MustMatch3R2(x, f1, f2, f3)
-}
-
-// mkunion-extension:schema
-func init() {
-	schema.RegisterUnionTypes(AlphabetSchemaDef())
-}
-
-func AlphabetSchemaDef() *schema.UnionVariants[Alphabet] {
-	return schema.MustDefineUnion[Alphabet](
-		new(A1),
-		new(B2),
-		new(C3),
-	)
 }
 
 // mkunion-extension:shape
