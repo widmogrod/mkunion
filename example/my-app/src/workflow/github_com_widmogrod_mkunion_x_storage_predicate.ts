@@ -54,8 +54,8 @@ export type Locatable = {
 	Location?: string,
 }
 
-export type ParamBinds = {[key: BindName]: schema.Schema}
 export type BindName = string
+export type ParamBinds = {[key: BindName]: schema.Schema}
 export type WherePredicates = {
 	Predicate?: Predicate,
 	Params?: ParamBinds,

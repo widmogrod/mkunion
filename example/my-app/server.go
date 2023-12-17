@@ -12,6 +12,7 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	_ "github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
@@ -115,12 +116,6 @@ type GenerateImage struct {
 	Height int `desc:"height of image as int between 50 and 500"`
 }
 
-//go:generate mkunion -name=QueryDSL
-type (
-	FindState schemaless.FindingRecords[schemaless.Record[workflow.State]]
-	FindFlow  schemaless.FindingRecords[schemaless.Record[workflow.Flow]]
-)
-
 func main() {
 	schema.RegisterUnionTypes(ChatResultSchemaDef())
 	schema.RegisterUnionTypes(ChatCMDSchemaDef())
@@ -200,6 +195,7 @@ func main() {
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 	}))
+
 	e.POST("/message", TypedJSONRequest(
 		ChatCMDFromJSON,
 		ChatResultToJSON,
@@ -319,19 +315,40 @@ func main() {
 
 			log.Infof("result: %+v", result)
 			return response, nil
-		}))
+		},
+	))
 
-	e.POST("/func", TypedJSONRequest(
-		workflow.FunctionInputFromJSON,
-		workflow.FunctionOutputToJSON,
-		func(x *workflow.FunctionInput) (*workflow.FunctionOutput, error) {
-			fn, err := di.FindFunction(x.Name)
-			if err != nil {
-				return nil, err
-			}
+	e.POST("/func", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
 
-			return fn(x)
-		}))
+		x, err := shared.JSONUnmarshal[*workflow.FunctionInput](data)
+		if err != nil {
+			log.Errorf("failed to parse request body: %v", err)
+			return err
+		}
+
+		fn, err := di.FindFunction(x.Name)
+		if err != nil {
+			return err
+		}
+
+		result, err := fn(x)
+		if err != nil {
+			return err
+		}
+
+		resultJSON, err := shared.JSONMarshal[workflow.FunctionOutput](result)
+		if err != nil {
+			log.Errorf("failed to convert to json: %v", err)
+			return err
+		}
+
+		return c.JSONBlob(http.StatusOK, resultJSON)
+	})
 
 	e.POST("/flow", TypedJSONRequest(
 		workflow.WorflowFromJSON,
@@ -356,43 +373,7 @@ func main() {
 			return flow, nil
 		},
 	))
-	//e.POST("/flow", func(c echo.Context) error {
-	//	data, err := io.ReadAll(c.Request().Body)
-	//	if err != nil {
-	//		log.Errorf("failed to read request body: %v", err)
-	//		return err
-	//	}
-	//
-	//	schemed, err := schema.FromJSON(data)
-	//	if err != nil {
-	//		log.Errorf("failed to parse request body: %v", err)
-	//		return err
-	//	}
-	//
-	//	program, err := schema.ToGoG[workflow.Worflow](schemed)
-	//	if err != nil {
-	//		log.Errorf("failed to convert to command: %v", err)
-	//		return err
-	//	}
-	//
-	//	flow, ok := program.(*workflow.Flow)
-	//	if !ok {
-	//		return errors.New("expected *workflow.Flow")
-	//	}
-	//
-	//	err = flowsRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.Flow]{
-	//		ID:   flow.Name,
-	//		Type: "flow",
-	//		Data: *flow,
-	//	}))
-	//
-	//	if err != nil {
-	//		log.Errorf("failed to save state: %v", err)
-	//		return err
-	//	}
-	//
-	//	return c.JSONBlob(http.StatusOK, data)
-	//})
+
 	e.GET("/flow/:id", func(c echo.Context) error {
 		record, err := flowsRepo.Get(c.Param("id"), "flow")
 		if err != nil {
@@ -400,9 +381,7 @@ func main() {
 			return err
 		}
 
-		result, err := workflow.WorflowToJSON(&record.Data)
-		//schemed := schema.FromGo(record)
-		//result, err := schema.ToJSON(schemed)
+		result, err := shared.JSONMarshal[workflow.Worflow](record.Data)
 		if err != nil {
 			if errors.Is(err, schemaless.ErrNotFound) {
 				return c.JSONBlob(http.StatusNotFound, []byte(`{"error": "not found"}`))
@@ -414,18 +393,29 @@ func main() {
 
 		return c.JSONBlob(http.StatusOK, result)
 	})
-	e.GET("/flows", func(c echo.Context) error {
-		records, err := flowsRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.Flow]]{
-			RecordType: "flow",
-			//Limit:      2,
-		})
+
+	e.POST("/flows", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		query, err := shared.JSONUnmarshal[schemaless.FindingRecords[schemaless.Record[workflow.Flow]]](data)
+		if err != nil {
+			log.Warnf("failed to parse query: %v", err)
+			query = schemaless.FindingRecords[schemaless.Record[workflow.Flow]]{}
+		}
+
+		query.RecordType = "flow"
+
+		records, err := flowsRepo.FindingRecords(query)
 		if err != nil {
 			log.Errorf("failed to get flowsRepo: %v", err)
 			return err
 		}
 
-		schemed := schema.FromGo(records)
-		result, err := schema.ToJSON(schemed)
+		result, err := shared.JSONMarshal[schemaless.PageResult[schemaless.Record[workflow.Flow]]](records)
 		if err != nil {
 			log.Errorf("failed to convert to json: %v", err)
 			return err
@@ -434,23 +424,26 @@ func main() {
 		return c.JSONBlob(http.StatusOK, result)
 	})
 
-	e.GET("/list", func(c echo.Context) error {
-		records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
-			RecordType: "process",
-			//Where: predicate.MustWhere(
-			//	"Type = :type AND Data.#.#.BaseState.Flow.#.Name = :name",
-			//	predicate.ParamBinds{
-			//		":type": schema.MkString("process"),
-			//		":name": schema.MkString("hello_world"),
-			//	},
-			//),
-		})
+	e.POST("/states", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		query, err := shared.JSONUnmarshal[schemaless.FindingRecords[schemaless.Record[workflow.State]]](data)
+		if err != nil {
+			log.Warnf("failed to parse query: %v", err)
+			query = schemaless.FindingRecords[schemaless.Record[workflow.State]]{}
+		}
+
+		query.RecordType = "process"
+		records, err := statesRepo.FindingRecords(query)
 		if err != nil {
 			return err
 		}
 
-		schemed := schema.FromGo(records)
-		result, err := schema.ToJSON(schemed)
+		result, err := shared.JSONMarshal[schemaless.PageResult[schemaless.Record[workflow.State]]](records)
 		if err != nil {
 			log.Errorf("failed to convert to json: %v", err)
 			return err
@@ -464,25 +457,6 @@ func main() {
 		workflow.StateToJSON,
 		func(cmd workflow.Command) (workflow.State, error) {
 			return srv.CreateOrUpdate(cmd)
-			//work := workflow.NewMachine(di, nil)
-			//err := work.Handle(cmd)
-			//if err != nil {
-			//	log.Errorf("failed to handle command: %v", err)
-			//	return nil, err
-			//}
-			//
-			//newState := work.State()
-			//err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-			//	ID:   workflow.GetRunID(newState),
-			//	Type: "process",
-			//	Data: newState,
-			//}))
-			//if err != nil {
-			//	log.Errorf("failed to save state: %v", err)
-			//	return nil, err
-			//}
-			//
-			//return newState, nil
 		}))
 
 	e.POST("/workflow-to-str", func(c echo.Context) error {
@@ -695,47 +669,6 @@ func TypedJSONRequest[A, B any](des func([]byte) (A, error), ser func(B) ([]byte
 		return c.JSONBlob(http.StatusOK, result)
 	}
 }
-
-//func TypedRequest[A, B any](handle func(x A) (B, error)) func(c echo.Context) error {
-//	return func(c echo.Context) error {
-//		data, err := io.ReadAll(c.Request().Body)
-//		if err != nil {
-//			log.Errorf("failed to read request body: %v", err)
-//			return err
-//		}
-//
-//		schemed, err := schema.FromJSON(data)
-//		if err != nil {
-//			log.Errorf("failed to parse request body: %v", err)
-//			return err
-//		}
-//
-//		in, err := schema.ToGoG[A](schemed)
-//		if err != nil {
-//			log.Errorf("failed to convert to command: %v", err)
-//			return err
-//		}
-//
-//		out, err := handle(in)
-//		if err != nil {
-//			return err
-//		}
-//
-//		if _, ok := any(out).(B); !ok {
-//			var b B
-//			return fmt.Errorf("TypedRequest: expected %T, got %T", b, out)
-//		}
-//
-//		schemed = schema.FromGo(out)
-//		result, err := schema.ToJSON(schemed)
-//		if err != nil {
-//			log.Errorf("failed to convert to json: %v", err)
-//			return err
-//		}
-//
-//		return c.JSONBlob(http.StatusOK, result)
-//	}
-//}
 
 func NewService[CMD any, State any](
 	recordType string,

@@ -216,9 +216,6 @@ export type Compare = {
 export type ResumeOptions = {
 	Timeout?: number,
 }
-export type ApplyAwaitOptions = {
-	Timeout?: number,
-}
 export type BaseState = {
 	Flow?: Worflow,
 	RunID?: string,
@@ -227,6 +224,9 @@ export type BaseState = {
 	ExprResult?: {[key: string]: schema.Schema},
 	DefaultMaxRetries?: number,
 	RunOption?: RunOption,
+}
+export type ApplyAwaitOptions = {
+	Timeout?: number,
 }
 export type Execution = {
 	FlowID?: string,

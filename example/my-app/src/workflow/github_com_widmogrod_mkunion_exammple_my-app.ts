@@ -23,18 +23,6 @@ export type ChatResponses = {
 	Responses?: ChatResult[],
 }
 
-export type QueryDSL = {
-	"$type"?: "main.FindState",
-	"main.FindState": FindState
-} | {
-	"$type"?: "main.FindFlow",
-	"main.FindFlow": FindFlow
-}
-
-export type FindState = schemaless.FindingRecords<schemaless.Record<workflow.State>>
-
-export type FindFlow = schemaless.FindingRecords<schemaless.Record<workflow.Flow>>
-
 export type ChatCMD = {
 	"$type"?: "main.UserMessage",
 	"main.UserMessage": UserMessage
@@ -44,22 +32,18 @@ export type UserMessage = {
 	Message?: string,
 }
 
-export type RefreshFlows = {}
 export type GenerateImage = {
 	Width?: number,
 	Height?: number,
 }
+export type RefreshFlows = {}
 export type Service<CMD, State> = {}
-export type RefreshStates = {}
 export type ListWorkflowsFn = {
 	Count?: number,
 	Words?: string[],
 	EnumTest?: string,
 }
+export type RefreshStates = {}
 
 //eslint-disable-next-line
 import * as openai from './'
-//eslint-disable-next-line
-import * as schemaless from './github_com_widmogrod_mkunion_x_storage_schemaless'
-//eslint-disable-next-line
-import * as workflow from './github_com_widmogrod_mkunion_x_workflow'

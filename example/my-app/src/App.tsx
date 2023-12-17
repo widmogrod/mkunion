@@ -1,14 +1,12 @@
 import React, {useEffect, useState} from 'react';
 import './App.css';
+import * as openai from './workflow/'
+import * as schemaless from './workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
+import {GenerateImage, ListWorkflowsFn} from './workflow/github_com_widmogrod_mkunion_exammple_my-app'
 import * as workflow from './workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
 import {Chat} from "./Chat";
-import {GenerateImage, ListWorkflowsFn} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
 
-// type ListOf<T> = {}
-// type ListOf2<T1,T2> = {}
-// type B<T1,T2> = ListOf2<T1,T2>
-// export type P = ListOf2<ListOf<any>, ListOf2<number, other>>
 function flowCreate(flow: workflow.Flow) {
     return fetch('http://localhost:8080/flow', {
         method: 'POST',
@@ -33,8 +31,14 @@ type record = {
 }
 
 function listStates(onData: (data: { Items: record[] }) => void) {
-    fetch('http://localhost:8080/list', {
-        method: 'GET',
+    fetch('http://localhost:8080/states', {
+        method: 'POST',
+        body: JSON.stringify({
+            Limit: 30,
+            Sort: [
+                {Field: "ID", Descending: false},
+            ]
+        } as schemaless.FindingRecords<schemaless.Record<workflow.State>>),
     })
         .then(res => res.json())
         .then(data => {
@@ -50,7 +54,13 @@ type recordFlow = {
 
 function listFlows(onData: (data: { Items: recordFlow[] }) => void) {
     fetch('http://localhost:8080/flows', {
-        method: 'GET',
+        method: 'POST',
+        body: JSON.stringify({
+            Limit: 3,
+            Sort: [
+                {Field: "ID", Descending: false},
+            ]
+        } as schemaless.FindingRecords<schemaless.Record<workflow.Flow>>),
     })
         .then(res => res.json())
         .then(data => {
@@ -576,11 +586,11 @@ function App() {
                             <Chat
                                 props={{
                                     name: "John",
-                                    onFunctionCall: (x: { Name: string, Arguments: string }) => {
+                                    onFunctionCall: (x: openai.FunctionCall) => {
                                         console.log("onFunctionCall", x);
-                                        switch (x.Name) {
+                                        switch (x.name) {
                                             case "count_words":
-                                                let args = JSON.parse(x.Arguments) as ListWorkflowsFn
+                                                let args = JSON.parse(x.arguments || "") as ListWorkflowsFn
                                                 console.log(args)
                                                 break
 
@@ -589,11 +599,12 @@ function App() {
                                                 break;
 
                                             case "refresh_flows":
+                                                console.log("refresh_flows")
                                                 listFlows(setFlows)
                                                 break;
 
                                             case "generate_image":
-                                                let args2 = JSON.parse(x.Arguments) as GenerateImage;
+                                                let args2 = JSON.parse(x.arguments || "") as GenerateImage;
                                                 generateImage(args2?.Width || 100, args2?.Height || 100, (data) => {
                                                     setImageFromState(data)
                                                     listStates(setTable)
@@ -625,14 +636,14 @@ function App() {
                                                 <img
                                                     src={`data:image/jpeg;base64,${data["workflow.Done"].Result["schema.Binary"]}`}
                                                     alt=""/>
-                                                <ListVariables data={data["workflow.Done"].BaseState}/>
+                                                <ListVariables data={data["workflow.Done"]?.BaseState}/>
                                             </>
                                         )
                                     } else if ("schema.String" in data["workflow.Done"].Result) {
                                         return <>
                                             <span className="done">workflow.Done</span>
                                             {data["workflow.Done"].Result["schema.String"]}
-                                            <ListVariables data={data["workflow.Done"].BaseState}/>
+                                            <ListVariables data={data["workflow.Done"]?.BaseState}/>
                                         </>
                                     }
 
@@ -646,7 +657,7 @@ function App() {
                                     return (
                                         <>
                                             <span className="await">workflow.Await</span>
-                                            <ListVariables data={data["workflow.Await"].BaseState}/>
+                                            <ListVariables data={data["workflow.Await"]?.BaseState}/>
                                         </>
                                     )
                                 } else if ("workflow.Scheduled" in data) {
@@ -654,7 +665,7 @@ function App() {
                                         <>
                                             <span className="schedguled">workflow.Scheduled</span>
                                             <span>{JSON.stringify(data["workflow.Scheduled"].ExpectedRunTimestamp)}</span>
-                                            <ListVariables data={data["workflow.Scheduled"].BaseState}/>
+                                            <ListVariables data={data["workflow.Scheduled"]?.BaseState}/>
                                             <button onClick={() => {
                                                 stopSchedule(data["workflow.Scheduled"].ParentRunID)
                                             }}>
@@ -665,7 +676,7 @@ function App() {
                                 } else if ("workflow.ScheduleStopped") {
                                     return <>
                                         <span className="stopped">workflow.ScheduleStopped</span>
-                                        <ListVariables data={data["workflow.ScheduleStopped"].BaseState}/>
+                                        <ListVariables data={data["workflow.ScheduleStopped"]?.BaseState}/>
                                         <button onClick={() => {
                                             resumeSchedule(data["workflow.ScheduleStopped"].ParentRunID)
                                         }}>
@@ -742,47 +753,95 @@ function ListVariables(props: { data: workflow.BaseState }) {
     );
 }
 
-function SchemaValue(props: { data?: schema.Schema }) {
-    // check if props.data is an object
-    if (typeof props.data !== 'object') {
-        return <>{JSON.stringify(props.data)}</>
-    }
+function NativeValue(props: { data: any }) {
+    switch (typeof props.data) {
+        case "string":
+            if (props.data.length > 500) {
+                return <>{props.data.substring(0, 10)}...</>
+            }
+            return <>{props.data}</>
+        case "number":
+            return <>{props.data}</>
+        case "boolean":
+            return <>{props.data}</>
+        case "object":
+            if (props.data?.$type) {
+                return <SchemaValue data={props.data}/>
+            }
 
-    if ("schema.String" in props.data) {
-        return <>{props.data["schema.String"]}</>
-    } else if ("schema.Binary" in props.data) {
-        return <>binary</>
-    } else if ("schema.Map" in props.data) {
-        const mapData = props.data["schema.Map"];
-        const keys = Object.keys(mapData);
-
-        if (keys && keys.length === 0) {
-            return null; // If the map is empty, return null (no table to display)
-        }
-
-        return (
-            <table>
-                <thead>
-                <tr>
-                    <th>Key</th>
-                    <th>Value</th>
-                </tr>
-                </thead>
+            return <table>
                 <tbody>
-                {keys && keys.map((key) => (
-                    <tr key={key}>
-                        <td className="key">{key}</td>
-                        <td>
-                            <SchemaValue data={mapData[key]}/>
-                        </td>
-                    </tr>
-                ))}
+                {Object.keys(props.data).map((key) => {
+                    let val = props.data?.[key]
+                    return (
+                        <tr key={key}>
+                            <td>{key}</td>
+                            <td><SchemaValue data={val}/></td>
+                        </tr>
+                    );
+                })}
                 </tbody>
             </table>
-        );
+
     }
 
     return <>{JSON.stringify(props.data)}</>
+}
+
+function SchemaValue(props: { data?: schema.Schema }) {
+    switch (props.data?.$type) {
+        case "schema.String":
+            return <>{props.data["schema.String"]}</>
+        case "schema.Number":
+            return <>{props.data["schema.Number"]}</>
+        case "schema.Binary":
+            return <>binary</>
+        case "schema.Bool":
+            return <>{props.data["schema.Bool"]}</>
+        case "schema.List":
+            const listData = props.data["schema.List"];
+            return (
+                <ul>
+                    {listData && listData.map((item, index) => (
+                        <li key={"list-item-" + index}>
+                            <SchemaValue data={item}/>
+                        </li>
+                    ))}
+                </ul>
+            );
+
+        case "schema.Map":
+            const mapData = props.data["schema.Map"];
+            const keys = Object.keys(mapData);
+
+            if (keys && keys.length === 0) {
+                return null; // If the map is empty, return null (no table to display)
+            }
+
+            return (
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {keys && keys.map((key) => (
+                        <tr key={key}>
+                            <td className="key">{key}</td>
+                            <td>
+                                <SchemaValue data={mapData[key]}/>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            );
+
+    }
+
+    return <NativeValue data={props.data}/>
 }
 
 function PaginatedTable(props: { table: { Items: any[] }, mapData: (data: any) => any }) {
