@@ -328,3 +328,93 @@ func IsPrimitive(x Shape) bool {
 		},
 	)
 }
+
+func ExtractPkgImportNames(x Shape) map[string]string {
+	return MustMatchShape(
+		x,
+		func(y *Any) map[string]string {
+			return nil
+		},
+		func(y *RefName) map[string]string {
+			result := make(map[string]string)
+			if y.PkgName != "" {
+				result[y.PkgName] = y.PkgImportName
+			}
+
+			for _, x := range y.Indexed {
+				result = joinMaps(result, ExtractPkgImportNames(x))
+			}
+
+			return result
+		},
+		func(y *AliasLike) map[string]string {
+			result := make(map[string]string)
+			if y.PkgName != "" {
+				result[y.PkgName] = y.PkgImportName
+			}
+
+			result = joinMaps(result, ExtractPkgImportNames(y.Type))
+
+			return result
+		},
+		func(y *BooleanLike) map[string]string {
+			return nil
+		},
+		func(x *StringLike) map[string]string {
+			return nil
+		},
+		func(x *NumberLike) map[string]string {
+			return nil
+		},
+		func(x *ListLike) map[string]string {
+			result := make(map[string]string)
+			result = joinMaps(result, ExtractPkgImportNames(x.Element))
+			return result
+		},
+		func(x *MapLike) map[string]string {
+			result := make(map[string]string)
+			result = joinMaps(result, ExtractPkgImportNames(x.Key))
+			result = joinMaps(result, ExtractPkgImportNames(x.Val))
+			return result
+		},
+		func(x *StructLike) map[string]string {
+			result := make(map[string]string)
+			if x.PkgName != "" {
+				result[x.PkgName] = x.PkgImportName
+			}
+
+			for _, y := range x.TypeParams {
+				result = joinMaps(result, ExtractPkgImportNames(y.Type))
+			}
+
+			for _, y := range x.Fields {
+				result = joinMaps(result, ExtractPkgImportNames(y.Type))
+			}
+
+			return result
+
+		},
+		func(x *UnionLike) map[string]string {
+			result := make(map[string]string)
+			if x.PkgName != "" {
+				result[x.PkgName] = x.PkgImportName
+			}
+
+			for _, y := range x.Variant {
+				result = joinMaps(result, ExtractPkgImportNames(y))
+			}
+
+			return result
+		},
+	)
+}
+
+func joinMaps(maps ...map[string]string) map[string]string {
+	result := make(map[string]string)
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] = v
+		}
+	}
+	return result
+}

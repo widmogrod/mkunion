@@ -114,7 +114,7 @@ func LocationFromJSON(x []byte) (Location, error) {
 		return LocationAnythingFromJSON(data.LocationAnything)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("schema.Location: unknown type %s", data.Type)
 }
 
 func LocationToJSON(x Location) ([]byte, error) {

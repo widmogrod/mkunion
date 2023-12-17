@@ -6,13 +6,10 @@ import (
 
 type Function func(args *FunctionInput) (*FunctionOutput, error)
 
-//go:generate go run ../../cmd/mkunion/main.go -name=FunctionDSL
+//go:generate go run ../../cmd/mkunion/main.go serde
+
 type (
-	//FunctionDef struct {
-	//	Name string
-	//	Input schema.ShapeDef
-	//	Output schema.ShapeDef
-	//}
+	//go:tag serde:"json"
 	FunctionInput struct {
 		// Name acts as unique function ID
 		Name string
@@ -23,6 +20,8 @@ type (
 
 		//ArgsDef schema.TypeDef
 	}
+
+	//go:tag serde:"json"
 	FunctionOutput struct {
 		Result schema.Schema
 	}

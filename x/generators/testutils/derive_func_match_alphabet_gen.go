@@ -167,7 +167,7 @@ func AlphabetFromJSON(x []byte) (Alphabet, error) {
 		return C3FromJSON(data.C3)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("testutils.Alphabet: unknown type %s", data.Type)
 }
 
 func AlphabetToJSON(x Alphabet) ([]byte, error) {

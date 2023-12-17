@@ -13,6 +13,8 @@ type Execution struct {
 	Variables map[string]schema.Schema
 }
 
+//go:generate go run ../../cmd/mkunion/main.go serde
+
 //go:generate go run ../../cmd/mkunion/main.go -name=RunOption
 type (
 	ScheduleRun struct {
@@ -85,6 +87,7 @@ type (
 	}
 )
 
+//go:tag serde:"json"
 type BaseState struct {
 	Flow       Worflow // Flow is a reference to the flow that describes execution
 	RunID      string  // RunID is a unique identifier of the execution

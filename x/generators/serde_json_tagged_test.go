@@ -23,9 +23,11 @@ func TestNewSerdeJSONTagged(t *testing.T) {
 package testutils
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shared"
+	"time"
 )
 
 var (
@@ -34,6 +36,7 @@ var (
 )
 
 func (r *ListOf2[T1,T2]) MarshalJSON() ([]byte, error) {
+	var err error
 	result := make(map[string]json.RawMessage)
 
 	fieldID, err := shared.JSONMarshal[string](r.ID)
@@ -93,6 +96,18 @@ func (r *ListOf2[T1,T2]) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field ListOfPtr; %w", err)
 	}
 	result["ListOfPtr"] = fieldListOfPtr
+
+	fieldTime, err := shared.JSONMarshal[time.Time](r.Time)
+	if err != nil {
+		return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field Time; %w", err)
+	}
+	result["Time"] = fieldTime
+
+	fieldValue, err := shared.JSONMarshal[schema.Schema](r.Value)
+	if err != nil {
+		return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field Value; %w", err)
+	}
+	result["Value"] = fieldValue
 
 	output, err := json.Marshal(result)
 	if err != nil {
@@ -175,6 +190,22 @@ func (r *ListOf2[T1,T2]) UnmarshalJSON(bytes []byte) error {
 			r.ListOfPtr, err = shared.JSONUnmarshal[*ListOf[T2]](bytes)
 			if err != nil {
 				return fmt.Errorf("testutils.ListOf2[T1,T2].UnmarshalJSON: field ListOfPtr; %w", err)
+			}
+			return nil
+
+		case "Time":
+			var err error
+			r.Time, err = shared.JSONUnmarshal[time.Time](bytes)
+			if err != nil {
+				return fmt.Errorf("testutils.ListOf2[T1,T2].UnmarshalJSON: field Time; %w", err)
+			}
+			return nil
+
+		case "Value":
+			var err error
+			r.Value, err = shared.JSONUnmarshal[schema.Schema](bytes)
+			if err != nil {
+				return fmt.Errorf("testutils.ListOf2[T1,T2].UnmarshalJSON: field Value; %w", err)
 			}
 			return nil
 

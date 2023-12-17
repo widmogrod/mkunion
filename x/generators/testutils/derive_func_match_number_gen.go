@@ -143,7 +143,7 @@ func NumberFromJSON(x []byte) (Number, error) {
 		return N1FromJSON(data.N1)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("testutils.Number: unknown type %s", data.Type)
 }
 
 func NumberToJSON(x Number) ([]byte, error) {

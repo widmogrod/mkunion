@@ -170,7 +170,7 @@ func SchemaFromJSON(x []byte) (Schema, error) {
 		return MapFromJSON(data.Map)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("schema.Schema: unknown type %s", data.Type)
 }
 
 func SchemaToJSON(x Schema) ([]byte, error) {

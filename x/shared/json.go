@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"reflect"
 	"sync"
 )
@@ -61,7 +60,6 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 
 	valuePtr, destinationPtrMarshaller := any(destinationTypePtr).(json.Unmarshaler)
 	if destinationPtrMarshaller {
-		log.Warnf("shared.JSONUnmarshal: ultra path %T", new(A))
 		// convert source to pointer, since this is only way to use native marshaller
 		err := valuePtr.UnmarshalJSON(data)
 		if err != nil {
@@ -71,7 +69,6 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 	}
 
 	if JSONIsNativePath(destinationType) {
-		log.Warnf("shared.JSONUnmarshal: fast path %T", new(A))
 		result := new(A)
 		err := json.Unmarshal(data, result)
 		if err != nil {
@@ -82,7 +79,6 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 
 	key := fullTypeName(reflect.TypeOf(new(A)))
 	fromTo, ok := registerJSONMarshaller.Load(key)
-	log.Warnf("shared.JSONUnmarshal: %s, found=%v", key, ok)
 	if !ok {
 		err := json.Unmarshal(data, &destinationType)
 		if err != nil {

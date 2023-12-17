@@ -23,7 +23,7 @@ func TestListOf2_SimpleType(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(string(result))
 
-	expected := `{"Data":"abc","ID":"123","List":[1,2,3],"ListOf":{"Data":"list of string"},"ListOfPtr":{"Data":41},"Map":{"a":1,"b":2,"c":3}}`
+	expected := `{"Data":"abc","ID":"123","List":[1,2,3],"ListOf":{"Data":"list of string"},"ListOfPtr":{"Data":41},"Map":{"a":1,"b":2,"c":3},"Time":"0001-01-01T00:00:00Z","Value":null}`
 	assert.JSONEq(t, expected, string(result))
 
 	output := ListOf2[string, int]{}
@@ -90,7 +90,9 @@ func TestListOf2_ComplexType(t *testing.T) {
       "Data": "next level"
     }
   },
-  "Map": {}
+  "Map": {},
+  "Time": "0001-01-01T00:00:00Z",
+  "Value": null
 }`
 	assert.JSONEq(t, expected, string(result))
 

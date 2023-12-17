@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"encoding/json"
+	"github.com/widmogrod/mkunion/x/schema"
 	"time"
 )
 
@@ -32,6 +33,8 @@ type ListOf2[T1 comparable, T2 any] struct {
 	Map       map[T1]T2
 	ListOf    ListOf[T1]
 	ListOfPtr *ListOf[T2]
+	Time      time.Time
+	Value     schema.Schema
 }
 
 var (
