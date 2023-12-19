@@ -97,6 +97,10 @@ var TypeStringToNumberKindMap = map[string]NumberKind{
 }
 
 func NumberKindToGoName(x NumberKind) string {
+	if x == nil {
+		return "int"
+	}
+
 	return MustMatchNumberKind(
 		x,
 		func(x *UInt8) string {

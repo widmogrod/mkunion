@@ -1,6 +1,7 @@
 package shape
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
@@ -585,6 +586,121 @@ func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape 
 				variant = CleanTypeThatAreOvershadowByTypeParam(variant, params)
 			}
 			return x
+		},
+	)
+}
+
+func IndexWith(y Shape, indexed []Shape) Shape {
+	x, ok := y.(*StructLike)
+	if !ok {
+		return y
+	}
+
+	if len(x.TypeParams) != len(indexed) ||
+		len(x.TypeParams) == 0 {
+		return x
+	}
+
+	params := map[string]*RefName{}
+	for i, param := range x.TypeParams {
+		typ := indexed[i]
+
+		ref, ok := typ.(*RefName)
+		if !ok {
+			panic(fmt.Errorf("IndexWith: expected indexed type to be *RefName, got %T", typ))
+		}
+
+		params[param.Name] = ref
+	}
+
+	return InstantiateTypeThatAreOvershadowByTypeParam(x, params)
+}
+
+func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[string]*RefName) Shape {
+	return MustMatchShape(
+		typ,
+		func(x *Any) Shape {
+			return x
+		},
+		func(x *RefName) Shape {
+			if result, err := replacement[x.Name]; err {
+				return result
+			}
+
+			result := &RefName{
+				Name:          x.Name,
+				PkgName:       x.PkgName,
+				PkgImportName: x.PkgImportName,
+			}
+			for _, name := range x.Indexed {
+				result.Indexed = append(result.Indexed, InstantiateTypeThatAreOvershadowByTypeParam(name, replacement))
+			}
+
+			return result
+		},
+		func(x *AliasLike) Shape {
+			result := &AliasLike{
+				Name:          x.Name,
+				PkgName:       x.PkgName,
+				PkgImportName: x.PkgImportName,
+				IsAlias:       x.IsAlias,
+				Type:          InstantiateTypeThatAreOvershadowByTypeParam(x.Type, replacement),
+				Tags:          x.Tags,
+			}
+			return result
+		},
+		func(x *BooleanLike) Shape {
+			return x
+		},
+		func(x *StringLike) Shape {
+			return x
+		},
+		func(x *NumberLike) Shape {
+			return x
+		},
+		func(x *ListLike) Shape {
+			result := &ListLike{
+				Element:          InstantiateTypeThatAreOvershadowByTypeParam(x.Element, replacement),
+				ElementIsPointer: x.ElementIsPointer,
+			}
+			return result
+		},
+		func(x *MapLike) Shape {
+			result := &MapLike{
+				Key:          InstantiateTypeThatAreOvershadowByTypeParam(x.Key, replacement),
+				KeyIsPointer: x.KeyIsPointer,
+				Val:          InstantiateTypeThatAreOvershadowByTypeParam(x.Val, replacement),
+				ValIsPointer: x.ValIsPointer,
+			}
+			return result
+		},
+		func(x *StructLike) Shape {
+			result := &StructLike{
+				Name:          x.Name,
+				PkgName:       x.PkgName,
+				PkgImportName: x.PkgImportName,
+				TypeParams:    x.TypeParams,
+			}
+
+			for _, field := range x.Fields {
+				result.Fields = append(result.Fields, &FieldLike{
+					Name: field.Name,
+					Type: InstantiateTypeThatAreOvershadowByTypeParam(field.Type, replacement),
+				})
+			}
+			return result
+		},
+		func(x *UnionLike) Shape {
+			result := &UnionLike{
+				Name:          x.Name,
+				PkgName:       x.PkgName,
+				PkgImportName: x.PkgImportName,
+				Tags:          x.Tags,
+			}
+			for _, variant := range x.Variant {
+				result.Variant = append(result.Variant, InstantiateTypeThatAreOvershadowByTypeParam(variant, replacement))
+			}
+			return result
 		},
 	)
 }

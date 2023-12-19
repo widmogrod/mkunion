@@ -2,6 +2,7 @@ package shape
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -83,15 +84,26 @@ func WithInstantiation() ToGoTypeNameOption {
 	return "instantiate"
 }
 
-const rootPackage = "root-package:"
+func WithPkgImportName() ToGoTypeNameOption {
+	return usePkgImportName
+}
+
+const (
+	rootPackage      = "root-package:"
+	usePkgImportName = "usePkgImportName"
+)
 
 func WithRootPackage(pkgName string) ToGoTypeNameOption {
 	result := rootPackage + pkgName
 	return ToGoTypeNameOption(result)
 }
 
-func packageWrap(options []ToGoTypeNameOption, pkgName string, value string) string {
+func packageWrap(options []ToGoTypeNameOption, pkgName, pkgImportName, value string) string {
+	useImportName := false
 	for _, option := range options {
+		if option == usePkgImportName {
+			useImportName = true
+		}
 		if !strings.HasPrefix(string(option), rootPackage) {
 			continue
 		}
@@ -104,6 +116,10 @@ func packageWrap(options []ToGoTypeNameOption, pkgName string, value string) str
 
 	if pkgName == "" {
 		return value
+	}
+
+	if useImportName {
+		return fmt.Sprintf("%s.%s", pkgImportName, value)
 	}
 
 	return fmt.Sprintf("%s.%s", pkgName, value)
@@ -119,8 +135,30 @@ func shouldInstantiate(options []ToGoTypeNameOption) bool {
 	return false
 }
 
-func ToGoRemovePkgName(pkgName string, x string) string {
-	return strings.ReplaceAll(x, fmt.Sprintf("%s.", pkgName), "")
+// ToGoTypeNameFromReflect returns type name without package name
+// example:
+//
+//		schema.Any
+//	 string
+func ToGoTypeNameFromReflect(x reflect.Type) string {
+	if x.Kind() == reflect.Ptr {
+		x = x.Elem()
+	}
+
+	return x.String()
+}
+
+// ToGoFullTypeNameFromReflect returns full type name with package name
+// example:
+//
+//		github.com/widmogrod/mkunion/x/schema.Any
+//	 string
+func ToGoFullTypeNameFromReflect(x reflect.Type) string {
+	if x.Kind() == reflect.Ptr {
+		x = x.Elem()
+	}
+
+	return fmt.Sprintf("%s.%s", x.PkgPath(), x.Name())
 }
 
 func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
@@ -135,7 +173,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 				return x.Name
 			}
 
-			result := packageWrap(options, x.PkgName, x.Name)
+			result := packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 			if len(x.Indexed) > 0 {
 				names := make([]string, 0)
 				for _, name := range x.Indexed {
@@ -148,7 +186,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 			return result
 		},
 		func(x *AliasLike) string {
-			return packageWrap(options, x.PkgName, x.Name)
+			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 		},
 		func(x *BooleanLike) string {
 			return "bool"
@@ -184,7 +222,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 						strings.Join(instantiatedTypeParams, ","),
 					)
 
-					return packageWrap(options, x.PkgName, result)
+					return packageWrap(options, x.PkgName, x.PkgImportName, result)
 				}
 			} else {
 				typeParams := ToGoTypeParamsNames(x)
@@ -194,14 +232,14 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 						strings.Join(typeParams, ","),
 					)
 
-					return packageWrap(options, x.PkgName, result)
+					return packageWrap(options, x.PkgName, x.PkgImportName, result)
 				}
 			}
 
-			return packageWrap(options, x.PkgName, x.Name)
+			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 		},
 		func(x *UnionLike) string {
-			return packageWrap(options, x.PkgName, x.Name)
+			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 		},
 	)
 }
@@ -291,42 +329,6 @@ func WrapPointerIf(name string, isPointer bool) string {
 		return fmt.Sprintf("*%s", name)
 	}
 	return name
-}
-
-func IsPrimitive(x Shape) bool {
-	return MustMatchShape(
-		x,
-		func(x *Any) bool {
-			return true
-		},
-		func(x *RefName) bool {
-			return false
-		},
-		func(x *AliasLike) bool {
-			return false
-		},
-		func(x *BooleanLike) bool {
-			return true
-		},
-		func(x *StringLike) bool {
-			return true
-		},
-		func(x *NumberLike) bool {
-			return true
-		},
-		func(x *ListLike) bool {
-			return true
-		},
-		func(x *MapLike) bool {
-			return true
-		},
-		func(x *StructLike) bool {
-			return false
-		},
-		func(x *UnionLike) bool {
-			return false
-		},
-	)
 }
 
 func ExtractPkgImportNames(x Shape) map[string]string {

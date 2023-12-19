@@ -59,11 +59,7 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		return FromGoReflect(x.Elem(), infiniteRecursionFix)
 
 	case reflect.Interface:
-		shape, found := LookupShape(&RefName{
-			Name:          x.Name(),
-			PkgName:       guessPkgName(x),
-			PkgImportName: x.PkgPath(),
-		})
+		shape, found := LookupShape(MkRefNameFromReflect(x))
 
 		union, isUnion := shape.(*UnionLike)
 		if isUnion {
@@ -100,7 +96,7 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 
 		result := &StructLike{
 			Name:          x.Name(),
-			PkgName:       guessPkgName(x),
+			PkgName:       GuessPkgName(x),
 			PkgImportName: x.PkgPath(),
 		}
 
@@ -214,7 +210,11 @@ func ExtractTags(tag string) map[string]Tag {
 	return result
 }
 
-func guessPkgName(x reflect.Type) string {
-	parts := strings.Split(x.PkgPath(), "/")
+func GuessPkgName(x reflect.Type) string {
+	return GuessPkgNameFromPkgImportName(x.PkgPath())
+}
+
+func GuessPkgNameFromPkgImportName(x string) string {
+	parts := strings.Split(x, "/")
 	return parts[len(parts)-1]
 }
