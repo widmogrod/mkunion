@@ -14,20 +14,62 @@ import (
 
 var cache = sync.Map{}
 
-func RefFullName(x *RefName) string {
-	return fmt.Sprintf("%s:%s.%s", x.PkgImportName, x.PkgName, x.Name)
-}
+func shapeFullName(x Shape) string {
+	return MustMatchShape(
+		x,
+		func(x *Any) string {
+			return "any"
+		},
+		func(x *RefName) string {
+			if x.PkgName == "" {
+				return x.Name
+			}
 
-func StructFullName(x *StructLike) string {
-	return fmt.Sprintf("%s:%s.%s", x.PkgImportName, x.PkgName, x.Name)
-}
+			// intentionaly skip indexing
 
-func UnionFullName(x *UnionLike) string {
-	return fmt.Sprintf("%s:%s.%s", x.PkgImportName, x.PkgName, x.Name)
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+		func(x *AliasLike) string {
+			if x.PkgName == "" {
+				return x.Name
+			}
+
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+		func(x *BooleanLike) string {
+			return "bool"
+		},
+		func(x *StringLike) string {
+			return "string"
+		},
+		func(x *NumberLike) string {
+			return "number"
+		},
+		func(x *ListLike) string {
+			return fmt.Sprintf("[]%s", shapeFullName(x.Element))
+		},
+		func(x *MapLike) string {
+			return fmt.Sprintf("map[%s]%s", shapeFullName(x.Key), shapeFullName(x.Val))
+		},
+		func(x *StructLike) string {
+			if x.PkgName == "" {
+				return x.Name
+			}
+
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+		func(x *UnionLike) string {
+			if x.PkgName == "" {
+				return x.Name
+			}
+
+			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+	)
 }
 
 func LookupShape(x *RefName) (Shape, bool) {
-	key := RefFullName(x)
+	key := shapeFullName(x)
 	if v, ok := cache.Load(key); ok {
 		return v.(Shape), true
 	}
@@ -59,11 +101,14 @@ func LookupShape(x *RefName) (Shape, bool) {
 				return fmt.Errorf("shape.LookupShape: error during infer %w", err)
 			}
 
-			for _, y := range inferred.RetrieveStructs() {
-				cache.Store(StructFullName(y), y)
-			}
-			for _, y := range inferred.RetrieveUnions() {
-				cache.Store(UnionFullName(y), y)
+			for _, y := range inferred.RetrieveShapes() {
+				cache.Store(shapeFullName(y), y)
+				switch z := y.(type) {
+				case *UnionLike:
+					for _, v := range z.Variant {
+						cache.Store(shapeFullName(v), v)
+					}
+				}
 			}
 
 			// continue scanning
@@ -74,6 +119,9 @@ func LookupShape(x *RefName) (Shape, bool) {
 		log.Warnf("shape.LookupShape: error during walk %s", err.Error())
 		return nil, false
 	}
+
+	c := cache
+	_ = c
 
 	// if not found, return nil, false
 	if v, ok := cache.Load(key); ok {

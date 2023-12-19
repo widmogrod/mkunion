@@ -158,6 +158,10 @@ func ToGoFullTypeNameFromReflect(x reflect.Type) string {
 		x = x.Elem()
 	}
 
+	if x.PkgPath() == "" {
+		return x.Name()
+	}
+
 	return fmt.Sprintf("%s.%s", x.PkgPath(), x.Name())
 }
 
