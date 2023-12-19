@@ -78,7 +78,7 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 		var err error
 		var before *Record[schema.Schema]
 		if _, ok := s.store[s.toKey(record)]; ok {
-			before, err = schema.ToGoG[*Record[schema.Schema]](s.store[s.toKey(record)], WithOnlyRecordSchemaOptions)
+			before, err = schema.ToGoG[*Record[schema.Schema]](s.store[s.toKey(record)])
 			if err != nil {
 				panic(fmt.Errorf("store.InMemoryRepository.UpdateRecords: to typed failed %s %w", err, ErrInternalError))
 			}
@@ -99,7 +99,7 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 
 	for _, record := range x.Deleting {
 		if _, ok := s.store[s.toKey(record)]; ok {
-			before, err := schema.ToGoG[*Record[schema.Schema]](s.store[s.toKey(record)], WithOnlyRecordSchemaOptions)
+			before, err := schema.ToGoG[*Record[schema.Schema]](s.store[s.toKey(record)])
 			if err != nil {
 				panic(fmt.Errorf("store.InMemoryRepository.UpdateRecords: to typed failed %s %w", err, ErrInternalError))
 			}
@@ -170,7 +170,7 @@ func (s *InMemoryRepository) FindingRecords(query FindingRecords[Record[schema.S
 
 	typedRecords := make([]Record[schema.Schema], 0)
 	for _, record := range records {
-		typed, err := schema.ToGoG[*Record[schema.Schema]](record, WithOnlyRecordSchemaOptions)
+		typed, err := schema.ToGoG[*Record[schema.Schema]](record)
 		if err != nil {
 			return PageResult[Record[schema.Schema]]{}, err
 		}

@@ -65,7 +65,7 @@ func TestNewRepository2WithSchema(t *testing.T) {
 
 	result, err := repo.FindingRecords(FindingRecords[Record[schema.Schema]]{
 		Where: predicate.MustWhere(
-			`Data["schema.Map"].Age > :age AND Data[*].Age < :maxAge`,
+			`Data["schema.Map"].Age["schema.Number"] > :age AND Data[*].Age["schema.Number"] < :maxAge`,
 			predicate.ParamBinds{
 				":age":    schema.MkInt(20),
 				":maxAge": schema.MkInt(40),

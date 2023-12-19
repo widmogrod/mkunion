@@ -8,6 +8,7 @@ import (
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"io"
 	"strings"
@@ -40,12 +41,13 @@ func (os *OpenSearchRepository) Get(recordID string, recordType RecordType) (Rec
 
 	log.Println("OpenSearchRepository.Get result=", string(result))
 
-	schemed, err := schema.FromJSON(result)
-	if err != nil {
-		return Record[schema.Schema]{}, err
-	}
-
-	typed, err := schema.ToGoG[*Record[schema.Schema]](schema.Get(schemed, "_source"), WithOnlyRecordSchemaOptions)
+	typed, err := shared.JSONUnmarshal[*Record[schema.Schema]](result)
+	//schemed, err := schema.FromJSON(result)
+	//if err != nil {
+	//	return Record[schema.Schema]{}, err
+	//}
+	//
+	//typed, err := schema.ToGoG[*Record[schema.Schema]](schema.Get(schemed, "_source"))
 	if err != nil {
 		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get type conversion error=%s. %w", err, ErrInvalidType)
 	}
@@ -55,7 +57,8 @@ func (os *OpenSearchRepository) Get(recordID string, recordType RecordType) (Rec
 
 func (os *OpenSearchRepository) UpdateRecords(command UpdateRecords[Record[schema.Schema]]) error {
 	for _, record := range command.Saving {
-		data, err := schema.ToJSON(schema.FromGo(record))
+		data, err := shared.JSONMarshal[Record[schema.Schema]](record)
+		//data, err := schema.ToJSON(schema.FromPrimitiveGo(record))
 		if err != nil {
 			panic(err)
 		}
@@ -77,6 +80,14 @@ func (os *OpenSearchRepository) UpdateRecords(command UpdateRecords[Record[schem
 	return nil
 }
 
+type OpenSearchSearchResult struct {
+	Hits struct {
+		Hits []struct {
+			Item Record[schema.Schema] `json:"_source"`
+		}
+	}
+}
+
 func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schema.Schema]]) (PageResult[Record[schema.Schema]], error) {
 	filters, sorters := os.toFiltersAndSorters(query)
 
@@ -93,28 +104,28 @@ func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schem
 		queryTemplate["size"] = query.Limit
 	}
 
-	if query.After != nil {
-		schemed, err := schema.FromJSON([]byte(*query.After))
-		if err != nil {
-			panic(err)
-		}
-
-		list, ok := schemed.(*schema.List)
-		if !ok {
-			panic(fmt.Errorf("expected list, got %T", schemed))
-		}
-
-		afterSearch := make([]string, len(*list))
-		for i, item := range *list {
-			str, ok := schema.As[string](item)
-			if !ok {
-				panic(fmt.Errorf("expected string, got %T", item))
-			}
-			afterSearch[i] = str
-		}
-
-		queryTemplate["search_after"] = afterSearch
-	}
+	//if query.After != nil {
+	//	schemed, err := schema.FromJSON([]byte(*query.After))
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//
+	//	list, ok := schemed.(*schema.List)
+	//	if !ok {
+	//		panic(fmt.Errorf("expected list, got %T", schemed))
+	//	}
+	//
+	//	afterSearch := make([]string, len(*list))
+	//	for i, item := range *list {
+	//		str, ok := schema.As[string](item)
+	//		if !ok {
+	//			panic(fmt.Errorf("expected string, got %T", item))
+	//		}
+	//		afterSearch[i] = str
+	//	}
+	//
+	//	queryTemplate["search_after"] = afterSearch
+	//}
 
 	if len(filters) > 0 {
 		queryTemplate["query"] = filters
@@ -146,46 +157,53 @@ func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schem
 		//return PageResult[Record[schema.Schema]]{}, err
 	}
 
-	schemed, err := schema.FromJSON(result)
-	if err != nil {
-		panic(err)
-		//return PageResult[Record[schema.Schema]]{}, err
+	hits, err := shared.JSONUnmarshal[OpenSearchSearchResult](result)
+	//
+	//schemed, err := schema.FromJSON(result)
+	//if err != nil {
+	//	panic(err)
+	//	//return PageResult[Record[schema.Schema]]{}, err
+	//}
+	//
+	//hists := schema.Get(schemed, "hits.hits")
+	//var lastSort schema.Schema
+
+	var items []Record[schema.Schema]
+	for _, hit := range hits.Hits.Hits {
+		items = append(items, hit.Item)
 	}
 
-	hists := schema.Get(schemed, "hits.hits")
-	var lastSort schema.Schema
+	//items := schema.Reduce(
+	//	hits.Hits,
+	//	[]Record[schema.Schema]{},
+	//	func(s schema.Schema, result []Record[schema.Schema]) []Record[schema.Schema] {
+	//		typed, err := schema.ToGoG[*Record[schema.Schema]](schema.Get(s, "_source"))
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		result = append(result, *typed)
+	//
+	//		//lastSort = schema.Get(s, "sort")
+	//
+	//		return result
+	//	})
 
-	items := schema.Reduce(
-		hists,
-		[]Record[schema.Schema]{},
-		func(s schema.Schema, result []Record[schema.Schema]) []Record[schema.Schema] {
-			typed, err := schema.ToGoG[*Record[schema.Schema]](schema.Get(s, "_source"), WithOnlyRecordSchemaOptions)
-			if err != nil {
-				panic(err)
-			}
-			result = append(result, *typed)
-
-			lastSort = schema.Get(s, "sort")
-
-			return result
-		})
-
-	if len(items) == int(query.Limit) && lastSort != nil {
-		// has next page of results
-		next := query
-
-		data, err := schema.ToJSON(lastSort)
-		if err != nil {
-			panic(err)
-		}
-		after := string(data)
-		next.After = &after
-
-		return PageResult[Record[schema.Schema]]{
-			Items: items,
-			Next:  &next,
-		}, nil
-	}
+	//if len(items) == int(query.Limit) && lastSort != nil {
+	//	// has next page of results
+	//	next := query
+	//
+	//	data, err := schema.ToJSON(lastSort)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	after := string(data)
+	//	next.After = &after
+	//
+	//	return PageResult[Record[schema.Schema]]{
+	//		Items: items,
+	//		Next:  &next,
+	//	}, nil
+	//}
 
 	return PageResult[Record[schema.Schema]]{
 		Items: items,

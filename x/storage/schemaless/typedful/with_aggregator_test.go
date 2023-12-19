@@ -85,7 +85,7 @@ func TestNewRepositoryInMemory(t *testing.T) {
 
 	result, err := r.FindingRecords(FindingRecords[Record[User]]{
 		Where: predicate.MustWhere(
-			"Data.Age > :age",
+			`Data.Age["schema.Number"] > :age`,
 			predicate.ParamBinds{
 				":age": schema.MkInt(20),
 			},

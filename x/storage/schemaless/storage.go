@@ -91,8 +91,6 @@ type Record[A any] struct {
 // )
 type UpdatingPolicy uint
 
-var WithOnlyRecordSchemaOptions = schema.WithExtraRules()
-
 const (
 	PolicyIfServerNotChanged UpdatingPolicy = iota
 	PolicyOverwriteServerChanges
@@ -247,6 +245,7 @@ func SaveAndDelete(saving, deleting UpdateRecords[Record[schema.Schema]]) Update
 }
 
 func RecordAs[A any](record Record[schema.Schema]) (Record[A], error) {
+	//panic("not implemented")
 	typed, err := schema.ToGoG[A](record.Data)
 	if err != nil {
 		return Record[A]{}, err

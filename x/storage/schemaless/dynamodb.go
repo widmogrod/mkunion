@@ -58,7 +58,7 @@ func (d *DynamoDBRepository) Get(key, recordType string) (Record[schema.Schema],
 		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get schema conversion error=%s. %w", err, ErrInternalError)
 	}
 
-	typed, err := schema.ToGoG[*Record[schema.Schema]](schemed, WithOnlyRecordSchemaOptions)
+	typed, err := schema.ToGoG[*Record[schema.Schema]](schemed)
 	if err != nil {
 		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get type conversion error=%s. %w", err, ErrInvalidType)
 	}
@@ -75,7 +75,7 @@ func (d *DynamoDBRepository) UpdateRecords(command UpdateRecords[Record[schema.S
 	for _, value := range command.Saving {
 		originalVersion := value.Version
 		value.Version++
-		sch := schema.FromGo(value)
+		sch := schema.FromPrimitiveGo(value)
 		item := schema.ToDynamoDB(sch)
 		if _, ok := item.(*types.AttributeValueMemberM); !ok {
 			return fmt.Errorf("DynamoDBRepository.UpdateRecords: unsupported type: %T", item)
@@ -161,21 +161,21 @@ func (d *DynamoDBRepository) FindingRecords(query FindingRecords[Record[schema.S
 		//ConsistentRead:            aws.Bool(true),
 	}
 
-	if query.After != nil {
-		schemed, err := schema.FromJSON([]byte(*query.After))
-		if err != nil {
-			return PageResult[Record[schema.Schema]]{}, err
-		}
-
-		scanInput.ExclusiveStartKey = map[string]types.AttributeValue{
-			"ID": &types.AttributeValueMemberS{
-				Value: schema.AsDefault[string](schema.Get(schemed, "ID"), ""),
-			},
-			"Type": &types.AttributeValueMemberS{
-				Value: schema.AsDefault[string](schema.Get(schemed, "Type"), ""),
-			},
-		}
-	}
+	//if query.After != nil {
+	//	schemed, err := schema.FromJSON([]byte(*query.After))
+	//	if err != nil {
+	//		return PageResult[Record[schema.Schema]]{}, err
+	//	}
+	//
+	//	scanInput.ExclusiveStartKey = map[string]types.AttributeValue{
+	//		"ID": &types.AttributeValueMemberS{
+	//			Value: schema.AsDefault[string](schema.Get(schemed, "ID"), ""),
+	//		},
+	//		"Type": &types.AttributeValueMemberS{
+	//			Value: schema.AsDefault[string](schema.Get(schemed, "Type"), ""),
+	//		},
+	//	}
+	//}
 
 	// Be aware that DynamoDB limit is scan limit, not page limit!
 	if query.Limit > 0 {
@@ -202,33 +202,33 @@ func (d *DynamoDBRepository) FindingRecords(query FindingRecords[Record[schema.S
 			return PageResult[Record[schema.Schema]]{}, err
 		}
 
-		typed, err := schema.ToGoG[*Record[schema.Schema]](schemed, WithOnlyRecordSchemaOptions)
+		typed, err := schema.ToGoG[*Record[schema.Schema]](schemed)
 		if err != nil {
 			return PageResult[Record[schema.Schema]]{}, err
 		}
 		result.Items = append(result.Items, *typed)
 	}
 
-	if items.LastEvaluatedKey != nil {
-		after := &types.AttributeValueMemberM{
-			Value: items.LastEvaluatedKey,
-		}
-		schemed, err := schema.FromDynamoDB(after)
-		if err != nil {
-			return PageResult[Record[schema.Schema]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error calculating after cursor %s. %w", err, ErrInternalError)
-		}
-		json, err := schema.ToJSON(schemed)
-		if err != nil {
-			return PageResult[Record[schema.Schema]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error serializing after cursor %s. %w", err, ErrInternalError)
-		}
-		cursor := string(json)
-		result.Next = &FindingRecords[Record[schema.Schema]]{
-			Where: query.Where,
-			Sort:  query.Sort,
-			Limit: query.Limit,
-			After: &cursor,
-		}
-	}
+	//if items.LastEvaluatedKey != nil {
+	//	after := &types.AttributeValueMemberM{
+	//		Value: items.LastEvaluatedKey,
+	//	}
+	//	schemed, err := schema.FromDynamoDB(after)
+	//	if err != nil {
+	//		return PageResult[Record[schema.Schema]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error calculating after cursor %s. %w", err, ErrInternalError)
+	//	}
+	//	json, err := schema.ToJSON(schemed)
+	//	if err != nil {
+	//		return PageResult[Record[schema.Schema]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error serializing after cursor %s. %w", err, ErrInternalError)
+	//	}
+	//	cursor := string(json)
+	//	result.Next = &FindingRecords[Record[schema.Schema]]{
+	//		Where: query.Where,
+	//		Sort:  query.Sort,
+	//		Limit: query.Limit,
+	//		After: &cursor,
+	//	}
+	//}
 
 	return result, nil
 }
