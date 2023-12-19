@@ -70,16 +70,20 @@ func (g *SerdeJSONTagged) ExtractImports(x shape.Shape) PkgMap {
 	}
 
 	// add default and necessary imports
-	g.InjectDefaultImports(pkgMap)
+	defaults := g.defaultImportsFor(x)
+	pkgMap = MergePkgMaps(pkgMap, defaults)
+
 	// remove self from importing
 	delete(pkgMap, shape.ToGoPkgName(x))
 	return pkgMap
 }
 
-func (g *SerdeJSONTagged) InjectDefaultImports(pkgMap PkgMap) {
-	pkgMap["fmt"] = "fmt"
-	pkgMap["json"] = "encoding/json"
-	pkgMap["shared"] = "github.com/widmogrod/mkunion/x/shared"
+func (g *SerdeJSONTagged) defaultImportsFor(x shape.Shape) PkgMap {
+	return map[string]string{
+		"json":   "encoding/json",
+		"fmt":    "fmt",
+		"shared": "github.com/widmogrod/mkunion/x/shared",
+	}
 }
 
 func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
@@ -94,7 +98,23 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 
 		},
 		func(x *shape.AliasLike) (string, error) {
-			panic("not implemented")
+			result := &strings.Builder{}
+			result.WriteString("var (\n")
+			result.WriteString("\t_ json.Unmarshaler = (*")
+			result.WriteString(shape.ToGoTypeName(x,
+				shape.WithInstantiation(),
+				shape.WithRootPackage(shape.ToGoPkgName(x)),
+			))
+			result.WriteString(")(nil)\n")
+			result.WriteString("\t_ json.Marshaler   = (*")
+			result.WriteString(shape.ToGoTypeName(x,
+				shape.WithInstantiation(),
+				shape.WithRootPackage(shape.ToGoPkgName(x)),
+			))
+			result.WriteString(")(nil)\n")
+			result.WriteString(")\n\n")
+
+			return result.String(), nil
 
 		},
 		func(x *shape.BooleanLike) (string, error) {
@@ -143,9 +163,13 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 }
 
 func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
+	typeName := shape.ToGoTypeName(x, shape.WithRootPackage(shape.ToGoPkgName(x)))
 	errorContext := fmt.Sprintf(`%s.MarshalJSON:`, shape.ToGoTypeName(x))
 
-	return shape.MustMatchShapeR2(
+	result := &strings.Builder{}
+	result.WriteString(fmt.Sprintf("func (r *%s) MarshalJSON() ([]byte, error) {\n", typeName))
+
+	body, err := shape.MustMatchShapeR2(
 		x,
 		func(y *shape.Any) (string, error) {
 			panic("not implemented")
@@ -156,7 +180,20 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 
 		},
 		func(y *shape.AliasLike) (string, error) {
-			panic("not implemented")
+			if y.IsAlias {
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSON: generation of marshaller for alias types is not supported")
+			}
+
+			fieldTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(x)))
+
+			result := &strings.Builder{}
+			result.WriteString(fmt.Sprintf("\tresult, err := shared.JSONMarshal[%s](%s(*r))\n", fieldTypeName, fieldTypeName))
+			result.WriteString("\tif err != nil {\n")
+			result.WriteString("\t\treturn nil, fmt.Errorf(\"" + errorContext + " %w\", err)\n")
+			result.WriteString("\t}\n")
+			result.WriteString("\treturn result, nil\n")
+
+			return result.String(), nil
 
 		},
 		func(y *shape.BooleanLike) (string, error) {
@@ -180,10 +217,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 
 		},
 		func(y *shape.StructLike) (string, error) {
-			typeName := shape.ToGoTypeName(y, shape.WithRootPackage(shape.ToGoPkgName(x)))
-
 			result := &strings.Builder{}
-			result.WriteString(fmt.Sprintf("func (r *%s) MarshalJSON() ([]byte, error) {\n", typeName))
 			result.WriteString("\tvar err error\n")
 			result.WriteString("\tresult := make(map[string]json.RawMessage)\n\n")
 
@@ -247,7 +281,6 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 			result.WriteString("\t}\n")
 			result.WriteString("\n")
 			result.WriteString("\treturn output, nil\n")
-			result.WriteString("}\n\n")
 
 			return result.String(), nil
 		},
@@ -255,12 +288,25 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 			panic("not implemented")
 		},
 	)
+
+	if err != nil {
+		return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSON: %w", err)
+	}
+
+	result.WriteString(body)
+	result.WriteString("}\n\n")
+
+	return result.String(), nil
 }
 
 func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
+	typeName := shape.ToGoTypeName(x, shape.WithRootPackage(shape.ToGoPkgName(x)))
 	errorContext := fmt.Sprintf(`%s.UnmarshalJSON:`, shape.ToGoTypeName(x))
 
-	return shape.MustMatchShapeR2(
+	result := &strings.Builder{}
+	result.WriteString(fmt.Sprintf("func (r *%s) UnmarshalJSON(bytes []byte) error {\n", typeName))
+
+	body, err := shape.MustMatchShapeR2(
 		x,
 		func(y *shape.Any) (string, error) {
 			panic("not implemented")
@@ -271,8 +317,21 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 
 		},
 		func(y *shape.AliasLike) (string, error) {
-			panic("not implemented")
+			if y.IsAlias {
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSON: generation of unmarshaller for alias types is not supported")
+			}
 
+			fieldTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(x)))
+
+			result := &strings.Builder{}
+			result.WriteString(fmt.Sprintf("\tresult, err := shared.JSONUnmarshal[%s](bytes)\n", fieldTypeName))
+			result.WriteString("\tif err != nil {\n")
+			result.WriteString("\t\treturn fmt.Errorf(\"" + errorContext + " %w\", err)\n")
+			result.WriteString("\t}\n")
+			result.WriteString(fmt.Sprintf("\t*r = %s(result)\n", typeName))
+			result.WriteString("\treturn nil\n")
+
+			return result.String(), nil
 		},
 		func(y *shape.BooleanLike) (string, error) {
 			panic("not implemented")
@@ -295,10 +354,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 
 		},
 		func(y *shape.StructLike) (string, error) {
-			typeName := shape.ToGoTypeName(y, shape.WithRootPackage(shape.ToGoPkgName(x)))
-
 			result := &strings.Builder{}
-			result.WriteString(fmt.Sprintf("func (r *%s) UnmarshalJSON(bytes []byte) error {\n", typeName))
 			result.WriteString("\treturn shared.JSONParseObject(bytes, func(key string, bytes []byte) error {\n")
 			result.WriteString("\t\tswitch key {\n")
 
@@ -372,7 +428,6 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 			result.WriteString("\t\t}\n\n")
 			result.WriteString("\t\treturn fmt.Errorf(\"" + context + ".UnmarshalJSON: unknown key: %s\", key)\n")
 			result.WriteString("\t})\n")
-			result.WriteString("}\n")
 
 			return result.String(), nil
 		},
@@ -380,6 +435,15 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 			panic("not implemented")
 		},
 	)
+
+	if err != nil {
+		return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSON: %w", err)
+	}
+
+	result.WriteString(body)
+	result.WriteString("}\n\n")
+
+	return result.String(), nil
 }
 
 func padLeftTabs(n int, s string) string {

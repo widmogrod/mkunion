@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestNewSerdeJSONTagged(t *testing.T) {
+func TestNewSerdeJSONTagged_Struct(t *testing.T) {
 	//t.Skip("not implemented")
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	if err != nil {
@@ -213,5 +213,51 @@ func (r *ListOf2[T1,T2]) UnmarshalJSON(bytes []byte) error {
 		return fmt.Errorf("testutils.ListOf2[T1,T2].UnmarshalJSON: unknown key: %s", key)
 	})
 }
+
+`, result)
+}
+func TestNewSerdeJSONTagged_Alias(t *testing.T) {
+	//t.Skip("not implemented")
+	inferred, err := shape.InferFromFile("testutils/tree.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	generator := NewSerdeJSONTagged(
+		inferred.RetrieveShapeNamedAs("K"),
+	)
+
+	result, err := generator.Generate()
+	assert.NoError(t, err)
+	assert.Equal(t, `package testutils
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
+)
+
+var (
+	_ json.Unmarshaler = (*K)(nil)
+	_ json.Marshaler   = (*K)(nil)
+)
+
+func (r *K) MarshalJSON() ([]byte, error) {
+	result, err := shared.JSONMarshal[string](string(*r))
+	if err != nil {
+		return nil, fmt.Errorf("testutils.K.MarshalJSON: %w", err)
+	}
+	return result, nil
+}
+
+func (r *K) UnmarshalJSON(bytes []byte) error {
+	result, err := shared.JSONUnmarshal[string](bytes)
+	if err != nil {
+		return fmt.Errorf("testutils.K.UnmarshalJSON: %w", err)
+	}
+	*r = K(result)
+	return nil
+}
+
 `, result)
 }
