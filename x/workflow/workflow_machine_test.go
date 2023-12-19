@@ -30,13 +30,6 @@ var functions = map[string]Function{
 }
 
 func TestExecution(t *testing.T) {
-	schema.RegisterRules([]schema.RuleMatcher{
-		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(BaseState{})),
-	})
-	schema.RegisterUnionTypes(
-		StateSchemaDef(),
-	)
-
 	program := &Flow{
 		Name: "hello_world_flow",
 		Arg:  "input",

@@ -3,6 +3,7 @@ package workflow
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"strings"
 )
 
@@ -117,7 +118,7 @@ func ToStrReshaper(reshaper Reshaper, depth int) string {
 }
 
 func ToStrSchema(x schema.Schema, depth int) string {
-	res, err := schema.ToJSON(x)
+	res, err := shared.JSONMarshal[schema.Schema](x)
 	if err != nil {
 		panic(err)
 	}
