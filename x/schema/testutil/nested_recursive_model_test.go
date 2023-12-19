@@ -90,3 +90,25 @@ func TestToGo_ExampleTwo(t *testing.T) {
 		assert.Equal(t, subject, output.Interface())
 	}
 }
+
+func Test_GetShapeLocation(t *testing.T) {
+	inferred, err := shape.InferFromFile("nested_recursive_model.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exampleTwo := inferred.RetrieveStruct("ExampleTwo")
+	assert.NotNil(t, exampleTwo)
+
+	subject := ExampleTwo{
+		TwoData: schema.MkInt(1),
+		TwoNext: &ExampleOne{
+			OneValue: "hello",
+		},
+	}
+
+	result, resultShape := schema.Get(subject, "TwoNext[*].OneValue")
+
+	assert.Equal(t, schema.MkString("hello"), result)
+	assert.Equal(t, &shape.StringLike{}, resultShape)
+}

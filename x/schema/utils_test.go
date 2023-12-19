@@ -275,7 +275,7 @@ func TestGet(t *testing.T) {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			result := Get(uc.data, uc.location)
+			result := GetSchema(uc.data, uc.location)
 			assert.Equal(t, uc.expected, result)
 		})
 	}

@@ -21,6 +21,7 @@ type (
 
 var (
 	_ json.Unmarshaler = (*Map)(nil)
+	_ json.Marshaler   = (*Map)(nil)
 )
 
 func (x *Map) UnmarshalJSON(bytes []byte) error {
@@ -34,6 +35,18 @@ func (x *Map) UnmarshalJSON(bytes []byte) error {
 		(*x)[key] = val
 		return nil
 	})
+}
+
+func (x *Map) MarshalJSON() ([]byte, error) {
+	result := make(map[string]json.RawMessage)
+	for key, value := range *x {
+		bytes, err := SchemaToJSON(value)
+		if err != nil {
+			return nil, fmt.Errorf("schema.Map.MarshalJSON: %w", err)
+		}
+		result[key] = bytes
+	}
+	return json.Marshal(result)
 }
 
 //go:tag serde:"json"
