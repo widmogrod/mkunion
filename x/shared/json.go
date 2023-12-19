@@ -8,14 +8,29 @@ import (
 	"sync"
 )
 
-var registerJSONMarshaller = sync.Map{}
+var (
+	registerJSONMarshaller = sync.Map{}
+	registerType           = sync.Map{}
+)
 
 type serde[A any] struct {
 	from func([]byte) (A, error)
 	to   func(A) ([]byte, error)
 }
 
-func fullTypeName(x reflect.Type) string {
+func TypeRegistryLoad(typeFullName string) (any, bool) {
+	return registerType.Load(typeFullName)
+}
+
+func TypeRegistryLoadFromReflect(x reflect.Type) (any, bool) {
+	if x.Kind() == reflect.Ptr {
+		x = x.Elem()
+	}
+
+	return TypeRegistryLoad(FullTypeName(x))
+}
+
+func FullTypeName(x reflect.Type) string {
 	if x.Kind() == reflect.Ptr {
 		x = x.Elem()
 	}
@@ -33,18 +48,14 @@ func JSONMarshallerRegister[A any](
 	from func([]byte) (A, error),
 	to func(A) ([]byte, error),
 ) {
+	destinationTypePtr := new(A)
+	registerType.Store(fullName, *destinationTypePtr)
+
 	registerJSONMarshaller.Store(fullName, serde[any]{
 		from: func(bytes []byte) (any, error) {
-			//if len(bytes) == 0 {
-			//	return nil, nil
-			//}
 			return from(bytes)
 		},
 		to: func(a any) ([]byte, error) {
-			//if a == nil {
-			//	return nil, nil
-			//}
-
 			if x, ok := a.(A); ok {
 				return to(x)
 			}
@@ -77,7 +88,7 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 		return *result, nil
 	}
 
-	key := fullTypeName(reflect.TypeOf(new(A)))
+	key := FullTypeName(reflect.TypeOf(new(A)))
 	fromTo, ok := registerJSONMarshaller.Load(key)
 	if !ok {
 		err := json.Unmarshal(data, &destinationType)
@@ -149,7 +160,7 @@ func JSONMarshal[A any](x any) ([]byte, error) {
 
 	// choose the right marshaller
 	// of field type, not the current value type
-	key := fullTypeName(reflect.TypeOf(new(A)))
+	key := FullTypeName(reflect.TypeOf(new(A)))
 	fromTo, ok := registerJSONMarshaller.Load(key)
 	if !ok {
 		date, err := json.Marshal(x)
