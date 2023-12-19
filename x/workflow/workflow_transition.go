@@ -340,7 +340,7 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 				return nil, fmt.Errorf("workflow.ExecuteReshaper: expected location to start with field name, got %s", x.Path)
 			}
 			if val, ok := context.Variables[field.Name]; ok {
-				return schema.GetLocation(val, rest), nil
+				return schema.GetSchemaLocation(val, rest), nil
 			} else {
 				return nil, fmt.Errorf("variable %s not found", x.Path)
 			}

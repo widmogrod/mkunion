@@ -67,7 +67,7 @@ func TestExecution(t *testing.T) {
 		},
 	}
 
-	store := schemaless.NewInMemoryRepository()
+	store := schemaless.NewInMemoryRepository[schema.Schema]()
 	repo := typedful.NewTypedRepository[State](store)
 	state, err := repo.Get("1", "workflow")
 	assert.ErrorIs(t, err, schemaless.ErrNotFound)
