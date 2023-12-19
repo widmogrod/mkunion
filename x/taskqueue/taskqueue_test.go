@@ -83,14 +83,14 @@ func TestTaskQueue(t *testing.T) {
 	desc = &Description{
 		Change: []string{"create"},
 		Entity: "process",
-		Filter: `Data[*]["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
-AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
-AND Version = 1`,
+		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp[*] <= :now 
+AND Data["workflow.Scheduled"].ExpectedRunTimestamp[*] > 0
+AND Version[*] = 1`,
 		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0`,
 		//Filter: `Data #= "workflow.Scheduled" && Data[*].RunOption.Delayed > 0`,
 	}
 
-	store := schemaless.NewInMemoryRepository()
+	store := schemaless.NewInMemoryRepository[schema.Schema]()
 	stream := store.AppendLog()
 
 	repo := typedful.NewTypedRepository[workflow.State](store)

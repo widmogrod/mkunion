@@ -49,7 +49,7 @@ type TaskQueue struct {
 func (q *TaskQueue) RunCDC(ctx context.Context) error {
 	return q.stream.Subscribe(ctx, 0, func(change schemaless.Change[schema.Schema]) {
 		filter := predicate.MustWhere(q.desc.Filter, q.params())
-		if !predicate.Evaluate(filter.Predicate, schema.FromGo(change.After), filter.Params) {
+		if !predicate.EvaluateSchema(filter.Predicate, schema.FromGo(change.After), filter.Params) {
 			return
 		}
 
