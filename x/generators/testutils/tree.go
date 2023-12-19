@@ -29,7 +29,7 @@ type ListOf2[T1 comparable, T2 any] struct {
 	ID        string
 	Data      T1
 	List      []T2
-	Map       map[T1]T2
+	Map       map[T1]T2 `json:"map_of_tree"`
 	ListOf    ListOf[T1]
 	ListOfPtr *ListOf[T2]
 	Time      time.Time

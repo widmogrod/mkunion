@@ -79,7 +79,7 @@ func (r *ListOf2[T1,T2]) MarshalJSON() ([]byte, error) {
 			return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field Map[%#v] value decoding %#v; %w", key, v, err)
 		}
 	}
-	result["Map"], err = json.Marshal(fieldMap)
+	result["map_of_tree"], err = json.Marshal(fieldMap)
 	if err != nil {
 		return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field Map; %w", err)
 	}
@@ -149,7 +149,7 @@ func (r *ListOf2[T1,T2]) UnmarshalJSON(bytes []byte) error {
 			}
 			return nil
 
-		case "Map":
+		case "map_of_tree":
 			r.Map = make(map[T1]T2)
 			err := shared.JSONParseObject(bytes, func(rawKey string, bytes []byte) error {
 				item, err := shared.JSONUnmarshal[T2](bytes)
@@ -210,14 +210,13 @@ func (r *ListOf2[T1,T2]) UnmarshalJSON(bytes []byte) error {
 
 		}
 
-		return fmt.Errorf("testutils.ListOf2[T1,T2].UnmarshalJSON: unknown key: %s", key)
+		return nil
 	})
 }
 
 `, result)
 }
 func TestNewSerdeJSONTagged_Alias(t *testing.T) {
-	//t.Skip("not implemented")
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	if err != nil {
 		t.Fatal(err)

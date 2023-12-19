@@ -223,6 +223,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 
 			for _, field := range y.Fields {
 				fieldTypeName := shape.WrapPointerIf(shape.ToGoTypeName(field.Type, shape.WithRootPackage(shape.ToGoPkgName(x))), field.IsPointer)
+				jsonFieldName := shape.TagGetValue(field.Tags, "json", field.Name)
 
 				switch y := field.Type.(type) {
 				case *shape.ListLike:
@@ -235,7 +236,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 					result.WriteString("\t\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "[%d]; %w\", i, err)\n")
 					result.WriteString("\t\t}\n")
 					result.WriteString("\t}\n")
-					result.WriteString(fmt.Sprintf("\tresult[\"%s\"], err = json.Marshal(field%s)\n", field.Name, field.Name))
+					result.WriteString(fmt.Sprintf("\tresult[\"%s\"], err = json.Marshal(field%s)\n", jsonFieldName, field.Name))
 					result.WriteString("\tif err != nil {\n")
 					result.WriteString("\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "; %w\", err)\n")
 					result.WriteString("\t}\n")
@@ -260,7 +261,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 					result.WriteString("\t\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "[%#v] value decoding %#v; %w\", key, v, err)\n")
 					result.WriteString("\t\t}\n")
 					result.WriteString("\t}\n")
-					result.WriteString(fmt.Sprintf("\tresult[\"%s\"], err = json.Marshal(field%s)\n", field.Name, field.Name))
+					result.WriteString(fmt.Sprintf("\tresult[\"%s\"], err = json.Marshal(field%s)\n", jsonFieldName, field.Name))
 					result.WriteString("\tif err != nil {\n")
 					result.WriteString("\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "; %w\", err)\n")
 					result.WriteString("\t}\n")
@@ -270,7 +271,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 					result.WriteString("\tif err != nil {\n")
 					result.WriteString("\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "; %w\", err)\n")
 					result.WriteString("\t}\n")
-					result.WriteString(fmt.Sprintf("\tresult[\"%s\"] = field%s\n", field.Name, field.Name))
+					result.WriteString(fmt.Sprintf("\tresult[\"%s\"] = field%s\n", jsonFieldName, field.Name))
 				}
 				result.WriteString("\n")
 			}
@@ -361,7 +362,8 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 			for _, field := range y.Fields {
 				fieldTypeName := shape.WrapPointerIf(shape.ToGoTypeName(field.Type, shape.WithRootPackage(shape.ToGoPkgName(x))), field.IsPointer)
 
-				result.WriteString(fmt.Sprintf("\t\tcase \"%s\":\n", field.Name))
+				jsonFieldName := shape.TagGetValue(field.Tags, "json", field.Name)
+				result.WriteString(fmt.Sprintf("\t\tcase \"%s\":\n", jsonFieldName))
 
 				switch y := field.Type.(type) {
 				case *shape.ListLike:
@@ -423,10 +425,8 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 				result.WriteString("\n")
 			}
 
-			context := shape.ToGoTypeName(x)
-
 			result.WriteString("\t\t}\n\n")
-			result.WriteString("\t\treturn fmt.Errorf(\"" + context + ".UnmarshalJSON: unknown key: %s\", key)\n")
+			result.WriteString("\t\treturn nil\n")
 			result.WriteString("\t})\n")
 
 			return result.String(), nil
