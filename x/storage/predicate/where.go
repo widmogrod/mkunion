@@ -16,7 +16,7 @@ type WherePredicates struct {
 }
 
 func (w *WherePredicates) Evaluate(data schema.Schema) bool {
-	return Evaluate(w.Predicate, data, w.Params)
+	return EvaluateSchema(w.Predicate, data, w.Params)
 }
 
 func Where(query string, params ParamBinds) (*WherePredicates, error) {
