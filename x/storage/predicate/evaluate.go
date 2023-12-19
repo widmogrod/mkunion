@@ -81,7 +81,7 @@ func EvaluateEqual(record schema.Schema, location string, value any) bool {
 		},
 		record,
 		map[string]schema.Schema{
-			":value": schema.FromGo(value),
+			":value": schema.FromPrimitiveGo(value),
 		},
 	)
 }
