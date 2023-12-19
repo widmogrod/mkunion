@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewRepository2Typed(t *testing.T) {
-	storage := NewInMemoryRepository()
+	storage := NewInMemoryRepository[schema.Schema]()
 	r := NewTypedRepository[User](storage)
 
 	err := r.UpdateRecords(exampleUserRecords)
@@ -17,14 +17,14 @@ func TestNewRepository2Typed(t *testing.T) {
 
 	result, err := r.FindingRecords(FindingRecords[Record[User]]{
 		Where: predicate.MustWhere(
-			`Data.Age["schema.Number"] > :age`,
+			`Data[*].Age[*] > :age`,
 			predicate.ParamBinds{
 				":age": schema.MkInt(20),
 			},
 		),
 		Sort: []SortField{
 			{
-				Field:      `Data.Name`,
+				Field:      `Data[*].Name[*]`,
 				Descending: false,
 			},
 		},

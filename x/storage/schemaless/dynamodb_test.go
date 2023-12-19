@@ -35,9 +35,9 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	err = setupDynamoDB(d, tableName)
 	assert.NoError(t, err, "while setting up dynamodb")
 
-	repo := NewDynamoDBRepository(d, tableName)
+	repo := NewDynamoDBRepository[exampleRecord](d, tableName)
 	// clean database
-	err = repo.UpdateRecords(UpdateRecords[Record[schema.Schema]]{
+	err = repo.UpdateRecords(UpdateRecords[Record[exampleRecord]]{
 		Deleting: exampleUpdateRecords.Saving,
 	})
 	assert.NoError(t, err, "while deleting records")
@@ -45,17 +45,17 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	err = repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err, "while saving records")
 
-	result, err := repo.FindingRecords(FindingRecords[Record[schema.Schema]]{
+	result, err := repo.FindingRecords(FindingRecords[Record[exampleRecord]]{
 		RecordType: "exampleRecord",
 		Where: predicate.MustWhere(
-			`Data["schema.Map"].Age > :age AND Data[*].Age < :maxAge`,
+			`Data.Age > :age AND Data.Age < :maxAge`,
 			predicate.ParamBinds{
 				":age":    schema.MkInt(20),
 				":maxAge": schema.MkInt(40),
 			}),
 		Sort: []SortField{
 			{
-				Field:      `Data["schema.Map"].Name`,
+				Field:      `Data.Name`,
 				Descending: false,
 			},
 		},
@@ -63,7 +63,7 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	})
 	assert.NoError(t, err, "while finding records")
 
-	var foundRecords []Record[schema.Schema]
+	var foundRecords []Record[exampleRecord]
 	for {
 		for _, item := range result.Items {
 			foundRecords = append(foundRecords, item)
@@ -71,6 +71,7 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 
 		if result.HasNext() {
 			result, err = repo.FindingRecords(*result.Next)
+			assert.NoError(t, err, "while finding records")
 		} else {
 			break
 		}
@@ -78,8 +79,8 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 
 	if assert.Len(t, foundRecords, 3, "dynamo should scan all records") {
 		// DynamoDB don't support sorting on attributes, that are not part of sort key
-		//assert.Equal(t, "Alice", schema.As[string](schema.Get(result.Items[0].Data, "Ctx"), "no-name"))
-		//assert.Equal(t, "Jane", schema.As[string](schema.Get(result.Items[1].Data, "Ctx"), "no-name"))
+		//assert.Equal(t, "Alice", schema.As[string](schema.GetSchema(result.Items[0].Data, "Ctx"), "no-name"))
+		//assert.Equal(t, "Jane", schema.As[string](schema.GetSchema(result.Items[1].Data, "Ctx"), "no-name"))
 
 		//should be able to find by id
 		for _, item := range result.Items {

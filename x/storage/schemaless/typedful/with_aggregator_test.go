@@ -57,7 +57,7 @@ var exampleUserRecords = Save(
 )
 
 func TestNewRepositoryInMemory(t *testing.T) {
-	storage := NewInMemoryRepository()
+	storage := NewInMemoryRepository[schema.Schema]()
 	aggregate := func() Aggregator[User, UsersCountByAge] {
 		return NewKeyedAggregate[User, UsersCountByAge](
 			"byAge",
@@ -85,14 +85,14 @@ func TestNewRepositoryInMemory(t *testing.T) {
 
 	result, err := r.FindingRecords(FindingRecords[Record[User]]{
 		Where: predicate.MustWhere(
-			`Data.Age["schema.Number"] > :age`,
+			`Data[*].Age[*] > :age`,
 			predicate.ParamBinds{
 				":age": schema.MkInt(20),
 			},
 		),
 		Sort: []SortField{
 			{
-				Field:      "Data.Name",
+				Field:      "Data[*].Name[*]",
 				Descending: false,
 			},
 		},

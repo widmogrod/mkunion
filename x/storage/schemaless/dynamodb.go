@@ -10,25 +10,26 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"strings"
 )
 
-func NewDynamoDBRepository(client *dynamodb.Client, tableName string) *DynamoDBRepository {
-	return &DynamoDBRepository{
+func NewDynamoDBRepository[A any](client *dynamodb.Client, tableName string) *DynamoDBRepository[A] {
+	return &DynamoDBRepository[A]{
 		client:    client,
 		tableName: tableName,
 	}
 }
 
-var _ Repository[schema.Schema] = (*DynamoDBRepository)(nil)
+var _ Repository[any] = (*DynamoDBRepository[any])(nil)
 
-type DynamoDBRepository struct {
+type DynamoDBRepository[A any] struct {
 	client    *dynamodb.Client
 	tableName string
 }
 
-func (d *DynamoDBRepository) Get(key, recordType string) (Record[schema.Schema], error) {
+func (d *DynamoDBRepository[A]) Get(key, recordType string) (Record[A], error) {
 	item, err := d.client.GetItem(context.Background(), &dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
 			"ID": &types.AttributeValueMemberS{
@@ -42,11 +43,11 @@ func (d *DynamoDBRepository) Get(key, recordType string) (Record[schema.Schema],
 		ConsistentRead: aws.Bool(true),
 	})
 	if err != nil {
-		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get error=%s. %w", err, ErrInternalError)
+		return Record[A]{}, fmt.Errorf("DynamoDBRepository.GetSchema error=%s. %w", err, ErrInternalError)
 	}
 
 	if len(item.Item) == 0 {
-		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get not found. %w", ErrNotFound)
+		return Record[A]{}, fmt.Errorf("DynamoDBRepository.GetSchema not found. %w", ErrNotFound)
 	}
 
 	i := &types.AttributeValueMemberM{
@@ -55,18 +56,18 @@ func (d *DynamoDBRepository) Get(key, recordType string) (Record[schema.Schema],
 
 	schemed, err := schema.FromDynamoDB(i)
 	if err != nil {
-		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get schema conversion error=%s. %w", err, ErrInternalError)
+		return Record[A]{}, fmt.Errorf("DynamoDBRepository.GetSchema schema conversion error=%s. %w", err, ErrInternalError)
 	}
 
-	typed, err := schema.ToGoG[*Record[schema.Schema]](schemed)
+	typed, err := schema.ToGoG[*Record[A]](schemed)
 	if err != nil {
-		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get type conversion error=%s. %w", err, ErrInvalidType)
+		return Record[A]{}, fmt.Errorf("DynamoDBRepository.GetSchema type conversion error=%s. %w", err, ErrInvalidType)
 	}
 
 	return *typed, nil
 }
 
-func (d *DynamoDBRepository) UpdateRecords(command UpdateRecords[Record[schema.Schema]]) error {
+func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) error {
 	if command.IsEmpty() {
 		return fmt.Errorf("DynamoDBRepository.UpdateRecords: empty command %w", ErrEmptyCommand)
 	}
@@ -75,7 +76,7 @@ func (d *DynamoDBRepository) UpdateRecords(command UpdateRecords[Record[schema.S
 	for _, value := range command.Saving {
 		originalVersion := value.Version
 		value.Version++
-		sch := schema.FromPrimitiveGo(value)
+		sch := schema.FromGo[Record[A]](value)
 		item := schema.ToDynamoDB(sch)
 		if _, ok := item.(*types.AttributeValueMemberM); !ok {
 			return fmt.Errorf("DynamoDBRepository.UpdateRecords: unsupported type: %T", item)
@@ -138,10 +139,10 @@ func (d *DynamoDBRepository) UpdateRecords(command UpdateRecords[Record[schema.S
 	return nil
 }
 
-func (d *DynamoDBRepository) FindingRecords(query FindingRecords[Record[schema.Schema]]) (PageResult[Record[schema.Schema]], error) {
+func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {
 	filterExpression, paramsExpression, expressionNames, err := d.buildFilterExpression(query)
 	if err != nil {
-		return PageResult[Record[schema.Schema]]{}, err
+		return PageResult[Record[A]]{}, err
 	}
 
 	log.Infof("\nfilterExpression: %#v \n", filterExpression)
@@ -161,21 +162,21 @@ func (d *DynamoDBRepository) FindingRecords(query FindingRecords[Record[schema.S
 		//ConsistentRead:            aws.Bool(true),
 	}
 
-	//if query.After != nil {
-	//	schemed, err := schema.FromJSON([]byte(*query.After))
-	//	if err != nil {
-	//		return PageResult[Record[schema.Schema]]{}, err
-	//	}
-	//
-	//	scanInput.ExclusiveStartKey = map[string]types.AttributeValue{
-	//		"ID": &types.AttributeValueMemberS{
-	//			Value: schema.AsDefault[string](schema.Get(schemed, "ID"), ""),
-	//		},
-	//		"Type": &types.AttributeValueMemberS{
-	//			Value: schema.AsDefault[string](schema.Get(schemed, "Type"), ""),
-	//		},
-	//	}
-	//}
+	if query.After != nil {
+		schemed, err := shared.JSONUnmarshal[schema.Schema]([]byte(*query.After))
+		if err != nil {
+			return PageResult[Record[A]]{}, fmt.Errorf("dynamodb.FindingRecords: after cursor unmarshal err ;%w", err)
+		}
+
+		scanInput.ExclusiveStartKey = map[string]types.AttributeValue{
+			"ID": &types.AttributeValueMemberS{
+				Value: schema.AsDefault[string](schema.GetSchema(schemed, "ID"), ""),
+			},
+			"Type": &types.AttributeValueMemberS{
+				Value: schema.AsDefault[string](schema.GetSchema(schemed, "Type"), ""),
+			},
+		}
+	}
 
 	// Be aware that DynamoDB limit is scan limit, not page limit!
 	if query.Limit > 0 {
@@ -184,10 +185,10 @@ func (d *DynamoDBRepository) FindingRecords(query FindingRecords[Record[schema.S
 
 	items, err := d.client.Scan(context.Background(), scanInput)
 	if err != nil {
-		return PageResult[Record[schema.Schema]]{}, err
+		return PageResult[Record[A]]{}, err
 	}
 
-	result := PageResult[Record[schema.Schema]]{
+	result := PageResult[Record[A]]{
 		Items: nil,
 	}
 
@@ -199,41 +200,43 @@ func (d *DynamoDBRepository) FindingRecords(query FindingRecords[Record[schema.S
 
 		schemed, err := schema.FromDynamoDB(i)
 		if err != nil {
-			return PageResult[Record[schema.Schema]]{}, err
+			return PageResult[Record[A]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error converting item %s. %w", err, ErrInternalError)
 		}
 
-		typed, err := schema.ToGoG[*Record[schema.Schema]](schemed)
+		typed, err := schema.ToGoG[*Record[A]](schemed)
 		if err != nil {
-			return PageResult[Record[schema.Schema]]{}, err
+			return PageResult[Record[A]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error converting item %s. %w", err, ErrInternalError)
 		}
 		result.Items = append(result.Items, *typed)
 	}
 
-	//if items.LastEvaluatedKey != nil {
-	//	after := &types.AttributeValueMemberM{
-	//		Value: items.LastEvaluatedKey,
-	//	}
-	//	schemed, err := schema.FromDynamoDB(after)
-	//	if err != nil {
-	//		return PageResult[Record[schema.Schema]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error calculating after cursor %s. %w", err, ErrInternalError)
-	//	}
-	//	json, err := schema.ToJSON(schemed)
-	//	if err != nil {
-	//		return PageResult[Record[schema.Schema]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error serializing after cursor %s. %w", err, ErrInternalError)
-	//	}
-	//	cursor := string(json)
-	//	result.Next = &FindingRecords[Record[schema.Schema]]{
-	//		Where: query.Where,
-	//		Sort:  query.Sort,
-	//		Limit: query.Limit,
-	//		After: &cursor,
-	//	}
-	//}
+	if items.LastEvaluatedKey != nil {
+		after := &types.AttributeValueMemberM{
+			Value: items.LastEvaluatedKey,
+		}
+
+		schemed, err := schema.FromDynamoDB(after)
+		if err != nil {
+			return PageResult[Record[A]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error calculating after cursor %s. %w", err, ErrInternalError)
+		}
+
+		json, err := shared.JSONMarshal[schema.Schema](schemed)
+		if err != nil {
+			return PageResult[Record[A]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error serializing after cursor %s. %w", err, ErrInternalError)
+		}
+		cursor := string(json)
+		result.Next = &FindingRecords[Record[A]]{
+			Where: query.Where,
+			Sort:  query.Sort,
+			Limit: query.Limit,
+			After: &cursor,
+		}
+	}
 
 	return result, nil
 }
 
-func (d *DynamoDBRepository) buildFilterExpression(query FindingRecords[Record[schema.Schema]]) (string, map[string]types.AttributeValue, map[string]string, error) {
+func (d *DynamoDBRepository[A]) buildFilterExpression(query FindingRecords[Record[A]]) (string, map[string]types.AttributeValue, map[string]string, error) {
 	var where predicate.Predicate
 	var binds predicate.ParamBinds = map[predicate.BindName]schema.Schema{}
 	var names map[string]string = map[string]string{}

@@ -28,12 +28,12 @@ type TypedRepoWithAggregator[T any, C any] struct {
 func (r *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType RecordType) (Record[T], error) {
 	v, err := r.store.Get(recordID, recordType)
 	if err != nil {
-		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.Get store error ID=%s Type=%s. %w", recordID, recordType, err)
+		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema store error ID=%s Type=%s. %w", recordID, recordType, err)
 	}
 
 	typed, err := RecordAs[T](v)
 	if err != nil {
-		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.Get type assertion error ID=%s Type=%s. %w", recordID, recordType, err)
+		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema type assertion error ID=%s Type=%s. %w", recordID, recordType, err)
 	}
 
 	return typed, nil
