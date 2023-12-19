@@ -57,6 +57,6 @@ func (r *WherePredicates) UnmarshalJSON(bytes []byte) error {
 
 		}
 
-		return fmt.Errorf("predicate.WherePredicates.UnmarshalJSON: unknown key: %s", key)
+		return nil
 	})
 }

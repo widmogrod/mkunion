@@ -8,6 +8,72 @@ import (
 )
 
 var (
+	_ json.Unmarshaler = (*PageResult[any])(nil)
+	_ json.Marshaler   = (*PageResult[any])(nil)
+)
+
+func (r *PageResult[A]) MarshalJSON() ([]byte, error) {
+	var err error
+	result := make(map[string]json.RawMessage)
+
+	fieldItems := make([]json.RawMessage, len(r.Items))
+	for i, v := range r.Items {
+		fieldItems[i], err = shared.JSONMarshal[A](v)
+		if err != nil {
+			return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: field Items[%d]; %w", i, err)
+		}
+	}
+	result["Items"], err = json.Marshal(fieldItems)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: field Items; %w", err)
+	}
+
+	fieldNext, err := shared.JSONMarshal[*FindingRecords[A]](r.Next)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: field Next; %w", err)
+	}
+	result["Next"] = fieldNext
+
+	output, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: final step; %w", err)
+	}
+
+	return output, nil
+}
+
+func (r *PageResult[A]) UnmarshalJSON(bytes []byte) error {
+	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
+		switch key {
+		case "Items":
+			err := shared.JSONParseList(bytes, func(index int, bytes []byte) error {
+				item, err := shared.JSONUnmarshal[A](bytes)
+				if err != nil {
+					return fmt.Errorf("schemaless.PageResult[A].UnmarshalJSON: field Items[%d]; %w", index, err)
+				}
+				r.Items = append(r.Items, item)
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("schemaless.PageResult[A].UnmarshalJSON: field Items; %w", err)
+			}
+			return nil
+
+		case "Next":
+			var err error
+			r.Next, err = shared.JSONUnmarshal[*FindingRecords[A]](bytes)
+			if err != nil {
+				return fmt.Errorf("schemaless.PageResult[A].UnmarshalJSON: field Next; %w", err)
+			}
+			return nil
+
+		}
+
+		return nil
+	})
+}
+
+var (
 	_ json.Unmarshaler = (*Record[any])(nil)
 	_ json.Marshaler   = (*Record[any])(nil)
 )
@@ -80,72 +146,6 @@ func (r *Record[A]) UnmarshalJSON(bytes []byte) error {
 			r.Version, err = shared.JSONUnmarshal[uint16](bytes)
 			if err != nil {
 				return fmt.Errorf("schemaless.Record[A].UnmarshalJSON: field Version; %w", err)
-			}
-			return nil
-
-		}
-
-		return nil
-	})
-}
-
-var (
-	_ json.Unmarshaler = (*PageResult[any])(nil)
-	_ json.Marshaler   = (*PageResult[any])(nil)
-)
-
-func (r *PageResult[A]) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldItems := make([]json.RawMessage, len(r.Items))
-	for i, v := range r.Items {
-		fieldItems[i], err = shared.JSONMarshal[A](v)
-		if err != nil {
-			return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: field Items[%d]; %w", i, err)
-		}
-	}
-	result["Items"], err = json.Marshal(fieldItems)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: field Items; %w", err)
-	}
-
-	fieldNext, err := shared.JSONMarshal[*FindingRecords[A]](r.Next)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: field Next; %w", err)
-	}
-	result["Next"] = fieldNext
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.PageResult[A].MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
-}
-
-func (r *PageResult[A]) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "Items":
-			err := shared.JSONParseList(bytes, func(index int, bytes []byte) error {
-				item, err := shared.JSONUnmarshal[A](bytes)
-				if err != nil {
-					return fmt.Errorf("schemaless.PageResult[A].UnmarshalJSON: field Items[%d]; %w", index, err)
-				}
-				r.Items = append(r.Items, item)
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("schemaless.PageResult[A].UnmarshalJSON: field Items; %w", err)
-			}
-			return nil
-
-		case "Next":
-			var err error
-			r.Next, err = shared.JSONUnmarshal[*FindingRecords[A]](bytes)
-			if err != nil {
-				return fmt.Errorf("schemaless.PageResult[A].UnmarshalJSON: field Next; %w", err)
 			}
 			return nil
 
