@@ -174,10 +174,8 @@ func GetLocation(data Schema, locations []Location) Schema {
 					return nil, locations
 				}
 
-				for key, value := range *mapData {
-					if key == x.Name {
-						return value, locations
-					}
+				if value, ok := (*mapData)[x.Name]; ok {
+					return value, locations
 				}
 
 				return nil, locations
@@ -203,7 +201,7 @@ func GetLocation(data Schema, locations []Location) Schema {
 					return nil, locations
 
 				case *Map:
-					for _, value := range *data.(*Map) {
+					for _, value := range *y {
 						newData := GetLocation(value, locations)
 						if newData != nil {
 							return newData, nil

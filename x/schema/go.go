@@ -2,647 +2,595 @@ package schema
 
 import (
 	"fmt"
+	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shared"
 	"reflect"
-	"strings"
 )
 
-var (
-	defaultListDef = &NativeList{}
-	defaultMapDef  = &NativeMap{}
-	unionMap       = &UnionMap{}
-)
-
-type WellDefinedFromToStrategy[T any] struct {
-	ToSchema func(x T) Schema
-	ToGo     func(x Schema) T
-}
-
-type goConfig struct {
-	defaultListDef                  TypeListDefinition
-	defaultMapDef                   TypeMapDefinition
-	localRules                      []RuleMatcher
-	registry                        *Registry
-	useRegistry                     bool
-	unionFormatter                  UnionFormatFunc
-	activeBuilder                   any
-	localWellDefinedTypesConversion map[string]WellDefinedFromToStrategy[any]
-}
-
-func (c *goConfig) ListDefFor(x *List, path []string) TypeListDefinition {
-	return c.defaultListDef
-}
-
-func (c *goConfig) formatter() UnionFormatFunc {
-	if c.unionFormatter == nil {
-		return c.registry.unionFormatter
-	}
-
-	return c.unionFormatter
-}
-
-func (c *goConfig) MapDefFor(x *Map, path []string) TypeMapDefinition {
-	for _, rule := range c.localRules {
-		if typeDef, ok := rule.MapDefFor(x, path, c); ok {
-			return typeDef
-		}
-	}
-
-	if c.useRegistry && c.registry != nil {
-		for _, rule := range c.registry.rules {
-			if typeDef, ok := rule.MapDefFor(x, path, c); ok {
-				return typeDef
-			}
-		}
-	}
-
-	return c.defaultMapDef
-}
-
-func (c *goConfig) Transform(x any, r Schema) Schema {
-	for _, rule := range c.localRules {
-		v, ok := rule.SchemaToUnionType(x, r, c)
-		if ok {
-			return v
-		}
-	}
-
-	if c.useRegistry {
-		for _, rule := range c.registry.rules {
-			v, ok := rule.SchemaToUnionType(x, r, c)
-			if ok {
-				return v
-			}
-		}
-	}
-
-	return r
-}
-
-func (c *goConfig) variantName(r reflect.Type) string {
-	return c.formatter()(r)
-}
-
-func (c *goConfig) typeName(r reflect.Type) string {
-	return c.formatter()(r)
-}
-
-func (c *goConfig) RegisterStrategy(r reflect.Type, x WellDefinedFromToStrategy[any]) {
-	if c.localWellDefinedTypesConversion == nil {
-		c.localWellDefinedTypesConversion = make(map[string]WellDefinedFromToStrategy[any])
-	}
-
-	name := c.typeName(r)
-	c.localWellDefinedTypesConversion[name] = x
-}
-
-func (c *goConfig) WellDefinedTypeToSchema(x any) Schema {
-	r := reflect.TypeOf(x)
-	name := c.typeName(r)
-	if wellDefined, ok := c.localWellDefinedTypesConversion[name]; ok {
-		return wellDefined.ToSchema(x)
-	}
-
-	if c.useRegistry {
-		if wellDefined, ok := c.registry.wellDefinedTypesConversion[name]; ok {
-			return wellDefined.ToSchema(x)
-		}
-	}
-
-	return nil
-}
-
-func (c *goConfig) WellDefinedTypeToGo(x Schema, r reflect.Type) any {
-	name := c.typeName(r)
-	if wellDefined, ok := c.localWellDefinedTypesConversion[name]; ok {
-		return wellDefined.ToGo(x)
-	}
-
-	if c.useRegistry {
-		if wellDefined, ok := c.registry.wellDefinedTypesConversion[name]; ok {
-			return wellDefined.ToGo(x)
-		}
-	}
-
-	return nil
-}
-
-type goConfigFunc func(c *goConfig)
-
-func WithWellDefinedTypeConversion[T any](from func(T) Schema, to func(Schema) T) goConfigFunc {
-	return func(c *goConfig) {
-		var t T
-
-		r := reflect.TypeOf(t)
-		c.RegisterStrategy(r, NewWellDefinedFromToStrategy(from, to))
-	}
-}
-
-// NewWellDefinedFromToStrategy assumption is that from and to functions are symmetrical
-// and that function works on values, not pointers (to reduce implementation complexity)
-// and if there is need to do conversion on pointers, then it should be done in "runtime" wrapper (here)
-func NewWellDefinedFromToStrategy[T any](from func(T) Schema, to func(Schema) T) WellDefinedFromToStrategy[any] {
-	return WellDefinedFromToStrategy[any]{
-		ToSchema: func(x any) Schema {
-			if y, ok := x.(T); ok {
-				return from(y)
-			}
-
-			if y, ok := x.(*T); ok {
-				// check if value can be dereference, not using reflection
-				if y != nil {
-					return from(*y)
-				} else {
-					return MkNone()
-				}
-			}
-
-			panic(fmt.Errorf("schema.NewWellDefinedFromToStrategy: invalid type %T", x))
-		},
-		ToGo: func(x Schema) any {
-			return any(to(x))
-		},
-	}
-}
-
-func WithRulesFromRegistry(registry *Registry) goConfigFunc {
-	return func(c *goConfig) {
-		c.useRegistry = true
-		c.registry = registry
-	}
-}
-
-func WithoutDefaultRegistry() goConfigFunc {
-	return func(c *goConfig) {
-		c.useRegistry = false
-	}
-}
-
-func WithExtraRules(rules ...RuleMatcher) goConfigFunc {
-	return func(c *goConfig) {
-		c.localRules = append(c.localRules, rules...)
-	}
-}
-
-func WithOnlyTheseRules(rules ...RuleMatcher) goConfigFunc {
-	return func(c *goConfig) {
-		c.useRegistry = false
-		c.localRules = rules
-	}
-}
-
-func WithDefaultMaoDef(def TypeMapDefinition) goConfigFunc {
-	return func(c *goConfig) {
-		c.defaultMapDef = def
-	}
-}
-
-func WithDefaultListDef(def TypeListDefinition) goConfigFunc {
-	return func(c *goConfig) {
-		c.defaultListDef = def
-	}
-}
-func WithUnionFormatter(f UnionFormatFunc) goConfigFunc {
-	return func(c *goConfig) {
-		c.unionFormatter = f
-	}
-}
-
-func FromGo(x any, options ...goConfigFunc) Schema {
-	c := goConfig{
-		useRegistry: true,
-		registry:    defaultRegistry,
-	}
-	for _, option := range options {
-		option(&c)
-	}
-
-	return goToSchema(x, &c)
-}
-
-func goToSchema(x any, c *goConfig) Schema {
-	if to, ok := x.(Marshaler); ok {
-		schemed, err := to.MarshalSchema()
-		if err != nil {
-			panic(err)
-		}
-		return schemed
-	}
-
+func FromPrimitiveGo(x any) Schema {
 	switch y := x.(type) {
-	case Schema:
-		return c.Transform(x, y)
-
-	case nil:
-		return &None{}
-
 	case bool:
 		return MkBool(y)
-	case *bool:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkBool(*y)
-		}
 
-	case string:
-		return MkString(y)
-	case *string:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkString(*y)
-		}
+	case int:
+		return MkInt(y)
 
-	case []byte:
-		return MkBinary(y)
-	case *[]byte:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkBinary(*y)
-		}
+	case int8:
+		return MkInt(int(y))
+
+	case int16:
+		return MkInt(int(y))
+
+	case int32:
+		return MkInt(int(y))
+
+	case int64:
+		return MkInt(int(y))
+
+	case uint:
+		return MkInt(int(y))
+
+	case uint8:
+		return MkInt(int(y))
+
+	case uint16:
+		return MkInt(int(y))
+
+	case uint32:
+		return MkInt(int(y))
+
+	case uint64:
+		return MkInt(int(y))
+
+	case float32:
+		return MkFloat(float64(y))
 
 	case float64:
 		return MkFloat(y)
-	case *float64:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(*y)
-		}
 
-	case float32:
-		return MkFloat(float64(y))
-	case *float32:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
+	case string:
+		return MkString(y)
 
-	case int:
-		return MkFloat(float64(y))
-	case *int:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case int8:
-		return MkFloat(float64(y))
-	case *int8:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case int16:
-		return MkFloat(float64(y))
-	case *int16:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case int32:
-		return MkFloat(float64(y))
-	case *int32:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case int64:
-		return MkFloat(float64(y))
-
-	case *int64:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case uint:
-		return MkFloat(float64(y))
-	case *uint:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case uint8:
-		return MkFloat(float64(y))
-	case *uint8:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case uint16:
-		return MkFloat(float64(y))
-	case *uint16:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case uint32:
-		return MkFloat(float64(y))
-	case *uint32:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
-
-	case uint64:
-		return MkFloat(float64(y))
-	case *uint64:
-		if y == nil {
-			return &None{}
-		} else {
-			return MkFloat(float64(*y))
-		}
+	case []byte:
+		return MkBinary(y)
 
 	case []any:
-		var r = List{}
-		for _, v := range y {
-			r = append(r, goToSchema(v, c))
-		}
-		return &r
-
-	case map[string]any:
-		var r = make(Map)
-		for k, v := range y {
-			r[k] = goToSchema(v, c)
-		}
-		return &r
-
-	case reflect.Value:
-		return goToSchema(y.Interface(), c)
-
-	default:
-		if definedType := c.WellDefinedTypeToSchema(x); definedType != nil {
-			return definedType
+		result := List{}
+		for _, item := range y {
+			result = append(result, FromPrimitiveGo(item))
 		}
 
-		v := reflect.ValueOf(x)
+		return &result
 
-		if v.Kind() == reflect.Ptr {
-			if v.IsNil() {
-				return &None{}
-			}
-			v = v.Elem()
+	case map[any]any:
+		result := Map{}
+		for key, value := range y {
+			result[key.(string)] = FromPrimitiveGo(value)
 		}
 
-		if v.Kind() == reflect.Map {
-			var r = make(Map)
-			for _, k := range v.MapKeys() {
-				r[k.String()] = goToSchema(v.MapIndex(k), c)
-			}
-			return &r
-		}
-
-		if v.Kind() == reflect.Struct {
-			var r = make(Map)
-			for i := 0; i < v.NumField(); i++ {
-				if !v.Type().Field(i).IsExported() {
-					continue
-				}
-
-				name, ok := v.Type().Field(i).Tag.Lookup("name")
-				if !ok {
-					name = v.Type().Field(i).Name
-				}
-
-				r[name] = goToSchema(v.Field(i), c)
-			}
-
-			return c.Transform(x, &r)
-		}
-
-		if v.Kind() == reflect.Slice {
-			var r = List{}
-			for i := 0; i < v.Len(); i++ {
-				r = append(r, goToSchema(v.Index(i), c))
-			}
-			return &r
-		}
+		return &result
 	}
 
-	panic(fmt.Errorf("goToSchema: unsupported type: %T", x))
+	if x == nil {
+		return MkNone()
+	}
+
+	if x, ok := x.(Schema); ok {
+		return x
+	}
+
+	panic(fmt.Errorf("schema.FromPrimitiveGo: unknown type %T", x))
 }
 
-func MustToGo(x Schema, options ...goConfigFunc) any {
-	v, err := ToGo(x, options...)
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
-func ToGo(x Schema, options ...goConfigFunc) (any, error) {
-	c := goConfig{
-		defaultListDef: defaultListDef,
-		defaultMapDef:  defaultMapDef,
-		useRegistry:    true,
-		registry:       defaultRegistry,
-	}
-	for _, option := range options {
-		option(&c)
-	}
-
-	return schemaToGo(x, &c, nil)
-}
-
-func schemaToGo(x Schema, c *goConfig, path []string) (any, error) {
+func ToGoPrimitive(x Schema) (any, error) {
 	return MustMatchSchemaR2(
 		x,
 		func(x *None) (any, error) {
-			// it means that schema was serialised, and when being deserialized,
-			// leaf variants, needs to be returned as is.
-			// serialize(Struct{K: V}) == deserialize(Map(K=>V))
-			// serialize(String(abc)) == deserialize(UnionMap(String => abc)
-			// serialize(List(Map{k=>v})) == deserialize(UnionMap(List => Map{k => v}))
-			if _, ok := c.activeBuilder.(*UnionMap); ok {
-				return x, nil
-			}
-
 			return nil, nil
 		},
 		func(x *Bool) (any, error) {
-			if _, ok := c.activeBuilder.(*UnionMap); ok {
-				return x, nil
-			}
-
 			return bool(*x), nil
 		},
 		func(x *Number) (any, error) {
-			if _, ok := c.activeBuilder.(*UnionMap); ok {
-				return x, nil
-			}
-
 			return float64(*x), nil
 		},
 		func(x *String) (any, error) {
-			if _, ok := c.activeBuilder.(*UnionMap); ok {
-				return x, nil
-			}
-
 			return string(*x), nil
 		},
 		func(x *Binary) (any, error) {
-			if _, ok := c.activeBuilder.(*UnionMap); ok {
-				return x, nil
-			}
-
-			return *x, nil
+			return []byte(*x), nil
 		},
 		func(x *List) (any, error) {
-			build := c.ListDefFor(x, path).NewListBuilder()
-			for _, v := range *x {
-				c.activeBuilder = build
-				value, err := schemaToGo(v, c, append(path, "[*]"))
+			result := []any{}
+			for _, item := range *x {
+				item, err := ToGoPrimitive(item)
 				if err != nil {
 					return nil, err
 				}
 
-				err = build.Append(value)
-				if err != nil {
-					return nil, fmt.Errorf("schema.schemaToGo: at path %s, at type %T, cause %w", strings.Join(path, "."), x, err)
-				}
+				result = append(result, item)
 			}
 
-			return build.Build(), nil
+			return result, nil
 		},
 		func(x *Map) (any, error) {
-			build := c.MapDefFor(x, path).NewMapBuilder()
-
-			// If the builder can process raw map schemas, do so.
-			// this is optional, and is only used for the Unmarshaler.
-			if b, ok := build.(mapBuilderCanProcessRawMapSchema); ok {
-				return b.BuildFromMapSchema(x)
-			}
-
-			if inject, ok := build.(wellDefinedSupported); ok {
-				inject.WithWellDefinedTypesConversion(c.WellDefinedTypeToGo)
-			}
-
+			result := map[any]any{}
 			for key, value := range *x {
-				c.activeBuilder = build
-				value, err := schemaToGo(value, c, append(path, key))
+				key, err := ToGoPrimitive(MkString(key))
 				if err != nil {
 					return nil, err
 				}
 
-				err = build.Set(key, value)
+				value, err := ToGoPrimitive(value)
 				if err != nil {
-					return nil, fmt.Errorf("schema.schemaToGo: at path %s, at type %T, cause %w", strings.Join(path, "."), x, err)
+					return nil, err
+				}
+
+				result[key] = value
+			}
+
+			return result, nil
+		},
+	)
+}
+
+func ToGoG[A any](x Schema) (res A, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = fmt.Errorf("schema.ToGoG: panic recover %w", e)
+			} else {
+				err = fmt.Errorf("schema.ToGoG: panic recover %#v", e)
+			}
+		}
+	}()
+
+	res = ToGo[A](x)
+	return
+}
+
+func ToGo[A any](x Schema) A {
+	v := reflect.TypeOf(new(A)).Elem()
+	original := shape.MkRefNameFromReflect(v)
+
+	s, found := shape.LookupShape(original)
+	if !found {
+		panic(fmt.Errorf("schema.FromGo: shape.RefName not found %s", v.String()))
+	}
+
+	s = shape.IndexWith(s, original.Indexed)
+
+	value, err := ToGoReflect(s, x, v)
+	if err != nil {
+		panic(fmt.Errorf("schema.ToGo: %w", err))
+	}
+
+	return value.Interface().(A)
+}
+
+func FromGo[A any](x A) Schema {
+	v := reflect.TypeOf(new(A)).Elem()
+	original := shape.MkRefNameFromReflect(v)
+
+	s, found := shape.LookupShape(original)
+	if !found {
+		panic(fmt.Errorf("schema.FromGo: shape.RefName not found for %s.%s", v.PkgPath(), v.Name()))
+	}
+
+	s = shape.IndexWith(s, original.Indexed)
+
+	return FromGoReflect(s, reflect.ValueOf(x))
+}
+
+func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
+	return shape.MustMatchShape(
+		xschema,
+		func(x *shape.Any) Schema {
+			panic("not implemented")
+
+		},
+		func(x *shape.RefName) Schema {
+			y, found := shape.LookupShape(x)
+			if !found {
+				panic(fmt.Errorf("schema.FromGoReflect: shape.RefName not found %s", shape.ToGoTypeName(x)))
+			}
+
+			return FromGoReflect(y, yreflect)
+		},
+		func(x *shape.AliasLike) Schema {
+			if yreflect.Kind() == reflect.Ptr {
+				yreflect = yreflect.Elem()
+			}
+
+			return FromGoReflect(x.Type, yreflect)
+		},
+		func(x *shape.BooleanLike) Schema {
+			yreflect = toTheCoreValue(yreflect)
+
+			if yreflect.Kind() != reflect.Bool {
+				panic(fmt.Errorf("schema.FromGoReflect: shape.BooleanLike expected reflect.Bool, got %s", yreflect.String()))
+			}
+
+			return MkBool(yreflect.Bool())
+		},
+		func(x *shape.StringLike) Schema {
+			yreflect = toTheCoreValue(yreflect)
+
+			if yreflect.Kind() != reflect.String {
+				panic(fmt.Errorf("schema.FromGoReflect: shape.StringLike expected reflect.String, got %s", yreflect.String()))
+			}
+
+			return MkString(yreflect.String())
+		},
+		func(x *shape.NumberLike) Schema {
+			yreflect = toTheCoreValue(yreflect)
+
+			// this is "int" type
+			if x.Kind == nil {
+				return MkInt(int(yreflect.Int()))
+			}
+
+			return shape.MustMatchNumberKind(
+				x.Kind,
+				func(x *shape.UInt8) Schema {
+					return MkInt(int(yreflect.Uint()))
+				},
+				func(x *shape.UInt16) Schema {
+					return MkInt(int(yreflect.Uint()))
+				},
+				func(x *shape.UInt32) Schema {
+					return MkInt(int(yreflect.Uint()))
+				},
+				func(x *shape.UInt64) Schema {
+					return MkInt(int(yreflect.Uint()))
+				},
+				func(x *shape.Int8) Schema {
+					return MkInt(int(yreflect.Int()))
+				},
+				func(x *shape.Int16) Schema {
+					return MkInt(int(yreflect.Int()))
+				},
+				func(x *shape.Int32) Schema {
+					return MkInt(int(yreflect.Int()))
+				},
+				func(x *shape.Int64) Schema {
+					return MkInt(int(yreflect.Int()))
+				},
+				func(x *shape.Float32) Schema {
+					return MkFloat(yreflect.Float())
+				},
+				func(x *shape.Float64) Schema {
+					return MkFloat(yreflect.Float())
+				},
+			)
+		},
+		func(x *shape.ListLike) Schema {
+			yreflect = toTheCoreValue(yreflect)
+			if yreflect.Kind() != reflect.Slice {
+				panic(fmt.Errorf("schema.FromGoReflect: shape.ListLike expected reflect.Slice, got %s", yreflect.String()))
+			}
+
+			result := List{}
+			for i := 0; i < yreflect.Len(); i++ {
+				result = append(result, FromGoReflect(x.Element, yreflect.Index(i)))
+			}
+
+			return &result
+		},
+		func(x *shape.MapLike) Schema {
+			yreflect = toTheCoreValue(yreflect)
+			if yreflect.Kind() != reflect.Map {
+				panic(fmt.Errorf("schema.FromGoReflect: shape.MapLike expected reflect.Map, got %s", yreflect.String()))
+			}
+
+			result := Map{}
+			for _, key := range yreflect.MapKeys() {
+				result[key.String()] = FromGoReflect(x.Val, yreflect.MapIndex(key))
+			}
+
+			return &result
+		},
+		func(x *shape.StructLike) Schema {
+			yreflect = toTheCoreValue(yreflect)
+			if yreflect.Kind() != reflect.Struct {
+				panic(fmt.Errorf("schema.FromGoReflect: shape.StructLike expected reflect.Struct, got %s", yreflect.String()))
+			}
+
+			result := Map{}
+			for _, field := range x.Fields {
+				fieldReflect := yreflect.FieldByName(field.Name)
+				if !fieldReflect.IsValid() {
+					continue
+				}
+
+				//if fieldReflect.IsZero() {
+				//	continue
+				//}
+
+				result[field.Name] = FromGoReflect(field.Type, fieldReflect)
+			}
+
+			return &result
+		},
+		func(x *shape.UnionLike) Schema {
+			if yreflect.IsNil() {
+				return MkNone()
+			}
+
+			// find which variant is set
+			valueName := shape.ToGoTypeNameFromReflect(yreflect.Elem().Type())
+			for _, variant := range x.Variant {
+				variantName := shape.ToGoTypeName(variant)
+				if variantName == valueName {
+					return MkMap(
+						MkField(
+							"$type",
+							MkString(variantName),
+						),
+						MkField(
+							variantName,
+							FromGoReflect(variant, yreflect),
+						),
+					)
 				}
 			}
 
-			return build.Build(), nil
-		})
+			panic(fmt.Errorf("schema.FromGoReflect: shape.UnionLike %s not found", valueName))
+		},
+	)
 }
 
-// ToGoG converts a Schema to a Go value of the given type.
-func ToGoG[A any](x Schema, options ...goConfigFunc) (A, error) {
-	var a A
-	var result any
-	var err error
-
-	if x == nil {
-		return a, nil
-	}
-
-	switch any(a).(type) {
-	case int:
-		result = AsDefault[int](x, any(a).(int))
-	case int8:
-		result = AsDefault[int8](x, any(a).(int8))
-	case int16:
-		result = AsDefault[int16](x, any(a).(int16))
-	case int32:
-		result = AsDefault[int32](x, any(a).(int32))
-	case int64:
-		result = AsDefault[int64](x, any(a).(int64))
-	case uint:
-		result = AsDefault[uint](x, any(a).(uint))
-	case uint8:
-		result = AsDefault[uint8](x, any(a).(uint8))
-	case uint16:
-		result = AsDefault[uint16](x, any(a).(uint16))
-	case uint32:
-		result = AsDefault[uint32](x, any(a).(uint32))
-	case uint64:
-		result = AsDefault[uint64](x, any(a).(uint64))
-	case float32:
-		result = AsDefault[float32](x, any(a).(float32))
-	case float64:
-		result = AsDefault[float64](x, any(a).(float64))
-	case string:
-		result = AsDefault[string](x, any(a).(string))
-	case bool:
-		result = AsDefault[bool](x, any(a).(bool))
-	case []byte:
-		result = AsDefault[[]byte](x, any(a).([]byte))
-	default:
-		// Short circuit, if expected type is already a schema
-		// and when you wonder why such strange type assertion?
-		//
-		//		var a A
-		//		if _, ok := a.(Schema); ok {
-		//			return x.(A), nil
-		//		}
-		//
-		// above code results in error:
-		//
-		// 		invalid operation: cannot use type assertion on type parameter value a (variable of type A constrained by any)
-		//
-		// To avoid this, we need to do cast a to interface{} first.
-		//
-		//		if _, ok := any(a).(Schema) {...}
-		//
-		// But doing it that way, it removes all types that could be interfaces.
-		// For example, generic type "ToGoG" can be set as "Schema", which is interface
-		// and doing type conversion like this, will result in ok == false
-		//
-		// 		var a Schema  // in code is var a A
-		//  	_, ok := any(a).(Schema)
-		//
-		// reason is that Schema is interface, and any(a) results interface{}
-		// which is not the same as Schema.
-		//
-		// so to preserve original type, we do pointer type assertion
-		if _, ok := any((*A)(nil)).(*Schema); ok {
-			return x.(A), nil
+func toTheCoreValue(x reflect.Value) reflect.Value {
+	for {
+		if x.Kind() == reflect.Ptr {
+			x = x.Elem()
+			continue
 		}
 
-		if any(a) == nil {
-			result, err = ToGo(x, options...)
-		} else {
-			options := append(options, WithExtraRules(WhenPath(nil, UseStruct(a))))
-			result, err = ToGo(x, options...)
+		if x.Kind() == reflect.Interface {
+			x = x.Elem()
+			continue
 		}
 
-		if err != nil {
-			var a A
-			return a, fmt.Errorf("schema.ToGoG[%T] schema conversion failed. %w", any((*A)(nil)), err)
-		}
+		return x
+	}
+}
+
+func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (reflect.Value, error) {
+	if IsNone(ydata) {
+		return reflect.Zero(zreflect), nil
 	}
 
-	typed, ok := result.(A)
-	if !ok {
-		var a A
-		return a, fmt.Errorf("schema.ToGoG[%T] type assertion failed on type %T", any((*A)(nil)), result)
-	}
+	return shape.MustMatchShapeR2(
+		xshape,
+		func(x *shape.Any) (reflect.Value, error) {
+			panic("not implemented")
+		},
+		func(x *shape.RefName) (reflect.Value, error) {
+			newShape, found := shape.LookupShape(x)
+			if !found {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.RefName not found %#v", x)
+			}
 
-	return typed, nil
+			return ToGoReflect(newShape, ydata, zreflect)
+		},
+		func(x *shape.AliasLike) (reflect.Value, error) {
+			value, err := ToGoReflect(x.Type, ydata, zreflect)
+			if err != nil {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.AliasLike %s; %w", x.Name, err)
+			}
+
+			if zreflect.Kind() == reflect.Ptr {
+				if value.CanAddr() {
+					return value.Addr(), nil
+				} else {
+					ptr := reflect.New(value.Type())
+					ptr.Elem().Set(value)
+					return ptr.Convert(zreflect), nil
+				}
+			}
+
+			return value.Convert(zreflect), nil
+		},
+		func(x *shape.BooleanLike) (reflect.Value, error) {
+			data, ok := ydata.(*Bool)
+			if !ok {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.BooleanLike expected *Bool, got %T", ydata)
+			}
+
+			return reflect.ValueOf(bool(*data)), nil
+		},
+		func(x *shape.StringLike) (reflect.Value, error) {
+			data, ok := ydata.(*String)
+			if !ok {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.StringLike expected *String, got %T", ydata)
+			}
+			return reflect.ValueOf(string(*data)), nil
+		},
+		func(x *shape.NumberLike) (reflect.Value, error) {
+			data, ok := ydata.(*Number)
+			if !ok {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.NumberLike expected *Number, got %T", ydata)
+			}
+
+			if nil == x.Kind {
+				return reflect.ValueOf(int(*data)).Convert(zreflect), nil
+			}
+
+			return shape.MustMatchNumberKindR2(
+				x.Kind,
+				func(x *shape.UInt8) (reflect.Value, error) {
+					return reflect.ValueOf(uint8(*data)), nil
+				},
+				func(x *shape.UInt16) (reflect.Value, error) {
+					return reflect.ValueOf(uint16(*data)), nil
+				},
+				func(x *shape.UInt32) (reflect.Value, error) {
+					return reflect.ValueOf(uint32(*data)), nil
+				},
+				func(x *shape.UInt64) (reflect.Value, error) {
+					return reflect.ValueOf(uint64(*data)), nil
+				},
+				func(x *shape.Int8) (reflect.Value, error) {
+					return reflect.ValueOf(int8(*data)), nil
+				},
+				func(x *shape.Int16) (reflect.Value, error) {
+					return reflect.ValueOf(int16(*data)), nil
+				},
+				func(x *shape.Int32) (reflect.Value, error) {
+					return reflect.ValueOf(int32(*data)), nil
+				},
+				func(x *shape.Int64) (reflect.Value, error) {
+					return reflect.ValueOf(int64(*data)), nil
+				},
+				func(x *shape.Float32) (reflect.Value, error) {
+					return reflect.ValueOf(float32(*data)), nil
+				},
+				func(x *shape.Float64) (reflect.Value, error) {
+					return reflect.ValueOf(float64(*data)), nil
+				},
+			)
+		},
+		func(x *shape.ListLike) (reflect.Value, error) {
+			data, ok := ydata.(*List)
+			if !ok {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike expected *List, got %T", ydata)
+			}
+
+			if zreflect.Kind() != reflect.Slice {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike expected reflect.Slice, got %s", zreflect.String())
+			}
+
+			if len(*data) == 0 {
+				return reflect.Zero(zreflect), nil
+			}
+
+			result := reflect.MakeSlice(zreflect, len(*data), len(*data))
+			for i, item := range *data {
+				dest, err := ToGoReflect(x.Element, item, zreflect.Elem())
+				if err != nil {
+					return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike; %w", err)
+				}
+
+				result.Index(i).Set(dest)
+			}
+
+			return result, nil
+		},
+		func(x *shape.MapLike) (reflect.Value, error) {
+			data, ok := ydata.(*Map)
+			if !ok {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.MapLike expected *Map, got %T", ydata)
+			}
+
+			//wasPointer := false
+			if zreflect.Kind() == reflect.Ptr {
+				//wasPointer = true
+				zreflect = zreflect.Elem()
+			}
+
+			if zreflect.Kind() != reflect.Map {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.MapLike expected reflect.Map, got %s", zreflect.String())
+			}
+
+			if len(*data) == 0 {
+				return reflect.Zero(zreflect), nil
+			}
+
+			result := reflect.MakeMap(zreflect)
+			for key, value := range *data {
+				dest, err := ToGoReflect(x.Val, value, zreflect.Elem())
+				if err != nil {
+					return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.MapLike; %w", err)
+				}
+
+				result.SetMapIndex(reflect.ValueOf(key), dest)
+			}
+
+			//if wasPointer {
+			//	ptr := reflect.New(result.Type())
+			//	ptr.Elem().Set(result)
+			//	return ptr, nil
+			//}
+
+			return result, nil
+		},
+		func(x *shape.StructLike) (reflect.Value, error) {
+			data, ok := ydata.(*Map)
+			if !ok {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.StructLike expected *Map, got %T", ydata)
+			}
+
+			wasPointer := false
+			if zreflect.Kind() == reflect.Ptr {
+				wasPointer = true
+				zreflect = zreflect.Elem()
+			}
+
+			if zreflect.Kind() != reflect.Struct {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.StructLike expected reflect.Struct, got %d", zreflect.Kind())
+			}
+
+			result := reflect.New(zreflect).Elem()
+			for _, field := range x.Fields {
+				value, ok := (*data)[field.Name]
+				if !ok {
+					continue
+				}
+
+				fieldValue, ok := zreflect.FieldByName(field.Name)
+				if !ok {
+					return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: field %s not found", field.Name)
+				}
+
+				dest, err := ToGoReflect(field.Type, value, fieldValue.Type)
+				if err != nil {
+					return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: field %s; %w", field.Name, err)
+				}
+
+				result.FieldByName(field.Name).Set(dest)
+			}
+
+			if wasPointer {
+				return result.Addr(), nil
+			}
+
+			return result, nil
+		},
+		func(x *shape.UnionLike) (reflect.Value, error) {
+			data, ok := ydata.(*Map)
+			if !ok {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike expected *Map, got %T", ydata)
+			}
+
+			if zreflect.Kind() != reflect.Interface {
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike expected reflect.Interface, got %T", zreflect)
+			}
+
+			//TODO add $type field lookup for faster execution
+
+			for _, variant := range x.Variant {
+				variantName := shape.ToGoTypeName(variant)
+				_, found := (*data)[variantName]
+				if found {
+					// zreflect is interface, so we need to find the actual type
+					fullPkgName := shape.ToGoTypeName(variant, shape.WithPkgImportName())
+					typ, found := shared.TypeRegistryLoad(fullPkgName)
+					if !found {
+						return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike %s not found %s", x.Name, fullPkgName)
+					}
+
+					typR := reflect.TypeOf(typ)
+
+					k := typR.String()
+					_ = k
+
+					return ToGoReflect(variant, (*data)[variantName], typR)
+				}
+			}
+
+			return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike %s not found %#v", x.Name, data)
+
+		},
+	)
 }

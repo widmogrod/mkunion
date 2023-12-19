@@ -148,18 +148,12 @@ assert.Equal(t, data, result)
 - [x] schema.Schema is now serializable and deserilizable
 
 ### V0.8.x
-- [ ] `schema.ToGo` can deduce nested types, for fields in struct that have type information
-- [ ] Generator of custom `ser-deser` that improve performance and developer experiences for free
-
-### V0.9.x
-- [ ] Support json tags in golang to map field names to schema
-- [ ] Add cata, ana, and hylo morphisms
-- [ ] Open `goConfigFunc` to allow customizing how golang types are converted to schema, passed from external code.
-
-### V0.10.x
 - [x] `schema` use `x/shape` and native types to represent variants like Map and List and Bytes
+- [x] schema.Schema is refactored to leverage simpler types thanks to `x/shape` library
+- [x] schema.ToJSON and schema.FromJSON are removed and replaced by `mkunion` defaults
+
+### V0.11.x
 - [ ] `schema` becomes `data`
 - [ ] data.FromGo and data.ToGo works only on primitive values
 - [ ] data.FromStruct and data.ToStruct works only on structs and reflection
-- [ ] data.FromJSON and data.ToJSON removed and replaced by `mkunion` defaults
 - [ ] data.FromDynamoDB and data.ToDynamoDB refactored
