@@ -150,6 +150,23 @@ type Tag struct {
 	Options []string
 }
 
+func TagGetValue(x map[string]Tag, tag, defaults string) string {
+	if x == nil {
+		return defaults
+	}
+
+	t, ok := x[tag]
+	if !ok {
+		return defaults
+	}
+
+	if t.Value == "" {
+		return defaults
+	}
+
+	return t.Value
+}
+
 // go:generate go run ../../cmd/mkunion/main.go -name=Guard
 type (
 	Enum struct {
@@ -191,7 +208,6 @@ func ConcatGuard(a, b Guard) Guard {
 }
 
 func Tags(x Shape) map[string]Tag {
-
 	return MustMatchShape(
 		x,
 		func(x *Any) map[string]Tag {

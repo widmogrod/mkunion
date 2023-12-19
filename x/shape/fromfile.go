@@ -631,6 +631,7 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 				Name:          x.Name,
 				PkgName:       x.PkgName,
 				PkgImportName: x.PkgImportName,
+				IsPointer:     x.IsPointer,
 			}
 			for _, name := range x.Indexed {
 				result.Indexed = append(result.Indexed, InstantiateTypeThatAreOvershadowByTypeParam(name, replacement))
@@ -680,12 +681,17 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 				PkgName:       x.PkgName,
 				PkgImportName: x.PkgImportName,
 				TypeParams:    x.TypeParams,
+				Tags:          x.Tags,
 			}
 
 			for _, field := range x.Fields {
 				result.Fields = append(result.Fields, &FieldLike{
-					Name: field.Name,
-					Type: InstantiateTypeThatAreOvershadowByTypeParam(field.Type, replacement),
+					Name:      field.Name,
+					Type:      InstantiateTypeThatAreOvershadowByTypeParam(field.Type, replacement),
+					Desc:      field.Desc,
+					Guard:     field.Guard,
+					IsPointer: field.IsPointer,
+					Tags:      field.Tags,
 				})
 			}
 			return result

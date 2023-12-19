@@ -47,5 +47,5 @@ type ListOf[T any] struct{}
 //go:tag json:"list_of_2,omitempty"
 type ListOf2[T1, T2 any] struct {
 	Data   T1
-	ListOf ListOf[T1]
+	ListOf ListOf[T1] `json:"list_of"`
 }

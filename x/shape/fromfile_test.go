@@ -323,6 +323,11 @@ func TestInferFromFile(t *testing.T) {
 						},
 					},
 				},
+				Tags: map[string]Tag{
+					"json": {
+						Value: "list_of",
+					},
+				},
 			},
 		},
 		Tags: map[string]Tag{
