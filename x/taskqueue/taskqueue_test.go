@@ -33,13 +33,6 @@ var functions = map[string]workflow.Function{
 }
 
 func TestTaskQueue(t *testing.T) {
-	schema.RegisterRules([]schema.RuleMatcher{
-		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(workflow.BaseState{})),
-	})
-	schema.RegisterUnionTypes(
-		workflow.StateSchemaDef(),
-	)
-
 	program := &workflow.Flow{
 		Name: "hello_world_flow",
 		Arg:  "input",
@@ -115,7 +108,7 @@ AND Version = 1`,
 			}
 
 			newState := work.State()
-			//d, _ := schema.ToJSON(schema.FromGo(newState))
+			//d, _ := schema.ToJSON(schema.FromPrimitiveGo(newState))
 			//t.Logf("newState: %s", string(d))
 
 			saving := []schemaless.Record[workflow.State]{
@@ -128,7 +121,7 @@ AND Version = 1`,
 			}
 
 			if next := workflow.ScheduleNext(newState, di); next != nil {
-				//d, _ := schema.ToJSON(schema.FromGo(next))
+				//d, _ := schema.ToJSON(schema.FromPrimitiveGo(next))
 				//t.Logf("next: %s", string(d))
 				work := workflow.NewMachine(di, nil)
 				err := work.Handle(next)
@@ -138,7 +131,7 @@ AND Version = 1`,
 				}
 
 				t.Logf("next id=%s", workflow.GetRunID(work.State()))
-				//d, _ = schema.ToJSON(schema.FromGo(work.State()))
+				//d, _ = schema.ToJSON(schema.FromPrimitiveGo(work.State()))
 				//t.Logf("nextState: %s", string(d))
 
 				saving = append(saving, schemaless.Record[workflow.State]{
