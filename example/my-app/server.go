@@ -48,61 +48,6 @@ type (
 	}
 )
 
-func init() {
-	schema.RegisterWellDefinedTypesConversion[openai.ToolCall](
-		func(call openai.ToolCall) schema.Schema {
-			return schema.MkMap(
-				schema.MkField("Index", schema.FromGo(call.Index)),
-				schema.MkField("Type", schema.FromGo(call.Type)),
-				schema.MkField("Function", schema.FromGo(call.Function)),
-				schema.MkField("ID", schema.FromGo(call.ID)),
-			)
-		},
-		func(s schema.Schema) openai.ToolCall {
-			index, _ := schema.ToGoG[*int](schema.Get(s, "Index"))
-			typ, _ := schema.ToGoG[openai.ToolType](schema.Get(s, "Type"))
-			function, _ := schema.ToGoG[openai.FunctionCall](schema.Get(s, "Function"))
-			id, _ := schema.ToGoG[string](schema.Get(s, "ID"))
-
-			return openai.ToolCall{
-				Index:    index,
-				Type:     typ,
-				Function: function,
-				ID:       id,
-			}
-		},
-	)
-	schema.RegisterWellDefinedTypesConversion[openai.ToolType](
-		func(toolType openai.ToolType) schema.Schema {
-			return schema.MkString(string(toolType))
-		},
-		func(s schema.Schema) openai.ToolType {
-			v, err := schema.ToGoG[string](s)
-			if err != nil {
-				panic(err)
-			}
-			return openai.ToolType(v)
-		},
-	)
-	schema.RegisterWellDefinedTypesConversion[openai.FunctionCall](
-		func(call openai.FunctionCall) schema.Schema {
-			return schema.MkMap(
-				schema.MkField("Name", schema.FromGo(call.Name)),
-				schema.MkField("Arguments", schema.FromGo(call.Arguments)),
-			)
-		},
-		func(s schema.Schema) openai.FunctionCall {
-			name, _ := schema.ToGoG[string](schema.Get(s, "Name"))
-			arguments, _ := schema.ToGoG[string](schema.Get(s, "Arguments"))
-
-			return openai.FunctionCall{
-				Name:      name,
-				Arguments: arguments,
-			}
-		},
-	)
-}
-
 type ListWorkflowsFn struct {
 	Count    int      `desc:"total number of words in sentence"`
 	Words    []string `desc:"list of words in sentence"`
@@ -117,13 +62,6 @@ type GenerateImage struct {
 }
 
 func main() {
-	schema.RegisterUnionTypes(ChatResultSchemaDef())
-	schema.RegisterUnionTypes(ChatCMDSchemaDef())
-	schema.RegisterRules([]schema.RuleMatcher{
-		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(workflow.BaseState{})),
-		schema.WhenPath([]string{"*", "Await"}, schema.UseStruct(&workflow.ApplyAwaitOptions{})),
-	})
-
 	log.SetLevel(log.DebugLevel)
 
 	store := schemaless.NewInMemoryRepository()
@@ -273,8 +211,11 @@ func main() {
 						return nil, err
 					}
 
-					schemed := schema.FromGo(records)
-					result, err := schema.ToJSON(schemed)
+					result, err := shared.JSONMarshal[schemaless.FindingRecords[schemaless.Record[workflow.State]]](records)
+					if err != nil {
+						log.Errorf("failed to convert to json: %v", err)
+						return nil, err
+					}
 
 					history = append(history, openai.ChatCompletionMessage{
 						Role:       openai.ChatMessageRoleTool,
