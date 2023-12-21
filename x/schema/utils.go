@@ -287,7 +287,7 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						}
 					}
 				case *shape.AliasLike:
-					res, sch := GetShapeSchemaLocation(y.Type, data, locations)
+					res, sch := GetShapeSchemaLocation(y.Type, data, append([]Location{x}, locations...))
 					if res != nil {
 						return &locres{
 							data:  res,
