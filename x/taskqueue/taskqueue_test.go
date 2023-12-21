@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
-	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"github.com/widmogrod/mkunion/x/workflow"
 	"os"
 	"testing"
@@ -83,18 +82,19 @@ func TestTaskQueue(t *testing.T) {
 	desc = &Description{
 		Change: []string{"create"},
 		Entity: "process",
-		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp[*] <= :now 
-AND Data["workflow.Scheduled"].ExpectedRunTimestamp[*] > 0
-AND Version[*] = 1`,
+		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
+AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0
+AND Version = 1`,
 		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0`,
 		//Filter: `Data #= "workflow.Scheduled" && Data[*].RunOption.Delayed > 0`,
 	}
 
-	store := schemaless.NewInMemoryRepository[schema.Schema]()
+	store := schemaless.NewInMemoryRepository[workflow.State]()
 	stream := store.AppendLog()
 
-	repo := typedful.NewTypedRepository[workflow.State](store)
-	proc := &FunctionProcessor[workflow.State]{
+	//repo := typedful.NewTypedRepository[workflow.State](store)
+	repo := store
+	proc := &FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task Task[schemaless.Record[workflow.State]]) {
 			//t.Logf("task id: %s \n", task.ID)
 			t.Logf("data id: %s \n", task.Data.ID)
@@ -178,10 +178,10 @@ To run this test, please set AWS_SQS_QUEUE_URL to the address of your AWS SQS in
 	}
 
 	//queue := NewSQSQueue(awssqs, queueURL)
-	queue := NewInMemoryQueue[schemaless.Record[schema.Schema]]()
+	queue := NewInMemoryQueue[schemaless.Record[workflow.State]]()
 
 	ctx := context.Background()
-	tq2 := NewTaskQueue(desc, queue, store, stream, proc)
+	tq2 := NewTaskQueue[workflow.State](desc, queue, repo, stream, proc)
 	go func() {
 		err := tq2.RunSelector(ctx)
 		if err != nil {

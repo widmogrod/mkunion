@@ -88,7 +88,7 @@ func (queue *SQSQueue[T]) Pop(ctx context.Context) ([]Task[T], error) {
 	return tasks, nil
 }
 
-func (queue *SQSQueue[T]) Delete(ctx context.Context, tasks []Task[schemaless.Record[schema.Schema]]) error {
+func (queue *SQSQueue[T]) Delete(ctx context.Context, tasks []Task[T]) error {
 	if len(tasks) == 0 {
 		return nil
 	}

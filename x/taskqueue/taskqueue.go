@@ -8,14 +8,14 @@ import (
 	"time"
 )
 
-func NewTaskQueue(
+func NewTaskQueue[T any](
 	desc *Description,
-	queue Queuer[schemaless.Record[schema.Schema]],
-	find Repository,
-	stream *schemaless.AppendLog[schema.Schema],
-	proc Processor[schemaless.Record[schema.Schema]],
-) *TaskQueue {
-	return &TaskQueue{
+	queue Queuer[schemaless.Record[T]],
+	find schemaless.Repository[T],
+	stream *schemaless.AppendLog[T],
+	proc Processor[schemaless.Record[T]],
+) *TaskQueue[T] {
+	return &TaskQueue[T]{
 		desc:   desc,
 		queue:  queue,
 		find:   find,
@@ -27,33 +27,29 @@ func NewTaskQueue(
 type Queuer[T any] interface {
 	Push(ctx context.Context, task Task[T]) error
 	Pop(ctx context.Context) ([]Task[T], error)
-	Delete(ctx context.Context, tasks []Task[schemaless.Record[schema.Schema]]) error
-}
-
-type Repository interface {
-	FindingRecords(query schemaless.FindingRecords[schemaless.Record[schema.Schema]]) (schemaless.PageResult[schemaless.Record[schema.Schema]], error)
+	Delete(ctx context.Context, tasks []Task[T]) error
 }
 
 type Processor[T any] interface {
 	Process(task Task[T]) error
 }
 
-type TaskQueue struct {
+type TaskQueue[T any] struct {
 	desc   *Description
-	queue  Queuer[schemaless.Record[schema.Schema]]
-	find   Repository
-	stream *schemaless.AppendLog[schema.Schema]
-	proc   Processor[schemaless.Record[schema.Schema]]
+	queue  Queuer[schemaless.Record[T]]
+	find   schemaless.Repository[T]
+	stream *schemaless.AppendLog[T]
+	proc   Processor[schemaless.Record[T]]
 }
 
-func (q *TaskQueue) RunCDC(ctx context.Context) error {
-	return q.stream.Subscribe(ctx, 0, func(change schemaless.Change[schema.Schema]) {
+func (q *TaskQueue[T]) RunCDC(ctx context.Context) error {
+	return q.stream.Subscribe(ctx, 0, func(change schemaless.Change[T]) {
 		filter := predicate.MustWhere(q.desc.Filter, q.params())
 		if !predicate.EvaluateSchema(filter.Predicate, schema.FromGo(change.After), filter.Params) {
 			return
 		}
 
-		err := q.queue.Push(ctx, Task[schemaless.Record[schema.Schema]]{
+		err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
 			ID:   change.After.ID,
 			Data: *change.After,
 		})
@@ -63,13 +59,13 @@ func (q *TaskQueue) RunCDC(ctx context.Context) error {
 	})
 }
 
-func (q *TaskQueue) RunSelector(ctx context.Context) error {
+func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
 	var timeDelta = time.Second * 1
 	var startTime time.Time
 	for {
 		startTime = time.Now()
 
-		var after = &schemaless.FindingRecords[schemaless.Record[schema.Schema]]{
+		var after = &schemaless.FindingRecords[schemaless.Record[T]]{
 			RecordType: q.desc.Entity,
 			Where:      predicate.MustWhere(q.desc.Filter, q.params()),
 			Limit:      10,
@@ -83,7 +79,7 @@ func (q *TaskQueue) RunSelector(ctx context.Context) error {
 			}
 
 			for _, record := range records.Items {
-				err := q.queue.Push(ctx, Task[schemaless.Record[schema.Schema]]{
+				err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
 					ID:   record.ID,
 					Data: record,
 					Meta: nil,
@@ -109,7 +105,7 @@ func (q *TaskQueue) RunSelector(ctx context.Context) error {
 	}
 }
 
-func (q *TaskQueue) RunProcessor(ctx context.Context) error {
+func (q *TaskQueue[T]) RunProcessor(ctx context.Context) error {
 	for {
 		tasks, err := q.queue.Pop(ctx)
 		if err != nil {
@@ -132,7 +128,7 @@ func (q *TaskQueue) RunProcessor(ctx context.Context) error {
 	}
 }
 
-func (q *TaskQueue) params() predicate.ParamBinds {
+func (q *TaskQueue[T]) params() predicate.ParamBinds {
 	timeNow := schema.FromGo(time.Now().Unix())
 	return predicate.ParamBinds{
 		":now": timeNow,
@@ -152,21 +148,22 @@ type Task[T any] struct {
 }
 
 type FunctionProcessor[T any] struct {
-	F func(task Task[schemaless.Record[T]])
+	F func(task Task[T])
 }
 
-func (proc *FunctionProcessor[T]) Process(task Task[schemaless.Record[schema.Schema]]) error {
-	t, err := schemaless.RecordAs[T](task.Data)
-	if err != nil {
-		panic(err)
-	}
+func (proc *FunctionProcessor[T]) Process(task Task[T]) error {
+	//t, err := schemaless.RecordAs[T](task.Data)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//proc.F(Task[schemaless.Record[T]]{
+	//	ID:   task.ID,
+	//	Data: t,
+	//})
 
-	proc.F(Task[schemaless.Record[T]]{
-		ID:   task.ID,
-		Data: t,
-	})
-
+	proc.F(task)
 	return nil
 }
 
-var _ Processor[schemaless.Record[schema.Schema]] = &FunctionProcessor[schemaless.Record[schema.Schema]]{}
+//var _ Processor[schemaless.Record[schema.Schema]] = &FunctionProcessor[schemaless.Record[schema.Schema]]{}

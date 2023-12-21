@@ -2,8 +2,6 @@ package taskqueue
 
 import (
 	"context"
-	"github.com/widmogrod/mkunion/x/schema"
-	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
 
 func NewInMemoryQueue[T any]() *Queue[T] {
@@ -27,7 +25,7 @@ func (q *Queue[T]) Pop(ctx context.Context) ([]Task[T], error) {
 	return []Task[T]{<-q.queue}, nil
 }
 
-func (*Queue[T]) Delete(ctx context.Context, tasks []Task[schemaless.Record[schema.Schema]]) error {
+func (*Queue[T]) Delete(ctx context.Context, tasks []Task[T]) error {
 	return nil
 }
 
