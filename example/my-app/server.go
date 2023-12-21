@@ -64,7 +64,7 @@ type GenerateImage struct {
 func main() {
 	log.SetLevel(log.DebugLevel)
 
-	store := schemaless.NewInMemoryRepository()
+	store := schemaless.NewInMemoryRepository[schema.Schema]()
 	statesRepo := typedful.NewTypedRepository[workflow.State](store)
 	flowsRepo := typedful.NewTypedRepository[workflow.Flow](store)
 
@@ -475,10 +475,11 @@ func main() {
 			return newState, nil
 		}))
 
-	proc := &taskqueue.FunctionProcessor[workflow.State]{
-		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
+	proc := &taskqueue.FunctionProcessor[schemaless.Record[schema.Schema]]{
+		F: func(task taskqueue.Task[schemaless.Record[schema.Schema]]) {
+			data := schema.ToGo[workflow.State](task.Data.Data)
 			//log.Infof("data id: %#v \n", task.Data.ID)
-			work := workflow.NewMachine(di, task.Data.Data)
+			work := workflow.NewMachine(di, data)
 			err := work.Handle(&workflow.Run{})
 			if err != nil {
 				log.Errorf("err: %s", err)
@@ -543,14 +544,14 @@ func main() {
 		Change: []string{"create"},
 		Entity: "process",
 		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0 AND Version = 1`,
-		Filter: `Data[*]["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
-AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
+		Filter: `Data["schema.Map"]["workflow.Scheduled"]["schema.Map"].ExpectedRunTimestamp["schema.Number"] <= :now 
+AND Data["schema.Map"]["workflow.Scheduled"]["schema.Map"].ExpectedRunTimestamp["schema.Number"] > 0
 `,
 	}
 	queue := taskqueue.NewInMemoryQueue[schemaless.Record[schema.Schema]]()
 	stream := store.AppendLog()
 	ctx := context.Background()
-	tq2 := taskqueue.NewTaskQueue(desc, queue, store, stream, proc)
+	tq2 := taskqueue.NewTaskQueue[schema.Schema](desc, queue, store, stream, proc)
 
 	//go func() {
 	//	err := tq2.RunCDC(ctx)

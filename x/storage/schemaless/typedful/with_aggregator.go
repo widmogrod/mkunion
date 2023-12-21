@@ -3,9 +3,11 @@ package typedful
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	. "github.com/widmogrod/mkunion/x/storage/schemaless"
 	"log"
+	"reflect"
 )
 
 func NewTypedRepoWithAggregator[T, C any](
@@ -25,8 +27,22 @@ type TypedRepoWithAggregator[T any, C any] struct {
 	aggregator func() Aggregator[T, C]
 }
 
-func (r *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType RecordType) (Record[T], error) {
-	v, err := r.store.Get(recordID, recordType)
+func (repo *TypedRepoWithAggregator[T, C]) shapeOf() shape.Shape {
+	v := reflect.TypeOf(new(Record[T])).Elem()
+	original := shape.MkRefNameFromReflect(v)
+
+	s, found := shape.LookupShape(original)
+	if !found {
+		panic(fmt.Errorf("typedful.TypedRepoWithAggregator: shape.RefName not found %s", v.String()))
+	}
+
+	s = shape.IndexWith(s, original.Indexed)
+
+	return s
+}
+
+func (repo *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType RecordType) (Record[T], error) {
+	v, err := repo.store.Get(recordID, recordType)
 	if err != nil {
 		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema store error ID=%s Type=%s. %w", recordID, recordType, err)
 	}
@@ -39,7 +55,7 @@ func (r *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType RecordTy
 	return typed, nil
 }
 
-func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]) error {
+func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]) error {
 	schemas := UpdateRecords[Record[schema.Schema]]{
 		UpdatingPolicy: s.UpdatingPolicy,
 		Saving:         make(map[string]Record[schema.Schema]),
@@ -47,7 +63,7 @@ func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]
 	}
 
 	// This is fix to in memory aggregator
-	aggregate := r.aggregator()
+	aggregate := repo.aggregator()
 
 	for id, record := range s.Saving {
 		err := aggregate.Append(record)
@@ -79,7 +95,7 @@ func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]
 		schemas.Saving["indices:"+versionedData.ID+":"+versionedData.Type] = versionedData
 	}
 
-	err := r.store.UpdateRecords(schemas)
+	err := repo.store.UpdateRecords(schemas)
 	if err != nil {
 		return fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords schemas store err %w", err)
 	}
@@ -87,7 +103,7 @@ func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]
 	return nil
 }
 
-func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error) {
+func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error) {
 	// Typed version of FindingRecords should work with different form of where and sort fields
 	// Typed version suggest that data stored in storage is typed,
 	// but in fact it stored as schema.Schema
@@ -97,16 +113,17 @@ func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Reco
 	// wheere internal representation Record[schema.Schen] is access it
 	//		Data["schema.Map"].Name, Data["schema.Map"].Age
 	// This means, that we need add between data path and
+
 	if query.Where != nil {
-		query.Where.Predicate = wrapLocationInShemaMap(query.Where.Predicate)
+		query.Where.Predicate = repo.wrapLocationInShemaMap(query.Where.Predicate)
 	}
 
 	// do the same for sort fields
 	for i, sort := range query.Sort {
-		query.Sort[i].Field = wrapLocation(sort.Field)
+		query.Sort[i].Field = repo.wrapLocation(sort.Field)
 	}
 
-	found, err := r.store.FindingRecords(FindingRecords[Record[schema.Schema]]{
+	found, err := repo.store.FindingRecords(FindingRecords[Record[schema.Schema]]{
 		RecordType: query.RecordType,
 		Where:      query.Where,
 		Sort:       query.Sort,
@@ -163,39 +180,48 @@ func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Reco
 //     But, because synchronous index is from point of time, it needs to trigger reindex.
 //     Which imply that aggregator myst know when index was created, so it can know when to stop rebuilding process.
 //     This implies control plane. Versions of records should follow monotonically increasing order, that way it will be easier to detect when index is up to date.
-func (r *TypedRepoWithAggregator[T, C]) ReindexAll() {
+func (repo *TypedRepoWithAggregator[T, C]) ReindexAll() {
 	panic("not implemented")
 }
 
-func wrapLocationInShemaMap(x predicate.Predicate) predicate.Predicate {
-	if x == nil {
-		return nil
+func (repo *TypedRepoWithAggregator[T, C]) wrapLocation(field string) string {
+	loc, err := schema.ParseLocation(field)
+	if err != nil {
+		panic(fmt.Errorf("store.TypedRepoWithAggregator.wrapLocation schema.ParseLocation %w", err))
 	}
 
+	s := repo.shapeOf()
+
+	loc = repo.wrapLocationShapeAware(loc, s)
+
+	return schema.LocationToStr(loc)
+}
+
+func (repo *TypedRepoWithAggregator[T, C]) wrapLocationInShemaMap(p predicate.Predicate) predicate.Predicate {
 	return predicate.MustMatchPredicate(
-		x,
+		p,
 		func(x *predicate.And) predicate.Predicate {
 			r := &predicate.And{}
 			for _, p := range x.L {
-				r.L = append(r.L, wrapLocationInShemaMap(p))
+				r.L = append(r.L, repo.wrapLocationInShemaMap(p))
 			}
 			return r
 		},
 		func(x *predicate.Or) predicate.Predicate {
 			r := &predicate.Or{}
 			for _, p := range x.L {
-				r.L = append(r.L, wrapLocationInShemaMap(p))
+				r.L = append(r.L, repo.wrapLocationInShemaMap(p))
 			}
 			return r
 		},
 		func(x *predicate.Not) predicate.Predicate {
 			r := &predicate.Not{}
-			r.P = wrapLocationInShemaMap(x.P)
+			r.P = repo.wrapLocationInShemaMap(x.P)
 			return r
 		},
 		func(x *predicate.Compare) predicate.Predicate {
 			return &predicate.Compare{
-				Location:  wrapLocation(x.Location),
+				Location:  repo.wrapLocation(x.Location),
 				Operation: x.Operation,
 				BindValue: predicate.MustMatchBindable(
 					x.BindValue,
@@ -207,7 +233,7 @@ func wrapLocationInShemaMap(x predicate.Predicate) predicate.Predicate {
 					},
 					func(x *predicate.Locatable) predicate.Bindable {
 						return &predicate.Locatable{
-							Location: wrapLocation(x.Location),
+							Location: repo.wrapLocation(x.Location),
 						}
 					},
 				),
@@ -216,24 +242,138 @@ func wrapLocationInShemaMap(x predicate.Predicate) predicate.Predicate {
 	)
 }
 
-func wrapLocation(x string) string {
-	loc, err := schema.ParseLocation(x)
-	if err != nil {
-		return x
-	}
-	if len(loc) >= 2 {
-		first := loc[0]
-		if fl, ok := first.(*schema.LocationField); ok && fl.Name != "Data" {
-			return x
-		}
-
-		rest := loc[1:]
-
-		newLoc := []schema.Location{first}
-		newLoc = append(newLoc, &schema.LocationField{Name: "schema.Map"})
-		newLoc = append(newLoc, rest...)
-		return schema.LocationToStr(newLoc)
+func (repo *TypedRepoWithAggregator[T, C]) wrapLocationShapeAware(loc []schema.Location, s shape.Shape) []schema.Location {
+	if len(loc) == 0 {
+		return loc
 	}
 
-	return x
+	return schema.MustMatchLocation(
+		loc[0],
+		func(x *schema.LocationField) []schema.Location {
+			return shape.MustMatchShape(
+				s,
+				func(y *shape.Any) []schema.Location {
+					panic("not implemented")
+				},
+				func(y *shape.RefName) []schema.Location {
+					s, ok := shape.LookupShape(y)
+					if !ok {
+						panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s", y.Name))
+					}
+
+					return repo.wrapLocationShapeAware(loc, s)
+				},
+				func(y *shape.AliasLike) []schema.Location {
+					panic("not implemented")
+				},
+				func(y *shape.BooleanLike) []schema.Location {
+					panic("not implemented")
+				},
+				func(y *shape.StringLike) []schema.Location {
+					panic("not implemented")
+				},
+				func(y *shape.NumberLike) []schema.Location {
+					panic("not implemented")
+				},
+				func(y *shape.ListLike) []schema.Location {
+					panic("not implemented")
+				},
+				func(y *shape.MapLike) []schema.Location {
+					panic("not implemented")
+				},
+				func(y *shape.StructLike) []schema.Location {
+					for _, field := range y.Fields {
+						if field.Name == x.Name {
+							result := repo.wrapLocationShapeAware(loc[1:], field.Type)
+							return append(
+								append([]schema.Location{x}, shapeToSchemaName(field.Type)...),
+								result...,
+							)
+						}
+					}
+
+					panic(fmt.Errorf("wrapLocationShapeAware: field %s not found in struct %s", x.Name, y.Name))
+				},
+				func(y *shape.UnionLike) []schema.Location {
+					for _, variant := range y.Variant {
+						if shape.ToGoTypeName(variant) == x.Name {
+							result := repo.wrapLocationShapeAware(loc[1:], variant)
+							return append(
+								append([]schema.Location{x}, shapeToSchemaName(variant)...),
+								result...,
+							)
+						}
+					}
+
+					panic("not implemented")
+				},
+			)
+		},
+		func(x *schema.LocationIndex) []schema.Location {
+			panic("not implemented")
+		},
+		func(x *schema.LocationAnything) []schema.Location {
+			panic("not implemented")
+		},
+	)
+}
+
+func shapeToSchemaName(x shape.Shape) []schema.Location {
+	return shape.MustMatchShape(
+		x,
+		func(x *shape.Any) []schema.Location {
+			panic("not implemented")
+		},
+		func(x *shape.RefName) []schema.Location {
+			s, found := shape.LookupShape(x)
+			if !found {
+				panic(fmt.Errorf("shapeToSchemaName: shape.RefName not found %s", x.Name))
+			}
+			return shapeToSchemaName(s)
+		},
+		func(x *shape.AliasLike) []schema.Location {
+			panic("not implemented")
+		},
+		func(x *shape.BooleanLike) []schema.Location {
+			return []schema.Location{
+				&schema.LocationField{
+					Name: "schema.Boolean",
+				},
+			}
+		},
+		func(x *shape.StringLike) []schema.Location {
+			return []schema.Location{
+				&schema.LocationField{
+					Name: "schema.String",
+				},
+			}
+		},
+		func(x *shape.NumberLike) []schema.Location {
+			return []schema.Location{
+				&schema.LocationField{
+					Name: "schema.Number",
+				},
+			}
+		},
+		func(x *shape.ListLike) []schema.Location {
+			panic("not implemented")
+		},
+		func(x *shape.MapLike) []schema.Location {
+			panic("not implemented")
+		},
+		func(x *shape.StructLike) []schema.Location {
+			return []schema.Location{
+				&schema.LocationField{
+					Name: "schema.Map",
+				},
+			}
+		},
+		func(x *shape.UnionLike) []schema.Location {
+			return []schema.Location{
+				&schema.LocationField{
+					Name: "schema.Map",
+				},
+			}
+		},
+	)
 }
