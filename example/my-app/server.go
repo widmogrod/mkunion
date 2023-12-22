@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -22,7 +23,12 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
+	"os/signal"
+	"runtime"
+	"runtime/pprof"
+	"syscall"
 )
 
 //go:generate mkunion -name=ChatCMD
@@ -61,8 +67,40 @@ type GenerateImage struct {
 	Height int `desc:"height of image as int between 50 and 500"`
 }
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
 func main() {
+	flag.Parse()
 	log.SetLevel(log.DebugLevel)
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
+	// ... rest of the program ...
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		runtime.GC()    // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
 
 	store := schemaless.NewInMemoryRepository[schema.Schema]()
 	statesRepo := typedful.NewTypedRepository[workflow.State](store)
@@ -550,7 +588,6 @@ AND Data["schema.Map"]["workflow.Scheduled"]["schema.Map"].ExpectedRunTimestamp[
 	}
 	queue := taskqueue.NewInMemoryQueue[schemaless.Record[schema.Schema]]()
 	stream := store.AppendLog()
-	ctx := context.Background()
 	tq2 := taskqueue.NewTaskQueue[schema.Schema](desc, queue, store, stream, proc)
 
 	//go func() {
@@ -574,8 +611,26 @@ AND Data["schema.Map"]["workflow.Scheduled"]["schema.Map"].ExpectedRunTimestamp[
 		}
 	}()
 
-	e.Logger.Fatal(e.Start(":8080"))
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+	go func() {
+		<-sigs
+		log.Infof("shutting down server")
+		if err := e.Shutdown(ctx); err != nil {
+			log.Errorf("failed to shutdown server: %v", err)
+		}
+	}()
+
+	if err := e.Start(":8080"); err != nil {
+		if err == http.ErrServerClosed {
+			log.Infof("server closed")
+		} else {
+			log.Errorf("failed to start server: %v", err)
+		}
+	}
+
+	log.Infof("exiting")
 }
 
 func TypedJSONRequest[A, B any](des func([]byte) (A, error), ser func(B) ([]byte, error), handle func(x A) (B, error)) func(c echo.Context) error {
