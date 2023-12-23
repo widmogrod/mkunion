@@ -513,11 +513,9 @@ func main() {
 			return newState, nil
 		}))
 
-	proc := &taskqueue.FunctionProcessor[schemaless.Record[schema.Schema]]{
-		F: func(task taskqueue.Task[schemaless.Record[schema.Schema]]) {
-			data := schema.ToGo[workflow.State](task.Data.Data)
-			//log.Infof("data id: %#v \n", task.Data.ID)
-			work := workflow.NewMachine(di, data)
+	proc := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
+		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
+			work := workflow.NewMachine(di, task.Data.Data)
 			err := work.Handle(&workflow.Run{})
 			if err != nil {
 				log.Errorf("err: %s", err)
@@ -582,13 +580,13 @@ func main() {
 		Change: []string{"create"},
 		Entity: "process",
 		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0 AND Version = 1`,
-		Filter: `Data["schema.Map"]["workflow.Scheduled"]["schema.Map"].ExpectedRunTimestamp["schema.Number"] <= :now 
-AND Data["schema.Map"]["workflow.Scheduled"]["schema.Map"].ExpectedRunTimestamp["schema.Number"] > 0
+		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
+AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0
 `,
 	}
-	queue := taskqueue.NewInMemoryQueue[schemaless.Record[schema.Schema]]()
-	stream := store.AppendLog()
-	tq2 := taskqueue.NewTaskQueue[schema.Schema](desc, queue, store, stream, proc)
+	queue := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
+	stream := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
+	tq2 := taskqueue.NewTaskQueue[workflow.State](desc, queue, statesRepo, stream, proc)
 
 	//go func() {
 	//	err := tq2.RunCDC(ctx)
