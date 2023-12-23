@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -66,6 +67,19 @@ func shapeFullName(x Shape) string {
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
 	)
+}
+
+func LookupShapeReflectAndIndex[A any]() (Shape, bool) {
+	v := reflect.TypeOf(new(A)).Elem()
+	original := MkRefNameFromReflect(v)
+
+	s, found := LookupShape(original)
+	if !found {
+		return nil, false
+	}
+
+	s = IndexWith(s, original.Indexed)
+	return s, true
 }
 
 func LookupShape(x *RefName) (Shape, bool) {
