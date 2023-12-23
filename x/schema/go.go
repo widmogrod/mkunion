@@ -194,6 +194,8 @@ func FromGo[A any](x A) Schema {
 		return FromPrimitiveGo(x)
 	}
 
+	// TODO check if interface ToSchema() is implemented
+
 	v := reflect.TypeOf(new(A)).Elem()
 	original := shape.MkRefNameFromReflect(v)
 
@@ -305,6 +307,11 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			}
 			if yreflect.Kind() != reflect.Slice {
 				panic(fmt.Errorf("schema.FromGoReflect: shape.ListLike expected reflect.Slice, got %s", yreflect.String()))
+			}
+
+			// optimisation for []byte, otherwise it would iterate byte by byte!
+			if shape.IsBinary(x) {
+				return MkBinary(yreflect.Bytes())
 			}
 
 			result := List{}
@@ -496,34 +503,38 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 			)
 		},
 		func(x *shape.ListLike) (reflect.Value, error) {
-			data, ok := ydata.(*List)
-			if !ok {
-				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike expected *List, got %T", ydata)
-			}
-
-			if zreflect.Kind() == reflect.Ptr {
-				zreflect = zreflect.Elem()
-			}
-
-			if zreflect.Kind() != reflect.Slice {
-				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike expected reflect.Slice, got %s", zreflect.String())
-			}
-
-			if len(*data) == 0 {
-				return reflect.Zero(zreflect), nil
-			}
-
-			result := reflect.MakeSlice(zreflect, len(*data), len(*data))
-			for i, item := range *data {
-				dest, err := ToGoReflect(x.Element, item, zreflect.Elem())
-				if err != nil {
-					return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike; %w", err)
+			switch data := ydata.(type) {
+			case *Binary:
+				// optimisation for []byte, otherwise it would iterate byte by byte!
+				if shape.IsBinary(x) {
+					return reflect.ValueOf(*data), nil
 				}
 
-				result.Index(i).Set(dest)
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike detected *schema.Binary but list shape is not like []uint8, got []%s", shape.ToGoTypeName(x.Element))
+
+			case *List:
+				if zreflect.Kind() != reflect.Slice {
+					return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike expected reflect.Slice, got %s", zreflect.String())
+				}
+
+				if len(*data) == 0 {
+					return reflect.Zero(zreflect), nil
+				}
+
+				result := reflect.MakeSlice(zreflect, len(*data), len(*data))
+				for i, item := range *data {
+					dest, err := ToGoReflect(x.Element, item, zreflect.Elem())
+					if err != nil {
+						return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike; %w", err)
+					}
+
+					result.Index(i).Set(dest)
+				}
+
+				return result, nil
 			}
 
-			return result, nil
+			return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.ListLike expected *List, got %T", ydata)
 		},
 		func(x *shape.MapLike) (reflect.Value, error) {
 			data, ok := ydata.(*Map)

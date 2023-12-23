@@ -48,7 +48,7 @@ func TestToGo_ExampleTwo(t *testing.T) {
 	assert.NotNil(t, exampleTwo)
 
 	subject := ExampleTwo{
-		TwoData: schema.MkInt(1),
+		TwoData: schema.MkBinary([]byte("world")),
 		TwoNext: &ExampleOne{
 			OneValue: "hello",
 		},
@@ -60,9 +60,9 @@ func TestToGo_ExampleTwo(t *testing.T) {
 		schema.MkField(
 			"TwoData",
 			schema.MkMap(
-				schema.MkField("$type", schema.MkString("schema.Number")),
+				schema.MkField("$type", schema.MkString("schema.Binary")),
 				schema.MkField(
-					"schema.Number", schema.MkInt(1),
+					"schema.Binary", schema.MkBinary([]byte("world")),
 				),
 			),
 		),
