@@ -2,11 +2,11 @@ package typedful
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	. "github.com/widmogrod/mkunion/x/storage/schemaless"
-	"log"
 	"reflect"
 )
 
