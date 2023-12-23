@@ -7,6 +7,15 @@ import (
 	"sync"
 )
 
+type AppendLoger[T any] interface {
+	Close()
+	Change(from, to Record[T]) error
+	Delete(data Record[T]) error
+	Push(x Change[T])
+	Append(b *AppendLog[T])
+	Subscribe(ctx context.Context, fromOffset int, f func(Change[T])) error
+}
+
 type Change[T any] struct {
 	Before  *Record[T]
 	After   *Record[T]
@@ -22,6 +31,8 @@ func NewAppendLog[T any]() *AppendLog[T] {
 		cond: sync.NewCond(mux.RLocker()),
 	}
 }
+
+var _ AppendLoger[any] = (*AppendLog[any])(nil)
 
 // AppendLog is a stream of events, and in context of schemaless, it is a stream of changes to records, or deleted record with past state
 type AppendLog[T any] struct {
