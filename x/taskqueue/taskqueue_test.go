@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"github.com/widmogrod/mkunion/x/workflow"
 	"os"
 	"testing"
@@ -89,11 +90,10 @@ AND Version = 1`,
 		//Filter: `Data #= "workflow.Scheduled" && Data[*].RunOption.Delayed > 0`,
 	}
 
-	store := schemaless.NewInMemoryRepository[workflow.State]()
-	stream := store.AppendLog()
+	store := schemaless.NewInMemoryRepository[schema.Schema]()
+	stream := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
 
-	//repo := typedful.NewTypedRepository[workflow.State](store)
-	repo := store
+	repo := typedful.NewTypedRepository[workflow.State](store)
 	proc := &FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task Task[schemaless.Record[workflow.State]]) {
 			//t.Logf("task id: %s \n", task.ID)

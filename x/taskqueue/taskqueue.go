@@ -12,7 +12,7 @@ func NewTaskQueue[T any](
 	desc *Description,
 	queue Queuer[schemaless.Record[T]],
 	find schemaless.Repository[T],
-	stream *schemaless.AppendLog[T],
+	stream schemaless.AppendLoger[T],
 	proc Processor[schemaless.Record[T]],
 ) *TaskQueue[T] {
 	return &TaskQueue[T]{
@@ -38,7 +38,7 @@ type TaskQueue[T any] struct {
 	desc   *Description
 	queue  Queuer[schemaless.Record[T]]
 	find   schemaless.Repository[T]
-	stream *schemaless.AppendLog[T]
+	stream schemaless.AppendLoger[T]
 	proc   Processor[schemaless.Record[T]]
 }
 
