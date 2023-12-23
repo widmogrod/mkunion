@@ -69,3 +69,26 @@ form.action-section {
     float: left;
     width: 33%
 }
+
+.sort-asc:after,
+.sort-desc:after {
+    content: ' ';
+    position: relative;
+    left: 2px;
+    border: 8px solid transparent;
+}
+
+.sort-asc:after {
+    top: 10px;
+    border-top-color: silver;
+}
+
+.sort-desc:after {
+    bottom: 15px;
+    border-bottom-color: silver;
+}
+
+.sort-asc,
+.sort-desc {
+    padding-right: 10px;
+}

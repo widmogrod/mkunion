@@ -24,48 +24,49 @@ function flowToString(flow: workflow.Worflow) {
         .then(res => res.text())
 }
 
-type record = {
-    ID: string,
-    Type: string,
-    Data: workflow.State
+type ListProps<T> = {
+    baseURL?: string,
+    path?: string,
+    sort?: {
+        [key: string]: boolean
+    }
+    limit?: number,
 }
 
-function listStates(onData: (data: { Items: record[] }) => void) {
-    fetch('http://localhost:8080/states', {
+function storageList<T>(input: ListProps<T>): Promise<schemaless.PageResult<schemaless.Record<T>>> {
+    let url = input.baseURL || 'http://localhost:8080/'
+    url = url + input.path
+
+    return fetch(url, {
         method: 'POST',
         body: JSON.stringify({
-            Limit: 30,
-            Sort: [
-                {Field: "ID", Descending: false},
-            ]
-        } as schemaless.FindingRecords<schemaless.Record<workflow.State>>),
+            Limit: input.limit || 30,
+            Sort: input.sort && Object.keys(input.sort).map((key) => {
+                return {
+                    Field: key,
+                    Descending: input.sort?.[key],
+                }
+            })
+        } as schemaless.FindingRecords<schemaless.Record<T>>),
     })
         .then(res => res.json())
-        .then(data => {
-            onData(data);
-        })
+        .then(data => data as schemaless.PageResult<schemaless.Record<T>>)
 }
 
-type recordFlow = {
-    ID: string,
-    Type: string,
-    Data: workflow.Flow
-}
-
-function listFlows(onData: (data: { Items: recordFlow[] }) => void) {
-    fetch('http://localhost:8080/flows', {
-        method: 'POST',
-        body: JSON.stringify({
-            Limit: 3,
-            Sort: [
-                {Field: "ID", Descending: false},
-            ]
-        } as schemaless.FindingRecords<schemaless.Record<workflow.Flow>>),
+function listStates(input?: ListProps<workflow.State>) {
+    return storageList<workflow.State>({
+        path: "states",
+        sort: input?.sort,
+        limit: input?.limit,
     })
-        .then(res => res.json())
-        .then(data => {
-            onData(data);
-        })
+}
+
+function listFlows(input?: ListProps<workflow.Flow>) {
+    return storageList<workflow.Flow>({
+        path: "flows",
+        sort: input?.sort,
+        limit: input?.limit,
+    })
 }
 
 function runFlow(flowID: string, input: string, onData?: (data: workflow.State) => void) {
@@ -426,7 +427,7 @@ function App() {
     const [output, setOutput] = React.useState("" as any);
 
 
-    const [table, setTable] = React.useState({Items: [] as record[]});
+    const [statesData, setStatesData] = React.useState({Items: []} as schemaless.PageResult<schemaless.Record<workflow.State>>);
 
     const [image, setImage] = React.useState("" as string);
     const [imageWidth, setImageWidth] = React.useState(100 as number);
@@ -434,8 +435,7 @@ function App() {
     const [selectedFlow, setSelectedFlow] = React.useState("hello_world" as string);
 
 
-    const [flows, setFlows] = React.useState({Items: [] as recordFlow[]});
-
+    const [flowsData, setFlowsData] = React.useState({Items: []} as schemaless.PageResult<schemaless.Record<workflow.Flow>>);
 
     const setImageFromState = (data: workflow.State) => {
         if ("workflow.Done" in data) {
@@ -495,18 +495,14 @@ function App() {
                     <h2>Display tables</h2>
                     <button onClick={(e) => {
                         e.preventDefault()
-                        listStates((data) => {
-                            setTable(data);
-                        })
+                        listStates().then(setStatesData)
                     }}>
                         List states
                     </button>
 
                     <button onClick={(e) => {
                         e.preventDefault()
-                        listFlows((data) => {
-                            setFlows(data);
-                        })
+                        listFlows().then(setFlowsData)
                     }}>
                         List flows
                     </button>
@@ -524,7 +520,7 @@ function App() {
                     <h2>Run selected flow</h2>
                     <select value={selectedFlow}
                             onChange={(e) => setSelectedFlow(e.currentTarget.value)}>
-                        {flows.Items.map((item) => {
+                        {flowsData.Items?.map((item) => {
                             return (
                                 <option key={item.ID} value={item.ID}>{item.ID}</option>
                             );
@@ -585,20 +581,20 @@ function App() {
                                                 break
 
                                             case "refresh_states":
-                                                listStates(setTable)
+                                                listStates().then(setStatesData)
                                                 break;
 
                                             case "refresh_flows":
                                                 console.log("refresh_flows")
-                                                listFlows(setFlows)
+                                                listFlows().then(setFlowsData)
                                                 break;
 
                                             case "generate_image":
                                                 let args2 = JSON.parse(x.arguments || "") as GenerateImage;
                                                 generateImage(args2?.Width || 100, args2?.Height || 100, (data) => {
                                                     setImageFromState(data)
-                                                    listStates(setTable)
-                                                    listFlows(setFlows)
+                                                    listStates().then(setStatesData)
+                                                    listFlows().then(setFlowsData)
                                                 })
                                                 break;
                                         }
@@ -607,87 +603,143 @@ function App() {
                             />
                         </td>
                         <td>
-                            <PaginatedTable table={flows}
-                                            mapData={(data: workflow.Flow) => {
-                                                return <WorkflowToString flow={{
-                                                    "$type": "workflow.Flow",
-                                                    "workflow.Flow": data,
-                                                }}/>
-                                                // return <SchemaValue data={data}/>
-                                            }}/>
+                            <PaginatedTable<workflow.Flow>
+                                load={(state) => {
+                                    return listFlows({
+                                        limit: state.limit,
+                                        sort: state.sort,
+                                    })
+                                }}
+                                mapData={(data) => {
+                                    return <WorkflowToString flow={{
+                                        "$type": "workflow.Flow",
+                                        "workflow.Flow": data.Data || {}
+                                    }}/>
+                                }}
+                            />
                         </td>
                         <td>
-                            <PaginatedTable table={table} mapData={(data) => {
-                                if ("workflow.Done" in data) {
-                                    if ("schema.Binary" in data["workflow.Done"].Result) {
-                                        return (
-                                            <>
-                                                <span className="done">workflow.Done</span>
-                                                <img
-                                                    src={`data:image/jpeg;base64,${data["workflow.Done"].Result["schema.Binary"]}`}
-                                                    alt=""/>
-                                                <ListVariables data={data["workflow.Done"]?.BaseState}/>
-                                            </>
-                                        )
-                                    } else if ("schema.String" in data["workflow.Done"].Result) {
-                                        return <>
-                                            <span className="done">workflow.Done</span>
-                                            {data["workflow.Done"].Result["schema.String"]}
-                                            <ListVariables data={data["workflow.Done"]?.BaseState}/>
-                                        </>
+                            <PaginatedTable<workflow.State>
+                                load={(state) => {
+                                    return listStates({
+                                        limit: state.limit,
+                                        sort: state.sort,
+                                    })
+                                }}
+                                mapData={(input) => {
+                                    if (!input.Data) {
+                                        return <div>nothing</div>
                                     }
 
-                                    return JSON.stringify(data["workflow.Done"].Result)
-                                } else if ("workflow.Error" in data) {
+                                    let data = input.Data
+
+                                    switch (data.$type) {
+                                        case "workflow.Done":
+                                            let done = data["workflow.Done"]
+                                            switch (done.Result?.$type) {
+                                                case "schema.Binary":
+                                                    return (
+                                                        <>
+                                                            <span className="done">workflow.Done</span>
+                                                            <img
+                                                                src={`data:image/jpeg;base64,${done.Result["schema.Binary"]}`}
+                                                                alt=""/>
+                                                            <ListVariables data={done.BaseState}/>
+                                                        </>
+                                                    )
+                                                case "schema.String":
+                                                    return <>
+                                                        <span className="done">workflow.Done</span>
+                                                        {done.Result["schema.String"]}
+                                                        <ListVariables data={done.BaseState}/>
+                                                    </>
+                                            }
+
+                                            return <>
+                                                <span className="unknown">{done.Result?.$type}</span>
+                                            </>
+
+                                        case "workflow.Error":
+                                            let error = data["workflow.Error"]
+                                            return <>
+                                                <span className="error">workflow.Error</span>
+                                                <dl>
+                                                    <dt>Code</dt>
+                                                    <dd>{error.Code}</dd>
+                                                    <dt>Message</dt>
+                                                    <dd>{error.Reason}</dd>
+                                                </dl>
+                                                <ListVariables data={error.BaseState}/>
+                                            </>
+
+                                        case "workflow.Await":
+                                            let await_ = data["workflow.Await"]
+
+                                            return (
+                                                <>
+                                                    <span className="await">workflow.Await</span>
+                                                    <ListVariables data={await_.BaseState}/>
+                                                    <input type={"text"} id="callbackValue"
+                                                           placeholder={"callback result"}/>
+                                                    <button onClick={(e) => {
+                                                        e.preventDefault()
+                                                        if (!await_.CallbackID) {
+                                                            return
+                                                        }
+
+                                                        submitCallbackResult(await_.CallbackID, {
+                                                            "schema.String": (document.getElementById("callbackValue") as HTMLInputElement).value
+                                                        }, (data) => {
+                                                            setState(data)
+                                                        })
+                                                    }}>
+                                                        Submit callback result
+                                                    </button>
+                                                </>
+                                            )
+
+                                        case "workflow.Scheduled":
+                                            let scheduled = data["workflow.Scheduled"]
+
+                                            return (
+                                                <>
+                                                    <span className="schedguled">workflow.Scheduled</span>
+                                                    <span>{JSON.stringify(scheduled.ExpectedRunTimestamp)}</span>
+                                                    <ListVariables data={scheduled.BaseState}/>
+                                                    <button onClick={() => {
+                                                        if (!scheduled.ParentRunID) {
+                                                            return
+                                                        }
+
+                                                        stopSchedule(scheduled.ParentRunID)
+                                                    }}>
+                                                        Stop Schedule
+                                                    </button>
+                                                </>
+                                            )
+
+                                        case "workflow.ScheduleStopped":
+                                            let scheduleStopped = data["workflow.ScheduleStopped"]
+
+                                            return <>
+                                                <span className="stopped">workflow.ScheduleStopped</span>
+                                                <ListVariables data={scheduleStopped.BaseState}/>
+                                                <button onClick={() => {
+                                                    if (!scheduleStopped.ParentRunID) {
+                                                        return
+                                                    }
+
+                                                    resumeSchedule(scheduleStopped.ParentRunID)
+                                                }}>
+                                                    Resume Schedule
+                                                </button>
+                                            </>
+                                    }
+
                                     return <>
-                                        <span className="error">workflow.Error</span>
-                                        {JSON.stringify(data["workflow.Error"])}
+                                        <span className="unknown">{data.$type}</span>
                                     </>
-                                } else if ("workflow.Await" in data) {
-                                    return (
-                                        <>
-                                            <span className="await">workflow.Await</span>
-                                            <ListVariables data={data["workflow.Await"]?.BaseState}/>
-                                            <input type={"text"} id="callbackValue" placeholder={"callback result"}/>
-                                            <button onClick={(e) => {
-                                                e.preventDefault()
-                                                submitCallbackResult(data["workflow.Await"].CallbackID, {
-                                                    "schema.String": (document.getElementById("callbackValue") as HTMLInputElement).value
-                                                }, (data) => {
-                                                    setState(data)
-                                                })
-                                            }}>
-                                                Submit callback result
-                                            </button>
-                                        </>
-                                    )
-                                } else if ("workflow.Scheduled" in data) {
-                                    return (
-                                        <>
-                                            <span className="schedguled">workflow.Scheduled</span>
-                                            <span>{JSON.stringify(data["workflow.Scheduled"].ExpectedRunTimestamp)}</span>
-                                            <ListVariables data={data["workflow.Scheduled"]?.BaseState}/>
-                                            <button onClick={() => {
-                                                stopSchedule(data["workflow.Scheduled"].ParentRunID)
-                                            }}>
-                                                Stop Schedule
-                                            </button>
-                                        </>
-                                    )
-                                } else if ("workflow.ScheduleStopped") {
-                                    return <>
-                                        <span className="stopped">workflow.ScheduleStopped</span>
-                                        <ListVariables data={data["workflow.ScheduleStopped"]?.BaseState}/>
-                                        <button onClick={() => {
-                                            resumeSchedule(data["workflow.ScheduleStopped"].ParentRunID)
-                                        }}>
-                                            Resume Schedule
-                                        </button>
-                                    </>
-                                } else {
-                                    return JSON.stringify(data)
-                                }
-                            }}/>
+                                }}/>
                         </td>
                         <td>
                             <img src={`data:image/jpeg;base64,${image}`} alt=""/>
@@ -705,7 +757,11 @@ function App() {
 
 export default App;
 
-function ListVariables(props: { data: workflow.BaseState }) {
+function ListVariables(props: { data?: workflow.BaseState }) {
+    if (!props.data) {
+        return <></>
+    }
+
     return (
         <table>
             <tbody>
@@ -721,7 +777,7 @@ function ListVariables(props: { data: workflow.BaseState }) {
                 </>
             }
             {props.data?.Variables && Object.keys(props.data.Variables).map((key) => {
-                let val = props.data.Variables?.[key]
+                let val = props.data?.Variables?.[key]
                 return (
                     <tr key={key}>
                         <td>{key}</td>
@@ -741,7 +797,7 @@ function ListVariables(props: { data: workflow.BaseState }) {
                 </>
             }
             {props.data?.ExprResult && Object.keys(props.data.ExprResult).map((key) => {
-                let val = props.data.ExprResult?.[key]
+                let val = props.data?.ExprResult?.[key]
                 return (
                     <tr key={key}>
                         <td>{key}</td>
@@ -845,28 +901,85 @@ function SchemaValue(props: { data?: schema.Schema }) {
     return <NativeValue data={props.data}/>
 }
 
-function PaginatedTable(props: { table: { Items: any[] }, mapData: (data: any) => any }) {
-    const mapData = props.mapData || ((data: any) => JSON.stringify(data))
+type PaginatedInput = {
+    limit: number
+    sort: PaginatedTableSort
+}
+
+type PaginatedTableSort = {
+    [key: string]: boolean
+}
+
+type PaginatedTableProps<T> = {
+    limit?: number
+    sort?: PaginatedTableSort
+    load: (input: PaginatedInput) => Promise<schemaless.PageResult<schemaless.Record<T>>>
+    mapData?: (data: schemaless.Record<T>) => JSX.Element
+}
+
+function PaginatedTable<T>(props: PaginatedTableProps<T>) {
+    const [data, setData] = useState({Items: [] as any[]} as schemaless.PageResult<schemaless.Record<T>>)
+    const [state, setState] = useState({
+        limit: props.limit || 30,
+        sort: props.sort || {},
+    } as PaginatedInput)
+
+    useEffect(() => {
+        props.load(state).then(setData)
+    }, [state])
+
+    const changeSort = (key: string) => (e: React.MouseEvent) => {
+        e.preventDefault()
+
+        let newSort = {...state.sort}
+        if (newSort[key] === undefined) {
+            newSort[key] = true
+        } else if (newSort[key]) {
+            newSort[key] = false
+        } else {
+            delete newSort[key]
+        }
+
+        setState({
+            ...state,
+            sort: newSort,
+        })
+    }
+
+    const sortState = (key: string) => {
+        if (state.sort[key] === undefined) {
+            return "sort-none"
+        } else if (state.sort[key]) {
+            return "sort-asc"
+        } else {
+            return "sort-desc"
+        }
+    }
+
     return <table>
         <thead>
         <tr>
-            <th>ID</th>
-            <th>Type</th>
-            <th>Version</th>
+            <th onClick={changeSort("ID")} className={sortState("ID")}>ID</th>
+            <th onClick={changeSort("Type")} className={sortState("Type")}>Type</th>
+            <th onClick={changeSort("Version")} className={sortState("Version")}>Version</th>
             <th>Data</th>
         </tr>
         </thead>
         <tbody>
-        {props.table && props.table.Items && props.table.Items.map((item) => {
+        {data.Items && data.Items.length > 0 ? data.Items.map((item) => {
             return (
                 <tr key={item.ID}>
                     <td>{item.ID}</td>
                     <td>{item.Type}</td>
                     <td>{item.Version}</td>
-                    <td>{mapData(item.Data)}</td>
+                    <td>{props.mapData && props.mapData(item)}</td>
                 </tr>
             );
-        })}
+        }) : (
+            <tr>
+                <td colSpan={4}>No data</td>
+            </tr>
+        )}
         </tbody>
     </table>
 }
