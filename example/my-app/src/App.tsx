@@ -401,14 +401,12 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
         })
 }
 
-function submitCallbackResult(onData?: (data: workflow.State) => void) {
+function submitCallbackResult(callbackID: string, res: schema.Schema, onData?: (data: workflow.State) => void) {
     const cmd: workflow.Command = {
         "$type": "workflow.Callback",
         "workflow.Callback": {
-            CallbackID: "callback_id",
-            Result: {
-                "schema.String": "callback result",
-            },
+            CallbackID: callbackID,
+            Result: res,
         }
     }
 
@@ -547,16 +545,7 @@ function App() {
                         })
                     }
                     }>
-                        Await image
-                    </button>
-
-                    <button onClick={(e) => {
-                        e.preventDefault()
-                        submitCallbackResult((data) => {
-                            setImageFromState(data)
-                        })
-                    }}>
-                        Submit callback result
+                        Run concat await
                     </button>
                 </form>
 
@@ -659,6 +648,17 @@ function App() {
                                         <>
                                             <span className="await">workflow.Await</span>
                                             <ListVariables data={data["workflow.Await"]?.BaseState}/>
+                                            <input type={"text"} id="callbackValue" placeholder={"callback result"}/>
+                                            <button onClick={(e) => {
+                                                e.preventDefault()
+                                                submitCallbackResult(data["workflow.Await"].CallbackID, {
+                                                    "schema.String": (document.getElementById("callbackValue") as HTMLInputElement).value
+                                                }, (data) => {
+                                                    setState(data)
+                                                })
+                                            }}>
+                                                Submit callback result
+                                            </button>
                                         </>
                                     )
                                 } else if ("workflow.Scheduled" in data) {
