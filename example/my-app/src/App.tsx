@@ -567,7 +567,8 @@ function App() {
 
                 <form className={"action-section"}>
                     <h2>Invoke function without workflow</h2>
-                    <button onClick={() => {
+                    <button onClick={(e) => {
+                        e.preventDefault()
                         callFunc("concat", [
                             {"schema.String": "hello "},
                             {"schema.String": input},
@@ -1019,7 +1020,9 @@ function SchedguledRun(props: { input: string }) {
         }
     }
 
-    const doIt = () => {
+    const doIt = (e: React.MouseEvent) => {
+        e.preventDefault()
+
         if (cmd?.["workflow.Run"]?.Flow) {
             flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
         }
@@ -1035,7 +1038,6 @@ function SchedguledRun(props: { input: string }) {
     return <button onClick={doIt}>
         Scheduled Run
     </button>
-
 }
 
 function stopSchedule(parentRunID: string) {
