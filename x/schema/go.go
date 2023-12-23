@@ -194,17 +194,10 @@ func FromGo[A any](x A) Schema {
 		return FromPrimitiveGo(x)
 	}
 
-	// TODO check if interface ToSchema() is implemented
-
-	v := reflect.TypeOf(new(A)).Elem()
-	original := shape.MkRefNameFromReflect(v)
-
-	s, found := shape.LookupShape(original)
+	s, found := shape.LookupShapeReflectAndIndex[A]()
 	if !found {
-		panic(fmt.Errorf("schema.FromGo: shape.RefName not found for %s", shape.ToGoFullTypeNameFromReflect(v)))
+		panic(fmt.Errorf("schema.FromGo: shape.RefName not found for %T", *new(A)))
 	}
-
-	s = shape.IndexWith(s, original.Indexed)
 
 	return FromGoReflect(s, reflect.ValueOf(x))
 }

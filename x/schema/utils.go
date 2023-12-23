@@ -5,7 +5,6 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/shape"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -223,15 +222,10 @@ func GetSchemaLocation(data Schema, locations []Location) Schema {
 }
 
 func Get[A any](data A, location string) (Schema, shape.Shape) {
-	v := reflect.TypeOf(new(A)).Elem()
-	original := shape.MkRefNameFromReflect(v)
-
-	s, found := shape.LookupShape(original)
+	s, found := shape.LookupShapeReflectAndIndex[A]()
 	if !found {
-		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %s", v.String()))
+		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %T", *new(A)))
 	}
-
-	s = shape.IndexWith(s, original.Indexed)
 
 	sdata := FromGo[A](data)
 
