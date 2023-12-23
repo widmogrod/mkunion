@@ -96,6 +96,21 @@ var TypeStringToNumberKindMap = map[string]NumberKind{
 	"rune":    &Int32{},
 }
 
+func IsBinary(x Shape) bool {
+	list, isList := x.(*ListLike)
+	if !isList {
+		return false
+	}
+
+	num, isNumber := list.Element.(*NumberLike)
+	if !isNumber {
+		return false
+	}
+
+	_, isByte := num.Kind.(*UInt8)
+	return isByte
+}
+
 func NumberKindToGoName(x NumberKind) string {
 	if x == nil {
 		return "int"
