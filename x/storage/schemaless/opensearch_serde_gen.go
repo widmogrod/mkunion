@@ -8,46 +8,6 @@ import (
 )
 
 var (
-	_ json.Unmarshaler = (*OpenSearchSearchResult[any])(nil)
-	_ json.Marshaler   = (*OpenSearchSearchResult[any])(nil)
-)
-
-func (r *OpenSearchSearchResult[A]) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldHits, err := shared.JSONMarshal[OpenSearchSearchResultHits[A]](r.Hits)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.OpenSearchSearchResult[A].MarshalJSON: field Hits; %w", err)
-	}
-	result["hits"] = fieldHits
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.OpenSearchSearchResult[A].MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
-}
-
-func (r *OpenSearchSearchResult[A]) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "hits":
-			var err error
-			r.Hits, err = shared.JSONUnmarshal[OpenSearchSearchResultHits[A]](bytes)
-			if err != nil {
-				return fmt.Errorf("schemaless.OpenSearchSearchResult[A].UnmarshalJSON: field Hits; %w", err)
-			}
-			return nil
-
-		}
-
-		return nil
-	})
-}
-
-var (
 	_ json.Unmarshaler = (*OpenSearchSearchResultHits[any])(nil)
 	_ json.Marshaler   = (*OpenSearchSearchResultHits[any])(nil)
 )
@@ -156,6 +116,46 @@ func (r *OpenSearchSearchResultHit[A]) UnmarshalJSON(bytes []byte) error {
 			})
 			if err != nil {
 				return fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].UnmarshalJSON: field Sort; %w", err)
+			}
+			return nil
+
+		}
+
+		return nil
+	})
+}
+
+var (
+	_ json.Unmarshaler = (*OpenSearchSearchResult[any])(nil)
+	_ json.Marshaler   = (*OpenSearchSearchResult[any])(nil)
+)
+
+func (r *OpenSearchSearchResult[A]) MarshalJSON() ([]byte, error) {
+	var err error
+	result := make(map[string]json.RawMessage)
+
+	fieldHits, err := shared.JSONMarshal[OpenSearchSearchResultHits[A]](r.Hits)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.OpenSearchSearchResult[A].MarshalJSON: field Hits; %w", err)
+	}
+	result["hits"] = fieldHits
+
+	output, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.OpenSearchSearchResult[A].MarshalJSON: final step; %w", err)
+	}
+
+	return output, nil
+}
+
+func (r *OpenSearchSearchResult[A]) UnmarshalJSON(bytes []byte) error {
+	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
+		switch key {
+		case "hits":
+			var err error
+			r.Hits, err = shared.JSONUnmarshal[OpenSearchSearchResultHits[A]](bytes)
+			if err != nil {
+				return fmt.Errorf("schemaless.OpenSearchSearchResult[A].UnmarshalJSON: field Hits; %w", err)
 			}
 			return nil
 

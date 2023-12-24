@@ -243,7 +243,7 @@ func BindValueFromJSON(x []byte) (*BindValue, error) {
 }
 
 func BindValueToJSON(x *BindValue) ([]byte, error) {
-	field_BindName, err := json.Marshal(x.BindName)
+	field_BindName, err := shared.JSONMarshal[BindName](x.BindName)
 	if err != nil {
 		return nil, err
 	}
