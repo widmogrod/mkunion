@@ -21,6 +21,7 @@ type (
 		// CRON like definition
 		Interval string
 		// ParentRunID is a reference to the original run, that scheduled this run and any between
+		// ParentRunID is used to track history of the execution, and is stable reference to the original run
 		ParentRunID string
 	}
 	DelayRun struct {
@@ -78,14 +79,11 @@ type (
 	Scheduled struct {
 		// ExpectedRunTimestamp is server timestamp + DelayBySeconds
 		ExpectedRunTimestamp int64
-		// ParentRunID is a reference to the original run, that scheduled this run and any between
-		// ParentRunID is used to track history of the execution, and is stable reference to the original run
-		ParentRunID string
-		BaseState   BaseState
+
+		BaseState BaseState
 	}
 	ScheduleStopped struct {
-		ParentRunID string
-		BaseState   BaseState
+		BaseState BaseState
 	}
 )
 

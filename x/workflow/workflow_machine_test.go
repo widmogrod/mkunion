@@ -256,7 +256,6 @@ func TestMachine(t *testing.T) {
 				},
 			}).
 			ThenState(&Scheduled{
-				ParentRunID:          runID,
 				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 				BaseState: BaseState{
 					RunID:  runID,
@@ -299,7 +298,6 @@ func TestMachine(t *testing.T) {
 						ParentRunID: runID,
 					}).
 					ThenState(&ScheduleStopped{
-						ParentRunID: runID,
 						BaseState: BaseState{
 							RunID:  runID,
 							StepID: "",
@@ -318,7 +316,6 @@ func TestMachine(t *testing.T) {
 						ParentRunID: runID,
 					}).
 					ThenState(&Scheduled{
-						ParentRunID:          runID,
 						ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 						BaseState: BaseState{
 							RunID:  runID,
@@ -528,7 +525,6 @@ func TestMachine(t *testing.T) {
 			}).
 			ThenState(&Scheduled{
 				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
-				ParentRunID:          runID,
 				BaseState: BaseState{
 					RunID:  runID,
 					StepID: "",
@@ -572,7 +568,6 @@ func TestMachine(t *testing.T) {
 						ParentRunID: runID,
 					}).
 					ThenState(&ScheduleStopped{
-						ParentRunID: runID,
 						BaseState: BaseState{
 							RunID:  runID,
 							StepID: "",
@@ -592,7 +587,6 @@ func TestMachine(t *testing.T) {
 						c.
 							GivenCommand(&Run{}).
 							ThenStateAndError(&ScheduleStopped{
-								ParentRunID: runID,
 								BaseState: BaseState{
 									RunID:  runID,
 									StepID: "",
@@ -616,7 +610,6 @@ func TestMachine(t *testing.T) {
 							}).
 							ThenState(&Scheduled{
 								ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
-								ParentRunID:          runID,
 								BaseState: BaseState{
 									RunID:  runID,
 									StepID: "",
