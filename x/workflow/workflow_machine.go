@@ -20,6 +20,8 @@ type (
 	ScheduleRun struct {
 		// CRON like definition
 		Interval string
+		// ParentRunID is a reference to the original run, that scheduled this run and any between
+		ParentRunID string
 	}
 	DelayRun struct {
 		// DelayBySeconds

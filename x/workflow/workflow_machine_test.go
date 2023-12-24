@@ -517,6 +517,125 @@ func TestMachine(t *testing.T) {
 				},
 			})
 	})
+	suite.Case("scheduled run", func(c *machine.Case[Command, State]) {
+		c.
+			GivenCommand(&Run{
+				Flow:  &FlowRef{FlowID: "hello_world_flow_if"},
+				Input: schema.MkString("El Mundo"),
+				RunOption: &ScheduleRun{
+					Interval: "@every 1s",
+				},
+			}).
+			ThenState(&Scheduled{
+				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
+				ParentRunID:          runID,
+				BaseState: BaseState{
+					RunID:  runID,
+					StepID: "",
+					Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+					Variables: map[string]schema.Schema{
+						"input": schema.MkString("El Mundo"),
+					},
+					ExprResult:        map[string]schema.Schema{},
+					DefaultMaxRetries: 3,
+					RunOption: &ScheduleRun{
+						Interval:    "@every 1s",
+						ParentRunID: runID,
+					},
+				},
+			}).
+			ForkCase("run scheduled run", func(c *machine.Case[Command, State]) {
+				c.
+					GivenCommand(&Run{}).
+					ThenState(&Done{
+						Result: schema.MkString("only Spanish will work!"),
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "end-1",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("El Mundo"),
+								"res":   schema.MkString("hello El Mundo"),
+							},
+							ExprResult:        map[string]schema.Schema{},
+							DefaultMaxRetries: 3,
+							RunOption: &ScheduleRun{
+								Interval:    "@every 1s",
+								ParentRunID: runID,
+							},
+						},
+					})
+			}).
+			ForkCase("stop scheduled run", func(c *machine.Case[Command, State]) {
+				c.
+					GivenCommand(&StopSchedule{
+						ParentRunID: runID,
+					}).
+					ThenState(&ScheduleStopped{
+						ParentRunID: runID,
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("El Mundo"),
+							},
+							ExprResult:        map[string]schema.Schema{},
+							DefaultMaxRetries: 3,
+							RunOption: &ScheduleRun{
+								Interval:    "@every 1s",
+								ParentRunID: runID,
+							},
+						},
+					}).
+					ForkCase("run stopped", func(c *machine.Case[Command, State]) {
+						c.
+							GivenCommand(&Run{}).
+							ThenStateAndError(&ScheduleStopped{
+								ParentRunID: runID,
+								BaseState: BaseState{
+									RunID:  runID,
+									StepID: "",
+									Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+									Variables: map[string]schema.Schema{
+										"input": schema.MkString("El Mundo"),
+									},
+									ExprResult:        map[string]schema.Schema{},
+									DefaultMaxRetries: 3,
+									RunOption: &ScheduleRun{
+										Interval:    "@every 1s",
+										ParentRunID: runID,
+									},
+								},
+							}, ErrInvalidStateTransition)
+					}).
+					ForkCase("resume scheduled run", func(c *machine.Case[Command, State]) {
+						c.
+							GivenCommand(&ResumeSchedule{
+								ParentRunID: runID,
+							}).
+							ThenState(&Scheduled{
+								ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
+								ParentRunID:          runID,
+								BaseState: BaseState{
+									RunID:  runID,
+									StepID: "",
+									Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+									Variables: map[string]schema.Schema{
+										"input": schema.MkString("El Mundo"),
+									},
+									ExprResult:        map[string]schema.Schema{},
+									DefaultMaxRetries: 3,
+									RunOption: &ScheduleRun{
+										Interval:    "@every 1s",
+										ParentRunID: runID,
+									},
+								},
+							})
+					})
+
+			})
+	})
 
 	suite.Run(t)
 	suite.Fuzzy(t)

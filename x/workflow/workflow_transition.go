@@ -79,14 +79,18 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 				case *ScheduleRun, *DelayRun:
 					context.RunOption = x.RunOption
 
-					runTimestamp, err := completeRunOption(x.RunOption, dep)
+					context.RunOption = completeParentRunID(context)
+
+					runTimestamp, err := calcualtedScheduledExpectedRunTimestamp(x.RunOption, dep)
 					if err != nil {
 						return nil, err
 					}
 
+					parentRunID := extractParentRunID(context)
+
 					// schedule or delay execution
 					return &Scheduled{
-						ParentRunID:          context.RunID,
+						ParentRunID:          parentRunID,
 						ExpectedRunTimestamp: runTimestamp,
 						BaseState:            context,
 					}, nil
@@ -96,7 +100,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 				return newStatus, nil
 			}
 
-			return nil, ErrAlreadyStarted
+			return nil, ErrInvalidStateTransition
 		},
 		func(x *Callback) (State, error) {
 			switch s := state.(type) {
@@ -176,7 +180,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 					return nil, ErrRunIDNotMatch
 				}
 
-				runTimestamp, err := completeRunOption(s.BaseState.RunOption, dep)
+				runTimestamp, err := calcualtedScheduledExpectedRunTimestamp(s.BaseState.RunOption, dep)
 				if err != nil {
 					return nil, err
 				}
@@ -235,13 +239,13 @@ func getFlow(x Worflow, dep Dependency) (*Flow, error) {
 
 var cronParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 
-func completeRunOption(x RunOption, dep Dependency) (int64, error) {
+func calcualtedScheduledExpectedRunTimestamp(x RunOption, dep Dependency) (int64, error) {
 	return MustMatchRunOptionR2(
 		x,
 		func(x *ScheduleRun) (int64, error) {
 			schedule, err := cronParser.Parse(x.Interval)
 			if err != nil {
-				return 0, fmt.Errorf("workflow.completeRunOption: failed to parse interval: %w; %w", err, ErrIntervalParse)
+				return 0, fmt.Errorf("workflow.calcualtedScheduledExpectedRunTimestamp: failed to parse interval: %w; %w", err, ErrIntervalParse)
 			}
 
 			return schedule.Next(dep.TimeNow()).Unix(), nil
@@ -252,6 +256,43 @@ func completeRunOption(x RunOption, dep Dependency) (int64, error) {
 				TimeNow().
 				Add(time.Duration(x.DelayBySeconds) * time.Second).
 				Unix(), nil
+		},
+	)
+}
+
+func extractParentRunID(context BaseState) string {
+	return MustMatchRunOption(
+		context.RunOption,
+		func(y *ScheduleRun) string {
+			if y.ParentRunID == "" {
+				return context.RunID
+			}
+
+			return y.ParentRunID
+		},
+		func(y *DelayRun) string {
+			// DelayRun is like scheduled one, so parent run is always the same as current run
+			return context.RunID
+		},
+	)
+}
+
+func completeParentRunID(context BaseState) RunOption {
+	return MustMatchRunOption(
+		context.RunOption,
+		func(y *ScheduleRun) RunOption {
+			if y.ParentRunID == "" {
+				return &ScheduleRun{
+					Interval:    y.Interval,
+					ParentRunID: context.RunID,
+				}
+			}
+
+			return y
+		},
+		func(y *DelayRun) RunOption {
+			// DelayRun is like scheduled one, so parent run is always the same as current run
+			return y
 		},
 	)
 }
