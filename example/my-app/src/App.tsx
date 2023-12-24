@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react';
 import './App.css';
 import * as openai from './workflow/'
 import * as schemaless from './workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
-import {GenerateImage, ListWorkflowsFn} from './workflow/github_com_widmogrod_mkunion_exammple_my-app'
 import * as workflow from './workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
 import {Chat} from "./Chat";
@@ -427,15 +426,10 @@ function App() {
     const [output, setOutput] = React.useState("" as any);
 
 
-    const [statesData, setStatesData] = React.useState({Items: []} as schemaless.PageResult<schemaless.Record<workflow.State>>);
-
     const [image, setImage] = React.useState("" as string);
     const [imageWidth, setImageWidth] = React.useState(100 as number);
     const [imageHeight, setImageHeight] = React.useState(100 as number);
     const [selectedFlow, setSelectedFlow] = React.useState("hello_world" as string);
-
-
-    const [flowsData, setFlowsData] = React.useState({Items: []} as schemaless.PageResult<schemaless.Record<workflow.Flow>>);
 
     const setImageFromState = (data: workflow.State) => {
         if ("workflow.Done" in data) {
@@ -452,8 +446,7 @@ function App() {
 
     return (
         <div className="App">
-            <main>
-                <h1>My App</h1>
+            <aside>
                 <form
                     className={"action-section"}
                     onSubmit={(e) => {
@@ -491,46 +484,29 @@ function App() {
                     </button>
                 </form>
 
-                <form className={"action-section"}>
-                    <h2>Display tables</h2>
-                    <button onClick={(e) => {
-                        e.preventDefault()
-                        listStates().then(setStatesData)
-                    }}>
-                        List states
-                    </button>
+                {/*<form*/}
+                {/*    className={"action-section"}*/}
+                {/*    onSubmit={(e) => {*/}
+                {/*        e.preventDefault()*/}
+                {/*        runFlow(selectedFlow, input, (data) => {*/}
+                {/*            setImageFromState(data)*/}
+                {/*        })*/}
+                {/*    }}*/}
+                {/*>*/}
+                {/*    <h2>Run selected flow</h2>*/}
+                {/*    <select value={selectedFlow}*/}
+                {/*            onChange={(e) => setSelectedFlow(e.currentTarget.value)}>*/}
+                {/*        {flowsData.Items?.map((item) => {*/}
+                {/*            return (*/}
+                {/*                <option key={item.ID} value={item.ID}>{item.ID}</option>*/}
+                {/*            );*/}
+                {/*        })}*/}
+                {/*    </select>*/}
 
-                    <button onClick={(e) => {
-                        e.preventDefault()
-                        listFlows().then(setFlowsData)
-                    }}>
-                        List flows
-                    </button>
-                </form>
-
-                <form
-                    className={"action-section"}
-                    onSubmit={(e) => {
-                        e.preventDefault()
-                        runFlow(selectedFlow, input, (data) => {
-                            setImageFromState(data)
-                        })
-                    }}
-                >
-                    <h2>Run selected flow</h2>
-                    <select value={selectedFlow}
-                            onChange={(e) => setSelectedFlow(e.currentTarget.value)}>
-                        {flowsData.Items?.map((item) => {
-                            return (
-                                <option key={item.ID} value={item.ID}>{item.ID}</option>
-                            );
-                        })}
-                    </select>
-
-                    <button>
-                        Run selected flow
-                    </button>
-                </form>
+                {/*    <button>*/}
+                {/*        Run selected flow*/}
+                {/*    </button>*/}
+                {/*</form>*/}
 
                 <form className={"action-section"}>
                     <h2>Async and callback result</h2>
@@ -565,43 +541,47 @@ function App() {
                     </button>
                 </form>
 
+                <form className={"action-section"}>
+                    <h2>Chat</h2>
+
+                    <Chat
+                        props={{
+                            name: "John",
+                            onFunctionCall: (x: openai.FunctionCall) => {
+                                console.log("onFunctionCall", x);
+                                // switch (x.name) {
+                                //     case "count_words":
+                                //         let args = JSON.parse(x.arguments || "") as ListWorkflowsFn
+                                //         console.log(args)
+                                //         break
+                                //
+                                //     case "refresh_states":
+                                //         listStates().then(setStatesData)
+                                //         break;
+                                //
+                                //     case "refresh_flows":
+                                //         console.log("refresh_flows")
+                                //         listFlows().then(setFlowsData)
+                                //         break;
+                                //
+                                //     case "generate_image":
+                                //         let args2 = JSON.parse(x.arguments || "") as GenerateImage;
+                                //         generateImage(args2?.Width || 100, args2?.Height || 100, (data) => {
+                                //             setImageFromState(data)
+                                //             listStates().then(setStatesData)
+                                //             listFlows().then(setFlowsData)
+                                //         })
+                                //         break;
+                                // }
+                            }
+                        }}
+                    />
+                </form>
+            </aside>
+            <main>
                 <table>
                     <tbody>
                     <tr>
-                        <td>
-                            <Chat
-                                props={{
-                                    name: "John",
-                                    onFunctionCall: (x: openai.FunctionCall) => {
-                                        console.log("onFunctionCall", x);
-                                        switch (x.name) {
-                                            case "count_words":
-                                                let args = JSON.parse(x.arguments || "") as ListWorkflowsFn
-                                                console.log(args)
-                                                break
-
-                                            case "refresh_states":
-                                                listStates().then(setStatesData)
-                                                break;
-
-                                            case "refresh_flows":
-                                                console.log("refresh_flows")
-                                                listFlows().then(setFlowsData)
-                                                break;
-
-                                            case "generate_image":
-                                                let args2 = JSON.parse(x.arguments || "") as GenerateImage;
-                                                generateImage(args2?.Width || 100, args2?.Height || 100, (data) => {
-                                                    setImageFromState(data)
-                                                    listStates().then(setStatesData)
-                                                    listFlows().then(setFlowsData)
-                                                })
-                                                break;
-                                        }
-                                    }
-                                }}
-                            />
-                        </td>
                         <td>
                             <PaginatedTable<workflow.Flow>
                                 load={(state) => {
@@ -679,7 +659,8 @@ function App() {
                                                 <>
                                                     <span className="await">workflow.Await</span>
                                                     <ListVariables data={await_.BaseState}/>
-                                                    <input type={"text"} id="callbackValue"
+                                                    <input type={"text"}
+                                                           id="callbackValue"
                                                            placeholder={"callback result"}/>
                                                     <button onClick={(e) => {
                                                         e.preventDefault()
@@ -901,9 +882,10 @@ function SchemaValue(props: { data?: schema.Schema }) {
     return <NativeValue data={props.data}/>
 }
 
-type PaginatedInput = {
+type PaginatedTableState<T> = {
     limit: number
     sort: PaginatedTableSort
+    selected: { [key: string]: schemaless.Record<T> }
 }
 
 type PaginatedTableSort = {
@@ -913,7 +895,7 @@ type PaginatedTableSort = {
 type PaginatedTableProps<T> = {
     limit?: number
     sort?: PaginatedTableSort
-    load: (input: PaginatedInput) => Promise<schemaless.PageResult<schemaless.Record<T>>>
+    load: (input: PaginatedTableState<T>) => Promise<schemaless.PageResult<schemaless.Record<T>>>
     mapData?: (data: schemaless.Record<T>) => JSX.Element
 }
 
@@ -922,7 +904,8 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
     const [state, setState] = useState({
         limit: props.limit || 30,
         sort: props.sort || {},
-    } as PaginatedInput)
+        selected: {},
+    } as PaginatedTableState<T>)
 
     useEffect(() => {
         props.load(state).then(setData)
@@ -956,9 +939,86 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         }
     }
 
+    const refresh = (e: React.MouseEvent) => {
+        e.preventDefault()
+        props.load(state).then(setData)
+    }
+
+    const selectRowToggle = (item: schemaless.Record<T>)=> () => {
+        if (!item.ID) {
+            return
+        }
+
+        let selected = {...state.selected}
+        if (selected[item.ID]) {
+            delete selected[item.ID]
+        } else {
+            selected[item.ID] = item
+        }
+
+        setState({
+            ...state,
+            selected: selected,
+        })
+    }
+
+    const isSelected = (item: schemaless.Record<T>) => {
+        if (!item.ID) {
+            return false
+        }
+
+        return state.selected[item.ID] !== undefined
+    }
+
+    const batchSelection = (e: React.MouseEvent) => {
+        e.preventDefault()
+
+        let selectionLength = Object.keys(state.selected).length
+        if (selectionLength > 0) {
+            setState({
+                ...state,
+                selected: {},
+            })
+        } else {
+            let selected = {} as { [key: string]: schemaless.Record<T> }
+            data.Items?.forEach((item) => {
+                if (!item.ID) {
+                    return
+                }
+
+                selected[item.ID] = item
+            })
+
+            setState({
+                ...state,
+                selected: selected
+            } as PaginatedTableState<T>)
+        }
+    }
+
+    const batchSelectionState = () => {
+        let selectionLength = Object.keys(state.selected).length
+        if (selectionLength === 0) {
+            return "selected-none"
+        }
+        if (selectionLength === data.Items?.length) {
+            return "selected-all"
+        }
+
+        return "selected-some"
+    }
+
     return <table>
         <thead>
         <tr>
+            <th colSpan={5} className={"option-row"}>
+                <button className={"refresh"} onClick={refresh}>Refresh</button>
+            </th>
+        </tr>
+        <tr>
+            <th onClick={batchSelection} className={batchSelectionState()}>
+                <button>select</button>
+            </th>
             <th onClick={changeSort("ID")} className={sortState("ID")}>ID</th>
             <th onClick={changeSort("Type")} className={sortState("Type")}>Type</th>
             <th onClick={changeSort("Version")} className={sortState("Version")}>Version</th>
@@ -969,6 +1029,7 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         {data.Items && data.Items.length > 0 ? data.Items.map((item) => {
             return (
                 <tr key={item.ID}>
+                    <td><input type={"checkbox"} onChange={ selectRowToggle(item)} checked={isSelected(item)}/></td>
                     <td>{item.ID}</td>
                     <td>{item.Type}</td>
                     <td>{item.Version}</td>
@@ -977,7 +1038,7 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
             );
         }) : (
             <tr>
-                <td colSpan={4}>No data</td>
+                <td colSpan={5}>No data</td>
             </tr>
         )}
         </tbody>

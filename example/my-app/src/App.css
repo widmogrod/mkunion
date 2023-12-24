@@ -1,7 +1,17 @@
 .App {
     text-align: left;
     margin: 0 auto;
-    width: 90%;
+    width: 100%;
+}
+
+aside {
+    float: left;
+    width: 300px;
+    margin: 0 10px 0 0;
+}
+main {
+    float: left;
+    width: calc(100% - 310px);
 }
 
 span {
@@ -35,6 +45,7 @@ thead tr {
     background-color: #009879;
     color: #ffffff;
     text-align: left;
+    font-size: 1.2em;
 }
 
 th,
@@ -43,11 +54,31 @@ td {
     vertical-align: top;
 }
 
-tbody tr {
+table > thead .option-row {
+    background-color: #005b48;
+    color: #ffffff;
+    text-align: left;
+    font-size: .9em;
+    height: 1px;
+    position: relative;
+    padding: 0;
+    margin: 0;
+}
+
+table > thead .option-row .refresh {
+    position: absolute;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    right: 10px;
+    top: 5px
+}
+
+table > tbody > tr {
     border-bottom: 1px solid #dddddd;
 }
 
-tbody tr:nth-of-type(even) {
+table > tbody > tr:nth-of-type(even) {
     background-color: #f3f3f3;
 }
 
@@ -66,8 +97,13 @@ table table th, td {
 
 form.action-section {
     margin: 10px 0;
-    float: left;
-    width: 33%
+    padding: 10px;
+}
+
+form.action-section h2 {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0 0 5px 0;
 }
 
 .sort-asc:after,
@@ -88,7 +124,8 @@ form.action-section {
     border-bottom-color: silver;
 }
 
+.sort-none,
 .sort-asc,
 .sort-desc {
-    padding-right: 10px;
+    cursor: pointer;
 }
