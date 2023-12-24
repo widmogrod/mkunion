@@ -68,6 +68,59 @@ function listFlows(input?: ListProps<workflow.Flow>) {
     })
 }
 
+type UpdatingProps<T> = {
+    baseURL?: string,
+    path?: string,
+    data: schemaless.UpdateRecords<schemaless.Record<T>>,
+}
+
+function updatingRecords<T>(input: UpdatingProps<T>) {
+    let url = input.baseURL || 'http://localhost:8080/'
+    url = url + input.path
+
+    return fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(input.data),
+    })
+        .then(res => {})
+}
+
+function deleteFlows(flows: schemaless.Record<workflow.Flow>[]) {
+    let deleting = {} as { [key: string]: schemaless.Record<workflow.Flow> }
+    flows.forEach((flow) => {
+        if (!flow.ID) {
+            return
+        }
+
+        deleting[flow.ID] = flow
+    })
+
+    return updatingRecords<workflow.Flow>({
+        path: "flows-updating",
+        data: {
+            Deleting: deleting,
+        }
+    })
+}
+
+function deleteStates(states: schemaless.Record<workflow.State>[]) {
+    let deleting = {} as { [key: string]: schemaless.Record<workflow.State> }
+    states.forEach((flow) => {
+        if (!flow.ID) {
+            return
+        }
+
+        deleting[flow.ID] = flow
+    })
+
+    return updatingRecords<workflow.State>({
+        path: "state-updating",
+        data: {
+            Deleting: deleting,
+        }
+    })
+}
+
 function runFlow(flowID: string, input: string, onData?: (data: workflow.State) => void) {
     const cmd: workflow.Command = {
         "$type": "workflow.Run",
@@ -596,6 +649,15 @@ function App() {
                                         "workflow.Flow": data.Data || {}
                                     }}/>
                                 }}
+                                actions={[
+                                    {
+                                        name: "Delete selected",
+                                        action: (state, ctx) => {
+                                            deleteFlows([...Object.values(state.selected)])
+                                                .then(() => ctx.refresh())
+                                        }
+                                    },
+                                ]}
                             />
                         </td>
                         <td>
@@ -606,6 +668,18 @@ function App() {
                                         sort: state.sort,
                                     })
                                 }}
+                                actions={[
+                                    {
+                                        name: "Delete selected",
+                                        action: (state, ctx) => {
+                                            deleteStates([...Object.values(state.selected)])
+                                                .then(() => {
+                                                    ctx.refresh()
+                                                    ctx.clearSelection()
+                                                })
+                                        }
+                                    },
+                                ]}
                                 mapData={(input) => {
                                     if (!input.Data) {
                                         return <div>nothing</div>
@@ -892,11 +966,23 @@ type PaginatedTableSort = {
     [key: string]: boolean
 }
 
+type PaginatedTableAction<T> = {
+    name: string
+    action: (state: PaginatedTableState<T>, ctx: PaginatedTableContext<T>) => void
+}
+
+type PaginatedTableContext<T> = {
+    refresh: () => void
+    clearSelection: () => void
+}
+
+
 type PaginatedTableProps<T> = {
     limit?: number
     sort?: PaginatedTableSort
     load: (input: PaginatedTableState<T>) => Promise<schemaless.PageResult<schemaless.Record<T>>>
     mapData?: (data: schemaless.Record<T>) => JSX.Element
+    actions?: PaginatedTableAction<T>[]
 }
 
 function PaginatedTable<T>(props: PaginatedTableProps<T>) {
@@ -910,6 +996,18 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
     useEffect(() => {
         props.load(state).then(setData)
     }, [state])
+
+    const ctx = {
+        refresh: () => {
+            props.load(state).then(setData)
+        },
+        clearSelection: () => {
+            setState({
+                ...state,
+                selected: {},
+            })
+        }
+    } as PaginatedTableContext<T>
 
     const changeSort = (key: string) => (e: React.MouseEvent) => {
         e.preventDefault()
@@ -939,12 +1037,8 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         }
     }
 
-    const refresh = (e: React.MouseEvent) => {
-        e.preventDefault()
-        props.load(state).then(setData)
-    }
 
-    const selectRowToggle = (item: schemaless.Record<T>)=> () => {
+    const selectRowToggle = (item: schemaless.Record<T>) => () => {
         if (!item.ID) {
             return
         }
@@ -1008,11 +1102,20 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         return "selected-some"
     }
 
+    const applyAction = (action: PaginatedTableAction<T>) => (e: React.MouseEvent) => {
+        e.preventDefault()
+        action.action(state, ctx)
+    }
+
     return <table>
         <thead>
         <tr>
             <th colSpan={5} className={"option-row"}>
-                <button className={"refresh"} onClick={refresh}>Refresh</button>
+                <button className={"refresh"} onClick={() => ctx.refresh()}>Refresh</button>
+
+                {props.actions && props.actions.map((action) => {
+                    return <button key={action.name} onClick={applyAction(action)}>{action.name}</button>
+                })}
             </th>
         </tr>
         <tr>
@@ -1029,7 +1132,7 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         {data.Items && data.Items.length > 0 ? data.Items.map((item) => {
             return (
                 <tr key={item.ID}>
-                    <td><input type={"checkbox"} onChange={ selectRowToggle(item)} checked={isSelected(item)}/></td>
+                    <td><input type={"checkbox"} onChange={selectRowToggle(item)} checked={isSelected(item)}/></td>
                     <td>{item.ID}</td>
                     <td>{item.Type}</td>
                     <td>{item.Version}</td>
