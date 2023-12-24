@@ -8,72 +8,6 @@ import (
 )
 
 var (
-	_ json.Unmarshaler = (*OpenSearchSearchResultHit[any])(nil)
-	_ json.Marshaler   = (*OpenSearchSearchResultHit[any])(nil)
-)
-
-func (r *OpenSearchSearchResultHit[A]) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldItem, err := shared.JSONMarshal[A](r.Item)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: field Item; %w", err)
-	}
-	result["_source"] = fieldItem
-
-	fieldSort := make([]json.RawMessage, len(r.Sort))
-	for i, v := range r.Sort {
-		fieldSort[i], err = shared.JSONMarshal[string](v)
-		if err != nil {
-			return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: field Sort[%d]; %w", i, err)
-		}
-	}
-	result["sort"], err = json.Marshal(fieldSort)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: field Sort; %w", err)
-	}
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
-}
-
-func (r *OpenSearchSearchResultHit[A]) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "_source":
-			var err error
-			r.Item, err = shared.JSONUnmarshal[A](bytes)
-			if err != nil {
-				return fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].UnmarshalJSON: field Item; %w", err)
-			}
-			return nil
-
-		case "sort":
-			err := shared.JSONParseList(bytes, func(index int, bytes []byte) error {
-				item, err := shared.JSONUnmarshal[string](bytes)
-				if err != nil {
-					return fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].UnmarshalJSON: field Sort[%d]; %w", index, err)
-				}
-				r.Sort = append(r.Sort, item)
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].UnmarshalJSON: field Sort; %w", err)
-			}
-			return nil
-
-		}
-
-		return nil
-	})
-}
-
-var (
 	_ json.Unmarshaler = (*OpenSearchSearchResult[any])(nil)
 	_ json.Marshaler   = (*OpenSearchSearchResult[any])(nil)
 )
@@ -156,6 +90,72 @@ func (r *OpenSearchSearchResultHits[A]) UnmarshalJSON(bytes []byte) error {
 			})
 			if err != nil {
 				return fmt.Errorf("schemaless.OpenSearchSearchResultHits[A].UnmarshalJSON: field Hits; %w", err)
+			}
+			return nil
+
+		}
+
+		return nil
+	})
+}
+
+var (
+	_ json.Unmarshaler = (*OpenSearchSearchResultHit[any])(nil)
+	_ json.Marshaler   = (*OpenSearchSearchResultHit[any])(nil)
+)
+
+func (r *OpenSearchSearchResultHit[A]) MarshalJSON() ([]byte, error) {
+	var err error
+	result := make(map[string]json.RawMessage)
+
+	fieldItem, err := shared.JSONMarshal[A](r.Item)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: field Item; %w", err)
+	}
+	result["_source"] = fieldItem
+
+	fieldSort := make([]json.RawMessage, len(r.Sort))
+	for i, v := range r.Sort {
+		fieldSort[i], err = shared.JSONMarshal[string](v)
+		if err != nil {
+			return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: field Sort[%d]; %w", i, err)
+		}
+	}
+	result["sort"], err = json.Marshal(fieldSort)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: field Sort; %w", err)
+	}
+
+	output, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].MarshalJSON: final step; %w", err)
+	}
+
+	return output, nil
+}
+
+func (r *OpenSearchSearchResultHit[A]) UnmarshalJSON(bytes []byte) error {
+	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
+		switch key {
+		case "_source":
+			var err error
+			r.Item, err = shared.JSONUnmarshal[A](bytes)
+			if err != nil {
+				return fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].UnmarshalJSON: field Item; %w", err)
+			}
+			return nil
+
+		case "sort":
+			err := shared.JSONParseList(bytes, func(index int, bytes []byte) error {
+				item, err := shared.JSONUnmarshal[string](bytes)
+				if err != nil {
+					return fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].UnmarshalJSON: field Sort[%d]; %w", index, err)
+				}
+				r.Sort = append(r.Sort, item)
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("schemaless.OpenSearchSearchResultHit[A].UnmarshalJSON: field Sort; %w", err)
 			}
 			return nil
 
