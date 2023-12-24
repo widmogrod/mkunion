@@ -760,6 +760,7 @@ function App() {
                                                 <>
                                                     <span className="schedguled">workflow.Scheduled</span>
                                                     <span>{JSON.stringify(scheduled.ExpectedRunTimestamp)}</span>
+                                                    <span>{scheduled.ParentRunID}</span>
                                                     <ListVariables data={scheduled.BaseState}/>
                                                     <button onClick={() => {
                                                         if (!scheduled.ParentRunID) {
