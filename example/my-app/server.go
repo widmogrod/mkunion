@@ -403,6 +403,28 @@ func main() {
 		return c.JSONBlob(http.StatusOK, result)
 	})
 
+	e.POST("/flows-updating", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		updating, err := shared.JSONUnmarshal[schemaless.UpdateRecords[schemaless.Record[workflow.Flow]]](data)
+		if err != nil {
+			log.Errorf("failed to parse body: %v", err)
+			return err
+		}
+
+		err = flowsRepo.UpdateRecords(updating)
+		if err != nil {
+			log.Errorf("failed to update records: %v", err)
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
+	})
+
 	e.POST("/states", func(c echo.Context) error {
 		data, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -429,6 +451,28 @@ func main() {
 		}
 
 		return c.JSONBlob(http.StatusOK, result)
+	})
+
+	e.POST("/state-updating", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		updating, err := shared.JSONUnmarshal[schemaless.UpdateRecords[schemaless.Record[workflow.State]]](data)
+		if err != nil {
+			log.Errorf("failed to parse body: %v", err)
+			return err
+		}
+
+		err = statesRepo.UpdateRecords(updating)
+		if err != nil {
+			log.Errorf("failed to update records: %v", err)
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
 	})
 
 	e.POST("/", TypedJSONRequest(
