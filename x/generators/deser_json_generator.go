@@ -230,6 +230,9 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 }
 
 func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) string {
+	typeName := shape.ToGoTypeName(field.Type, shape.WithInstantiation(), shape.WithRootPackage(shape.ToGoPkgName(g.Union)))
+	typeName = shape.WrapPointerIf(typeName, field.IsPointer)
+
 	return shape.MustMatchShape(
 		field.Type,
 		func(x *shape.Any) string {
@@ -237,10 +240,16 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 		},
 		func(x *shape.RefName) string {
 			// check if reference is Union,
-			y, _ := shape.LookupShape(x)
+			y, found := shape.LookupShape(x)
 			if z, ok := y.(*shape.UnionLike); ok {
 				pkgName := g.pkgNameAndImport(z)
 				return g.padLeft(depth+1, fmt.Sprintf("%s%sToJSON(x.%s)", pkgName, z.Name, field.Name))
+			}
+
+			if found {
+				typeName := shape.ToGoTypeName(y, shape.WithInstantiation(), shape.WithRootPackage(shape.ToGoPkgName(g.Union)))
+				typeName = shape.WrapPointerIf(typeName, field.IsPointer)
+				return g.padLeft(depth, fmt.Sprintf("shared.JSONMarshal[%s](x.%s)", typeName, field.Name))
 			}
 
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
@@ -284,7 +293,7 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
 		},
 		func(x *shape.StructLike) string {
-			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
+			return g.padLeft(depth, fmt.Sprintf("shared.JSONMarshal[%s](x.%s)", typeName, field.Name))
 		},
 		func(x *shape.UnionLike) string {
 			return g.padLeft(depth, fmt.Sprintf("json.Marshal(x.%s)", field.Name))
