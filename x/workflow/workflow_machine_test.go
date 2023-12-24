@@ -2,9 +2,11 @@ package workflow
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"testing"
@@ -521,5 +523,122 @@ func TestMachine(t *testing.T) {
 
 	if true || suite.AssertSelfDocumentStateDiagram(t, "machine") {
 		suite.SelfDocumentStateDiagram(t, "machine")
+	}
+}
+
+func TestBaseState_Serde(t *testing.T) {
+	subject := BaseState{
+		RunID:  "qrwqer",
+		StepID: "end-1",
+		Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+		Variables: map[string]schema.Schema{
+			"input": schema.MkString("El Mundo"),
+			"res":   schema.MkString("hello El Mundo"),
+		},
+		ExprResult:        map[string]schema.Schema{},
+		DefaultMaxRetries: 3,
+	}
+
+	result, err := shared.JSONMarshal[BaseState](subject)
+	assert.NoError(t, err)
+
+	output, err := shared.JSONUnmarshal[BaseState](result)
+	assert.NoError(t, err)
+
+	if diff := cmp.Diff(subject, output); diff != "" {
+		t.Errorf("BaseState mismatch (-want +got):\n%s", diff)
+	}
+
+	expectedJSON := `{
+  "DefaultMaxRetries": 3,
+  "ExprResult": {},
+  "Flow": {
+    "$type": "workflow.FlowRef",
+    "workflow.FlowRef": {
+      "FlowID": "hello_world_flow_if"
+    }
+  },
+  "RunID": "qrwqer",
+  "RunOption": null,
+  "StepID": "end-1",
+  "Variables": {
+    "input": {
+      "$type": "schema.String",
+      "schema.String": "El Mundo"
+    },
+    "res": {
+      "$type": "schema.String",
+      "schema.String": "hello El Mundo"
+    }
+  }
+}
+`
+	if !assert.JSONEq(t, expectedJSON, string(result)) {
+		t.Log(string(result))
+	}
+
+}
+
+func TestState_Serde(t *testing.T) {
+	subject := &Done{
+		Result: schema.MkString("only Spanish will work!"),
+		BaseState: BaseState{
+			RunID:  "qrwqer",
+			StepID: "end-1",
+			Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+			Variables: map[string]schema.Schema{
+				"input": schema.MkString("El Mundo"),
+				"res":   schema.MkString("hello El Mundo"),
+			},
+			ExprResult:        map[string]schema.Schema{},
+			DefaultMaxRetries: 3,
+		},
+	}
+
+	result, err := shared.JSONMarshal[State](subject)
+	assert.NoError(t, err)
+
+	output, err := shared.JSONUnmarshal[State](result)
+	assert.NoError(t, err)
+
+	if diff := cmp.Diff(subject, output); diff != "" {
+		t.Errorf("State mismatch (-want +got):\n%s", diff)
+	}
+
+	expectedJSON := `{
+  "$type": "workflow.Done",
+  "workflow.Done": {
+    "BaseState": {
+      "DefaultMaxRetries": 3,
+      "ExprResult": {},
+      "Flow": {
+        "$type": "workflow.FlowRef",
+        "workflow.FlowRef": {
+          "FlowID": "hello_world_flow_if"
+        }
+      },
+      "RunID": "qrwqer",
+      "RunOption": null,
+      "StepID": "end-1",
+      "Variables": {
+        "input": {
+          "$type": "schema.String",
+          "schema.String": "El Mundo"
+        },
+        "res": {
+          "$type": "schema.String",
+          "schema.String": "hello El Mundo"
+        }
+      }
+    },
+    "Result": {
+      "$type": "schema.String",
+      "schema.String": "only Spanish will work!"
+    }
+  }
+}
+`
+	if !assert.JSONEq(t, expectedJSON, string(result)) {
+		t.Log(string(result))
 	}
 }
