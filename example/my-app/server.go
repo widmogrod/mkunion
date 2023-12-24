@@ -146,14 +146,14 @@ func main() {
 			switch cmd := cmd.(type) {
 			case *workflow.StopSchedule:
 				return predicate.MustWhere(
-					`Data["workflow.Scheduled"].ParentRunID = :runID`,
+					`Data["workflow.Scheduled"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
 					predicate.ParamBinds{
 						":runID": schema.MkString(cmd.ParentRunID),
 					},
 				), true
 			case *workflow.ResumeSchedule:
 				return predicate.MustWhere(
-					`Data["workflow.ScheduleStopped"].ParentRunID = :runID`,
+					`Data["workflow.ScheduleStopped"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
 					predicate.ParamBinds{
 						":runID": schema.MkString(cmd.ParentRunID),
 					},

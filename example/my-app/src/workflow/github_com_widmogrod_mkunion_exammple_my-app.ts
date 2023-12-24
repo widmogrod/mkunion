@@ -32,18 +32,18 @@ export type ChatResponses = {
 	Responses?: ChatResult[],
 }
 
-export type GenerateImage = {
-	Width?: number,
-	Height?: number,
-}
-export type Service<CMD, State> = {}
-export type RefreshStates = {}
+export type RefreshFlows = {}
 export type ListWorkflowsFn = {
 	Count?: number,
 	Words?: string[],
 	EnumTest?: string,
 }
-export type RefreshFlows = {}
+export type Service<CMD, State> = {}
+export type RefreshStates = {}
+export type GenerateImage = {
+	Width?: number,
+	Height?: number,
+}
 
 //eslint-disable-next-line
 import * as openai from './'

@@ -473,6 +473,26 @@ function submitCallbackResult(callbackID: string, res: schema.Schema, onData?: (
         })
 }
 
+function extractParentRunID(state: workflow.State): string | undefined {
+    switch (state.$type) {
+        case "workflow.Scheduled":
+            switch (state["workflow.Scheduled"].BaseState?.RunOption?.$type) {
+                case "workflow.ScheduleRun":
+                    return state["workflow.Scheduled"].BaseState?.RunOption?.["workflow.ScheduleRun"].ParentRunID
+            }
+            break
+
+        case "workflow.ScheduleStopped":
+            switch (state["workflow.ScheduleStopped"].BaseState?.RunOption?.$type) {
+                case "workflow.ScheduleRun":
+                    return state["workflow.ScheduleStopped"].BaseState?.RunOption?.["workflow.ScheduleRun"].ParentRunID
+            }
+            break
+    }
+
+    return undefined
+}
+
 function App() {
     const [state, setState] = React.useState({} as workflow.State);
     const [input, setInput] = React.useState("hello");
@@ -756,18 +776,20 @@ function App() {
                                         case "workflow.Scheduled":
                                             let scheduled = data["workflow.Scheduled"]
 
+                                            let parentRunID = "no ParentRunID"
+                                            let parentRunIDData = extractParentRunID(data)
+                                            if (parentRunIDData !== undefined) {
+                                                parentRunID = parentRunIDData
+                                            }
+
                                             return (
                                                 <>
                                                     <span className="schedguled">workflow.Scheduled</span>
                                                     <span>{JSON.stringify(scheduled.ExpectedRunTimestamp)}</span>
-                                                    <span>{scheduled.ParentRunID}</span>
+                                                    <span>{parentRunID}</span>
                                                     <ListVariables data={scheduled.BaseState}/>
                                                     <button onClick={() => {
-                                                        if (!scheduled.ParentRunID) {
-                                                            return
-                                                        }
-
-                                                        stopSchedule(scheduled.ParentRunID)
+                                                        stopSchedule(parentRunID)
                                                     }}>
                                                         Stop Schedule
                                                     </button>
@@ -777,15 +799,17 @@ function App() {
                                         case "workflow.ScheduleStopped":
                                             let scheduleStopped = data["workflow.ScheduleStopped"]
 
+                                            let parentRunID1 = "no ParentRunID"
+                                            let parentRunIDData1 = extractParentRunID(data)
+                                            if (parentRunIDData1 !== undefined) {
+                                                parentRunID1 = parentRunIDData1
+                                            }
+
                                             return <>
                                                 <span className="stopped">workflow.ScheduleStopped</span>
                                                 <ListVariables data={scheduleStopped.BaseState}/>
                                                 <button onClick={() => {
-                                                    if (!scheduleStopped.ParentRunID) {
-                                                        return
-                                                    }
-
-                                                    resumeSchedule(scheduleStopped.ParentRunID)
+                                                    resumeSchedule(parentRunID1)
                                                 }}>
                                                     Resume Schedule
                                                 </button>

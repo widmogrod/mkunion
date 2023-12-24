@@ -97,6 +97,7 @@ export type RunOption = {
 
 export type ScheduleRun = {
 	Interval?: string,
+	ParentRunID?: string,
 }
 
 export type DelayRun = {
@@ -186,12 +187,10 @@ export type Await = {
 
 export type Scheduled = {
 	ExpectedRunTimestamp?: number,
-	ParentRunID?: string,
 	BaseState?: BaseState,
 }
 
 export type ScheduleStopped = {
-	ParentRunID?: string,
 	BaseState?: BaseState,
 }
 
@@ -213,6 +212,14 @@ export type FlowRef = {
 	FlowID?: string,
 }
 
+export type Execution = {
+	FlowID?: string,
+	Status?: State,
+	Location?: string,
+	StartTime?: number,
+	EndTime?: number,
+	Variables?: {[key: string]: schema.Schema},
+}
 export type BaseState = {
 	Flow?: Worflow,
 	RunID?: string,
@@ -222,27 +229,19 @@ export type BaseState = {
 	DefaultMaxRetries?: number,
 	RunOption?: RunOption,
 }
-export type Execution = {
-	FlowID?: string,
-	Status?: State,
-	Location?: string,
-	StartTime?: number,
-	EndTime?: number,
-	Variables?: {[key: string]: schema.Schema},
+export type ApplyAwaitOptions = {
+	Timeout?: number,
 }
 export type ResumeOptions = {
 	Timeout?: number,
 }
-export type ApplyAwaitOptions = {
-	Timeout?: number,
+export type FunctionOutput = {
+	Result?: schema.Schema,
 }
 export type FunctionInput = {
 	Name?: string,
 	CallbackID?: string,
 	Args?: schema.Schema[],
-}
-export type FunctionOutput = {
-	Result?: schema.Schema,
 }
 
 //eslint-disable-next-line

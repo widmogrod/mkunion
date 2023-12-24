@@ -161,10 +161,6 @@ export type AndGuard = {
 	L?: Guard[],
 }
 
-export type TypeParam = {
-	Name?: string,
-	Type?: Shape,
-}
 export type Tag = {
 	Value?: string,
 	Options?: string[],
@@ -176,5 +172,9 @@ export type FieldLike = {
 	Guard?: Guard,
 	IsPointer?: boolean,
 	Tags?: {[key: string]: Tag},
+}
+export type TypeParam = {
+	Name?: string,
+	Type?: Shape,
 }
 
