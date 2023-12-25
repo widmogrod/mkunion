@@ -126,6 +126,10 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		func(x *TryRecover) (State, error) {
 			switch s := state.(type) {
 			case *Error:
+				if s.BaseState.RunID != x.RunID {
+					return nil, ErrRunIDNotMatch
+				}
+
 				maxRetries := s.BaseState.DefaultMaxRetries
 				//if s.MaxRetries > 0 {
 				//	maxRetries = s.MaxRetries

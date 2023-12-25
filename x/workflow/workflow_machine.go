@@ -43,7 +43,9 @@ type (
 		Result     schema.Schema
 		//Fail       schema.Schema
 	}
-	TryRecover   struct{}
+	TryRecover struct {
+		RunID string
+	}
 	StopSchedule struct {
 		// ParentRunID can be stopped by user, or by system
 		ParentRunID string

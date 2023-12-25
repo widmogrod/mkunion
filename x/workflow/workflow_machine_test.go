@@ -461,7 +461,9 @@ func TestMachine(t *testing.T) {
 			}).
 			ForkCase("retry execution", func(c *machine.Case[Command, State]) {
 				c.
-					GivenCommand(&TryRecover{},
+					GivenCommand(&TryRecover{
+						RunID: runID,
+					},
 						machine.WithBefore(func() {
 							di.FindFunctionF = func(funcID string) (Function, error) {
 								return nil, fmt.Errorf("function funcID='%s' not found", funcID)
