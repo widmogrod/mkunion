@@ -30,6 +30,34 @@ span.error {
 span.await {
     background-color: #52d2d2;
 }
+input {
+    padding: 5px;
+    margin: 0 5px 0 0;
+}
+
+input, button {
+    border: 1px solid #51887a;
+    border-radius: 0;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+button {
+    padding: 5px 10px;
+    background-color: #51887a;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    color: #666666;
+    cursor: not-allowed;
+}
+
+button:hover {
+    background-color: #005b48;
+}
 
 table {
     border-collapse: collapse;
@@ -58,20 +86,15 @@ table > thead .option-row {
     background-color: #005b48;
     color: #ffffff;
     text-align: left;
-    font-size: .9em;
-    height: 1px;
-    position: relative;
-    padding: 0;
-    margin: 0;
+    /*font-size: .9em;*/
+    /*height: 1px;*/
+    /*position: relative;*/
+    /*padding: 0;*/
+    /*margin: 0;*/
 }
 
-table > thead .option-row .refresh {
-    position: absolute;
-    cursor: pointer;
-    border: none;
-    border-radius: 5px;
-    right: 10px;
-    top: 5px
+table > thead .option-row button {
+    margin-right: 5px;
 }
 
 table > tbody > tr {
@@ -95,12 +118,12 @@ table table th, td {
     padding: 5px 10px;
 }
 
-form.action-section {
+.action-section {
     margin: 10px 0;
     padding: 10px;
 }
 
-form.action-section h2 {
+.action-section h2 {
     font-size: 1.2em;
     font-weight: bold;
     margin: 0 0 5px 0;

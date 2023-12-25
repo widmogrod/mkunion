@@ -139,10 +139,6 @@ func main() {
 			return workflow.NewMachine(di, state)
 		},
 		func(cmd workflow.Command) (*predicate.WherePredicates, bool) {
-			if cmd == nil {
-				return nil, false
-			}
-
 			switch cmd := cmd.(type) {
 			case *workflow.StopSchedule:
 				return predicate.MustWhere(
@@ -158,9 +154,15 @@ func main() {
 						":runID": schema.MkString(cmd.ParentRunID),
 					},
 				), true
-			default:
-				return nil, false
+			case *workflow.TryRecover:
+				return predicate.MustWhere(
+					`Data["workflow.Error"].BaseState.RunID = :runID`,
+					predicate.ParamBinds{
+						":runID": schema.MkString(cmd.RunID),
+					},
+				), true
 			}
+			return nil, false
 		},
 		func(state workflow.State) (string, bool) {
 			return workflow.GetRunID(state), true

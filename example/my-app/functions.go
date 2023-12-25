@@ -12,6 +12,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"math/rand"
 	"os"
 )
 
@@ -25,6 +26,25 @@ var functions = map[string]workflow.Function{
 		b, ok := schema.As[string](args[1])
 		if !ok {
 			return nil, fmt.Errorf("expected string, got %T", args[1])
+		}
+
+		return &workflow.FunctionOutput{
+			Result: schema.MkString(a + b),
+		}, nil
+	},
+	"concat_error": func(body *workflow.FunctionInput) (*workflow.FunctionOutput, error) {
+		args := body.Args
+		a, ok := schema.As[string](args[0])
+		if !ok {
+			return nil, fmt.Errorf("expected string, got %T", args[0])
+		}
+		b, ok := schema.As[string](args[1])
+		if !ok {
+			return nil, fmt.Errorf("expected string, got %T", args[1])
+		}
+
+		if rand.Float32() > 0.5 {
+			return nil, fmt.Errorf("random error")
 		}
 
 		return &workflow.FunctionOutput{

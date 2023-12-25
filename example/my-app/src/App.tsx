@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useReducer, useState} from 'react';
 import './App.css';
 import * as openai from './workflow/'
 import * as schemaless from './workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
@@ -82,7 +82,8 @@ function updatingRecords<T>(input: UpdatingProps<T>) {
         method: 'POST',
         body: JSON.stringify(input.data),
     })
-        .then(res => {})
+        .then(res => {
+        })
 }
 
 function deleteFlows(flows: schemaless.Record<workflow.Flow>[]) {
@@ -210,6 +211,80 @@ function runHelloWorldWorkflow(input: string, onData?: (data: workflow.State) =>
                                     "workflow.Apply": {
                                         ID: "apply1",
                                         Name: "concat",
+                                        Args: [
+                                            {
+                                                "$type": "workflow.SetValue",
+                                                "workflow.SetValue": {
+                                                    Value: {
+                                                        "schema.String": "hello ",
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "$type": "workflow.GetValue",
+                                                "workflow.GetValue": {
+                                                    Path: "input",
+                                                }
+                                            },
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "$type": "workflow.End",
+                            "workflow.End": {
+                                ID: "end1",
+                                Result: {
+                                    "$type": "workflow.GetValue",
+                                    "workflow.GetValue": {
+                                        Path: "res",
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                },
+            },
+            Input: {
+                "schema.String": input,
+            },
+        }
+    }
+
+    if (cmd?.["workflow.Run"]?.Flow) {
+        flowCreate(cmd?.["workflow.Run"]?.Flow as workflow.Flow)
+    }
+
+    fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(cmd),
+    })
+        .then(res => res.json())
+        .then(data => onData && onData(data))
+}
+
+function runErrorWorkflow(input: string, onData?: (data: workflow.State) => void) {
+    const cmd: workflow.Command = {
+        "$type": "workflow.Run",
+        "workflow.Run": {
+            Flow: {
+                "$type": "workflow.Flow",
+                "workflow.Flow": {
+                    Name: "do_error",
+                    Arg: "input",
+                    Body: [
+                        {
+                            "$type": "workflow.Assign",
+                            "workflow.Assign": {
+                                ID: "assign1",
+                                VarOk: "res",
+                                VarErr: "",
+                                Val: {
+                                    "$type": "workflow.Apply",
+                                    "workflow.Apply": {
+                                        ID: "apply1",
+                                        Name: "concat_error",
                                         Args: [
                                             {
                                                 "$type": "workflow.SetValue",
@@ -520,21 +595,7 @@ function App() {
     return (
         <div className="App">
             <aside>
-                <form
-                    className={"action-section"}
-                    onSubmit={(e) => {
-                        e.preventDefault()
-                        runHelloWorldWorkflow(input)
-                    }}
-                >
-                    <h2>Hello world</h2>
-                    <input type="text"
-                           placeholder="Enter your name"
-                           onInput={(e) => setInput(e.currentTarget.value)}/>
-                    <button>
-                        Run hello world workflow
-                    </button>
-                </form>
+                <HelloWorldDemo/>
 
                 <form
                     className={"action-section"}
@@ -690,7 +751,7 @@ function App() {
                                 }}
                                 actions={[
                                     {
-                                        name: "Delete selected",
+                                        name: "Delete",
                                         action: (state, ctx) => {
                                             deleteStates([...Object.values(state.selected)])
                                                 .then(() => {
@@ -699,6 +760,24 @@ function App() {
                                                 })
                                         }
                                     },
+                                    {
+                                        name: "Try recover",
+                                        action: (state, ctx) => {
+                                            const requests = Object.keys(state.selected).map((key) => {
+                                                let value = state.selected[key]
+                                                if (!value.ID) {
+                                                    return
+                                                }
+
+                                                return recover(value.ID)
+                                            })
+
+                                            Promise.all(requests).then(() => {
+                                                ctx.refresh()
+                                                ctx.clearSelection()
+                                            })
+                                        }
+                                    }
                                 ]}
                                 mapData={(input) => {
                                     if (!input.Data) {
@@ -744,6 +823,7 @@ function App() {
                                                     <dd>{error.Reason}</dd>
                                                 </dl>
                                                 <ListVariables data={error.BaseState}/>
+                                                <TryRecover error={error}/>
                                             </>
 
                                         case "workflow.Await":
@@ -1139,7 +1219,11 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
                 <button className={"refresh"} onClick={() => ctx.refresh()}>Refresh</button>
 
                 {props.actions && props.actions.map((action) => {
-                    return <button key={action.name} onClick={applyAction(action)}>{action.name}</button>
+                    return <button
+                        key={action.name}
+                        className={"action "}
+                        disabled={Object.keys(state.selected).length === 0}
+                        onClick={applyAction(action)}>{action.name}</button>
                 })}
             </th>
         </tr>
@@ -1342,6 +1426,28 @@ function SchedguledRun(props: { input: string }) {
     </button>
 }
 
+const recover = (runID: string) => {
+    const cmd: workflow.Command = {
+        "$type": "workflow.TryRecover",
+        "workflow.TryRecover": {
+            RunID: runID,
+        }
+    }
+
+    return fetch('http://localhost:8080/', {
+        method: 'POST',
+        body: JSON.stringify(cmd),
+    })
+        .then(res => res.json())
+        .then(data => data as workflow.State)
+}
+
+function TryRecover(props: { error: workflow.Error }) {
+    return <button onClick={() => props.error.BaseState?.RunID && recover(props.error.BaseState?.RunID)}>
+        Try recover
+    </button>
+}
+
 function stopSchedule(parentRunID: string) {
     const cmd: workflow.Command = {
         "$type": "workflow.StopSchedule",
@@ -1389,3 +1495,70 @@ function callFunc(funcID: string, args: any[]) {
         .then(res => res.json())
         .then(data => data as workflow.FunctionOutput)
 }
+
+
+type HelloWorldDemoState = {
+    input: string
+    loading: boolean
+}
+
+type HelloWorldDemoAction = {
+    type: string
+}
+
+function HelloWorldDemo() {
+    const [state, setState] = React.useState({
+        input: "Amigo",
+        loading: false,
+    } as HelloWorldDemoState);
+
+    const dispatch = (action: HelloWorldDemoAction) => {
+        switch (action.type) {
+            case "run_hello_world":
+                setState({
+                    ...state,
+                    loading: true,
+                })
+
+                runHelloWorldWorkflow(state.input, (data) => {
+                    setState({
+                        ...state,
+                        loading: false,
+                    })
+                })
+                break
+
+            case "run_hello_world_error":
+                setState({
+                    ...state,
+                    loading: true,
+                })
+
+                runErrorWorkflow(state.input, (data) => {
+                    setState({
+                        ...state,
+                        loading: false,
+                    })
+                })
+                break
+        }
+    }
+
+
+    return <div
+        className={"action-section"}>
+        <h2>Hello world demo</h2>
+        <input type="text"
+               placeholder="Enter your name"
+               value={state.input}
+        />
+        <button onClick={() => dispatch({type: "run_hello_world"})}>
+            Run hello world workflow
+        </button>
+        <button onClick={() => dispatch({type: "run_hello_world_error"})}>
+            Run hello world workflow with error
+        </button>
+        {state.loading && <div>Loading...</div>}
+    </div>
+}
+
