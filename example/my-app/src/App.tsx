@@ -797,6 +797,7 @@ function App() {
                                                             <img
                                                                 src={`data:image/jpeg;base64,${done.Result["schema.Binary"]}`}
                                                                 alt=""/>
+                                                            <WorkflowToString flow={done.BaseState?.Flow}/>
                                                             <ListVariables data={done.BaseState}/>
                                                         </>
                                                     )
@@ -804,6 +805,7 @@ function App() {
                                                     return <>
                                                         <span className="done">workflow.Done</span>
                                                         {done.Result["schema.String"]}
+                                                        <WorkflowToString flow={done.BaseState?.Flow}/>
                                                         <ListVariables data={done.BaseState}/>
                                                     </>
                                             }
@@ -822,6 +824,7 @@ function App() {
                                                     <dt>Message</dt>
                                                     <dd>{error.Reason}</dd>
                                                 </dl>
+                                                <WorkflowToString flow={error.BaseState?.Flow}/>
                                                 <ListVariables data={error.BaseState}/>
                                                 <TryRecover error={error}/>
                                             </>
@@ -832,6 +835,7 @@ function App() {
                                             return (
                                                 <>
                                                     <span className="await">workflow.Await</span>
+                                                    <WorkflowToString flow={await_.BaseState?.Flow}/>
                                                     <ListVariables data={await_.BaseState}/>
                                                     <input type={"text"}
                                                            id="callbackValue"
@@ -867,6 +871,7 @@ function App() {
                                                     <span className="schedguled">workflow.Scheduled</span>
                                                     <span>{JSON.stringify(scheduled.ExpectedRunTimestamp)}</span>
                                                     <span>{parentRunID}</span>
+                                                    <WorkflowToString flow={scheduled.BaseState?.Flow}/>
                                                     <ListVariables data={scheduled.BaseState}/>
                                                     <button onClick={() => {
                                                         stopSchedule(parentRunID)
@@ -887,6 +892,7 @@ function App() {
 
                                             return <>
                                                 <span className="stopped">workflow.ScheduleStopped</span>
+                                                <WorkflowToString flow={scheduleStopped.BaseState?.Flow}/>
                                                 <ListVariables data={scheduleStopped.BaseState}/>
                                                 <button onClick={() => {
                                                     resumeSchedule(parentRunID1)
@@ -1257,10 +1263,15 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
     </table>
 }
 
-function WorkflowToString(props: { flow: workflow.Worflow }) {
+
+function WorkflowToString(props: { flow?: workflow.Worflow }) {
     const [str, setStr] = useState("")
 
     useEffect(() => {
+        if (!props.flow) {
+            return
+        }
+
         flowToString(props.flow).then((data) => {
             setStr(data)
         })
