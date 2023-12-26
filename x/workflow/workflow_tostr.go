@@ -3,7 +3,6 @@ package workflow
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
-	"github.com/widmogrod/mkunion/x/shared"
 	"strings"
 )
 
@@ -118,11 +117,51 @@ func ToStrReshaper(reshaper Reshaper, depth int) string {
 }
 
 func ToStrSchema(x schema.Schema, depth int) string {
-	res, err := shared.JSONMarshal[schema.Schema](x)
-	if err != nil {
-		panic(err)
-	}
-	return string(res)
+	return schema.MustMatchSchema(
+		x,
+		func(x *schema.None) string {
+			return "none"
+		},
+		func(x *schema.Bool) string {
+			return fmt.Sprintf("%t", *x)
+		},
+		func(x *schema.Number) string {
+			return fmt.Sprintf("%f", *x)
+		},
+		func(x *schema.String) string {
+			return fmt.Sprintf("%q", *x)
+		},
+		func(x *schema.Binary) string {
+			return fmt.Sprintf("%q", *x)
+		},
+		func(x *schema.List) string {
+			result := strings.Builder{}
+			result.WriteString("[")
+			for i, v := range *x {
+				result.WriteString(ToStrSchema(v, depth+1))
+				if i < len(*x)-1 {
+					result.WriteString(", ")
+				}
+			}
+			result.WriteString("]")
+			return result.String()
+		},
+		func(x *schema.Map) string {
+			result := strings.Builder{}
+			result.WriteString("{")
+			i := 0
+			for key, v := range *x {
+				if i > 0 {
+					result.WriteString(", ")
+				}
+				i++
+				result.WriteString(fmt.Sprintf("%q: ", key))
+				result.WriteString(ToStrSchema(v, depth+1))
+			}
+			result.WriteString("}")
+			return result.String()
+		},
+	)
 }
 
 func ToStrPredicate(predicate Predicate, depth int) string {
