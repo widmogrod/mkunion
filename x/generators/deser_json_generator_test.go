@@ -6,6 +6,8 @@ import (
 	"github.com/widmogrod/mkunion/x/shape"
 	"os"
 	"testing"
+
+	_ "github.com/widmogrod/mkunion/x/generators/testutils"
 )
 
 func TestDeSerJSONGenerator(t *testing.T) {

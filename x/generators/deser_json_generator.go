@@ -146,7 +146,7 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 		func(x *shape.RefName) string {
 			// check if reference is Union,
 			// if yes, then we need to use function from the package called {VariantName}FromJSON
-			y, _ := shape.LookupShape(x)
+			y, _ := shape.LookupShapeOnDisk(x)
 			z, ok := y.(*shape.UnionLike)
 			if ok {
 				pkgName := g.pkgNameAndImport(z)
@@ -179,7 +179,7 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 		func(x *shape.ListLike) string {
 			ref, ok := x.Element.(*shape.RefName)
 			if ok {
-				y, _ := shape.LookupShape(ref)
+				y, _ := shape.LookupShapeOnDisk(ref)
 				z, ok := y.(*shape.UnionLike)
 				if ok {
 					pkgName := g.pkgNameAndImport(z)
@@ -201,7 +201,7 @@ func (g *DeSerJSONGenerator) UnmarshalTemplate(field *shape.FieldLike, depth int
 		func(x *shape.MapLike) string {
 			ref, ok := x.Val.(*shape.RefName)
 			if ok {
-				y, _ := shape.LookupShape(ref)
+				y, _ := shape.LookupShapeOnDisk(ref)
 				z, ok := y.(*shape.UnionLike)
 				if ok {
 					pkgName := g.pkgNameAndImport(z)
@@ -240,7 +240,7 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 		},
 		func(x *shape.RefName) string {
 			// check if reference is Union,
-			y, found := shape.LookupShape(x)
+			y, found := shape.LookupShapeOnDisk(x)
 			if z, ok := y.(*shape.UnionLike); ok {
 				pkgName := g.pkgNameAndImport(z)
 				return g.padLeft(depth+1, fmt.Sprintf("%s%sToJSON(x.%s)", pkgName, z.Name, field.Name))
@@ -269,7 +269,7 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 		func(x *shape.ListLike) string {
 			ref, ok := x.Element.(*shape.RefName)
 			if ok {
-				y, _ := shape.LookupShape(ref)
+				y, _ := shape.LookupShapeOnDisk(ref)
 				z, ok := y.(*shape.UnionLike)
 				if ok {
 					pkgName := g.pkgNameAndImport(z)
@@ -282,7 +282,7 @@ func (g *DeSerJSONGenerator) MarshalTemplate(field *shape.FieldLike, depth int) 
 		func(x *shape.MapLike) string {
 			ref, ok := x.Val.(*shape.RefName)
 			if ok {
-				y, _ := shape.LookupShape(ref)
+				y, _ := shape.LookupShapeOnDisk(ref)
 				z, ok := y.(*shape.UnionLike)
 				if ok {
 					pkgName := g.pkgNameAndImport(z)
