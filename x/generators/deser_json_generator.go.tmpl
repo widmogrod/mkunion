@@ -88,11 +88,24 @@ func {{ $self.VariantName $variant }}FromJSON(x []byte) (*{{ $self.VariantName $
 
 func {{ $self.VariantName $variant }}ToJSON(x *{{ $self.VariantName $variant }}) ([]byte, error) {
 	{{- if $self.IsStruct $variant }}
+	{{- if len $variant.Fields }}
+	var err error
+	{{- end }}
 	{{- range $index, $field := $variant.Fields }}
+		{{- if eq $field.IsPointer true }}
+	var field_{{ $field.Name }} json.RawMessage
+	if x.{{ $field.Name }} != nil {
+		field_{{ $field.Name }}, err = {{ $self.MarshalTemplate $field 2}}
+		if err != nil {
+			 return nil, err
+		}
+	}
+		{{- else }}
 	field_{{ $field.Name }}, err := {{ $self.MarshalTemplate $field 2}}
 	if err != nil {
 		return nil, err
 	}
+		{{- end }}
 	{{- end }}
 	return json.Marshal(map[string]json.RawMessage{
 		{{- range $index, $field := $variant.Fields }}
