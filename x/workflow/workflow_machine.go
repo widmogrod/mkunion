@@ -203,11 +203,13 @@ type (
 	//}
 )
 
+//go:tag serde:"json"
 type ResumeOptions struct {
 	Timeout int64
 	//Timeout time.DelayBySeconds
 }
 
+//go:tag serde:"json"
 type ApplyAwaitOptions struct {
 	Timeout int64
 	//Timeout time.DelayBySeconds

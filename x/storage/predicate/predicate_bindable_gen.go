@@ -250,6 +250,7 @@ func BindValueFromJSON(x []byte) (*BindValue, error) {
 }
 
 func BindValueToJSON(x *BindValue) ([]byte, error) {
+	var err error
 	field_BindName, err := shared.JSONMarshal[BindName](x.BindName)
 	if err != nil {
 		return nil, err
@@ -292,6 +293,7 @@ func LiteralFromJSON(x []byte) (*Literal, error) {
 }
 
 func LiteralToJSON(x *Literal) ([]byte, error) {
+	var err error
 	field_Value, err := schema.SchemaToJSON(x.Value)
 	if err != nil {
 		return nil, err
@@ -329,6 +331,7 @@ func LocatableFromJSON(x []byte) (*Locatable, error) {
 }
 
 func LocatableToJSON(x *Locatable) ([]byte, error) {
+	var err error
 	field_Location, err := json.Marshal(x.Location)
 	if err != nil {
 		return nil, err

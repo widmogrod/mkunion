@@ -319,6 +319,7 @@ func AndFromJSON(x []byte) (*And, error) {
 }
 
 func AndToJSON(x *And) ([]byte, error) {
+	var err error
 	field_L, err := shared.JSONListFromSerializer(x.L, PredicateToJSON)
 	if err != nil {
 		return nil, err
@@ -361,6 +362,7 @@ func OrFromJSON(x []byte) (*Or, error) {
 }
 
 func OrToJSON(x *Or) ([]byte, error) {
+	var err error
 	field_L, err := shared.JSONListFromSerializer(x.L, PredicateToJSON)
 	if err != nil {
 		return nil, err
@@ -403,6 +405,7 @@ func NotFromJSON(x []byte) (*Not, error) {
 }
 
 func NotToJSON(x *Not) ([]byte, error) {
+	var err error
 	field_P, err := PredicateToJSON(x.P)
 	if err != nil {
 		return nil, err
@@ -449,6 +452,7 @@ func CompareFromJSON(x []byte) (*Compare, error) {
 }
 
 func CompareToJSON(x *Compare) ([]byte, error) {
+	var err error
 	field_Location, err := json.Marshal(x.Location)
 	if err != nil {
 		return nil, err

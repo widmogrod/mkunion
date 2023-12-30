@@ -175,6 +175,7 @@ func LocationFieldFromJSON(x []byte) (*LocationField, error) {
 }
 
 func LocationFieldToJSON(x *LocationField) ([]byte, error) {
+	var err error
 	field_Name, err := json.Marshal(x.Name)
 	if err != nil {
 		return nil, err
@@ -212,6 +213,7 @@ func LocationIndexFromJSON(x []byte) (*LocationIndex, error) {
 }
 
 func LocationIndexToJSON(x *LocationIndex) ([]byte, error) {
+	var err error
 	field_Index, err := json.Marshal(x.Index)
 	if err != nil {
 		return nil, err

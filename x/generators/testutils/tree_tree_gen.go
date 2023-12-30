@@ -357,6 +357,7 @@ func BranchFromJSON(x []byte) (*Branch, error) {
 }
 
 func BranchToJSON(x *Branch) ([]byte, error) {
+	var err error
 	field_Lit, err := TreeToJSON(x.Lit)
 	if err != nil {
 		return nil, err
@@ -404,6 +405,7 @@ func LeafFromJSON(x []byte) (*Leaf, error) {
 }
 
 func LeafToJSON(x *Leaf) ([]byte, error) {
+	var err error
 	field_Value, err := json.Marshal(x.Value)
 	if err != nil {
 		return nil, err
