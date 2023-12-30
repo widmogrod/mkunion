@@ -7,6 +7,7 @@ import (
 )
 
 type PkgMap = map[string]string
+type InitFuncs = []string
 
 func GenerateImports(pkgMap PkgMap) string {
 	if len(pkgMap) == 0 {
@@ -28,7 +29,22 @@ func GenerateImports(pkgMap PkgMap) string {
 	result.WriteString(")\n\n")
 
 	return result.String()
+}
 
+func GenerateInitFunc(inits InitFuncs) string {
+	if len(inits) == 0 {
+		return ""
+	}
+
+	result := &strings.Builder{}
+	result.WriteString("func init() {\n")
+
+	for _, init := range inits {
+		result.WriteString(fmt.Sprintf("\t%s\n", init))
+	}
+	result.WriteString("}\n\n")
+
+	return result.String()
 }
 
 func MergePkgMaps(maps ...PkgMap) PkgMap {

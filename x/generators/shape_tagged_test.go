@@ -36,6 +36,16 @@ func ListOf2Shape() shape.Shape {
 		Name: "ListOf2",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "T1",
+				Type: &shape.Any{},
+			},
+			shape.TypeParam{
+				Name: "T2",
+				Type: &shape.Any{},
+			},
+		},
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
@@ -47,7 +57,6 @@ func ListOf2Shape() shape.Shape {
 					Name: "T1",
 					PkgName: "",
 					PkgImportName: "",
-					IsPointer: false,
 				},
 			},
 			{
@@ -57,9 +66,7 @@ func ListOf2Shape() shape.Shape {
 						Name: "T2",
 						PkgName: "",
 						PkgImportName: "",
-						IsPointer: false,
 					},
-					ElementIsPointer: false,
 				},
 			},
 			{
@@ -69,16 +76,17 @@ func ListOf2Shape() shape.Shape {
 						Name: "T1",
 						PkgName: "",
 						PkgImportName: "",
-						IsPointer: false,
 					},
-					KeyIsPointer: false,
 					Val: &shape.RefName{
 						Name: "T2",
 						PkgName: "",
 						PkgImportName: "",
-						IsPointer: false,
 					},
-					ValIsPointer: false,
+				},
+				Tags: map[string]shape.Tag{
+					"json": {
+						Value: "map_of_tree",
+					},
 				},
 			},
 			{
@@ -87,13 +95,11 @@ func ListOf2Shape() shape.Shape {
 					Name: "ListOf",
 					PkgName: "testutils",
 					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: false,
 					Indexed: []shape.Shape{
 						&shape.RefName{
 							Name: "T1",
 							PkgName: "",
 							PkgImportName: "",
-							IsPointer: false,
 						},
 					},
 				},
@@ -110,10 +116,10 @@ func ListOf2Shape() shape.Shape {
 							Name: "T2",
 							PkgName: "",
 							PkgImportName: "",
-							IsPointer: false,
 						},
 					},
 				},
+				IsPointer: true,
 			},
 			{
 				Name: "Time",
@@ -121,7 +127,6 @@ func ListOf2Shape() shape.Shape {
 					Name: "Time",
 					PkgName: "time",
 					PkgImportName: "time",
-					IsPointer: false,
 				},
 			},
 			{
@@ -130,18 +135,12 @@ func ListOf2Shape() shape.Shape {
 					Name: "Schema",
 					PkgName: "schema",
 					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					IsPointer: false,
 				},
 			},
 		},
-		TypeParams: []shape.Shape{
-			&shape.TypeParam{
-				Name: "T1",
-				Type: &shape.Any{},
-			},
-			&shape.TypeParam{
-				Name: "T2",
-				Type: &shape.Any{},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
 			},
 		},
 	}
