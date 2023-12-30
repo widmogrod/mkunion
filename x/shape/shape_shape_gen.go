@@ -132,6 +132,20 @@ func MustMatchShapeR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:shape
+func init() {
+	Register(ShapeShape())
+	Register(AnyShape())
+	Register(RefNameShape())
+	Register(AliasLikeShape())
+	Register(BooleanLikeShape())
+	Register(StringLikeShape())
+	Register(NumberLikeShape())
+	Register(ListLikeShape())
+	Register(MapLikeShape())
+	Register(StructLikeShape())
+	Register(UnionLikeShape())
+}
+
 func ShapeShape() Shape {
 	return &UnionLike{
 		Name:          "Shape",
@@ -175,7 +189,7 @@ func RefNameShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "pkgImportName",
+				Name: "PkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -213,7 +227,7 @@ func AliasLikeShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "pkgImportName",
+				Name: "PkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -227,6 +241,20 @@ func AliasLikeShape() Shape {
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 					IsPointer:     false,
+				},
+			},
+			{
+				Name: "Tags",
+				Type: &MapLike{
+					Key:          &StringLike{},
+					KeyIsPointer: false,
+					Val: &RefName{
+						Name:          "Tag",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     false,
+					},
+					ValIsPointer: false,
 				},
 			},
 		},
@@ -288,8 +316,9 @@ func ListLikeShape() Shape {
 				Type: &BooleanLike{},
 			},
 			{
-				Name: "ArrayLen",
-				Type: &NumberLike{},
+				Name:      "ArrayLen",
+				Type:      &NumberLike{},
+				IsPointer: true,
 			},
 		},
 	}
@@ -346,7 +375,7 @@ func StructLikeShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "pkgImportName",
+				Name: "PkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -373,6 +402,20 @@ func StructLikeShape() Shape {
 					ElementIsPointer: true,
 				},
 			},
+			{
+				Name: "Tags",
+				Type: &MapLike{
+					Key:          &StringLike{},
+					KeyIsPointer: false,
+					Val: &RefName{
+						Name:          "Tag",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     false,
+					},
+					ValIsPointer: false,
+				},
+			},
 		},
 	}
 }
@@ -392,7 +435,7 @@ func UnionLikeShape() Shape {
 				Type: &StringLike{},
 			},
 			{
-				Name: "pkgImportName",
+				Name: "PkgImportName",
 				Type: &StringLike{},
 			},
 			{
@@ -407,11 +450,39 @@ func UnionLikeShape() Shape {
 					ElementIsPointer: false,
 				},
 			},
+			{
+				Name: "Tags",
+				Type: &MapLike{
+					Key:          &StringLike{},
+					KeyIsPointer: false,
+					Val: &RefName{
+						Name:          "Tag",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     false,
+					},
+					ValIsPointer: false,
+				},
+			},
 		},
 	}
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Shape", ShapeFromJSON, ShapeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Any", AnyFromJSON, AnyToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.RefName", RefNameFromJSON, RefNameToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AliasLike", AliasLikeFromJSON, AliasLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.BooleanLike", BooleanLikeFromJSON, BooleanLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StringLike", StringLikeFromJSON, StringLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberLike", NumberLikeFromJSON, NumberLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.ListLike", ListLikeFromJSON, ListLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.MapLike", MapLikeFromJSON, MapLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StructLike", StructLikeFromJSON, StructLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UnionLike", UnionLikeFromJSON, UnionLikeToJSON)
+}
+
 type ShapeUnionJSON struct {
 	Type        string          `json:"$type,omitempty"`
 	Any         json.RawMessage `json:"shape.Any,omitempty"`
@@ -478,7 +549,7 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 		return UnionLikeFromJSON(data.UnionLike)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.Shape: unknown type %s", data.Type)
 }
 
 func ShapeToJSON(x Shape) ([]byte, error) {
@@ -638,7 +709,7 @@ func RefNameFromJSON(x []byte) (*RefName, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "pkgImportName":
+		case "PkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "IsPointer":
 			return json.Unmarshal(value, &result.IsPointer)
@@ -681,7 +752,7 @@ func RefNameToJSON(x *RefName) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"pkgImportName": field_PkgImportName,
+		"PkgImportName": field_PkgImportName,
 		"IsPointer":     field_IsPointer,
 		"Indexed":       field_Indexed,
 	})
@@ -708,7 +779,7 @@ func AliasLikeFromJSON(x []byte) (*AliasLike, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "pkgImportName":
+		case "PkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "IsAlias":
 			return json.Unmarshal(value, &result.IsAlias)
@@ -719,6 +790,8 @@ func AliasLikeFromJSON(x []byte) (*AliasLike, error) {
 			}
 			result.Type = res
 			return nil
+		case "Tags":
+			return json.Unmarshal(value, &result.Tags)
 		}
 
 		return fmt.Errorf("shape.AliasLikeFromJSON: unknown key %s", key)
@@ -748,12 +821,17 @@ func AliasLikeToJSON(x *AliasLike) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	field_Tags, err := json.Marshal(x.Tags)
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"pkgImportName": field_PkgImportName,
+		"PkgImportName": field_PkgImportName,
 		"IsAlias":       field_IsAlias,
 		"Type":          field_Type,
+		"Tags":          field_Tags,
 	})
 }
 func (self *AliasLike) MarshalJSON() ([]byte, error) {
@@ -1002,12 +1080,14 @@ func StructLikeFromJSON(x []byte) (*StructLike, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "pkgImportName":
+		case "PkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "TypeParams":
 			return json.Unmarshal(value, &result.TypeParams)
 		case "Fields":
 			return json.Unmarshal(value, &result.Fields)
+		case "Tags":
+			return json.Unmarshal(value, &result.Tags)
 		}
 
 		return fmt.Errorf("shape.StructLikeFromJSON: unknown key %s", key)
@@ -1037,12 +1117,17 @@ func StructLikeToJSON(x *StructLike) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	field_Tags, err := json.Marshal(x.Tags)
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"pkgImportName": field_PkgImportName,
+		"PkgImportName": field_PkgImportName,
 		"TypeParams":    field_TypeParams,
 		"Fields":        field_Fields,
+		"Tags":          field_Tags,
 	})
 }
 func (self *StructLike) MarshalJSON() ([]byte, error) {
@@ -1067,7 +1152,7 @@ func UnionLikeFromJSON(x []byte) (*UnionLike, error) {
 			return json.Unmarshal(value, &result.Name)
 		case "PkgName":
 			return json.Unmarshal(value, &result.PkgName)
-		case "pkgImportName":
+		case "PkgImportName":
 			return json.Unmarshal(value, &result.PkgImportName)
 		case "Variant":
 			res, err := shared.JSONToListWithDeserializer(value, result.Variant, ShapeFromJSON)
@@ -1076,6 +1161,8 @@ func UnionLikeFromJSON(x []byte) (*UnionLike, error) {
 			}
 			result.Variant = res
 			return nil
+		case "Tags":
+			return json.Unmarshal(value, &result.Tags)
 		}
 
 		return fmt.Errorf("shape.UnionLikeFromJSON: unknown key %s", key)
@@ -1101,11 +1188,16 @@ func UnionLikeToJSON(x *UnionLike) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	field_Tags, err := json.Marshal(x.Tags)
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(map[string]json.RawMessage{
 		"Name":          field_Name,
 		"PkgName":       field_PkgName,
-		"pkgImportName": field_PkgImportName,
+		"PkgImportName": field_PkgImportName,
 		"Variant":       field_Variant,
+		"Tags":          field_Tags,
 	})
 }
 func (self *UnionLike) MarshalJSON() ([]byte, error) {

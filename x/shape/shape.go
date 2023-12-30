@@ -1,5 +1,7 @@
 package shape
 
+// go:generate go run ../../cmd/mkunion/main.go serde
+
 // go:generate go run ../../cmd/mkunion/main.go -name=Shape
 type (
 	Any     struct{}
@@ -62,6 +64,7 @@ type (
 	}
 )
 
+//go:tag serde:"json"
 type TypeParam struct {
 	Name string
 	Type Shape
@@ -256,4 +259,8 @@ func Tags(x Shape) map[string]Tag {
 			return x.Tags
 		},
 	)
+}
+
+func Ptr[A any](x A) *A {
+	return &x
 }
