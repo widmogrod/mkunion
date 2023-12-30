@@ -8,7 +8,7 @@ import (
 
 //go:generate go run ../../cmd/mkunion/main.go serde
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema,shape
+//go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema
 type (
 	None   struct{}
 	Bool   bool

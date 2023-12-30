@@ -2,6 +2,7 @@
 package schema
 
 import "github.com/widmogrod/mkunion/f"
+import "github.com/widmogrod/mkunion/x/shape"
 import "github.com/widmogrod/mkunion/x/shared"
 import "encoding/json"
 import "fmt"
@@ -105,6 +106,128 @@ func MustMatchSchemaR2[TOut1, TOut2 any](
 	f7 func(x *Map) (TOut1, TOut2),
 ) (TOut1, TOut2) {
 	return f.MustMatch7R2(x, f1, f2, f3, f4, f5, f6, f7)
+}
+
+// mkunion-extension:shape
+func init() {
+	shape.Register(SchemaShape())
+	shape.Register(NoneShape())
+	shape.Register(BoolShape())
+	shape.Register(NumberShape())
+	shape.Register(StringShape())
+	shape.Register(BinaryShape())
+	shape.Register(ListShape())
+	shape.Register(MapShape())
+}
+
+func SchemaShape() shape.Shape {
+	return &shape.UnionLike{
+		Name:          "Schema",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Variant: []shape.Shape{
+			NoneShape(),
+			BoolShape(),
+			NumberShape(),
+			StringShape(),
+			BinaryShape(),
+			ListShape(),
+			MapShape(),
+		},
+	}
+}
+
+func NoneShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "None",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+	}
+}
+
+func BoolShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "Bool",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		IsAlias:       false,
+		Type:          &shape.BooleanLike{},
+	}
+}
+
+func NumberShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "Number",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		IsAlias:       false,
+		Type: &shape.NumberLike{
+			Kind: &shape.Float64{},
+		},
+	}
+}
+
+func StringShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "String",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		IsAlias:       false,
+		Type:          &shape.StringLike{},
+	}
+}
+
+func BinaryShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "Binary",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		IsAlias:       false,
+		Type: &shape.ListLike{
+			Element: &shape.NumberLike{
+				Kind: &shape.UInt8{},
+			},
+			ElementIsPointer: false,
+		},
+	}
+}
+
+func ListShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "List",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		IsAlias:       false,
+		Type: &shape.ListLike{
+			Element: &shape.RefName{
+				Name:          "Schema",
+				PkgName:       "schema",
+				PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+				IsPointer:     false,
+			},
+			ElementIsPointer: false,
+		},
+	}
+}
+
+func MapShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "Map",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		IsAlias:       false,
+		Type: &shape.MapLike{
+			Key:          &shape.StringLike{},
+			KeyIsPointer: false,
+			Val: &shape.RefName{
+				Name:          "Schema",
+				PkgName:       "schema",
+				PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+				IsPointer:     false,
+			},
+			ValIsPointer: false,
+		},
+	}
 }
 
 // mkunion-extension:json
