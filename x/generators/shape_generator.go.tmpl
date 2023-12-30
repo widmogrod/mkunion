@@ -3,6 +3,13 @@
 {{ RenderHeader -}}
 {{ RenderImport "github.com/widmogrod/mkunion/x/shape" -}}
 
+func init() {
+	shape.Register({{ .Union.Name }}Shape())
+	{{- range $index, $variant := .Union.Variant }}
+	shape.Register({{ $self.VariantName $variant }}Shape())
+	{{- end }}
+}
+
 func {{ .Union.Name }}Shape() shape.Shape {
 	return &shape.UnionLike{
 		Name: "{{ .Union.Name }}",

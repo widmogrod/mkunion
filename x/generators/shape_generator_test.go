@@ -24,6 +24,14 @@ package testutils
 
 import "github.com/widmogrod/mkunion/x/shape"
 
+func init() {
+	shape.Register(TreeShape())
+	shape.Register(BranchShape())
+	shape.Register(LeafShape())
+	shape.Register(KShape())
+	shape.Register(PShape())
+}
+
 func TreeShape() shape.Shape {
 	return &shape.UnionLike{
 		Name: "Tree",
