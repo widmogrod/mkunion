@@ -35,9 +35,9 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	err = setupDynamoDB(d, tableName)
 	assert.NoError(t, err, "while setting up dynamodb")
 
-	repo := NewDynamoDBRepository[exampleRecord](d, tableName)
+	repo := NewDynamoDBRepository[ExampleRecord](d, tableName)
 	// clean database
-	err = repo.UpdateRecords(UpdateRecords[Record[exampleRecord]]{
+	err = repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
 		Deleting: exampleUpdateRecords.Saving,
 	})
 	assert.NoError(t, err, "while deleting records")
@@ -45,8 +45,8 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	err = repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err, "while saving records")
 
-	result, err := repo.FindingRecords(FindingRecords[Record[exampleRecord]]{
-		RecordType: "exampleRecord",
+	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
+		RecordType: "ExampleRecord",
 		Where: predicate.MustWhere(
 			`Data.Age > :age AND Data.Age < :maxAge`,
 			predicate.ParamBinds{
@@ -63,7 +63,7 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	})
 	assert.NoError(t, err, "while finding records")
 
-	var foundRecords []Record[exampleRecord]
+	var foundRecords []Record[ExampleRecord]
 	for {
 		for _, item := range result.Items {
 			foundRecords = append(foundRecords, item)

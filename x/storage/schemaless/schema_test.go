@@ -7,63 +7,14 @@ import (
 	"testing"
 )
 
-type exampleRecord struct {
-	Name string
-	Age  int
-}
-
-// refactored exampleUpdateRecords that use Save
-var exampleUpdateRecords = Save(
-	Record[exampleRecord]{
-		ID:   "123",
-		Type: "exampleRecord",
-		Data: exampleRecord{
-			Name: "John",
-			Age:  20,
-		},
-	},
-	Record[exampleRecord]{
-		ID:   "124",
-		Type: "exampleRecord",
-		Data: exampleRecord{
-			Name: "Jane",
-			Age:  30,
-		},
-	},
-	Record[exampleRecord]{
-		ID:   "313",
-		Type: "exampleRecord",
-		Data: exampleRecord{
-			Name: "Alice",
-			Age:  39,
-		},
-	},
-	Record[exampleRecord]{
-		ID:   "1234",
-		Type: "exampleRecord",
-		Data: exampleRecord{
-			Name: "Bob",
-			Age:  40,
-		},
-	},
-	Record[exampleRecord]{
-		ID:   "3123",
-		Type: "exampleRecord",
-		Data: exampleRecord{
-			Name: "Zarlie",
-			Age:  39,
-		},
-	},
-)
-
 func TestNewRepository2WithSchema(t *testing.T) {
-	repo := NewInMemoryRepository[exampleRecord]()
+	repo := NewInMemoryRepository[ExampleRecord]()
 	assert.NotNil(t, repo)
 
 	err := repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err)
 
-	result, err := repo.FindingRecords(FindingRecords[Record[exampleRecord]]{
+	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
 		Where: predicate.MustWhere(
 			`Data.Age > :age AND Data.Age < :maxAge`,
 			predicate.ParamBinds{
@@ -106,27 +57,27 @@ func TestNewRepository2WithSchema(t *testing.T) {
 }
 
 func TestRepositoryWithSchema_UpdateRecords_Deletion(t *testing.T) {
-	repo := NewInMemoryRepository[exampleRecord]()
+	repo := NewInMemoryRepository[ExampleRecord]()
 	assert.NotNil(t, repo)
 
 	err := repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err)
 
-	result, err := repo.FindingRecords(FindingRecords[Record[exampleRecord]]{})
+	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{})
 	assert.NoError(t, err)
 	assert.Len(t, result.Items, 5, "should have 5 records")
 	assert.False(t, result.HasNext(), "should not have next page of results")
 
-	deleting := map[string]Record[exampleRecord]{}
+	deleting := map[string]Record[ExampleRecord]{}
 	for _, item := range result.Items {
 		deleting[item.ID] = item
 	}
 
-	err = repo.UpdateRecords(UpdateRecords[Record[exampleRecord]]{
+	err = repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
 		Deleting: deleting,
 	})
 
-	result, err = repo.FindingRecords(FindingRecords[Record[exampleRecord]]{})
+	result, err = repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{})
 	assert.NoError(t, err)
 	for _, item := range result.Items {
 		t.Log(item)

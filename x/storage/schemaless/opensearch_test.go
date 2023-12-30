@@ -27,10 +27,10 @@ To run this test, please set OPENSEARCH_ADDRESS to the address of your OpenSearc
 		},
 	})
 
-	repo := NewOpenSearchRepository[exampleRecord](client, "test-records-index")
+	repo := NewOpenSearchRepository[ExampleRecord](client, "test-records-index")
 
 	// clean database
-	err = repo.UpdateRecords(UpdateRecords[Record[exampleRecord]]{
+	err = repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
 		Deleting: exampleUpdateRecords.Saving,
 	})
 
@@ -39,8 +39,8 @@ To run this test, please set OPENSEARCH_ADDRESS to the address of your OpenSearc
 	err = repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err, "while saving records")
 
-	result, err := repo.FindingRecords(FindingRecords[Record[exampleRecord]]{
-		RecordType: "exampleRecord",
+	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
+		RecordType: "ExampleRecord",
 		Where: predicate.MustWhere(
 			`Data.Age > :age AND Data.Age < :maxAge`,
 			predicate.ParamBinds{
