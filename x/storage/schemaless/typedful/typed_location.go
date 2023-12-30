@@ -9,7 +9,7 @@ import (
 func NewTypedLocation[T any]() (*TypedLocation, error) {
 	s, found := shape.LookupShapeReflectAndIndex[T]()
 	if !found {
-		return nil, fmt.Errorf("typedful.NewTypedLocation: shape not found %T", *new(T))
+		return nil, fmt.Errorf("typedful.NewTypedLocation: shape not found %T; %w", *new(T), shape.ErrShapeNotFound)
 	}
 
 	return &TypedLocation{
@@ -56,7 +56,7 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 				func(y *shape.RefName) []schema.Location {
 					s, ok := shape.LookupShape(y)
 					if !ok {
-						panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s", y.Name))
+						panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s; %w", y.Name, shape.ErrShapeNotFound))
 					}
 
 					return location.wrapLocationShapeAware(loc, s)
@@ -125,7 +125,7 @@ func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []schema.Locatio
 		func(x *shape.RefName) []schema.Location {
 			s, found := shape.LookupShape(x)
 			if !found {
-				panic(fmt.Errorf("shapeToSchemaName: shape.RefName not found %s", x.Name))
+				panic(fmt.Errorf("shapeToSchemaName: shape.RefName not found %s; %w", x.Name, shape.ErrShapeNotFound))
 			}
 			return location.shapeToSchemaName(s)
 		},

@@ -176,7 +176,7 @@ func ToGo[A any](x Schema) A {
 
 	s, found := shape.LookupShape(original)
 	if !found {
-		panic(fmt.Errorf("schema.FromGo: shape.RefName not found %s", v.String()))
+		panic(fmt.Errorf("schema.FromGo: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
 	}
 
 	s = shape.IndexWith(s, original.Indexed)
@@ -196,7 +196,7 @@ func FromGo[A any](x A) Schema {
 
 	s, found := shape.LookupShapeReflectAndIndex[A]()
 	if !found {
-		panic(fmt.Errorf("schema.FromGo: shape.RefName not found for %T", *new(A)))
+		panic(fmt.Errorf("schema.FromGo: shape.RefName not found for %T; %w", *new(A), shape.ErrShapeNotFound))
 	}
 
 	return FromGoReflect(s, reflect.ValueOf(x))
@@ -212,7 +212,9 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 		func(x *shape.RefName) Schema {
 			y, found := shape.LookupShape(x)
 			if !found {
-				panic(fmt.Errorf("schema.FromGoReflect: shape.RefName not found %s", shape.ToGoTypeName(x, shape.WithPkgImportName())))
+				panic(fmt.Errorf("schema.FromGoReflect: shape.RefName not found %s; %w",
+					shape.ToGoTypeName(x, shape.WithPkgImportName()),
+					shape.ErrShapeNotFound))
 			}
 
 			return FromGoReflect(y, yreflect)
@@ -413,7 +415,7 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 		func(x *shape.RefName) (reflect.Value, error) {
 			newShape, found := shape.LookupShape(x)
 			if !found {
-				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.RefName not found %#v", x)
+				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.RefName not found %#v; %w", x, shape.ErrShapeNotFound)
 			}
 
 			return ToGoReflect(newShape, ydata, zreflect)

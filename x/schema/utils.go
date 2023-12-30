@@ -224,7 +224,7 @@ func GetSchemaLocation(data Schema, locations []Location) Schema {
 func Get[A any](data A, location string) (Schema, shape.Shape) {
 	s, found := shape.LookupShapeReflectAndIndex[A]()
 	if !found {
-		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %T", *new(A)))
+		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %T; %w", *new(A), shape.ErrShapeNotFound))
 	}
 
 	sdata := FromGo[A](data)
