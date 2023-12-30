@@ -445,11 +445,3 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 
 	return result.String(), nil
 }
-
-func padLeftTabs(n int, s string) string {
-	lines := strings.Split(s, "\n")
-	for i, line := range lines {
-		lines[i] = strings.Repeat("\t", n) + line
-	}
-	return strings.Join(lines, "\n")
-}
