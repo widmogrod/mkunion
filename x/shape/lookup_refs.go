@@ -13,10 +13,10 @@ import (
 	"sync"
 )
 
-var cache = sync.Map{}
+var shapeRegistry = sync.Map{}
 
 func Register(x Shape) {
-	cache.Store(shapeFullName(x), x)
+	shapeRegistry.Store(shapeFullName(x), x)
 }
 
 func shapeFullName(x Shape) string {
@@ -90,18 +90,27 @@ var (
 	ErrShapeNotFound = fmt.Errorf(`To register shape manually, use shape.Register(myShape) in your package init() function or, use shape.LookupShapeOnDisk(x) to scan your filesystem for shapes.`)
 )
 
+// LookupShape scans registry for shapes.
+// it's suited for runtime and compiled code
 func LookupShape(x *RefName) (Shape, bool) {
 	key := shapeFullName(x)
-	if v, ok := cache.Load(key); ok {
+	if v, ok := shapeRegistry.Load(key); ok {
 		return v.(Shape), true
 	}
+
+	//log.Warnf("shape.LookupShape: %s not found in shapeRegistry, trying to lookup on disk", key)
+	//return LookupShapeOnDisk(x)
 
 	return nil, false
 }
 
+var onDiskCache = sync.Map{}
+
+// LookupShapeOnDisk scans filesystem for shapes.
+// it's suited for generators, that parse AST
 func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 	key := shapeFullName(x)
-	if v, ok := cache.Load(key); ok {
+	if v, ok := onDiskCache.Load(key); ok {
 		return v.(Shape), true
 	}
 
@@ -133,11 +142,11 @@ func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 			}
 
 			for _, y := range inferred.RetrieveShapes() {
-				cache.Store(shapeFullName(y), y)
+				onDiskCache.Store(shapeFullName(y), y)
 				switch z := y.(type) {
 				case *UnionLike:
 					for _, v := range z.Variant {
-						cache.Store(shapeFullName(v), v)
+						onDiskCache.Store(shapeFullName(v), v)
 					}
 				}
 			}
@@ -151,11 +160,8 @@ func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 		return nil, false
 	}
 
-	c := cache
-	_ = c
-
 	// if not found, return nil, false
-	if v, ok := cache.Load(key); ok {
+	if v, ok := onDiskCache.Load(key); ok {
 		return v.(Shape), true
 	}
 
