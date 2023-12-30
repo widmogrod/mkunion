@@ -15,6 +15,10 @@ import (
 
 var cache = sync.Map{}
 
+func Register(x Shape) {
+	cache.Store(shapeFullName(x), x)
+}
+
 func shapeFullName(x Shape) string {
 	return MustMatchShape(
 		x,
@@ -82,7 +86,20 @@ func LookupShapeReflectAndIndex[A any]() (Shape, bool) {
 	return s, true
 }
 
+var (
+	ErrShapeNotFound = fmt.Errorf(`To register shape manually, use shape.Register(myShape) in your package init() function or, use shape.LookupShapeOnDisk(x) to scan your filesystem for shapes.`)
+)
+
 func LookupShape(x *RefName) (Shape, bool) {
+	key := shapeFullName(x)
+	if v, ok := cache.Load(key); ok {
+		return v.(Shape), true
+	}
+
+	return nil, false
+}
+
+func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 	key := shapeFullName(x)
 	if v, ok := cache.Load(key); ok {
 		return v.(Shape), true
@@ -90,7 +107,7 @@ func LookupShape(x *RefName) (Shape, bool) {
 
 	pkgPath, err := findPackagePath(x.PkgImportName)
 	if err != nil {
-		log.Warnf("shape.LookupShape: could not find package path %s", err.Error())
+		log.Warnf("shape.LookupShapeOnDisk: could not find package path %s", err.Error())
 		return nil, false
 	}
 
@@ -112,7 +129,7 @@ func LookupShape(x *RefName) (Shape, bool) {
 
 			inferred, err := InferFromFile(path)
 			if err != nil {
-				return fmt.Errorf("shape.LookupShape: error during infer %w", err)
+				return fmt.Errorf("shape.LookupShapeOnDisk: error during infer %w", err)
 			}
 
 			for _, y := range inferred.RetrieveShapes() {
@@ -130,7 +147,7 @@ func LookupShape(x *RefName) (Shape, bool) {
 		})
 
 	if err != nil {
-		log.Warnf("shape.LookupShape: error during walk %s", err.Error())
+		log.Warnf("shape.LookupShapeOnDisk: error during walk %s", err.Error())
 		return nil, false
 	}
 
