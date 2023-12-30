@@ -85,6 +85,14 @@ func MustMatchPredicateR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:shape
+func init() {
+	shape.Register(PredicateShape())
+	shape.Register(AndShape())
+	shape.Register(OrShape())
+	shape.Register(NotShape())
+	shape.Register(CompareShape())
+}
+
 func PredicateShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Predicate",

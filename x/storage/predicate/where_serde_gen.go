@@ -4,8 +4,13 @@ package predicate
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
+
+func init() {
+	shape.Register(WherePredicatesShape())
+}
 
 var (
 	_ json.Unmarshaler = (*WherePredicates)(nil)
@@ -59,4 +64,35 @@ func (r *WherePredicates) UnmarshalJSON(bytes []byte) error {
 
 		return nil
 	})
+}
+
+func WherePredicatesShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "WherePredicates",
+		PkgName:       "predicate",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Predicate",
+				Type: &shape.RefName{
+					Name:          "Predicate",
+					PkgName:       "predicate",
+					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+				},
+			},
+			{
+				Name: "Params",
+				Type: &shape.RefName{
+					Name:          "ParamBinds",
+					PkgName:       "predicate",
+					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
 }

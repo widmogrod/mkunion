@@ -69,6 +69,12 @@ func MustMatchNumberR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:shape
+func init() {
+	shape.Register(NumberShape())
+	shape.Register(N0Shape())
+	shape.Register(N1Shape())
+}
+
 func NumberShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Number",

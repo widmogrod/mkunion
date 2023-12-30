@@ -77,6 +77,13 @@ func MustMatchAlphabetR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:shape
+func init() {
+	shape.Register(AlphabetShape())
+	shape.Register(A1Shape())
+	shape.Register(B2Shape())
+	shape.Register(C3Shape())
+}
+
 func AlphabetShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Alphabet",

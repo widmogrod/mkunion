@@ -85,6 +85,14 @@ func MustMatchTreeR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:shape
+func init() {
+	shape.Register(TreeShape())
+	shape.Register(BranchShape())
+	shape.Register(LeafShape())
+	shape.Register(KShape())
+	shape.Register(PShape())
+}
+
 func TreeShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Tree",

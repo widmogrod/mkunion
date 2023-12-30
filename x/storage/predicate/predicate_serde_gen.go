@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
+
+func init() {
+	shape.Register(ParamBindsShape())
+}
 
 var (
 	_ json.Unmarshaler = (*ParamBinds)(nil)
@@ -28,4 +33,29 @@ func (r *ParamBinds) UnmarshalJSON(bytes []byte) error {
 	}
 	*r = ParamBinds(result)
 	return nil
+}
+
+func ParamBindsShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "ParamBinds",
+		PkgName:       "predicate",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+		Type: &shape.MapLike{
+			Key: &shape.RefName{
+				Name:          "BindName",
+				PkgName:       "predicate",
+				PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+			},
+			Val: &shape.RefName{
+				Name:          "Schema",
+				PkgName:       "schema",
+				PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+			},
+		},
+	}
 }

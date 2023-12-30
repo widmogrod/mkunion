@@ -78,6 +78,13 @@ func MustMatchBindableR2[TOut1, TOut2 any](
 }
 
 // mkunion-extension:shape
+func init() {
+	shape.Register(BindableShape())
+	shape.Register(BindValueShape())
+	shape.Register(LiteralShape())
+	shape.Register(LocatableShape())
+}
+
 func BindableShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Bindable",
