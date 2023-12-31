@@ -2,6 +2,7 @@ package generators
 
 import (
 	"fmt"
+	"github.com/widmogrod/mkunion/x/shape"
 	"sort"
 	"strings"
 )
@@ -74,4 +75,40 @@ func padLeftTabs2(n int, s string) string {
 		lines[i] = strings.Repeat("\t", n) + line
 	}
 	return strings.Join(lines, "\n")
+}
+
+func TypeNameIfSupports(s shape.Shape) (string, bool) {
+	return shape.MustMatchShapeR2(
+		s,
+		func(x *shape.Any) (string, bool) {
+			return "", false
+		},
+		func(x *shape.RefName) (string, bool) {
+			return "", false
+		},
+		func(x *shape.AliasLike) (string, bool) {
+			return x.Name, true
+		},
+		func(x *shape.BooleanLike) (string, bool) {
+			return "", false
+		},
+		func(x *shape.StringLike) (string, bool) {
+			return "", false
+		},
+		func(x *shape.NumberLike) (string, bool) {
+			return "", false
+		},
+		func(x *shape.ListLike) (string, bool) {
+			return "", false
+		},
+		func(x *shape.MapLike) (string, bool) {
+			return "", false
+		},
+		func(x *shape.StructLike) (string, bool) {
+			return x.Name, true
+		},
+		func(x *shape.UnionLike) (string, bool) {
+			return x.Name, true
+		},
+	)
 }

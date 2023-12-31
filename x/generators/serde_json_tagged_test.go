@@ -90,11 +90,13 @@ func (r *ListOf2[T1,T2]) MarshalJSON() ([]byte, error) {
 	}
 	result["ListOf"] = fieldListOf
 
-	fieldListOfPtr, err := shared.JSONMarshal[*ListOf[T2]](r.ListOfPtr)
-	if err != nil {
-		return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field ListOfPtr; %w", err)
+	if r.ListOfPtr != nil {
+		fieldListOfPtr, err := shared.JSONMarshal[*ListOf[T2]](r.ListOfPtr)
+		if err != nil {
+			return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field ListOfPtr; %w", err)
+		}
+		result["ListOfPtr"] = fieldListOfPtr
 	}
-	result["ListOfPtr"] = fieldListOfPtr
 
 	fieldTime, err := shared.JSONMarshal[time.Time](r.Time)
 	if err != nil {
@@ -216,6 +218,7 @@ func (r *ListOf2[T1,T2]) UnmarshalJSON(bytes []byte) error {
 
 `, result)
 }
+
 func TestNewSerdeJSONTagged_Alias(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	if err != nil {

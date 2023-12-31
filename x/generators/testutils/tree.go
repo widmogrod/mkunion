@@ -13,6 +13,7 @@ type (
 		Lit  Tree
 		List []Tree
 		Map  map[string]Tree
+		Of   *ListOf[Tree] `json:"just_of"`
 	}
 	Leaf struct{ Value int64 }
 	K    string

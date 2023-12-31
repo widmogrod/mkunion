@@ -150,8 +150,32 @@ func NewVisitorGenerator(union *shape.UnionLike, helper *Helpers) *VisitorGenera
 }
 
 type VisitorGenerator struct {
-	Union    *shape.UnionLike
-	template *template.Template
+	Union                 *shape.UnionLike
+	template              *template.Template
+	skipImportsAndPackage bool
+}
+
+func (g *VisitorGenerator) SkipImportsAndPackage(flag bool) {
+	g.skipImportsAndPackage = flag
+}
+
+func (g *VisitorGenerator) GenerateImports(pkgMap PkgMap) (string, error) {
+	return GenerateImports(pkgMap), nil
+}
+
+func (g *VisitorGenerator) ExtractImports(x shape.Shape) PkgMap {
+	// add default and necessary imports
+	pkgMap := g.defaultImportsFor(x)
+
+	// remove self from importing
+	delete(pkgMap, shape.ToGoPkgName(x))
+	return pkgMap
+}
+
+func (g *VisitorGenerator) defaultImportsFor(x shape.Shape) PkgMap {
+	return map[string]string{
+		"f": "github.com/widmogrod/mkunion/f",
+	}
 }
 
 func (g *VisitorGenerator) VariantName(x shape.Shape) string {
@@ -160,6 +184,17 @@ func (g *VisitorGenerator) VariantName(x shape.Shape) string {
 
 func (g *VisitorGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
+
+	if !g.skipImportsAndPackage {
+		result.WriteString(fmt.Sprintf("package %s\n\n", shape.ToGoPkgName(g.Union)))
+
+		pkgMap := g.ExtractImports(g.Union)
+		impPart, err := g.GenerateImports(pkgMap)
+		if err != nil {
+			return nil, fmt.Errorf("generators.VisitorGenerator.Generate: when generating imports; %w", err)
+		}
+		result.WriteString(impPart)
+	}
 
 	err := g.template.ExecuteTemplate(result, "visitor_generator.go.tmpl", g)
 

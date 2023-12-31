@@ -1,9 +1,64 @@
 package testutils
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/shape"
 	"testing"
 )
+
+func TestTree_JSON(t *testing.T) {
+	var subject Tree = &Branch{
+		Lit: &Leaf{Value: 111},
+		List: []Tree{
+			shape.Ptr(K("kk")),
+		},
+		Map: map[string]Tree{
+			"op": &Leaf{
+				Value: 333,
+			},
+		},
+		Of: nil,
+	}
+
+	result, err := TreeToJSON(subject)
+	assert.NoError(t, err)
+	t.Log(string(result))
+
+	expected := `{
+  "$type": "testutils.Branch",
+  "testutils.Branch": {
+    "List": [
+      {
+        "$type": "testutils.K",
+        "testutils.K": "kk"
+      }
+    ],
+    "Lit": {
+      "$type": "testutils.Leaf",
+      "testutils.Leaf": {
+        "Value": 111
+      }
+    },
+    "Map": {
+      "op": {
+        "$type": "testutils.Leaf",
+        "testutils.Leaf": {
+          "Value": 333
+        }
+      }
+    }
+  }
+}`
+	assert.JSONEq(t, expected, string(result))
+
+	output, err := TreeFromJSON([]byte(expected))
+	assert.NoError(t, err)
+
+	if diff := cmp.Diff(subject, output); diff != "" {
+		t.Errorf("TreeFromJSON() mismatch (-want +got):\n%s", diff)
+	}
+}
 
 func TestListOf2_SimpleType(t *testing.T) {
 	subject := ListOf2[string, int]{

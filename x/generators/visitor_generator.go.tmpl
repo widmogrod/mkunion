@@ -1,8 +1,5 @@
 {{- $self := . -}}
 
-{{ RenderHeader -}}
-{{ RenderImport "github.com/widmogrod/mkunion/f" -}}
-
 {{- $name := $self.Union.Name }}
 type {{ $name }}Visitor interface {
 	{{- range $index, $variant := .Union.Variant }}

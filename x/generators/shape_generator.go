@@ -16,14 +16,95 @@ var (
 
 func NewShapeGenerator(union *shape.UnionLike, helper *Helpers) *ShapeGenerator {
 	return &ShapeGenerator{
-		Union:    union,
-		template: template.Must(template.New("shape_generator.go.tmpl").Funcs(helper.Func()).Parse(shapeTmpl)),
+		Union:                 union,
+		template:              template.Must(template.New("shape_generator.go.tmpl").Funcs(helper.Func()).Parse(shapeTmpl)),
+		skipImportsAndPackage: false,
+		skipInitFunc:          false,
 	}
 }
 
 type ShapeGenerator struct {
-	Union    *shape.UnionLike
-	template *template.Template
+	Union                 *shape.UnionLike
+	template              *template.Template
+	skipImportsAndPackage bool
+	skipInitFunc          bool
+}
+
+func (g *ShapeGenerator) SkipImportsAndPackage(flag bool) {
+	g.skipImportsAndPackage = flag
+}
+
+func (g *ShapeGenerator) SkipInitFunc(flag bool) {
+	g.skipInitFunc = flag
+}
+
+func (g *ShapeGenerator) GenerateImports(pkgMap PkgMap) (string, error) {
+	return GenerateImports(pkgMap), nil
+}
+
+func (g *ShapeGenerator) ExtractImports(x shape.Shape) PkgMap {
+	// add default and necessary imports
+	pkgMap := g.defaultImportsFor(x)
+
+	// remove self from importing
+	delete(pkgMap, shape.ToGoPkgName(x))
+	return pkgMap
+}
+
+func (g *ShapeGenerator) defaultImportsFor(x shape.Shape) PkgMap {
+	return map[string]string{
+		"shape": "github.com/widmogrod/mkunion/x/shape",
+	}
+}
+
+func (g *ShapeGenerator) ExtractImportFuncs(s shape.Shape) []string {
+	return shape.MustMatchShape(
+		s,
+		func(x *shape.Any) []string {
+			return nil
+		},
+		func(x *shape.RefName) []string {
+			return nil
+		},
+		func(x *shape.AliasLike) []string {
+			return []string{
+				fmt.Sprintf("shape.Register(%sShape())", x.Name),
+			}
+		},
+		func(x *shape.BooleanLike) []string {
+			return nil
+		},
+		func(x *shape.StringLike) []string {
+			return nil
+		},
+		func(x *shape.NumberLike) []string {
+			return nil
+		},
+		func(x *shape.ListLike) []string {
+			return nil
+		},
+		func(x *shape.MapLike) []string {
+			return nil
+		},
+		func(x *shape.StructLike) []string {
+			return []string{
+				fmt.Sprintf("shape.Register(%sShape())", x.Name),
+			}
+		},
+		func(x *shape.UnionLike) []string {
+			result := []string{
+				fmt.Sprintf("shape.Register(%sShape())", x.Name),
+			}
+			for _, variant := range x.Variant {
+				result = append(result, g.ExtractImportFuncs(variant)...)
+			}
+			return result
+		},
+	)
+}
+
+func (g *ShapeGenerator) GenerateInitFunc(init []string) (string, error) {
+	return GenerateInitFunc(init), nil
 }
 
 func (g *ShapeGenerator) ident(d int) string {
@@ -243,6 +324,27 @@ func (g *ShapeGenerator) fprintNumberKind(result *bytes.Buffer, kind shape.Numbe
 
 func (g *ShapeGenerator) Generate() ([]byte, error) {
 	result := &bytes.Buffer{}
+
+	if !g.skipImportsAndPackage {
+		result.WriteString(fmt.Sprintf("package %s\n\n", shape.ToGoPkgName(g.Union)))
+
+		pkgMap := g.ExtractImports(g.Union)
+		impPart, err := g.GenerateImports(pkgMap)
+		if err != nil {
+			return nil, fmt.Errorf("generators.ShapeGenerator.Generate: when generating imports; %w", err)
+		}
+		result.WriteString(impPart)
+	}
+
+	if !g.skipInitFunc {
+		inits := g.ExtractImportFuncs(g.Union)
+		varPart, err := g.GenerateInitFunc(inits)
+		if err != nil {
+			return nil, fmt.Errorf("generators.ShapeGenerator.Generate: when generating func init(); %w", err)
+		}
+		result.WriteString(varPart)
+	}
+
 	err := g.template.ExecuteTemplate(result, "shape_generator.go.tmpl", g)
 	if err != nil {
 		return nil, err

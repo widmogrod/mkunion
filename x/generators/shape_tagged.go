@@ -96,7 +96,7 @@ func (g *ShapeTagged) defaultImportsFor(x shape.Shape) PkgMap {
 }
 
 func (g *ShapeTagged) ExtractImportFuncs(s shape.Shape) []string {
-	name, supports := g.TypeNameIfSupports(s)
+	name, supports := TypeNameIfSupports(s)
 	if !supports {
 		return nil
 	}
@@ -111,7 +111,7 @@ func (g *ShapeTagged) GenerateInitFunc(init []string) (string, error) {
 }
 
 func (g *ShapeTagged) GenerateShapeFunc(s shape.Shape) (string, error) {
-	name, supports := g.TypeNameIfSupports(s)
+	name, supports := TypeNameIfSupports(s)
 	if !supports {
 		return "", fmt.Errorf("generators.ShapeTagged.GenerateShapeFunc: %w", ErrNotSupported)
 	}
@@ -123,42 +123,6 @@ func (g *ShapeTagged) GenerateShapeFunc(s shape.Shape) (string, error) {
 	fmt.Fprintf(result, "}\n")
 
 	return result.String(), nil
-}
-
-func (g *ShapeTagged) TypeNameIfSupports(s shape.Shape) (string, bool) {
-	return shape.MustMatchShapeR2(
-		s,
-		func(x *shape.Any) (string, bool) {
-			return "", false
-		},
-		func(x *shape.RefName) (string, bool) {
-			return "", false
-		},
-		func(x *shape.AliasLike) (string, bool) {
-			return x.Name, true
-		},
-		func(x *shape.BooleanLike) (string, bool) {
-			return "", false
-		},
-		func(x *shape.StringLike) (string, bool) {
-			return "", false
-		},
-		func(x *shape.NumberLike) (string, bool) {
-			return "", false
-		},
-		func(x *shape.ListLike) (string, bool) {
-			return "", false
-		},
-		func(x *shape.MapLike) (string, bool) {
-			return "", false
-		},
-		func(x *shape.StructLike) (string, bool) {
-			return x.Name, true
-		},
-		func(x *shape.UnionLike) (string, bool) {
-			return x.Name, true
-		},
-	)
 }
 
 func ShapeToString(x shape.Shape) string {
