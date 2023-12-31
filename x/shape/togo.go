@@ -187,7 +187,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 				result = fmt.Sprintf("%s[%s]", result, strings.Join(names, ","))
 			}
 
-			return result
+			return WrapPointerIf(result, x.IsPointer)
 		},
 		func(x *AliasLike) string {
 			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
@@ -333,6 +333,22 @@ func WrapPointerIf(name string, isPointer bool) string {
 		return fmt.Sprintf("*%s", name)
 	}
 	return name
+}
+
+func WrapPointerIfField(name string, field *FieldLike) string {
+	if !field.IsPointer {
+		return name
+	}
+
+	switch typ := field.Type.(type) {
+	case *RefName:
+		if typ.IsPointer {
+			// because pointer was already applied
+			return name
+		}
+	}
+
+	return fmt.Sprintf("*%s", name)
 }
 
 func ExtractPkgImportNames(x Shape) map[string]string {
