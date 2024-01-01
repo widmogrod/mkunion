@@ -1,11 +1,5 @@
 package schema
 
-import (
-	"encoding/json"
-	"fmt"
-	"github.com/widmogrod/mkunion/x/shared"
-)
-
 //go:generate go run ../../cmd/mkunion/main.go serde
 
 //go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema
@@ -18,36 +12,6 @@ type (
 	List   []Schema
 	Map    map[string]Schema
 )
-
-var (
-	_ json.Unmarshaler = (*Map)(nil)
-	_ json.Marshaler   = (*Map)(nil)
-)
-
-func (x *Map) UnmarshalJSON(bytes []byte) error {
-	*x = make(Map)
-	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
-		val, err := SchemaFromJSON(value)
-		if err != nil {
-			return fmt.Errorf("schema.Map.UnmarshalJSON: %w", err)
-		}
-
-		(*x)[key] = val
-		return nil
-	})
-}
-
-func (x *Map) MarshalJSON() ([]byte, error) {
-	result := make(map[string]json.RawMessage)
-	for key, value := range *x {
-		bytes, err := SchemaToJSON(value)
-		if err != nil {
-			return nil, fmt.Errorf("schema.Map.MarshalJSON: %w", err)
-		}
-		result[key] = bytes
-	}
-	return json.Marshal(result)
-}
 
 //go:tag serde:"json"
 type Field struct {
