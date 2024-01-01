@@ -9,23 +9,23 @@ func TestUnmarshal(t *testing.T) {
 	val := `{
   "$type": "workflow.Flow",
   "workflow.Flow": {
-    "Name": "hello_world",
     "Arg": "input",
     "Body": [
       {
         "$type": "workflow.Choose",
         "workflow.Choose": {
+          "Else": [],
           "ID": "choose1",
           "If": {
             "$type": "workflow.Compare",
             "workflow.Compare": {
-              "Operation": "=",
               "Left": {
                 "$type": "workflow.GetValue",
                 "workflow.GetValue": {
                   "Path": "input"
                 }
               },
+              "Operation": "=",
               "Right": {
                 "$type": "workflow.SetValue",
                 "workflow.SetValue": {
@@ -53,21 +53,16 @@ func TestUnmarshal(t *testing.T) {
                 }
               }
             }
-          ],
-          "Else": null
+          ]
         }
       },
       {
         "$type": "workflow.Assign",
         "workflow.Assign": {
           "ID": "assign1",
-          "VarOk": "res",
-          "VarErr": "",
           "Val": {
             "$type": "workflow.Apply",
             "workflow.Apply": {
-              "ID": "apply1",
-              "Name": "concat",
               "Args": [
                 {
                   "$type": "workflow.SetValue",
@@ -85,9 +80,12 @@ func TestUnmarshal(t *testing.T) {
                   }
                 }
               ],
-              "Await": null
+              "ID": "apply1",
+              "Name": "concat"
             }
-          }
+          },
+          "VarErr": "",
+          "VarOk": "res"
         }
       },
       {
@@ -102,16 +100,17 @@ func TestUnmarshal(t *testing.T) {
           }
         }
       }
-    ]
+    ],
+    "Name": "hello_world"
   }
-}`
+}
+`
 
 	res, err := WorflowFromJSON([]byte(val))
 	assert.NoError(t, err)
 
 	out, err := WorflowToJSON(res)
 	assert.NoError(t, err)
-
 	t.Log(string(out))
 
 	assert.JSONEq(t, val, string(out))
@@ -201,12 +200,23 @@ func TestSecond(t *testing.T) {
       }
     },
     "Input": {
+     "$type": "schema.Map",
       "schema.Map": {
-		"prompt": {"schema.String": "hello world"},
-		"width": {"schema.Number": 100},
-		"height": {"schema.Number": 100}
+        "height": {
+          "$type": "schema.Number",
+          "schema.Number": 100
+        },
+        "prompt": {
+          "$type": "schema.String",
+          "schema.String": "hello world"
+        },
+        "width": {
+          "$type": "schema.Number",
+          "schema.Number": 100
+        }
       }
-    }
+    },
+    "RunOption": null
   }
 }`
 
@@ -218,4 +228,5 @@ func TestSecond(t *testing.T) {
 
 	t.Log(string(out))
 
+	assert.JSONEq(t, val, string(out))
 }
