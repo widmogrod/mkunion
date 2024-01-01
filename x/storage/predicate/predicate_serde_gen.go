@@ -19,20 +19,31 @@ var (
 )
 
 func (r *ParamBinds) MarshalJSON() ([]byte, error) {
-	result, err := shared.JSONMarshal[map[BindName]schema.Schema](map[BindName]schema.Schema(*r))
+	fieldMap := make(map[string]json.RawMessage)
+	for k, v := range *r {
+		key, value, err := shared.JSONMarshalMap[BindName, schema.Schema](k, v)
+		if err != nil {
+			return nil, fmt.Errorf("predicate.ParamBinds.MarshalJSON:; %w", err)
+		}
+		fieldMap[key] = value
+	}
+	result, err := json.Marshal(fieldMap)
 	if err != nil {
-		return nil, fmt.Errorf("predicate.ParamBinds.MarshalJSON: %w", err)
+		return nil, fmt.Errorf("predicate.ParamBinds.MarshalJSON:; %w", err)
 	}
 	return result, nil
 }
 
 func (r *ParamBinds) UnmarshalJSON(bytes []byte) error {
-	result, err := shared.JSONUnmarshal[map[BindName]schema.Schema](bytes)
-	if err != nil {
-		return fmt.Errorf("predicate.ParamBinds.UnmarshalJSON: %w", err)
-	}
-	*r = ParamBinds(result)
-	return nil
+	*r = make(ParamBinds)
+	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
+		k, v, err := shared.JSONUnmarshalMap[BindName, schema.Schema](key, value)
+		if err != nil {
+			return fmt.Errorf("predicate.ParamBinds.UnmarshalJSON: key %s; %w", key, err)
+		}
+		(*r)[k] = v
+		return nil
+	})
 }
 
 func ParamBindsShape() shape.Shape {
