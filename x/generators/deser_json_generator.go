@@ -143,6 +143,11 @@ func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
 }
 
 func (g *DeSerJSONGenerator) Serde(x shape.Shape) string {
+	//switch x.(type) {
+	//case *shape.AliasLike:
+	//	return ""
+	//}
+
 	serde := NewSerdeJSONTagged(x)
 	serde.SkipImportsAndPackage(true)
 	result, err := serde.Generate()

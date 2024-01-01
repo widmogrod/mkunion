@@ -18,6 +18,9 @@ type (
 	Leaf struct{ Value int64 }
 	K    string
 	P    ListOf2[ListOf[any], *ListOf2[int64, *time.Duration]]
+	Ma   map[string]Tree
+	La   []Tree
+	Ka   []map[string]Tree
 )
 
 //go:tag serde:"json"

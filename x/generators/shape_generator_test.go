@@ -31,6 +31,9 @@ func init() {
 	shape.Register(LeafShape())
 	shape.Register(KShape())
 	shape.Register(PShape())
+	shape.Register(MaShape())
+	shape.Register(LaShape())
+	shape.Register(KaShape())
 }
 
 func TreeShape() shape.Shape {
@@ -43,6 +46,9 @@ func TreeShape() shape.Shape {
 			LeafShape(),
 			KShape(),
 			PShape(),
+			MaShape(),
+			LaShape(),
+			KaShape(),
 		},
 	}
 }
@@ -174,6 +180,67 @@ func PShape() shape.Shape {
 					},
 				},
 			},
+		},
+	}
+}
+
+func MaShape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "Ma",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias: false,
+		Type: &shape.MapLike{
+			Key: &shape.StringLike{},
+			KeyIsPointer: false,
+			Val: &shape.RefName{
+				Name: "Tree",
+				PkgName: "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				IsPointer: false,
+			},
+			ValIsPointer: false,
+		},
+	}
+}
+
+func LaShape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "La",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias: false,
+		Type: &shape.ListLike{
+			Element: &shape.RefName{
+				Name: "Tree",
+				PkgName: "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				IsPointer: false,
+			},
+			ElementIsPointer: false,
+		},
+	}
+}
+
+func KaShape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "Ka",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias: false,
+		Type: &shape.ListLike{
+			Element: &shape.MapLike{
+				Key: &shape.StringLike{},
+				KeyIsPointer: false,
+				Val: &shape.RefName{
+					Name: "Tree",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer: false,
+				},
+				ValIsPointer: false,
+			},
+			ElementIsPointer: false,
 		},
 	}
 }

@@ -61,6 +61,10 @@ func MergePkgMaps(maps ...PkgMap) PkgMap {
 func padLeftTabs(n int, s string) string {
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
+		if line == "" {
+			// don't add tabs to empty lines
+			continue
+		}
 		lines[i] = strings.Repeat("\t", n) + line
 	}
 	return strings.Join(lines, "\n")
@@ -70,6 +74,10 @@ func padLeftTabs2(n int, s string) string {
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
 		if i == 0 {
+			continue
+		}
+		if line == "" {
+			// don't add tabs to empty lines
 			continue
 		}
 		lines[i] = strings.Repeat("\t", n) + line

@@ -1,7 +1,9 @@
 package generators
 
 import (
+	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/shape"
 	"strings"
 )
@@ -162,6 +164,10 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 	)
 }
 
+var (
+	ErrSkipGeneration = fmt.Errorf("skipping generation")
+)
+
 func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 	typeName := shape.ToGoTypeName(x, shape.WithRootPackage(shape.ToGoPkgName(x)))
 	errorContext := fmt.Sprintf(`%s.MarshalJSON:`, shape.ToGoTypeName(x))
@@ -181,20 +187,46 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 		},
 		func(y *shape.AliasLike) (string, error) {
 			if y.IsAlias {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSON: generation of marshaller for alias types is not supported")
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSON: generation of marshaller for alias type '%s = %s' is not supported; %w",
+					y.Name,
+					shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(x))),
+					ErrSkipGeneration,
+				)
 			}
 
 			fieldTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(x)))
 
-			result := &strings.Builder{}
-			result.WriteString(fmt.Sprintf("\tresult, err := shared.JSONMarshal[%s](%s(*r))\n", fieldTypeName, fieldTypeName))
-			result.WriteString("\tif err != nil {\n")
-			result.WriteString("\t\treturn nil, fmt.Errorf(\"" + errorContext + " %w\", err)\n")
-			result.WriteString("\t}\n")
-			result.WriteString("\treturn result, nil\n")
+			switch z := y.Type.(type) {
+			case *shape.MapLike:
+				keyTypeName := shape.ToGoTypeName(z.Key, shape.WithRootPackage(shape.ToGoPkgName(x)))
+				valTypeName := shape.ToGoTypeName(z.Val, shape.WithRootPackage(shape.ToGoPkgName(x)))
 
-			return result.String(), nil
+				result := &strings.Builder{}
+				result.WriteString(fmt.Sprintf("\tfieldMap := make(map[string]json.RawMessage)\n"))
+				result.WriteString(fmt.Sprintf("\tfor k, v := range *r {\n"))
+				result.WriteString(fmt.Sprintf("\t\tkey, value, err := shared.JSONMarshalMap[%s, %s](k, v)\n", keyTypeName, valTypeName))
+				result.WriteString(fmt.Sprintf("\t\tif err != nil {\n"))
+				result.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"" + errorContext + "; %%w\", err)\n"))
+				result.WriteString(fmt.Sprintf("\t\t}\n"))
+				result.WriteString(fmt.Sprintf("\t\tfieldMap[key] = value\n"))
+				result.WriteString(fmt.Sprintf("\t}\n"))
+				result.WriteString(fmt.Sprintf("\tresult, err := json.Marshal(fieldMap)\n"))
+				result.WriteString(fmt.Sprintf("\tif err != nil {\n"))
+				result.WriteString(fmt.Sprintf("\t\treturn nil, fmt.Errorf(\"" + errorContext + "; %%w\", err)\n"))
+				result.WriteString(fmt.Sprintf("\t}\n"))
+				result.WriteString(fmt.Sprintf("\treturn result, nil\n"))
+				return result.String(), nil
 
+			default:
+				result := &strings.Builder{}
+				result.WriteString(fmt.Sprintf("\tresult, err := shared.JSONMarshal[%s](*r)\n", fieldTypeName))
+				result.WriteString(fmt.Sprintf("\tif err != nil {\n"))
+				result.WriteString(fmt.Sprintf("\t\treturn nil, fmt.Errorf(\"" + errorContext + " %%w\", err)\n"))
+				result.WriteString(fmt.Sprintf("\t}\n"))
+				result.WriteString(fmt.Sprintf("\treturn result, nil\n"))
+
+				return result.String(), nil
+			}
 		},
 		func(y *shape.BooleanLike) (string, error) {
 			panic("not implemented")
@@ -247,24 +279,16 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 
 					result.WriteString(fmt.Sprintf("\tfield%s := make(map[string]json.RawMessage)\n", field.Name))
 					result.WriteString(fmt.Sprintf("\tfor k, v := range r.%s {\n", field.Name))
-					result.WriteString(fmt.Sprintf("\t\tvar key any\n"))
-					result.WriteString(fmt.Sprintf("\t\tkey, ok := any(k).(string)\n"))
-					result.WriteString(fmt.Sprintf("\t\tif !ok {\n"))
-					result.WriteString(fmt.Sprintf("\t\t\tkey, err = shared.JSONMarshal[%s](k)\n", keyTypeName))
-					result.WriteString("\t\t\tif err != nil {\n")
-					result.WriteString("\t\t\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "[%#v] key decoding; %w\", key, err)\n")
-					result.WriteString("\t\t\t}\n")
-					result.WriteString("\t\t\tkey = string(key.([]byte))\n")
-					result.WriteString("\t\t}\n\n")
-					result.WriteString(fmt.Sprintf("\t\tfield%s[key.(string)], err = shared.JSONMarshal[%s](v)\n", field.Name, valTypeName))
-					result.WriteString("\t\tif err != nil {\n")
-					result.WriteString("\t\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "[%#v] value decoding %#v; %w\", key, v, err)\n")
-					result.WriteString("\t\t}\n")
-					result.WriteString("\t}\n")
+					result.WriteString(fmt.Sprintf("\t\tkey, value, err := shared.JSONMarshalMap[%s, %s](k, v)\n", keyTypeName, valTypeName))
+					result.WriteString(fmt.Sprintf("\t\tif err != nil {\n"))
+					result.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"" + errorContext + "; %%w\", err)\n"))
+					result.WriteString(fmt.Sprintf("\t\t}\n"))
+					result.WriteString(fmt.Sprintf("\t\tfield%s[key] = value\n", field.Name))
+					result.WriteString(fmt.Sprintf("\t}\n"))
 					result.WriteString(fmt.Sprintf("\tresult[\"%s\"], err = json.Marshal(field%s)\n", jsonFieldName, field.Name))
-					result.WriteString("\tif err != nil {\n")
-					result.WriteString("\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "; %w\", err)\n")
-					result.WriteString("\t}\n")
+					result.WriteString(fmt.Sprintf("\tif err != nil {\n"))
+					result.WriteString(fmt.Sprintf("\t\treturn nil, fmt.Errorf(\"" + errorContext + " field " + field.Name + "; %%w\", err)\n"))
+					result.WriteString(fmt.Sprintf("\t}\n"))
 
 				default:
 					fieldContent := strings.Builder{}
@@ -277,7 +301,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 					if field.IsPointer {
 						result.WriteString(fmt.Sprintf("\tif r.%s != nil {\n", field.Name))
 						result.WriteString(padLeftTabs(1, fieldContent.String()))
-						result.WriteString(fmt.Sprintf("}\n"))
+						result.WriteString(fmt.Sprintf("\t}\n"))
 					} else {
 						result.WriteString(fieldContent.String())
 					}
@@ -300,6 +324,10 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 	)
 
 	if err != nil {
+		if errors.Is(err, ErrSkipGeneration) {
+			log.Warnf("generators.SerdeJSONTagged.GenerateMarshalJSON: skipping generation of marshaller for type '%s'; %s", typeName, err)
+			return "", nil
+		}
 		return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSON: %w", err)
 	}
 
@@ -328,20 +356,43 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 		},
 		func(y *shape.AliasLike) (string, error) {
 			if y.IsAlias {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSON: generation of unmarshaller for alias types is not supported")
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSON: generation of unmarshaller for alias type '%s = %s' is not supported; %w",
+					y.Name,
+					shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(x))),
+					ErrSkipGeneration,
+				)
 			}
 
-			fieldTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(x)))
+			switch z := y.Type.(type) {
+			case *shape.MapLike:
+				keyType := shape.ToGoTypeName(z.Key, shape.WithRootPackage(shape.ToGoPkgName(x)))
+				valType := shape.ToGoTypeName(z.Val, shape.WithRootPackage(shape.ToGoPkgName(x)))
 
-			result := &strings.Builder{}
-			result.WriteString(fmt.Sprintf("\tresult, err := shared.JSONUnmarshal[%s](bytes)\n", fieldTypeName))
-			result.WriteString("\tif err != nil {\n")
-			result.WriteString("\t\treturn fmt.Errorf(\"" + errorContext + " %w\", err)\n")
-			result.WriteString("\t}\n")
-			result.WriteString(fmt.Sprintf("\t*r = %s(result)\n", typeName))
-			result.WriteString("\treturn nil\n")
+				result := &strings.Builder{}
+				result.WriteString(fmt.Sprintf("\t*r = make(%s)\n", typeName))
+				result.WriteString(fmt.Sprintf("\treturn shared.JSONParseObject(bytes, func(key string, value []byte) error {\n"))
+				result.WriteString(fmt.Sprintf("\t\tk, v, err := shared.JSONUnmarshalMap[%s, %s](key, value)\n", keyType, valType))
+				result.WriteString(fmt.Sprintf("\t\tif err != nil {\n"))
+				result.WriteString(fmt.Sprintf("\t\t\treturn fmt.Errorf(\"" + errorContext + " key %%s; %%w\", key, err)\n"))
+				result.WriteString(fmt.Sprintf("\t\t}\n"))
+				result.WriteString(fmt.Sprintf("\t\t(*r)[k] = v\n"))
+				result.WriteString(fmt.Sprintf("\t\treturn nil\n"))
+				result.WriteString(fmt.Sprintf("\t})\n"))
+				return result.String(), nil
 
-			return result.String(), nil
+			default:
+				fieldTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(x)))
+
+				result := &strings.Builder{}
+				result.WriteString(fmt.Sprintf("\tresult, err := shared.JSONUnmarshal[%s](bytes)\n", fieldTypeName))
+				result.WriteString("\tif err != nil {\n")
+				result.WriteString("\t\treturn fmt.Errorf(\"" + errorContext + " %w\", err)\n")
+				result.WriteString("\t}\n")
+				result.WriteString(fmt.Sprintf("\t*r = %s(result)\n", typeName))
+				result.WriteString("\treturn nil\n")
+
+				return result.String(), nil
+			}
 		},
 		func(y *shape.BooleanLike) (string, error) {
 			panic("not implemented")
@@ -446,6 +497,10 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSON(x shape.Shape) (string, error) {
 	)
 
 	if err != nil {
+		if errors.Is(err, ErrSkipGeneration) {
+			log.Warnf("generators.SerdeJSONTagged.GenerateUnmarshalJSON: skipping generation of unmarshaller for type '%s'; %s", typeName, err)
+			return "", nil
+		}
 		return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSON: %w", err)
 	}
 

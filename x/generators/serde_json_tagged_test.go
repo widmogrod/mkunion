@@ -64,20 +64,11 @@ func (r *ListOf2[T1,T2]) MarshalJSON() ([]byte, error) {
 
 	fieldMap := make(map[string]json.RawMessage)
 	for k, v := range r.Map {
-		var key any
-		key, ok := any(k).(string)
-		if !ok {
-			key, err = shared.JSONMarshal[T1](k)
-			if err != nil {
-				return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field Map[%#v] key decoding; %w", key, err)
-			}
-			key = string(key.([]byte))
-		}
-
-		fieldMap[key.(string)], err = shared.JSONMarshal[T2](v)
+		key, value, err := shared.JSONMarshalMap[T1, T2](k, v)
 		if err != nil {
-			return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON: field Map[%#v] value decoding %#v; %w", key, v, err)
+			return nil, fmt.Errorf("testutils.ListOf2[T1,T2].MarshalJSON:; %w", err)
 		}
+		fieldMap[key] = value
 	}
 	result["map_of_tree"], err = json.Marshal(fieldMap)
 	if err != nil {
@@ -245,7 +236,7 @@ var (
 )
 
 func (r *K) MarshalJSON() ([]byte, error) {
-	result, err := shared.JSONMarshal[string](string(*r))
+	result, err := shared.JSONMarshal[string](*r)
 	if err != nil {
 		return nil, fmt.Errorf("testutils.K.MarshalJSON: %w", err)
 	}
@@ -258,6 +249,51 @@ func (r *K) UnmarshalJSON(bytes []byte) error {
 		return fmt.Errorf("testutils.K.UnmarshalJSON: %w", err)
 	}
 	*r = K(result)
+	return nil
+}
+
+`, result)
+}
+
+func TestNewSerdeJSONTagged_ListOfMapOfTree(t *testing.T) {
+	inferred, err := shape.InferFromFile("testutils/tree.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	generator := NewSerdeJSONTagged(
+		inferred.RetrieveShapeNamedAs("Ka"),
+	)
+
+	result, err := generator.Generate()
+	assert.NoError(t, err)
+	assert.Equal(t, `package testutils
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
+)
+
+var (
+	_ json.Unmarshaler = (*Ka)(nil)
+	_ json.Marshaler   = (*Ka)(nil)
+)
+
+func (r *Ka) MarshalJSON() ([]byte, error) {
+	result, err := shared.JSONMarshal[[]map[string]Tree](*r)
+	if err != nil {
+		return nil, fmt.Errorf("testutils.Ka.MarshalJSON: %w", err)
+	}
+	return result, nil
+}
+
+func (r *Ka) UnmarshalJSON(bytes []byte) error {
+	result, err := shared.JSONUnmarshal[[]map[string]Tree](bytes)
+	if err != nil {
+		return fmt.Errorf("testutils.Ka.UnmarshalJSON: %w", err)
+	}
+	*r = Ka(result)
 	return nil
 }
 
