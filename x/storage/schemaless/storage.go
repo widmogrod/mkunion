@@ -117,6 +117,7 @@ func (s UpdateRecords[T]) IsEmpty() bool {
 }
 
 type (
+	//go:tag serde:"json"
 	SortField struct {
 		Field      string
 		Descending bool
