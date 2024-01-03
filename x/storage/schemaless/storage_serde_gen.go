@@ -11,6 +11,7 @@ import (
 func init() {
 	shape.Register(PageResultShape())
 	shape.Register(RecordShape())
+	shape.Register(SortFieldShape())
 }
 
 var (
@@ -345,6 +346,120 @@ func RecordShape() shape.Shape {
 				Type: &shape.NumberLike{
 					Kind: &shape.UInt16{},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
+}
+
+var (
+	_ json.Unmarshaler = (*SortField)(nil)
+	_ json.Marshaler   = (*SortField)(nil)
+)
+
+func (r *SortField) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONSortField(*r)
+}
+func (r *SortField) _marshalJSONSortField(x SortField) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldField []byte
+	fieldField, err = r._marshalJSONstring(x.Field)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: SortField._marshalJSONSortField: field name Field; %w", err)
+	}
+	partial["Field"] = fieldField
+	var fieldDescending []byte
+	fieldDescending, err = r._marshalJSONbool(x.Descending)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: SortField._marshalJSONSortField: field name Descending; %w", err)
+	}
+	partial["Descending"] = fieldDescending
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: SortField._marshalJSONSortField: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *SortField) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: SortField._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *SortField) _marshalJSONbool(x bool) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: SortField._marshalJSONbool:; %w", err)
+	}
+	return result, nil
+}
+func (r *SortField) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONSortField(data)
+	if err != nil {
+		return fmt.Errorf("schemaless: SortField.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *SortField) _unmarshalJSONSortField(data []byte) (SortField, error) {
+	result := SortField{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: SortField._unmarshalJSONSortField: native struct unwrap; %w", err)
+	}
+	if fieldField, ok := partial["Field"]; ok {
+		result.Field, err = r._unmarshalJSONstring(fieldField)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: SortField._unmarshalJSONSortField: field Field; %w", err)
+		}
+	}
+	if fieldDescending, ok := partial["Descending"]; ok {
+		result.Descending, err = r._unmarshalJSONbool(fieldDescending)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: SortField._unmarshalJSONSortField: field Descending; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *SortField) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: SortField._unmarshalJSONstring: native string unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *SortField) _unmarshalJSONbool(data []byte) (bool, error) {
+	var result bool
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: SortField._unmarshalJSONbool: native boolean unwrap; %w", err)
+	}
+	return result, nil
+}
+func SortFieldShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "SortField",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Field",
+				Type: &shape.StringLike{},
+			},
+			{
+				Name: "Descending",
+				Type: &shape.BooleanLike{},
 			},
 		},
 		Tags: map[string]shape.Tag{
