@@ -9,15 +9,15 @@ import (
 )
 
 var (
-	//go:embed deser_json_generator.go.tmpl
+	//go:embed serde_json_union.go.tmpl
 	deserJSONTmpl string
 )
 
-func NewDeSerJSONGenerator(union *shape.UnionLike, helper *Helpers) *DeSerJSONGenerator {
+func SerdeJSONUnion(union *shape.UnionLike, helper *Helpers) *DeSerJSONGenerator {
 	return &DeSerJSONGenerator{
 		Union:                 union,
 		helper:                helper,
-		template:              template.Must(template.New("deser_json_generator.go.tmpl").Funcs(helper.Func()).Parse(deserJSONTmpl)),
+		template:              template.Must(template.New("serde_json_union.go.tmpl").Funcs(helper.Func()).Parse(deserJSONTmpl)),
 		skipImportsAndPackage: false,
 		pkgUsed: PkgMap{
 			"json":   "encoding/json",
@@ -119,7 +119,7 @@ func (g *DeSerJSONGenerator) OptionallyImport(x string) string {
 
 func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
 	body := &bytes.Buffer{}
-	err := g.template.ExecuteTemplate(body, "deser_json_generator.go.tmpl", g)
+	err := g.template.ExecuteTemplate(body, "serde_json_union.go.tmpl", g)
 	if err != nil {
 		return nil, err
 	}
