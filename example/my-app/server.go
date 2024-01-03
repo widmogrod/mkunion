@@ -31,6 +31,22 @@ import (
 	"syscall"
 )
 
+// this command make sure that all types that are imported will have generated typescript mapping
+//go:generate mkunion shape-export --language=typescript -o ./workflow
+
+// this lines defines all types that should have typescript mapping
+type (
+	Workflow       = workflow.Worflow
+	State          = workflow.State
+	Command        = workflow.Command
+	Expr           = workflow.Expr
+	Predicate      = workflow.Predicate
+	Reshaper       = workflow.Reshaper
+	Schema         = schema.Schema
+	UpdateRecords  = schemaless.UpdateRecords[schemaless.Record[any]]
+	FindingRecords = schemaless.FindingRecords[schemaless.Record[any]]
+)
+
 //go:generate mkunion -name=ChatCMD
 type (
 	UserMessage struct {
