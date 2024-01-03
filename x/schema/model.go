@@ -2,7 +2,7 @@ package schema
 
 //go:generate go run ../../cmd/mkunion/main.go serde
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Schema -skip-extension=schema
+//go:generate go run ../../cmd/mkunion/main.go -name=Schema
 type (
 	None   struct{}
 	Bool   bool
