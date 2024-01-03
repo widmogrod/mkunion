@@ -12,10 +12,7 @@ func TestShapeGenerator(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
-	g := NewShapeGenerator(
-		inferred.RetrieveUnion("Tree"),
-		NewHelper(WithPackageName("testutils")),
-	)
+	g := NewShapeGenerator(inferred.RetrieveUnion("Tree"))
 
 	result, err := g.Generate()
 	assert.NoError(t, err)
@@ -35,6 +32,7 @@ func init() {
 	shape.Register(LaShape())
 	shape.Register(KaShape())
 }
+
 
 func TreeShape() shape.Shape {
 	return &shape.UnionLike{
@@ -65,7 +63,6 @@ func BranchShape() shape.Shape {
 					Name: "Tree",
 					PkgName: "testutils",
 					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: false,
 				},
 			},
 			{
@@ -75,23 +72,18 @@ func BranchShape() shape.Shape {
 						Name: "Tree",
 						PkgName: "testutils",
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-						IsPointer: false,
 					},
-					ElementIsPointer: false,
 				},
 			},
 			{
 				Name: "Map",
 				Type: &shape.MapLike{
 					Key: &shape.StringLike{},
-					KeyIsPointer: false,
 					Val: &shape.RefName{
 						Name: "Tree",
 						PkgName: "testutils",
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-						IsPointer: false,
 					},
-					ValIsPointer: false,
 				},
 			},
 			{
@@ -106,9 +98,37 @@ func BranchShape() shape.Shape {
 							Name: "Tree",
 							PkgName: "testutils",
 							PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-							IsPointer: false,
 						},
 					},
+				},
+				IsPointer: true,
+				Tags: map[string]shape.Tag{
+					"json": {
+						Value: "just_of",
+					},
+				},
+			},
+			{
+				Name: "L",
+				Type: &shape.RefName{
+					Name: "Leaf",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					IsPointer: true,
+				},
+				IsPointer: true,
+			},
+			{
+				Name: "Kattr",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name: "Leaf",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						IsPointer: true,
+					},
+					ElementIsPointer: true,
+					ArrayLen: shape.Ptr(2),
 				},
 			},
 		},
@@ -136,7 +156,6 @@ func KShape() shape.Shape {
 		Name: "K",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-		IsAlias: false,
 		Type: &shape.StringLike{},
 	}
 }
@@ -146,41 +165,38 @@ func PShape() shape.Shape {
 		Name: "P",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-		IsAlias: false,
 		Type: &shape.RefName{
-			Name: "ListOf2",
-			PkgName: "testutils",
-			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-			IsPointer: false,
-			Indexed: []shape.Shape{
-				&shape.RefName{
-					Name: "ListOf",
-					PkgName: "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: false,
-					Indexed: []shape.Shape{
-						&shape.Any{},
-					},
-				},
-				&shape.RefName{
-					Name: "ListOf2",
-					PkgName: "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: true,
-					Indexed: []shape.Shape{
-						&shape.NumberLike{
-							Kind: &shape.Int64{},
+				Name: "ListOf2",
+				PkgName: "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				Indexed: []shape.Shape{
+					&shape.RefName{
+						Name: "ListOf",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						Indexed: []shape.Shape{
+							&shape.Any{},
 						},
-						&shape.RefName{
-							Name: "Duration",
-							PkgName: "time",
-							PkgImportName: "time",
-							IsPointer: true,
+					},
+					&shape.RefName{
+						Name: "ListOf2",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						IsPointer: true,
+						Indexed: []shape.Shape{
+							&shape.NumberLike{
+								Kind: &shape.Int64{},
+							},
+							&shape.RefName{
+								Name: "Duration",
+								PkgName: "time",
+								PkgImportName: "time",
+								IsPointer: true,
+							},
 						},
 					},
 				},
 			},
-		},
 	}
 }
 
@@ -189,18 +205,14 @@ func MaShape() shape.Shape {
 		Name: "Ma",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-		IsAlias: false,
 		Type: &shape.MapLike{
-			Key: &shape.StringLike{},
-			KeyIsPointer: false,
-			Val: &shape.RefName{
-				Name: "Tree",
-				PkgName: "testutils",
-				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-				IsPointer: false,
+				Key: &shape.StringLike{},
+				Val: &shape.RefName{
+					Name: "Tree",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				},
 			},
-			ValIsPointer: false,
-		},
 	}
 }
 
@@ -209,16 +221,13 @@ func LaShape() shape.Shape {
 		Name: "La",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-		IsAlias: false,
 		Type: &shape.ListLike{
-			Element: &shape.RefName{
-				Name: "Tree",
-				PkgName: "testutils",
-				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-				IsPointer: false,
+				Element: &shape.RefName{
+					Name: "Tree",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				},
 			},
-			ElementIsPointer: false,
-		},
 	}
 }
 
@@ -227,21 +236,16 @@ func KaShape() shape.Shape {
 		Name: "Ka",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-		IsAlias: false,
 		Type: &shape.ListLike{
-			Element: &shape.MapLike{
-				Key: &shape.StringLike{},
-				KeyIsPointer: false,
-				Val: &shape.RefName{
-					Name: "Tree",
-					PkgName: "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: false,
+				Element: &shape.MapLike{
+					Key: &shape.StringLike{},
+					Val: &shape.RefName{
+						Name: "Tree",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					},
 				},
-				ValIsPointer: false,
 			},
-			ElementIsPointer: false,
-		},
 	}
 }
 `, string(result))

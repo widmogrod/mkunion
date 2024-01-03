@@ -1,354 +1,50 @@
 package generators
 
 import (
-	"bytes"
 	_ "embed"
-	"fmt"
 	"github.com/widmogrod/mkunion/x/shape"
-	"strings"
-	"text/template"
 )
 
-var (
-	//go:embed shape_generator.go.tmpl
-	shapeTmpl string
-)
-
-func NewShapeGenerator(union *shape.UnionLike, helper *Helpers) *ShapeGenerator {
+func NewShapeGenerator(union *shape.UnionLike) *ShapeGenerator {
+	core := NewShapeTagged(union)
 	return &ShapeGenerator{
-		Union:                 union,
-		template:              template.Must(template.New("shape_generator.go.tmpl").Funcs(helper.Func()).Parse(shapeTmpl)),
-		skipImportsAndPackage: false,
-		skipInitFunc:          false,
+		gen: core,
 	}
 }
 
 type ShapeGenerator struct {
-	Union                 *shape.UnionLike
-	template              *template.Template
-	skipImportsAndPackage bool
-	skipInitFunc          bool
+	gen *ShapeTagged
 }
 
 func (g *ShapeGenerator) SkipImportsAndPackage(flag bool) {
-	g.skipImportsAndPackage = flag
+	g.gen.SkipImportsAndPackage(flag)
 }
 
 func (g *ShapeGenerator) SkipInitFunc(flag bool) {
-	g.skipInitFunc = flag
+	g.gen.SkipInitFunc(flag)
 }
 
 func (g *ShapeGenerator) GenerateImports(pkgMap PkgMap) (string, error) {
-	return GenerateImports(pkgMap), nil
+	return g.gen.GenerateImports(pkgMap)
 }
 
 func (g *ShapeGenerator) ExtractImports(x shape.Shape) PkgMap {
-	// add default and necessary imports
-	pkgMap := g.defaultImportsFor(x)
-
-	// remove self from importing
-	delete(pkgMap, shape.ToGoPkgName(x))
-	return pkgMap
-}
-
-func (g *ShapeGenerator) defaultImportsFor(x shape.Shape) PkgMap {
-	return map[string]string{
-		"shape": "github.com/widmogrod/mkunion/x/shape",
-	}
+	return g.gen.ExtractImports(x)
 }
 
 func (g *ShapeGenerator) ExtractImportFuncs(s shape.Shape) []string {
-	return shape.MustMatchShape(
-		s,
-		func(x *shape.Any) []string {
-			return nil
-		},
-		func(x *shape.RefName) []string {
-			return nil
-		},
-		func(x *shape.AliasLike) []string {
-			return []string{
-				fmt.Sprintf("shape.Register(%sShape())", x.Name),
-			}
-		},
-		func(x *shape.BooleanLike) []string {
-			return nil
-		},
-		func(x *shape.StringLike) []string {
-			return nil
-		},
-		func(x *shape.NumberLike) []string {
-			return nil
-		},
-		func(x *shape.ListLike) []string {
-			return nil
-		},
-		func(x *shape.MapLike) []string {
-			return nil
-		},
-		func(x *shape.StructLike) []string {
-			return []string{
-				fmt.Sprintf("shape.Register(%sShape())", x.Name),
-			}
-		},
-		func(x *shape.UnionLike) []string {
-			result := []string{
-				fmt.Sprintf("shape.Register(%sShape())", x.Name),
-			}
-			for _, variant := range x.Variant {
-				result = append(result, g.ExtractImportFuncs(variant)...)
-			}
-			return result
-		},
-	)
+	return g.gen.ExtractImportFuncs(s)
 }
 
 func (g *ShapeGenerator) GenerateInitFunc(init []string) (string, error) {
-	return GenerateInitFunc(init), nil
-}
-
-func (g *ShapeGenerator) ident(d int) string {
-	return strings.Repeat("\t", d)
-}
-
-func (g *ShapeGenerator) padLeft(d int, s string) string {
-	// pad each new line with \t
-	return strings.ReplaceAll(s, "\n", "\n"+g.ident(d))
-}
-
-func (g *ShapeGenerator) VariantName(x shape.Shape) string {
-	return TemplateHelperShapeVariantToName(x)
-}
-
-func TemplateHelperShapeVariantToName(x shape.Shape) string {
-	return shape.MustMatchShape(
-		x,
-		func(x *shape.Any) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: %T not suported", x))
-		},
-		func(x *shape.RefName) string {
-			return x.Name
-		},
-		func(x *shape.AliasLike) string {
-			return x.Name
-		},
-		func(x *shape.BooleanLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.StringLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.NumberLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.ListLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.MapLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.StructLike) string {
-			return x.Name
-		},
-		func(x *shape.UnionLike) string {
-			return x.Name
-		},
-	)
-}
-
-func (g *ShapeGenerator) ShapeToString(x shape.Shape, depth int) string {
-	return shape.MustMatchShape(
-		x,
-		func(x *shape.Any) string {
-			return g.padLeft(depth, `&shape.Any{}`)
-		},
-		func(x *shape.RefName) string {
-			result := &bytes.Buffer{}
-
-			fmt.Fprintf(result, "&shape.RefName{\n")
-			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
-			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
-			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
-			fmt.Fprintf(result, "\tIsPointer: %v,\n", x.IsPointer)
-
-			if len(x.Indexed) > 0 {
-				fmt.Fprintf(result, "\tIndexed: []shape.Shape{\n")
-				for _, indexed := range x.Indexed {
-					fmt.Fprintf(result, "\t\t%s,\n", g.ShapeToString(indexed, 2))
-				}
-				fmt.Fprintf(result, "\t},\n")
-			}
-
-			fmt.Fprintf(result, "}")
-
-			return g.padLeft(depth, result.String())
-		},
-		func(x *shape.AliasLike) string {
-			result := &bytes.Buffer{}
-
-			fmt.Fprintf(result, "&shape.AliasLike{\n")
-			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
-			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
-			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
-			fmt.Fprintf(result, "\tIsAlias: %v,\n", x.IsAlias)
-			fmt.Fprintf(result, "\tType: %s,\n", strings.TrimLeft(g.ShapeToString(x.Type, 1), "\t"))
-			fmt.Fprintf(result, "}")
-
-			return g.padLeft(depth, result.String())
-		},
-		func(x *shape.BooleanLike) string {
-			return g.padLeft(depth, "&shape.BooleanLike{}")
-		},
-		func(x *shape.StringLike) string {
-			return g.padLeft(depth, "&shape.StringLike{}")
-		},
-		func(x *shape.NumberLike) string {
-			result := &bytes.Buffer{}
-
-			fmt.Fprintf(result, "&shape.NumberLike{")
-			if x.Kind != nil {
-				fmt.Fprintf(result, "\n")
-				g.fprintNumberKind(result, x.Kind, 1)
-			}
-			fmt.Fprintf(result, "}")
-
-			return g.padLeft(depth, result.String())
-		},
-		func(x *shape.ListLike) string {
-			result := &bytes.Buffer{}
-
-			fmt.Fprintf(result, "&shape.ListLike{\n")
-			fmt.Fprintf(result, "\tElement: %s,\n", strings.TrimLeft(g.ShapeToString(x.Element, 1), "\t"))
-			fmt.Fprintf(result, "\tElementIsPointer: %v,\n", x.ElementIsPointer)
-			fmt.Fprintf(result, "}")
-
-			return g.padLeft(depth, result.String())
-		},
-		func(x *shape.MapLike) string {
-			result := &bytes.Buffer{}
-
-			fmt.Fprintf(result, "&shape.MapLike{\n")
-			fmt.Fprintf(result, "\tKey: %s,\n", strings.TrimLeft(g.ShapeToString(x.Key, 1), "\t"))
-			fmt.Fprintf(result, "\tKeyIsPointer: %v,\n", x.KeyIsPointer)
-			fmt.Fprintf(result, "\tVal: %s,\n", strings.TrimLeft(g.ShapeToString(x.Val, 1), "\t"))
-			fmt.Fprintf(result, "\tValIsPointer: %v,\n", x.ValIsPointer)
-
-			fmt.Fprintf(result, "}")
-
-			return g.padLeft(depth, result.String())
-		},
-		func(x *shape.StructLike) string {
-			result := &bytes.Buffer{}
-
-			fmt.Fprintf(result, "&shape.StructLike{\n")
-			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
-			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
-			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
-
-			if len(x.Fields) > 0 {
-				fmt.Fprintf(result, "\tFields: []*shape.FieldLike{\n")
-				for _, field := range x.Fields {
-					fmt.Fprintf(result, "\t\t{\n")
-					fmt.Fprintf(result, "\t\t\tName: %q,\n", field.Name)
-					fmt.Fprintf(result, "\t\t\tType: %s,\n", strings.TrimLeft(g.ShapeToString(field.Type, 3), "\t"))
-					fmt.Fprintf(result, "\t\t},\n")
-				}
-				fmt.Fprintf(result, "\t},\n")
-			}
-			fmt.Fprintf(result, "}")
-
-			return g.padLeft(depth, result.String())
-		},
-		func(x *shape.UnionLike) string {
-			result := &bytes.Buffer{}
-
-			fmt.Fprintf(result, "&shape.UnionLike{\n")
-			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
-			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
-			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
-
-			if len(x.Variant) > 0 {
-				fmt.Fprintf(result, "\tVariant: []shape.Shape{\n")
-				for _, variant := range x.Variant {
-					fmt.Fprintf(result, "\t\t%s,\n", strings.TrimLeft(g.ShapeToString(variant, 2), "\t"))
-				}
-				fmt.Fprintf(result, "\t},\n")
-			}
-
-			fmt.Fprintf(result, "}")
-
-			return g.padLeft(depth, result.String())
-		},
-	)
-}
-
-func (g *ShapeGenerator) kindToGoName(kind shape.NumberKind) string {
-	return shape.MustMatchNumberKind(
-		kind,
-		func(x *shape.UInt8) string {
-			return "shape.UInt8{}"
-		},
-		func(x *shape.UInt16) string {
-			return "shape.UInt16{}"
-		},
-		func(x *shape.UInt32) string {
-			return "shape.UInt32{}"
-		},
-		func(x *shape.UInt64) string {
-			return "shape.UInt64{}"
-		},
-		func(x *shape.Int8) string {
-			return "shape.Int8{}"
-		},
-		func(x *shape.Int16) string {
-			return "shape.Int16{}"
-		},
-		func(x *shape.Int32) string {
-			return "shape.Int32{}"
-		},
-		func(x *shape.Int64) string {
-			return "shape.Int64{}"
-		},
-		func(x *shape.Float32) string {
-			return "shape.Float32{}"
-		},
-		func(x *shape.Float64) string {
-			return "shape.Float64{}"
-		},
-	)
-}
-
-func (g *ShapeGenerator) fprintNumberKind(result *bytes.Buffer, kind shape.NumberKind, depth int) {
-	fmt.Fprintf(result, strings.Repeat("\t", depth)+"Kind: &%s,\n", g.kindToGoName(kind))
+	return g.gen.GenerateInitFunc(init)
 }
 
 func (g *ShapeGenerator) Generate() ([]byte, error) {
-	result := &bytes.Buffer{}
-
-	if !g.skipImportsAndPackage {
-		result.WriteString(fmt.Sprintf("package %s\n\n", shape.ToGoPkgName(g.Union)))
-
-		pkgMap := g.ExtractImports(g.Union)
-		impPart, err := g.GenerateImports(pkgMap)
-		if err != nil {
-			return nil, fmt.Errorf("generators.ShapeGenerator.Generate: when generating imports; %w", err)
-		}
-		result.WriteString(impPart)
-	}
-
-	if !g.skipInitFunc {
-		inits := g.ExtractImportFuncs(g.Union)
-		varPart, err := g.GenerateInitFunc(inits)
-		if err != nil {
-			return nil, fmt.Errorf("generators.ShapeGenerator.Generate: when generating func init(); %w", err)
-		}
-		result.WriteString(varPart)
-	}
-
-	err := g.template.ExecuteTemplate(result, "shape_generator.go.tmpl", g)
+	result, err := g.gen.Generate()
 	if err != nil {
 		return nil, err
 	}
 
-	return result.Bytes(), nil
+	return []byte(result), nil
 }
