@@ -32,7 +32,7 @@ import (
 )
 
 // this command make sure that all types that are imported will have generated typescript mapping
-//go:generate mkunion shape-export --language=typescript -o ./src/workflow
+//go:generate ../../cmd/mkunion/mkunion shape-export --language=typescript -o ./src/workflow
 
 // this lines defines all types that should have typescript mapping
 type (
@@ -44,17 +44,20 @@ type (
 	Reshaper       = workflow.Reshaper
 	Schema         = schema.Schema
 	UpdateRecords  = schemaless.UpdateRecords[schemaless.Record[any]]
-	FindingRecords = schemaless.FindingRecords[schemaless.Record[any]]
+	FindRecords    = schemaless.FindingRecords[schemaless.Record[any]]
+	PageResult     = schemaless.PageResult[schemaless.Record[any]]
+	FunctionOutput = workflow.FunctionOutput
+	FunctionInput  = workflow.FunctionInput
 )
 
-//go:generate mkunion -name=ChatCMD
+//go:generate ../../cmd/mkunion/mkunion -name=ChatCMD
 type (
 	UserMessage struct {
 		Message string
 	}
 )
 
-//go:generate mkunion -name=ChatResult
+//go:generate ../../cmd/mkunion/mkunion -name=ChatResult -v
 type (
 	SystemResponse struct {
 		//ID 	  string
