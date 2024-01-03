@@ -6,22 +6,21 @@ import (
 	"github.com/widmogrod/mkunion/x/shape"
 	"os"
 	"testing"
+
+	_ "github.com/widmogrod/mkunion/x/generators/testutils"
 )
 
-func TestDeSerJSONGenerator(t *testing.T) {
+func TestSerdeJSONUnion(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
-	g := NewDeSerJSONGenerator(
-		inferred.RetrieveUnion("Tree"),
-		NewHelper(WithPackageName("testutils")),
-	)
+	g := SerdeJSONUnion(inferred.RetrieveUnion("Tree"))
 
 	result, err := g.Generate()
 	assert.NoError(t, err)
 
-	reference, err := os.ReadFile("deser_json_generator_test_tree.go.asset")
+	reference, err := os.ReadFile("serde_json_union_test.go.asset")
 	assert.NoError(t, err)
 	assert.Equal(t, string(reference), string(result))
 }

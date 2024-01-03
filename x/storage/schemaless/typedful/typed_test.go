@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewRepository2Typed(t *testing.T) {
-	storage := NewInMemoryRepository()
+	storage := NewInMemoryRepository[schema.Schema]()
 	r := NewTypedRepository[User](storage)
 
 	err := r.UpdateRecords(exampleUserRecords)

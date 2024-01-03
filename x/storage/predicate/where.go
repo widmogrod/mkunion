@@ -1,21 +1,22 @@
 package predicate
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
-	"github.com/widmogrod/mkunion/x/shared"
 	"golang.org/x/exp/slices"
 	"strings"
 )
 
+//go:generate go run ../../../cmd/mkunion/main.go serde
+
+//go:tag serde:"json"
 type WherePredicates struct {
 	Predicate Predicate
 	Params    ParamBinds
 }
 
 func (w *WherePredicates) Evaluate(data schema.Schema) bool {
-	return Evaluate(w.Predicate, data, w.Params)
+	return EvaluateSchema(w.Predicate, data, w.Params)
 }
 
 func Where(query string, params ParamBinds) (*WherePredicates, error) {
@@ -99,48 +100,4 @@ func bindValuesFromPredicate(predicate Predicate, params []string) []string {
 			return params
 		},
 	)
-}
-
-var (
-	_ json.Unmarshaler = (*WherePredicates)(nil)
-	_ json.Marshaler   = (*WherePredicates)(nil)
-)
-
-func (w *WherePredicates) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
-		switch key {
-		case "Predicate":
-			var err error
-			w.Predicate, err = PredicateFromJSON(value)
-			if err != nil {
-				return err
-			}
-		case "Params":
-			return json.Unmarshal(value, &w.Params)
-		default:
-			return fmt.Errorf("predicate.WherePredicates: unknown key %s", key)
-		}
-		return nil
-	})
-}
-
-func (w *WherePredicates) MarshalJSON() ([]byte, error) {
-	result := map[string]json.RawMessage{}
-	field_Predicate, err := PredicateToJSON(w.Predicate)
-	if err != nil {
-		return nil, err
-	}
-	if field_Predicate != nil {
-		result["Predicate"] = field_Predicate
-	}
-
-	field_Params, err := json.Marshal(w.Params)
-	if err != nil {
-		return nil, err
-	}
-	if field_Params != nil {
-		result["Params"] = field_Params
-	}
-
-	return json.Marshal(result)
 }

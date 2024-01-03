@@ -13,11 +13,16 @@ type Execution struct {
 	Variables map[string]schema.Schema
 }
 
+//go:generate go run ../../cmd/mkunion/main.go serde
+
 //go:generate go run ../../cmd/mkunion/main.go -name=RunOption
 type (
 	ScheduleRun struct {
 		// CRON like definition
 		Interval string
+		// ParentRunID is a reference to the original run, that scheduled this run and any between
+		// ParentRunID is used to track history of the execution, and is stable reference to the original run
+		ParentRunID string
 	}
 	DelayRun struct {
 		// DelayBySeconds
@@ -38,7 +43,9 @@ type (
 		Result     schema.Schema
 		//Fail       schema.Schema
 	}
-	TryRecover   struct{}
+	TryRecover struct {
+		RunID string
+	}
 	StopSchedule struct {
 		// ParentRunID can be stopped by user, or by system
 		ParentRunID string
@@ -74,17 +81,15 @@ type (
 	Scheduled struct {
 		// ExpectedRunTimestamp is server timestamp + DelayBySeconds
 		ExpectedRunTimestamp int64
-		// ParentRunID is a reference to the original run, that scheduled this run and any between
-		// ParentRunID is used to track history of the execution, and is stable reference to the original run
-		ParentRunID string
-		BaseState   BaseState
+
+		BaseState BaseState
 	}
 	ScheduleStopped struct {
-		ParentRunID string
-		BaseState   BaseState
+		BaseState BaseState
 	}
 )
 
+//go:tag serde:"json"
 type BaseState struct {
 	Flow       Worflow // Flow is a reference to the flow that describes execution
 	RunID      string  // RunID is a unique identifier of the execution
@@ -198,11 +203,13 @@ type (
 	//}
 )
 
+//go:tag serde:"json"
 type ResumeOptions struct {
 	Timeout int64
 	//Timeout time.DelayBySeconds
 }
 
+//go:tag serde:"json"
 type ApplyAwaitOptions struct {
 	Timeout int64
 	//Timeout time.DelayBySeconds

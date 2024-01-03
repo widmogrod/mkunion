@@ -1,7 +1,17 @@
 .App {
     text-align: left;
     margin: 0 auto;
-    width: 90%;
+    width: 100%;
+}
+
+aside {
+    float: left;
+    width: 300px;
+    margin: 0 10px 0 0;
+}
+main {
+    float: left;
+    width: calc(100% - 310px);
 }
 
 span {
@@ -20,6 +30,34 @@ span.error {
 span.await {
     background-color: #52d2d2;
 }
+input {
+    padding: 5px;
+    margin: 0 5px 0 0;
+}
+
+input, button {
+    border: 1px solid #51887a;
+    border-radius: 0;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+button {
+    padding: 5px 10px;
+    background-color: #51887a;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    color: #666666;
+    cursor: not-allowed;
+}
+
+button:hover {
+    background-color: #005b48;
+}
 
 table {
     border-collapse: collapse;
@@ -35,6 +73,7 @@ thead tr {
     background-color: #009879;
     color: #ffffff;
     text-align: left;
+    font-size: 1.2em;
 }
 
 th,
@@ -43,11 +82,26 @@ td {
     vertical-align: top;
 }
 
-tbody tr {
+table > thead .option-row {
+    background-color: #005b48;
+    color: #ffffff;
+    text-align: left;
+    /*font-size: .9em;*/
+    /*height: 1px;*/
+    /*position: relative;*/
+    /*padding: 0;*/
+    /*margin: 0;*/
+}
+
+table > thead .option-row button {
+    margin-right: 5px;
+}
+
+table > tbody > tr {
     border-bottom: 1px solid #dddddd;
 }
 
-tbody tr:nth-of-type(even) {
+table > tbody > tr:nth-of-type(even) {
     background-color: #f3f3f3;
 }
 
@@ -64,8 +118,37 @@ table table th, td {
     padding: 5px 10px;
 }
 
-form.action-section {
+.action-section {
     margin: 10px 0;
-    float: left;
-    width: 33%
+    padding: 10px;
+}
+
+.action-section h2 {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+}
+
+.sort-asc:after,
+.sort-desc:after {
+    content: ' ';
+    position: relative;
+    left: 2px;
+    border: 8px solid transparent;
+}
+
+.sort-asc:after {
+    top: 10px;
+    border-top-color: silver;
+}
+
+.sort-desc:after {
+    bottom: 15px;
+    border-bottom-color: silver;
+}
+
+.sort-none,
+.sort-asc,
+.sort-desc {
+    cursor: pointer;
 }

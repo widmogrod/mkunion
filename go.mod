@@ -1,6 +1,6 @@
 module github.com/widmogrod/mkunion
 
-go 1.18
+go 1.20
 
 require (
 	github.com/alecthomas/participle/v2 v2.0.0
@@ -10,7 +10,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.19.6
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.18.5
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
-	github.com/bxcodec/faker/v3 v3.8.1
 	github.com/fatih/structtag v1.2.0
 	github.com/google/go-cmp v0.5.9
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
@@ -21,7 +20,6 @@ require (
 	github.com/urfave/cli/v2 v2.25.3
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	golang.org/x/mod v0.12.0
-	golang.org/x/sync v0.1.0
 )
 
 require (

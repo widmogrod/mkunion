@@ -8,23 +8,23 @@ import (
 	"sync"
 )
 
-func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{
-		store:     make(map[string]schema.Schema),
-		appendLog: NewAppendLog[schema.Schema](),
+func NewInMemoryRepository[A any]() *InMemoryRepository[A] {
+	return &InMemoryRepository[A]{
+		store:     make(map[string]Record[A]),
+		appendLog: NewAppendLog[A](),
 	}
 }
 
-var _ Repository[schema.Schema] = &InMemoryRepository{}
+var _ Repository[any] = (*InMemoryRepository[any])(nil)
 
-type InMemoryRepository struct {
-	store     map[string]schema.Schema
-	appendLog *AppendLog[schema.Schema]
+type InMemoryRepository[A any] struct {
+	store     map[string]Record[A]
+	appendLog *AppendLog[A]
 	mux       sync.RWMutex
 }
 
-func (s *InMemoryRepository) Get(recordID, recordType string) (Record[schema.Schema], error) {
-	result, err := s.FindingRecords(FindingRecords[Record[schema.Schema]]{
+func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], error) {
+	result, err := s.FindingRecords(FindingRecords[Record[A]]{
 		RecordType: recordType,
 		Where: predicate.MustWhere("ID = :id", predicate.ParamBinds{
 			":id": schema.MkString(recordID),
@@ -32,17 +32,17 @@ func (s *InMemoryRepository) Get(recordID, recordType string) (Record[schema.Sch
 		Limit: 1,
 	})
 	if err != nil {
-		return Record[schema.Schema]{}, err
+		return Record[A]{}, err
 	}
 
 	if len(result.Items) == 0 {
-		return Record[schema.Schema]{}, ErrNotFound
+		return Record[A]{}, ErrNotFound
 	}
 
 	return result.Items[0], nil
 }
 
-func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]]) error {
+func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) error {
 	if x.IsEmpty() {
 		return fmt.Errorf("store.InMemoryRepository.UpdateRecords: empty command %w", ErrEmptyCommand)
 	}
@@ -50,7 +50,7 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	newLog := NewAppendLog[schema.Schema]()
+	newLog := NewAppendLog[A]()
 
 	for _, record := range x.Saving {
 		stored, ok := s.store[s.toKey(record)]
@@ -62,7 +62,8 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 			continue
 		}
 
-		storedVersion := schema.AsDefault[uint16](schema.Get(stored, "Version"), 0)
+		//storedVersion := schema.AsDefault[uint16](schema.GetSchema(stored, "Version"), 0)
+		storedVersion := stored.Version
 
 		if x.UpdatingPolicy == PolicyIfServerNotChanged {
 			if storedVersion != record.Version {
@@ -76,19 +77,16 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 
 	for _, record := range x.Saving {
 		var err error
-		var before *Record[schema.Schema]
-		if _, ok := s.store[s.toKey(record)]; ok {
-			before, err = schema.ToGoG[*Record[schema.Schema]](s.store[s.toKey(record)], WithOnlyRecordSchemaOptions)
-			if err != nil {
-				panic(fmt.Errorf("store.InMemoryRepository.UpdateRecords: to typed failed %s %w", err, ErrInternalError))
-			}
+		var before *Record[A]
+		if b, ok := s.store[s.toKey(record)]; ok {
+			before = &b
 		}
 
 		record.Version += 1
-		s.store[s.toKey(record)] = schema.FromGo(record)
+		s.store[s.toKey(record)] = record
 
 		if before == nil {
-			err = newLog.Change(Record[schema.Schema]{}, record)
+			err = newLog.Change(Record[A]{}, record)
 		} else {
 			err = newLog.Change(*before, record)
 		}
@@ -98,12 +96,8 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 	}
 
 	for _, record := range x.Deleting {
-		if _, ok := s.store[s.toKey(record)]; ok {
-			before, err := schema.ToGoG[*Record[schema.Schema]](s.store[s.toKey(record)], WithOnlyRecordSchemaOptions)
-			if err != nil {
-				panic(fmt.Errorf("store.InMemoryRepository.UpdateRecords: to typed failed %s %w", err, ErrInternalError))
-			}
-			err = newLog.Delete(*before)
+		if before, ok := s.store[s.toKey(record)]; ok {
+			err := newLog.Delete(before)
 			if err != nil {
 				panic(fmt.Errorf("store.InMemoryRepository.UpdateRecords: append log failed (2) %s %w", err, ErrInternalError))
 			}
@@ -117,22 +111,22 @@ func (s *InMemoryRepository) UpdateRecords(x UpdateRecords[Record[schema.Schema]
 	return nil
 }
 
-func (s *InMemoryRepository) toKey(record Record[schema.Schema]) string {
+func (s *InMemoryRepository[A]) toKey(record Record[A]) string {
 	return record.ID + record.Type
 }
 
-func (s *InMemoryRepository) FindingRecords(query FindingRecords[Record[schema.Schema]]) (PageResult[Record[schema.Schema]], error) {
+func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
-	records := make([]schema.Schema, 0)
+	records := make([]Record[A], 0)
 	for _, v := range s.store {
 		records = append(records, v)
 	}
 
 	if query.RecordType != "" {
-		newRecords := make([]schema.Schema, 0)
+		newRecords := make([]Record[A], 0)
 		for _, record := range records {
-			if predicate.EvaluateEqual(record, "Type", query.RecordType) {
+			if predicate.EvaluateEqual[Record[A]](record, "Type", query.RecordType) {
 				newRecords = append(newRecords, record)
 			}
 		}
@@ -140,9 +134,9 @@ func (s *InMemoryRepository) FindingRecords(query FindingRecords[Record[schema.S
 	}
 
 	if query.Where != nil {
-		newRecords := make([]schema.Schema, 0)
+		newRecords := make([]Record[A], 0)
 		for _, record := range records {
-			if predicate.Evaluate(query.Where.Predicate, record, query.Where.Params) {
+			if predicate.Evaluate[Record[A]](query.Where.Predicate, record, query.Where.Params) {
 				newRecords = append(newRecords, record)
 			}
 		}
@@ -155,9 +149,9 @@ func (s *InMemoryRepository) FindingRecords(query FindingRecords[Record[schema.S
 
 	if query.After != nil {
 		found := false
-		newRecords := make([]schema.Schema, 0)
+		newRecords := make([]Record[A], 0)
 		for _, record := range records {
-			if predicate.EvaluateEqual(record, "ID", *query.After) {
+			if predicate.EvaluateEqual[Record[A]](record, "ID", *query.After) {
 				found = true
 				continue // we're interested in records after this one
 			}
@@ -168,47 +162,38 @@ func (s *InMemoryRepository) FindingRecords(query FindingRecords[Record[schema.S
 		records = newRecords
 	}
 
-	typedRecords := make([]Record[schema.Schema], 0)
-	for _, record := range records {
-		typed, err := schema.ToGoG[*Record[schema.Schema]](record, WithOnlyRecordSchemaOptions)
-		if err != nil {
-			return PageResult[Record[schema.Schema]]{}, err
-		}
-		typedRecords = append(typedRecords, *typed)
-	}
-
 	// Use limit to reduce number of records
-	var next *FindingRecords[Record[schema.Schema]]
+	var next *FindingRecords[Record[A]]
 	if query.Limit > 0 {
-		if len(typedRecords) > int(query.Limit) {
-			typedRecords = typedRecords[:query.Limit]
+		if len(records) > int(query.Limit) {
+			records = records[:query.Limit]
 
-			next = &FindingRecords[Record[schema.Schema]]{
+			next = &FindingRecords[Record[A]]{
 				Where: query.Where,
 				Sort:  query.Sort,
 				Limit: query.Limit,
-				After: &typedRecords[len(typedRecords)-1].ID,
+				After: &records[len(records)-1].ID,
 			}
 		}
 	}
 
-	result := PageResult[Record[schema.Schema]]{
-		Items: typedRecords,
+	result := PageResult[Record[A]]{
+		Items: records,
 		Next:  next,
 	}
 
 	return result, nil
 }
 
-func (s *InMemoryRepository) AppendLog() *AppendLog[schema.Schema] {
+func (s *InMemoryRepository[A]) AppendLog() *AppendLog[A] {
 	return s.appendLog
 }
 
-func sortRecords(records []schema.Schema, sortFields []SortField) []schema.Schema {
+func sortRecords[A any](records []Record[A], sortFields []SortField) []Record[A] {
 	sort.Slice(records, func(i, j int) bool {
 		for _, sortField := range sortFields {
-			fieldA := schema.Get(records[i], sortField.Field)
-			fieldB := schema.Get(records[j], sortField.Field)
+			fieldA, _ := schema.Get[Record[A]](records[i], sortField.Field)
+			fieldB, _ := schema.Get[Record[A]](records[j], sortField.Field)
 			cmp := schema.Compare(fieldA, fieldB)
 			if sortField.Descending {
 				cmp = -cmp

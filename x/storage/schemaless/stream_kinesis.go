@@ -2,6 +2,7 @@ package schemaless
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"sync"
 	"time"
 )
@@ -106,10 +108,18 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 
 		for _, record := range records.Records {
 			//log.Infoln("🗺Kaflka Stream Record:", string(record.Data))
-			schemed, err := schema.FromJSON(record.Data)
+
+			var data any = nil
+			err := json.Unmarshal(record.Data, &data)
 			if err != nil {
 				panic(err)
 			}
+
+			schemed := schema.FromPrimitiveGo(data)
+			//schemed, err := schema.FromJSON(record.Data)
+			//if err != nil {
+			//	panic(err)
+			//}
 
 			// potentially change, can be just state. And data pipeline can detect it
 			// groub by  key
@@ -126,17 +136,17 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 				Deleted: false,
 			}
 
-			switch schema.AsDefault[string](schema.Get(schemed, "eventName"), "") {
+			switch schema.AsDefault[string](schema.GetSchema(schemed, "eventName"), "") {
 			case "MODIFY":
 				// has both NewImage and OldImage
-				old := schema.Get(schemed, "dynamodb.OldImage")
+				old := schema.GetSchema(schemed, "dynamodb.OldImage")
 				before, err := s.toTyped(old)
 				if err != nil {
 					panic(err)
 				}
 				result.Before = &before
 
-				new := schema.Get(schemed, "dynamodb.NewImage")
+				new := schema.GetSchema(schemed, "dynamodb.NewImage")
 				after, err := s.toTyped(new)
 				if err != nil {
 					panic(err)
@@ -145,7 +155,7 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 
 			case "INSERT":
 				// has only NewImage
-				new := schema.Get(schemed, "dynamodb.NewImage")
+				new := schema.GetSchema(schemed, "dynamodb.NewImage")
 				after, err := s.toTyped(new)
 				if err != nil {
 					panic(err)
@@ -153,7 +163,7 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 				result.After = &after
 			case "REMOVE":
 				// has only OldImage
-				old := schema.Get(schemed, "dynamodb.OldImage")
+				old := schema.GetSchema(schemed, "dynamodb.OldImage")
 				before, err := s.toTyped(old)
 				if err != nil {
 					panic(err)
@@ -162,7 +172,7 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 				result.Deleted = true
 
 			default:
-				panic(fmt.Errorf("unknown event name: %s", schema.AsDefault[string](schema.Get(schemed, "eventName"), "")))
+				panic(fmt.Errorf("unknown event name: %s", schema.AsDefault[string](schema.GetSchema(schemed, "eventName"), "")))
 			}
 
 			resultC <- result
@@ -214,14 +224,16 @@ func (s *KinesisStream) Process() {
 func (s *KinesisStream) toTyped(record schema.Schema) (Record[schema.Schema], error) {
 	normalised, err := schema.UnwrapDynamoDB(record)
 	if err != nil {
-		data, _ := schema.ToJSON(record)
+		data, _ := shared.JSONMarshal[schema.Schema](record)
+		//data, _ := schema.ToJSON(record)
 		log.Errorln("🗺store.KinesisStream corrupted (1) record:", string(data), err)
 		return Record[schema.Schema]{}, fmt.Errorf("store.KinesisStream unwrap DynamoDB record: %v; %w", record, err)
 	}
 
-	typed, err := schema.ToGoG[*Record[schema.Schema]](normalised, WithOnlyRecordSchemaOptions)
+	typed, err := schema.ToGoG[*Record[schema.Schema]](normalised)
 	if err != nil {
-		data, _ := schema.ToJSON(record)
+		data, _ := shared.JSONMarshal[schema.Schema](record)
+		//data, _ := schema.ToJSON(record)
 		log.Errorln("🗺store.KinesisStream corrupted (2) record:", string(data), err)
 		return Record[schema.Schema]{}, fmt.Errorf("store.KinesisStream convert record: %v; %w", record, err)
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
 
@@ -25,10 +26,9 @@ type SQSQueue[T any] struct {
 var _ Queuer[any] = (*SQSQueue[any])(nil)
 
 func (queue *SQSQueue[T]) Push(ctx context.Context, task Task[T]) error {
-	schemed := schema.FromGo(task.Data)
-	body, err := schema.ToJSON(schemed)
+	body, err := shared.JSONMarshal[T](task.Data)
 	if err != nil {
-		return fmt.Errorf("sqsQueue.Push: ToJSON=%w", err)
+		return fmt.Errorf("sqsQueue.Push: JSONMarshal=%w", err)
 	}
 
 	bodyStr := string(body)
@@ -70,14 +70,9 @@ func (queue *SQSQueue[T]) Pop(ctx context.Context) ([]Task[T], error) {
 
 	var tasks []Task[T]
 	for _, message := range output.Messages {
-		schemed, err := schema.FromJSON([]byte(*message.Body))
+		data, err := shared.JSONUnmarshal[T]([]byte(*message.Body))
 		if err != nil {
-			return nil, fmt.Errorf("sqsQueue.Pop: FromJSON=%w", err)
-		}
-
-		data, err := schema.ToGoG[T](schemed, nil)
-		if err != nil {
-			return nil, fmt.Errorf("sqsQueue.Pop: ToGo=%w", err)
+			return nil, fmt.Errorf("sqsQueue.Pop: JSONUnmarshal=%w", err)
 		}
 
 		task := Task[T]{
@@ -93,7 +88,7 @@ func (queue *SQSQueue[T]) Pop(ctx context.Context) ([]Task[T], error) {
 	return tasks, nil
 }
 
-func (queue *SQSQueue[T]) Delete(ctx context.Context, tasks []Task[schemaless.Record[schema.Schema]]) error {
+func (queue *SQSQueue[T]) Delete(ctx context.Context, tasks []Task[T]) error {
 	if len(tasks) == 0 {
 		return nil
 	}

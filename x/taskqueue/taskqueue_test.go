@@ -33,13 +33,6 @@ var functions = map[string]workflow.Function{
 }
 
 func TestTaskQueue(t *testing.T) {
-	schema.RegisterRules([]schema.RuleMatcher{
-		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(workflow.BaseState{})),
-	})
-	schema.RegisterUnionTypes(
-		workflow.StateSchemaDef(),
-	)
-
 	program := &workflow.Flow{
 		Name: "hello_world_flow",
 		Arg:  "input",
@@ -90,18 +83,17 @@ func TestTaskQueue(t *testing.T) {
 	desc = &Description{
 		Change: []string{"create"},
 		Entity: "process",
-		Filter: `Data[*]["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
-AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
-AND Version = 1`,
+		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
+AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0`,
 		//Filter: `Data #= "workflow.Scheduled" && Data[*].RunOption.Delayed > 0`,
 	}
 
-	store := schemaless.NewInMemoryRepository()
-	stream := store.AppendLog()
+	store := schemaless.NewInMemoryRepository[schema.Schema]()
+	stream := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
 
 	repo := typedful.NewTypedRepository[workflow.State](store)
-	proc := &FunctionProcessor[workflow.State]{
+	proc := &FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task Task[schemaless.Record[workflow.State]]) {
 			//t.Logf("task id: %s \n", task.ID)
 			t.Logf("data id: %s \n", task.Data.ID)
@@ -115,7 +107,7 @@ AND Version = 1`,
 			}
 
 			newState := work.State()
-			//d, _ := schema.ToJSON(schema.FromGo(newState))
+			//d, _ := schema.ToJSON(schema.FromPrimitiveGo(newState))
 			//t.Logf("newState: %s", string(d))
 
 			saving := []schemaless.Record[workflow.State]{
@@ -128,7 +120,7 @@ AND Version = 1`,
 			}
 
 			if next := workflow.ScheduleNext(newState, di); next != nil {
-				//d, _ := schema.ToJSON(schema.FromGo(next))
+				//d, _ := schema.ToJSON(schema.FromPrimitiveGo(next))
 				//t.Logf("next: %s", string(d))
 				work := workflow.NewMachine(di, nil)
 				err := work.Handle(next)
@@ -138,7 +130,7 @@ AND Version = 1`,
 				}
 
 				t.Logf("next id=%s", workflow.GetRunID(work.State()))
-				//d, _ = schema.ToJSON(schema.FromGo(work.State()))
+				//d, _ = schema.ToJSON(schema.FromPrimitiveGo(work.State()))
 				//t.Logf("nextState: %s", string(d))
 
 				saving = append(saving, schemaless.Record[workflow.State]{
@@ -185,10 +177,10 @@ To run this test, please set AWS_SQS_QUEUE_URL to the address of your AWS SQS in
 	}
 
 	//queue := NewSQSQueue(awssqs, queueURL)
-	queue := NewInMemoryQueue[schemaless.Record[schema.Schema]]()
+	queue := NewInMemoryQueue[schemaless.Record[workflow.State]]()
 
 	ctx := context.Background()
-	tq2 := NewTaskQueue(desc, queue, store, stream, proc)
+	tq2 := NewTaskQueue[workflow.State](desc, queue, repo, stream, proc)
 	go func() {
 		err := tq2.RunSelector(ctx)
 		if err != nil {

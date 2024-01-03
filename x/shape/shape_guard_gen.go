@@ -2,7 +2,6 @@
 package shape
 
 import "github.com/widmogrod/mkunion/f"
-import "github.com/widmogrod/mkunion/x/schema"
 import "github.com/widmogrod/mkunion/x/shared"
 import "encoding/json"
 import "fmt"
@@ -76,20 +75,14 @@ func MustMatchGuardR2[TOut1, TOut2 any](
 	return f.MustMatch3R2(x, f1, f2, f3)
 }
 
-// mkunion-extension:schema
-func init() {
-	schema.RegisterUnionTypes(GuardSchemaDef())
-}
-
-func GuardSchemaDef() *schema.UnionVariants[Guard] {
-	return schema.MustDefineUnion[Guard](
-		&Enum{},
-		&Required{},
-		&AndGuard{},
-	)
-}
-
 // mkunion-extension:shape
+func init() {
+	Register(GuardShape())
+	Register(EnumShape())
+	Register(RequiredShape())
+	Register(AndGuardShape())
+}
+
 func GuardShape() Shape {
 	return &UnionLike{
 		Name:          "Guard",
@@ -141,6 +134,7 @@ func AndGuardShape() Shape {
 						Name:          "Guard",
 						PkgName:       "shape",
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						IsPointer:     false,
 					},
 					ElementIsPointer: false,
 				},
@@ -150,13 +144,18 @@ func AndGuardShape() Shape {
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AndGuard", AndGuardFromJSON, AndGuardToJSON)
+}
+
 type GuardUnionJSON struct {
-	Type string          `json:"$type,omitempty"`
-	Enum json.RawMessage `json:"github.com/widmogrod/mkunion/x/shape.Enum,omitempty"`
-
-	Required json.RawMessage `json:"github.com/widmogrod/mkunion/x/shape.Required,omitempty"`
-
-	AndGuard json.RawMessage `json:"github.com/widmogrod/mkunion/x/shape.AndGuard,omitempty"`
+	Type     string          `json:"$type,omitempty"`
+	Enum     json.RawMessage `json:"shape.Enum,omitempty"`
+	Required json.RawMessage `json:"shape.Required,omitempty"`
+	AndGuard json.RawMessage `json:"shape.AndGuard,omitempty"`
 }
 
 func GuardFromJSON(x []byte) (Guard, error) {
@@ -167,13 +166,11 @@ func GuardFromJSON(x []byte) (Guard, error) {
 	}
 
 	switch data.Type {
-	case "github.com/widmogrod/mkunion/x/shape.Enum":
+	case "shape.Enum":
 		return EnumFromJSON(data.Enum)
-
-	case "github.com/widmogrod/mkunion/x/shape.Required":
+	case "shape.Required":
 		return RequiredFromJSON(data.Required)
-
-	case "github.com/widmogrod/mkunion/x/shape.AndGuard":
+	case "shape.AndGuard":
 		return AndGuardFromJSON(data.AndGuard)
 	}
 
@@ -185,13 +182,15 @@ func GuardFromJSON(x []byte) (Guard, error) {
 		return AndGuardFromJSON(data.AndGuard)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.Guard: unknown type %s", data.Type)
 }
 
 func GuardToJSON(x Guard) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
 	return MustMatchGuardR2(
 		x,
-
 		func(x *Enum) ([]byte, error) {
 			body, err := EnumToJSON(x)
 			if err != nil {
@@ -199,11 +198,10 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			}
 
 			return json.Marshal(GuardUnionJSON{
-				Type: "github.com/widmogrod/mkunion/x/shape.Enum",
+				Type: "shape.Enum",
 				Enum: body,
 			})
 		},
-
 		func(x *Required) ([]byte, error) {
 			body, err := RequiredToJSON(x)
 			if err != nil {
@@ -211,11 +209,10 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			}
 
 			return json.Marshal(GuardUnionJSON{
-				Type:     "github.com/widmogrod/mkunion/x/shape.Required",
+				Type:     "shape.Required",
 				Required: body,
 			})
 		},
-
 		func(x *AndGuard) ([]byte, error) {
 			body, err := AndGuardToJSON(x)
 			if err != nil {
@@ -223,7 +220,7 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			}
 
 			return json.Marshal(GuardUnionJSON{
-				Type:     "github.com/widmogrod/mkunion/x/shape.AndGuard",
+				Type:     "shape.AndGuard",
 				AndGuard: body,
 			})
 		},
@@ -231,14 +228,12 @@ func GuardToJSON(x Guard) ([]byte, error) {
 }
 
 func EnumFromJSON(x []byte) (*Enum, error) {
-	var result *Enum = &Enum{}
-
+	var result *Enum = new(Enum)
 	// if is Struct
 	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "Val":
 			return json.Unmarshal(value, &result.Val)
-
 		}
 
 		return fmt.Errorf("shape.EnumFromJSON: unknown key %s", key)
@@ -252,12 +247,10 @@ func EnumToJSON(x *Enum) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"Val": field_Val,
 	})
 }
-
 func (self *Enum) MarshalJSON() ([]byte, error) {
 	return EnumToJSON(self)
 }
@@ -272,8 +265,7 @@ func (self *Enum) UnmarshalJSON(x []byte) error {
 }
 
 func RequiredFromJSON(x []byte) (*Required, error) {
-	var result *Required = &Required{}
-
+	var result *Required = new(Required)
 	// if is Struct
 	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
@@ -288,7 +280,6 @@ func RequiredFromJSON(x []byte) (*Required, error) {
 func RequiredToJSON(x *Required) ([]byte, error) {
 	return json.Marshal(map[string]json.RawMessage{})
 }
-
 func (self *Required) MarshalJSON() ([]byte, error) {
 	return RequiredToJSON(self)
 }
@@ -303,14 +294,17 @@ func (self *Required) UnmarshalJSON(x []byte) error {
 }
 
 func AndGuardFromJSON(x []byte) (*AndGuard, error) {
-	var result *AndGuard = &AndGuard{}
-
+	var result *AndGuard = new(AndGuard)
 	// if is Struct
 	err := shared.JSONParseObject(x, func(key string, value []byte) error {
 		switch key {
 		case "L":
-			return json.Unmarshal(value, &result.L)
-
+			res, err := shared.JSONToListWithDeserializer(value, result.L, GuardFromJSON)
+			if err != nil {
+				return fmt.Errorf("shape._FromJSON: field Guard %w", err)
+			}
+			result.L = res
+			return nil
 		}
 
 		return fmt.Errorf("shape.AndGuardFromJSON: unknown key %s", key)
@@ -320,16 +314,14 @@ func AndGuardFromJSON(x []byte) (*AndGuard, error) {
 }
 
 func AndGuardToJSON(x *AndGuard) ([]byte, error) {
-	field_L, err := json.Marshal(x.L)
+	field_L, err := shared.JSONListFromSerializer(x.L, GuardToJSON)
 	if err != nil {
 		return nil, err
 	}
-
 	return json.Marshal(map[string]json.RawMessage{
 		"L": field_L,
 	})
 }
-
 func (self *AndGuard) MarshalJSON() ([]byte, error) {
 	return AndGuardToJSON(self)
 }

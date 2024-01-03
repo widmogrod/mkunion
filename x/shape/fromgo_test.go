@@ -25,7 +25,7 @@ func TestFromGoo(t *testing.T) {
 				Name: "Name",
 				Type: &StringLike{},
 				Desc: ptr("Name of the person"),
-				Tags: map[string]FieldTag{
+				Tags: map[string]Tag{
 					"desc": {Value: "Name of the person"},
 				},
 			},
@@ -41,7 +41,7 @@ func TestFromGoo(t *testing.T) {
 							Name:          "Any",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        []*FieldLike{},
+							Fields:        nil,
 						},
 						&StructLike{
 							Name:          "RefName",
@@ -90,19 +90,27 @@ func TestFromGoo(t *testing.T) {
 									PkgName:       "shape",
 									PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 								}},
+								{Name: "Tags", Type: &MapLike{
+									Key: &StringLike{},
+									Val: &RefName{
+										Name:          "Tag",
+										PkgName:       "shape",
+										PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+									},
+								}},
 							},
 						},
 						&StructLike{
 							Name:          "BooleanLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        []*FieldLike{},
+							Fields:        nil,
 						},
 						&StructLike{
 							Name:          "StringLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        []*FieldLike{},
+							Fields:        nil,
 						},
 						&StructLike{
 							Name:          "NumberLike",
@@ -111,72 +119,10 @@ func TestFromGoo(t *testing.T) {
 							Fields: []*FieldLike{
 								{
 									Name: "Kind",
-									Type: &UnionLike{
+									Type: &RefName{
 										Name:          "NumberKind",
 										PkgName:       "shape",
 										PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-										Variant: []Shape{
-											&StructLike{
-												Name:          "UInt8",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "UInt16",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "UInt32",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "UInt64",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "Int8",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "Int16",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "Int32",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "Int64",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "Float32",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-											&StructLike{
-												Name:          "Float64",
-												PkgName:       "shape",
-												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-												Fields:        []*FieldLike{},
-											},
-										},
 									},
 								},
 							},
@@ -256,119 +202,34 @@ func TestFromGoo(t *testing.T) {
 								{
 									Name: "TypeParams",
 									Type: &ListLike{
-										Element: &StructLike{
+										Element: &RefName{
 											Name:          "TypeParam",
 											PkgName:       "shape",
 											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-											Fields: []*FieldLike{
-												{
-													Name: "Name",
-													Type: &StringLike{},
-												},
-												{
-													Name: "Type",
-													Type: &RefName{
-														Name:          "Shape",
-														PkgName:       "shape",
-														PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-													},
-												},
-											},
 										},
 									},
 								},
 								{
 									Name: "Fields",
 									Type: &ListLike{
-										Element: &StructLike{
+										Element: &RefName{
 											Name:          "FieldLike",
 											PkgName:       "shape",
 											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-											Fields: []*FieldLike{
-												{
-													Name: "Name",
-													Type: &StringLike{},
-												},
-												{
-													Name: "Type",
-													Type: &RefName{
-														Name:          "Shape",
-														PkgName:       "shape",
-														PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-													},
-												},
-												{
-													Name:      "Desc",
-													Type:      &StringLike{},
-													IsPointer: true,
-												},
-												{
-													Name: "Guard",
-													Type: &UnionLike{
-														Name:          "Guard",
-														PkgName:       "shape",
-														PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-														Variant: []Shape{
-															&StructLike{
-																Name:          "Enum",
-																PkgName:       "shape",
-																PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-																Fields:        []*FieldLike{{Name: "Val", Type: &ListLike{Element: &StringLike{}}}},
-															},
-															&StructLike{
-																Name:          "Required",
-																PkgName:       "shape",
-																PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-																Fields:        []*FieldLike{},
-															},
-															&StructLike{
-																Name:          "AndGuard",
-																PkgName:       "shape",
-																PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-																Fields: []*FieldLike{
-																	{
-																		Name: "L",
-																		Type: &ListLike{
-																			Element: &RefName{
-																				Name:          "Guard",
-																				PkgName:       "shape",
-																				PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-																			},
-																		},
-																	},
-																},
-															},
-														},
-													},
-												},
-												{
-													Name: "IsPointer",
-													Type: &BooleanLike{},
-												},
-												{
-													Name: "Tags",
-													Type: &MapLike{
-														Key: &StringLike{},
-														Val: &StructLike{
-															Name:          "FieldTag",
-															PkgName:       "shape",
-															PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-															Fields: []*FieldLike{
-																{
-																	Name: "Value",
-																	Type: &StringLike{},
-																},
-																{
-																	Name: "Options",
-																	Type: &ListLike{Element: &StringLike{}},
-																},
-															},
-														},
-													},
-												},
-											},
+											IsPointer:     true,
 										},
 										ElementIsPointer: true,
+									},
+								},
+								{
+									Name: "Tags",
+									Type: &MapLike{
+										Key: &StringLike{},
+										Val: &RefName{
+											Name:          "Tag",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
 									},
 								},
 							},
@@ -400,11 +261,22 @@ func TestFromGoo(t *testing.T) {
 										},
 									},
 								},
+								{
+									Name: "Tags",
+									Type: &MapLike{
+										Key: &StringLike{},
+										Val: &RefName{
+											Name:          "Tag",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
+									},
+								},
 							},
 						},
 					},
 				},
-				Tags: map[string]FieldTag{
+				Tags: map[string]Tag{
 					"desc": {Value: "Big bag of attributes"},
 				},
 			},

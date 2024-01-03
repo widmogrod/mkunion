@@ -1,5 +1,7 @@
 package shape
 
+// go:generate go run ../../cmd/mkunion/main.go serde
+
 // go:generate go run ../../cmd/mkunion/main.go -name=Shape
 type (
 	Any     struct{}
@@ -16,6 +18,7 @@ type (
 		PkgImportName string
 		IsAlias       bool
 		Type          Shape
+		Tags          map[string]Tag
 	}
 	BooleanLike struct{}
 	// StringLike is a string type, and when it has name, it means it named type.
@@ -50,15 +53,20 @@ type (
 		PkgImportName string
 		TypeParams    []TypeParam
 		Fields        []*FieldLike
+		Tags          map[string]Tag
+		// this refers when struct is instantiated
+		IsPointer bool
 	}
 	UnionLike struct {
 		Name          string
 		PkgName       string
 		PkgImportName string
 		Variant       []Shape
+		Tags          map[string]Tag
 	}
 )
 
+//go:tag serde:"json"
 type TypeParam struct {
 	Name string
 	Type Shape
@@ -93,18 +101,90 @@ var TypeStringToNumberKindMap = map[string]NumberKind{
 	"rune":    &Int32{},
 }
 
+func IsBinary(x Shape) bool {
+	list, isList := x.(*ListLike)
+	if !isList {
+		return false
+	}
+
+	num, isNumber := list.Element.(*NumberLike)
+	if !isNumber {
+		return false
+	}
+
+	_, isByte := num.Kind.(*UInt8)
+	return isByte
+}
+
+func NumberKindToGoName(x NumberKind) string {
+	if x == nil {
+		return "int"
+	}
+
+	return MustMatchNumberKind(
+		x,
+		func(x *UInt8) string {
+			return "uint8"
+		},
+		func(x *UInt16) string {
+			return "uint16"
+		},
+		func(x *UInt32) string {
+			return "uint32"
+		},
+		func(x *UInt64) string {
+			return "uint64"
+		},
+		func(x *Int8) string {
+			return "int8"
+		},
+		func(x *Int16) string {
+			return "int16"
+		},
+		func(x *Int32) string {
+			return "int32"
+		},
+		func(x *Int64) string {
+			return "int64"
+		},
+		func(x *Float32) string {
+			return "float32"
+		},
+		func(x *Float64) string {
+			return "float64"
+		},
+	)
+}
+
 type FieldLike struct {
 	Name      string
 	Type      Shape
 	Desc      *string
 	Guard     Guard
 	IsPointer bool
-	Tags      map[string]FieldTag
+	Tags      map[string]Tag
 }
 
-type FieldTag struct {
+type Tag struct {
 	Value   string
 	Options []string
+}
+
+func TagGetValue(x map[string]Tag, tag, defaults string) string {
+	if x == nil {
+		return defaults
+	}
+
+	t, ok := x[tag]
+	if !ok {
+		return defaults
+	}
+
+	if t.Value == "" {
+		return defaults
+	}
+
+	return t.Value
 }
 
 // go:generate go run ../../cmd/mkunion/main.go -name=Guard
@@ -145,4 +225,129 @@ func ConcatGuard(a, b Guard) Guard {
 	return &AndGuard{
 		L: append(result.L, b),
 	}
+}
+
+func Tags(x Shape) map[string]Tag {
+	return MustMatchShape(
+		x,
+		func(x *Any) map[string]Tag {
+			return nil
+		},
+		func(x *RefName) map[string]Tag {
+			return nil
+		},
+		func(x *AliasLike) map[string]Tag {
+			return x.Tags
+		},
+		func(x *BooleanLike) map[string]Tag {
+			return nil
+		},
+		func(x *StringLike) map[string]Tag {
+			return nil
+		},
+		func(x *NumberLike) map[string]Tag {
+			return nil
+		},
+		func(x *ListLike) map[string]Tag {
+			return nil
+		},
+		func(x *MapLike) map[string]Tag {
+			return nil
+		},
+		func(x *StructLike) map[string]Tag {
+			return x.Tags
+		},
+		func(x *UnionLike) map[string]Tag {
+			return x.Tags
+		},
+	)
+}
+
+func Ptr[A any](x A) *A {
+	return &x
+}
+
+func IsPointer(x Shape) bool {
+	switch y := x.(type) {
+	case *RefName:
+		return y.IsPointer
+	case *StructLike:
+		return y.IsPointer
+	}
+
+	return false
+}
+
+func UnwrapPointer(x string) string {
+	if len(x) == 0 {
+		return x
+	}
+
+	if x[0] == '*' {
+		return x[1:]
+	}
+
+	return x
+}
+
+func IsString(x Shape) bool {
+	_, ok := x.(*StringLike)
+	return ok
+}
+
+func ExtractRefs(x Shape) []*RefName {
+	return MustMatchShape(
+		x,
+		func(x *Any) []*RefName {
+			return nil
+		},
+		func(x *RefName) []*RefName {
+			var result []*RefName
+			if x.Indexed != nil {
+				for _, v := range x.Indexed {
+					result = append(result, ExtractRefs(v)...)
+				}
+			}
+
+			return append(result, x)
+		},
+		func(x *AliasLike) []*RefName {
+			return ExtractRefs(x.Type)
+		},
+		func(x *BooleanLike) []*RefName {
+			return nil
+		},
+		func(x *StringLike) []*RefName {
+			return nil
+		},
+		func(x *NumberLike) []*RefName {
+			return nil
+		},
+		func(x *ListLike) []*RefName {
+			return ExtractRefs(x.Element)
+		},
+		func(x *MapLike) []*RefName {
+			var result []*RefName
+			result = append(result, ExtractRefs(x.Key)...)
+			result = append(result, ExtractRefs(x.Val)...)
+			return result
+		},
+		func(x *StructLike) []*RefName {
+			var result []*RefName
+			for _, field := range x.Fields {
+				result = append(result, ExtractRefs(field.Type)...)
+			}
+			for _, param := range x.TypeParams {
+				result = append(result, ExtractRefs(param.Type)...)
+			}
+			return result
+		},
+		func(x *UnionLike) []*RefName {
+			var result []*RefName
+			for _, variant := range x.Variant {
+				result = append(result, ExtractRefs(variant)...)
+			}
+			return result
+		},
+	)
 }

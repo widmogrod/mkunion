@@ -78,15 +78,15 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 				switch x.RunOption.(type) {
 				case *ScheduleRun, *DelayRun:
 					context.RunOption = x.RunOption
+					context.RunOption = completeParentRunID(context)
 
-					runTimestamp, err := completeRunOption(x.RunOption, dep)
+					runTimestamp, err := calculateExpectedRunTimestamp(x.RunOption, dep)
 					if err != nil {
 						return nil, err
 					}
 
 					// schedule or delay execution
 					return &Scheduled{
-						ParentRunID:          context.RunID,
 						ExpectedRunTimestamp: runTimestamp,
 						BaseState:            context,
 					}, nil
@@ -96,7 +96,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 				return newStatus, nil
 			}
 
-			return nil, ErrAlreadyStarted
+			return nil, ErrInvalidStateTransition
 		},
 		func(x *Callback) (State, error) {
 			switch s := state.(type) {
@@ -126,6 +126,10 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		func(x *TryRecover) (State, error) {
 			switch s := state.(type) {
 			case *Error:
+				if s.BaseState.RunID != x.RunID {
+					return nil, ErrRunIDNotMatch
+				}
+
 				maxRetries := s.BaseState.DefaultMaxRetries
 				//if s.MaxRetries > 0 {
 				//	maxRetries = s.MaxRetries
@@ -157,13 +161,13 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		func(x *StopSchedule) (State, error) {
 			switch s := state.(type) {
 			case *Scheduled:
-				if s.ParentRunID != x.ParentRunID {
+				parentRunID := extractParentRunID(s.BaseState)
+				if parentRunID != x.ParentRunID {
 					return nil, ErrRunIDNotMatch
 				}
 
 				return &ScheduleStopped{
-					ParentRunID: x.ParentRunID,
-					BaseState:   s.BaseState,
+					BaseState: s.BaseState,
 				}, nil
 			}
 
@@ -172,18 +176,18 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		func(x *ResumeSchedule) (State, error) {
 			switch s := state.(type) {
 			case *ScheduleStopped:
-				if s.ParentRunID != x.ParentRunID {
+				parentRunID := extractParentRunID(s.BaseState)
+				if parentRunID != x.ParentRunID {
 					return nil, ErrRunIDNotMatch
 				}
 
-				runTimestamp, err := completeRunOption(s.BaseState.RunOption, dep)
+				runTimestamp, err := calculateExpectedRunTimestamp(s.BaseState.RunOption, dep)
 				if err != nil {
 					return nil, err
 				}
 
 				return &Scheduled{
 					ExpectedRunTimestamp: runTimestamp,
-					ParentRunID:          x.ParentRunID,
 					BaseState:            s.BaseState,
 				}, nil
 			}
@@ -235,13 +239,13 @@ func getFlow(x Worflow, dep Dependency) (*Flow, error) {
 
 var cronParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 
-func completeRunOption(x RunOption, dep Dependency) (int64, error) {
+func calculateExpectedRunTimestamp(x RunOption, dep Dependency) (int64, error) {
 	return MustMatchRunOptionR2(
 		x,
 		func(x *ScheduleRun) (int64, error) {
 			schedule, err := cronParser.Parse(x.Interval)
 			if err != nil {
-				return 0, fmt.Errorf("workflow.completeRunOption: failed to parse interval: %w; %w", err, ErrIntervalParse)
+				return 0, fmt.Errorf("workflow.calculateExpectedRunTimestamp: failed to parse interval: %w; %w", err, ErrIntervalParse)
 			}
 
 			return schedule.Next(dep.TimeNow()).Unix(), nil
@@ -252,6 +256,43 @@ func completeRunOption(x RunOption, dep Dependency) (int64, error) {
 				TimeNow().
 				Add(time.Duration(x.DelayBySeconds) * time.Second).
 				Unix(), nil
+		},
+	)
+}
+
+func extractParentRunID(context BaseState) string {
+	return MustMatchRunOption(
+		context.RunOption,
+		func(y *ScheduleRun) string {
+			if y.ParentRunID == "" {
+				return context.RunID
+			}
+
+			return y.ParentRunID
+		},
+		func(y *DelayRun) string {
+			// DelayRun is like scheduled one, so parent run is always the same as current run
+			return context.RunID
+		},
+	)
+}
+
+func completeParentRunID(context BaseState) RunOption {
+	return MustMatchRunOption(
+		context.RunOption,
+		func(y *ScheduleRun) RunOption {
+			if y.ParentRunID == "" {
+				return &ScheduleRun{
+					Interval:    y.Interval,
+					ParentRunID: context.RunID,
+				}
+			}
+
+			return y
+		},
+		func(y *DelayRun) RunOption {
+			// DelayRun is like scheduled one, so parent run is always the same as current run
+			return y
 		},
 	)
 }
@@ -340,7 +381,7 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 				return nil, fmt.Errorf("workflow.ExecuteReshaper: expected location to start with field name, got %s", x.Path)
 			}
 			if val, ok := context.Variables[field.Name]; ok {
-				return schema.GetLocation(val, rest), nil
+				return schema.GetSchemaLocation(val, rest), nil
 			} else {
 				return nil, fmt.Errorf("variable %s not found", x.Path)
 			}

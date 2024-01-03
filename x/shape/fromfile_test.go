@@ -33,7 +33,7 @@ func TestInferFromFile(t *testing.T) {
 						Desc:      ptr("Name of the person"),
 						Guard:     nil,
 						IsPointer: false,
-						Tags: map[string]FieldTag{
+						Tags: map[string]Tag{
 							"json": {
 								Value: "name",
 							},
@@ -55,7 +55,7 @@ func TestInferFromFile(t *testing.T) {
 						Desc:      nil,
 						Guard:     nil,
 						IsPointer: false,
-						Tags: map[string]FieldTag{
+						Tags: map[string]Tag{
 							"json": {
 								Value: "age",
 							},
@@ -192,6 +192,15 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
+
+				Tags: map[string]Tag{
+					"json": {
+						Value: "m_list",
+						Options: []string{
+							"omitempty",
+						},
+					},
+				},
 			},
 			&AliasLike{
 				Name:          "N",
@@ -264,6 +273,11 @@ func TestInferFromFile(t *testing.T) {
 				},
 			},
 		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Example",
+			},
+		},
 	}
 
 	if diff := cmp.Diff(expected, union); diff != "" {
@@ -285,56 +299,50 @@ func TestInferFromFile(t *testing.T) {
 				Type: &Any{},
 			},
 		},
-		Fields: nil,
+		Fields: []*FieldLike{
+			{
+				Name: "Data",
+				Type: &RefName{
+					Name:          "T1",
+					PkgName:       "",
+					PkgImportName: "",
+				},
+			},
+			{
+				Name: "ListOf",
+				Type: &RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					IsPointer:     false,
+					Indexed: []Shape{
+						&RefName{
+							Name:          "T1",
+							PkgName:       "",
+							PkgImportName: "",
+						},
+					},
+				},
+				Tags: map[string]Tag{
+					"json": {
+						Value: "list_of",
+					},
+				},
+			},
+		},
+		Tags: map[string]Tag{
+			"serde": {
+				Value: "json",
+			},
+			"json": {
+				Value: "list_of_2",
+				Options: []string{
+					"omitempty",
+				},
+			},
+		},
 	}
 	if diff := cmp.Diff(expected2, strut); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
 }
-
-//func TestEmbeds(t *testing.T) {
-//	inferred, err := InferFromFile("../workflow/workflow_other.go")
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	union := inferred.RetrieveUnion("FunctionDSL")
-//	assert.Equal(t, "FunctionDSL", union.Name)
-//
-//	expected := &UnionLike{
-//		Name:          "FunctionDSL",
-//		PkgName:       "workflow",
-//		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-//		Variant: []Shape{
-//			&StructLike{
-//				Name:          "FunctionInput",
-//				PkgName:       "workflow",
-//				PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-//				Fields: []*FieldLike{
-//					{
-//						Name: "Name",
-//						Type: &StringLike{},
-//					},
-//					{
-//						Name: "CallbackID",
-//						Type: &StringLike{},
-//					},
-//					{
-//						Name: "Args",
-//						Type: &ListLike{
-//							Element: &RefName{
-//								Name:          "Schema",
-//								PkgName:       "schema",
-//								PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-//							},
-//						},
-//					},
-//				},
-//			},
-//		},
-//	}
-//
-//	if diff := cmp.Diff(expected, union); diff != "" {
-//		t.Errorf("mismatch (-want +got):\n%s", diff)
-//	}
-//}

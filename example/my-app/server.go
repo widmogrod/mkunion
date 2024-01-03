@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -12,6 +13,7 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	_ "github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
@@ -21,7 +23,28 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
+	"os/signal"
+	"runtime"
+	"runtime/pprof"
+	"syscall"
+)
+
+// this command make sure that all types that are imported will have generated typescript mapping
+//go:generate mkunion shape-export --language=typescript -o ./workflow
+
+// this lines defines all types that should have typescript mapping
+type (
+	Workflow       = workflow.Worflow
+	State          = workflow.State
+	Command        = workflow.Command
+	Expr           = workflow.Expr
+	Predicate      = workflow.Predicate
+	Reshaper       = workflow.Reshaper
+	Schema         = schema.Schema
+	UpdateRecords  = schemaless.UpdateRecords[schemaless.Record[any]]
+	FindingRecords = schemaless.FindingRecords[schemaless.Record[any]]
 )
 
 //go:generate mkunion -name=ChatCMD
@@ -47,61 +70,6 @@ type (
 	}
 )
 
-func init() {
-	schema.RegisterWellDefinedTypesConversion[openai.ToolCall](
-		func(call openai.ToolCall) schema.Schema {
-			return schema.MkMap(
-				schema.MkField("Index", schema.FromGo(call.Index)),
-				schema.MkField("Type", schema.FromGo(call.Type)),
-				schema.MkField("Function", schema.FromGo(call.Function)),
-				schema.MkField("ID", schema.FromGo(call.ID)),
-			)
-		},
-		func(s schema.Schema) openai.ToolCall {
-			index, _ := schema.ToGoG[*int](schema.Get(s, "Index"))
-			typ, _ := schema.ToGoG[openai.ToolType](schema.Get(s, "Type"))
-			function, _ := schema.ToGoG[openai.FunctionCall](schema.Get(s, "Function"))
-			id, _ := schema.ToGoG[string](schema.Get(s, "ID"))
-
-			return openai.ToolCall{
-				Index:    index,
-				Type:     typ,
-				Function: function,
-				ID:       id,
-			}
-		},
-	)
-	schema.RegisterWellDefinedTypesConversion[openai.ToolType](
-		func(toolType openai.ToolType) schema.Schema {
-			return schema.MkString(string(toolType))
-		},
-		func(s schema.Schema) openai.ToolType {
-			v, err := schema.ToGoG[string](s)
-			if err != nil {
-				panic(err)
-			}
-			return openai.ToolType(v)
-		},
-	)
-	schema.RegisterWellDefinedTypesConversion[openai.FunctionCall](
-		func(call openai.FunctionCall) schema.Schema {
-			return schema.MkMap(
-				schema.MkField("Name", schema.FromGo(call.Name)),
-				schema.MkField("Arguments", schema.FromGo(call.Arguments)),
-			)
-		},
-		func(s schema.Schema) openai.FunctionCall {
-			name, _ := schema.ToGoG[string](schema.Get(s, "Name"))
-			arguments, _ := schema.ToGoG[string](schema.Get(s, "Arguments"))
-
-			return openai.FunctionCall{
-				Name:      name,
-				Arguments: arguments,
-			}
-		},
-	)
-}
-
 type ListWorkflowsFn struct {
 	Count    int      `desc:"total number of words in sentence"`
 	Words    []string `desc:"list of words in sentence"`
@@ -115,23 +83,42 @@ type GenerateImage struct {
 	Height int `desc:"height of image as int between 50 and 500"`
 }
 
-//go:generate mkunion -name=QueryDSL
-type (
-	FindState schemaless.FindingRecords[schemaless.Record[workflow.State]]
-	FindFlow  schemaless.FindingRecords[schemaless.Record[workflow.Flow]]
-)
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 func main() {
-	schema.RegisterUnionTypes(ChatResultSchemaDef())
-	schema.RegisterUnionTypes(ChatCMDSchemaDef())
-	schema.RegisterRules([]schema.RuleMatcher{
-		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(workflow.BaseState{})),
-		schema.WhenPath([]string{"*", "Await"}, schema.UseStruct(&workflow.ApplyAwaitOptions{})),
-	})
-
+	flag.Parse()
 	log.SetLevel(log.DebugLevel)
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
-	store := schemaless.NewInMemoryRepository()
+	// ... rest of the program ...
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		runtime.GC()    // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	store := schemaless.NewInMemoryRepository[schema.Schema]()
 	statesRepo := typedful.NewTypedRepository[workflow.State](store)
 	flowsRepo := typedful.NewTypedRepository[workflow.Flow](store)
 
@@ -168,28 +155,30 @@ func main() {
 			return workflow.NewMachine(di, state)
 		},
 		func(cmd workflow.Command) (*predicate.WherePredicates, bool) {
-			if cmd == nil {
-				return nil, false
-			}
-
 			switch cmd := cmd.(type) {
 			case *workflow.StopSchedule:
 				return predicate.MustWhere(
-					`Data["workflow.Scheduled"].ParentRunID = :runID`,
+					`Data["workflow.Scheduled"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
 					predicate.ParamBinds{
 						":runID": schema.MkString(cmd.ParentRunID),
 					},
 				), true
 			case *workflow.ResumeSchedule:
 				return predicate.MustWhere(
-					`Data["workflow.ScheduleStopped"].ParentRunID = :runID`,
+					`Data["workflow.ScheduleStopped"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
 					predicate.ParamBinds{
 						":runID": schema.MkString(cmd.ParentRunID),
 					},
 				), true
-			default:
-				return nil, false
+			case *workflow.TryRecover:
+				return predicate.MustWhere(
+					`Data["workflow.Error"].BaseState.RunID = :runID`,
+					predicate.ParamBinds{
+						":runID": schema.MkString(cmd.RunID),
+					},
+				), true
 			}
+			return nil, false
 		},
 		func(state workflow.State) (string, bool) {
 			return workflow.GetRunID(state), true
@@ -200,6 +189,7 @@ func main() {
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 	}))
+
 	e.POST("/message", TypedJSONRequest(
 		ChatCMDFromJSON,
 		ChatResultToJSON,
@@ -277,8 +267,11 @@ func main() {
 						return nil, err
 					}
 
-					schemed := schema.FromGo(records)
-					result, err := schema.ToJSON(schemed)
+					result, err := shared.JSONMarshal[schemaless.FindingRecords[schemaless.Record[workflow.State]]](records)
+					if err != nil {
+						log.Errorf("failed to convert to json: %v", err)
+						return nil, err
+					}
 
 					history = append(history, openai.ChatCompletionMessage{
 						Role:       openai.ChatMessageRoleTool,
@@ -319,19 +312,40 @@ func main() {
 
 			log.Infof("result: %+v", result)
 			return response, nil
-		}))
+		},
+	))
 
-	e.POST("/func", TypedJSONRequest(
-		workflow.FunctionInputFromJSON,
-		workflow.FunctionOutputToJSON,
-		func(x *workflow.FunctionInput) (*workflow.FunctionOutput, error) {
-			fn, err := di.FindFunction(x.Name)
-			if err != nil {
-				return nil, err
-			}
+	e.POST("/func", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
 
-			return fn(x)
-		}))
+		x, err := shared.JSONUnmarshal[*workflow.FunctionInput](data)
+		if err != nil {
+			log.Errorf("failed to parse request body: %v", err)
+			return err
+		}
+
+		fn, err := di.FindFunction(x.Name)
+		if err != nil {
+			return err
+		}
+
+		result, err := fn(x)
+		if err != nil {
+			return err
+		}
+
+		resultJSON, err := shared.JSONMarshal[workflow.FunctionOutput](result)
+		if err != nil {
+			log.Errorf("failed to convert to json: %v", err)
+			return err
+		}
+
+		return c.JSONBlob(http.StatusOK, resultJSON)
+	})
 
 	e.POST("/flow", TypedJSONRequest(
 		workflow.WorflowFromJSON,
@@ -356,43 +370,7 @@ func main() {
 			return flow, nil
 		},
 	))
-	//e.POST("/flow", func(c echo.Context) error {
-	//	data, err := io.ReadAll(c.Request().Body)
-	//	if err != nil {
-	//		log.Errorf("failed to read request body: %v", err)
-	//		return err
-	//	}
-	//
-	//	schemed, err := schema.FromJSON(data)
-	//	if err != nil {
-	//		log.Errorf("failed to parse request body: %v", err)
-	//		return err
-	//	}
-	//
-	//	program, err := schema.ToGoG[workflow.Worflow](schemed)
-	//	if err != nil {
-	//		log.Errorf("failed to convert to command: %v", err)
-	//		return err
-	//	}
-	//
-	//	flow, ok := program.(*workflow.Flow)
-	//	if !ok {
-	//		return errors.New("expected *workflow.Flow")
-	//	}
-	//
-	//	err = flowsRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.Flow]{
-	//		ID:   flow.Name,
-	//		Type: "flow",
-	//		Data: *flow,
-	//	}))
-	//
-	//	if err != nil {
-	//		log.Errorf("failed to save state: %v", err)
-	//		return err
-	//	}
-	//
-	//	return c.JSONBlob(http.StatusOK, data)
-	//})
+
 	e.GET("/flow/:id", func(c echo.Context) error {
 		record, err := flowsRepo.Get(c.Param("id"), "flow")
 		if err != nil {
@@ -400,9 +378,7 @@ func main() {
 			return err
 		}
 
-		result, err := workflow.WorflowToJSON(&record.Data)
-		//schemed := schema.FromGo(record)
-		//result, err := schema.ToJSON(schemed)
+		result, err := shared.JSONMarshal[workflow.Worflow](record.Data)
 		if err != nil {
 			if errors.Is(err, schemaless.ErrNotFound) {
 				return c.JSONBlob(http.StatusNotFound, []byte(`{"error": "not found"}`))
@@ -414,18 +390,29 @@ func main() {
 
 		return c.JSONBlob(http.StatusOK, result)
 	})
-	e.GET("/flows", func(c echo.Context) error {
-		records, err := flowsRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.Flow]]{
-			RecordType: "flow",
-			//Limit:      2,
-		})
+
+	e.POST("/flows", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		query, err := shared.JSONUnmarshal[schemaless.FindingRecords[schemaless.Record[workflow.Flow]]](data)
+		if err != nil {
+			log.Warnf("failed to parse query: %v", err)
+			query = schemaless.FindingRecords[schemaless.Record[workflow.Flow]]{}
+		}
+
+		query.RecordType = "flow"
+
+		records, err := flowsRepo.FindingRecords(query)
 		if err != nil {
 			log.Errorf("failed to get flowsRepo: %v", err)
 			return err
 		}
 
-		schemed := schema.FromGo(records)
-		result, err := schema.ToJSON(schemed)
+		result, err := shared.JSONMarshal[schemaless.PageResult[schemaless.Record[workflow.Flow]]](records)
 		if err != nil {
 			log.Errorf("failed to convert to json: %v", err)
 			return err
@@ -434,29 +421,76 @@ func main() {
 		return c.JSONBlob(http.StatusOK, result)
 	})
 
-	e.GET("/list", func(c echo.Context) error {
-		records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
-			RecordType: "process",
-			//Where: predicate.MustWhere(
-			//	"Type = :type AND Data.#.#.BaseState.Flow.#.Name = :name",
-			//	predicate.ParamBinds{
-			//		":type": schema.MkString("process"),
-			//		":name": schema.MkString("hello_world"),
-			//	},
-			//),
-		})
+	e.POST("/flows-updating", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		updating, err := shared.JSONUnmarshal[schemaless.UpdateRecords[schemaless.Record[workflow.Flow]]](data)
+		if err != nil {
+			log.Errorf("failed to parse body: %v", err)
+			return err
+		}
+
+		err = flowsRepo.UpdateRecords(updating)
+		if err != nil {
+			log.Errorf("failed to update records: %v", err)
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
+	})
+
+	e.POST("/states", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		query, err := shared.JSONUnmarshal[schemaless.FindingRecords[schemaless.Record[workflow.State]]](data)
+		if err != nil {
+			log.Warnf("failed to parse query: %v", err)
+			query = schemaless.FindingRecords[schemaless.Record[workflow.State]]{}
+		}
+
+		query.RecordType = "process"
+		records, err := statesRepo.FindingRecords(query)
 		if err != nil {
 			return err
 		}
 
-		schemed := schema.FromGo(records)
-		result, err := schema.ToJSON(schemed)
+		result, err := shared.JSONMarshal[schemaless.PageResult[schemaless.Record[workflow.State]]](records)
 		if err != nil {
 			log.Errorf("failed to convert to json: %v", err)
 			return err
 		}
 
 		return c.JSONBlob(http.StatusOK, result)
+	})
+
+	e.POST("/state-updating", func(c echo.Context) error {
+		data, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Errorf("failed to read request body: %v", err)
+			return err
+		}
+
+		updating, err := shared.JSONUnmarshal[schemaless.UpdateRecords[schemaless.Record[workflow.State]]](data)
+		if err != nil {
+			log.Errorf("failed to parse body: %v", err)
+			return err
+		}
+
+		err = statesRepo.UpdateRecords(updating)
+		if err != nil {
+			log.Errorf("failed to update records: %v", err)
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
 	})
 
 	e.POST("/", TypedJSONRequest(
@@ -464,25 +498,6 @@ func main() {
 		workflow.StateToJSON,
 		func(cmd workflow.Command) (workflow.State, error) {
 			return srv.CreateOrUpdate(cmd)
-			//work := workflow.NewMachine(di, nil)
-			//err := work.Handle(cmd)
-			//if err != nil {
-			//	log.Errorf("failed to handle command: %v", err)
-			//	return nil, err
-			//}
-			//
-			//newState := work.State()
-			//err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-			//	ID:   workflow.GetRunID(newState),
-			//	Type: "process",
-			//	Data: newState,
-			//}))
-			//if err != nil {
-			//	log.Errorf("failed to save state: %v", err)
-			//	return nil, err
-			//}
-			//
-			//return newState, nil
 		}))
 
 	e.POST("/workflow-to-str", func(c echo.Context) error {
@@ -560,9 +575,8 @@ func main() {
 			return newState, nil
 		}))
 
-	proc := &taskqueue.FunctionProcessor[workflow.State]{
+	proc := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
-			//log.Infof("data id: %#v \n", task.Data.ID)
 			work := workflow.NewMachine(di, task.Data.Data)
 			err := work.Handle(&workflow.Run{})
 			if err != nil {
@@ -628,14 +642,13 @@ func main() {
 		Change: []string{"create"},
 		Entity: "process",
 		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0 AND Version = 1`,
-		Filter: `Data[*]["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
-AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
+		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
+AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0
 `,
 	}
-	queue := taskqueue.NewInMemoryQueue[schemaless.Record[schema.Schema]]()
-	stream := store.AppendLog()
-	ctx := context.Background()
-	tq2 := taskqueue.NewTaskQueue(desc, queue, store, stream, proc)
+	queue := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
+	stream := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
+	tq2 := taskqueue.NewTaskQueue[workflow.State](desc, queue, statesRepo, stream, proc)
 
 	//go func() {
 	//	err := tq2.RunCDC(ctx)
@@ -658,8 +671,26 @@ AND Data[*]["workflow.Scheduled"].ExpectedRunTimestamp > 0
 		}
 	}()
 
-	e.Logger.Fatal(e.Start(":8080"))
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+	go func() {
+		<-sigs
+		log.Infof("shutting down server")
+		if err := e.Shutdown(ctx); err != nil {
+			log.Errorf("failed to shutdown server: %v", err)
+		}
+	}()
+
+	if err := e.Start(":8080"); err != nil {
+		if err == http.ErrServerClosed {
+			log.Infof("server closed")
+		} else {
+			log.Errorf("failed to start server: %v", err)
+		}
+	}
+
+	log.Infof("exiting")
 }
 
 func TypedJSONRequest[A, B any](des func([]byte) (A, error), ser func(B) ([]byte, error), handle func(x A) (B, error)) func(c echo.Context) error {
@@ -695,47 +726,6 @@ func TypedJSONRequest[A, B any](des func([]byte) (A, error), ser func(B) ([]byte
 		return c.JSONBlob(http.StatusOK, result)
 	}
 }
-
-//func TypedRequest[A, B any](handle func(x A) (B, error)) func(c echo.Context) error {
-//	return func(c echo.Context) error {
-//		data, err := io.ReadAll(c.Request().Body)
-//		if err != nil {
-//			log.Errorf("failed to read request body: %v", err)
-//			return err
-//		}
-//
-//		schemed, err := schema.FromJSON(data)
-//		if err != nil {
-//			log.Errorf("failed to parse request body: %v", err)
-//			return err
-//		}
-//
-//		in, err := schema.ToGoG[A](schemed)
-//		if err != nil {
-//			log.Errorf("failed to convert to command: %v", err)
-//			return err
-//		}
-//
-//		out, err := handle(in)
-//		if err != nil {
-//			return err
-//		}
-//
-//		if _, ok := any(out).(B); !ok {
-//			var b B
-//			return fmt.Errorf("TypedRequest: expected %T, got %T", b, out)
-//		}
-//
-//		schemed = schema.FromGo(out)
-//		result, err := schema.ToJSON(schemed)
-//		if err != nil {
-//			log.Errorf("failed to convert to json: %v", err)
-//			return err
-//		}
-//
-//		return c.JSONBlob(http.StatusOK, result)
-//	}
-//}
 
 func NewService[CMD any, State any](
 	recordType string,

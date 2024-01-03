@@ -2,7 +2,6 @@
 package shape
 
 import "github.com/widmogrod/mkunion/f"
-import "github.com/widmogrod/mkunion/x/schema"
 import "github.com/widmogrod/mkunion/x/shared"
 import "encoding/json"
 import "fmt"
@@ -132,27 +131,21 @@ func MustMatchNumberKindR2[TOut1, TOut2 any](
 	return f.MustMatch10R2(x, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10)
 }
 
-// mkunion-extension:schema
-func init() {
-	schema.RegisterUnionTypes(NumberKindSchemaDef())
-}
-
-func NumberKindSchemaDef() *schema.UnionVariants[NumberKind] {
-	return schema.MustDefineUnion[NumberKind](
-		new(UInt8),
-		new(UInt16),
-		new(UInt32),
-		new(UInt64),
-		new(Int8),
-		new(Int16),
-		new(Int32),
-		new(Int64),
-		new(Float32),
-		new(Float64),
-	)
-}
-
 // mkunion-extension:shape
+func init() {
+	Register(NumberKindShape())
+	Register(UInt8Shape())
+	Register(UInt16Shape())
+	Register(UInt32Shape())
+	Register(UInt64Shape())
+	Register(Int8Shape())
+	Register(Int16Shape())
+	Register(Int32Shape())
+	Register(Int64Shape())
+	Register(Float32Shape())
+	Register(Float64Shape())
+}
+
 func NumberKindShape() Shape {
 	return &UnionLike{
 		Name:          "NumberKind",
@@ -254,6 +247,20 @@ func Float64Shape() Shape {
 }
 
 // mkunion-extension:json
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberKind", NumberKindFromJSON, NumberKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt8", UInt8FromJSON, UInt8ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt16", UInt16FromJSON, UInt16ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt32", UInt32FromJSON, UInt32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt64", UInt64FromJSON, UInt64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int8", Int8FromJSON, Int8ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int16", Int16FromJSON, Int16ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int32", Int32FromJSON, Int32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int64", Int64FromJSON, Int64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float32", Float32FromJSON, Float32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float64", Float64FromJSON, Float64ToJSON)
+}
+
 type NumberKindUnionJSON struct {
 	Type    string          `json:"$type,omitempty"`
 	UInt8   json.RawMessage `json:"shape.UInt8,omitempty"`
@@ -320,7 +327,7 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 		return Float64FromJSON(data.Float64)
 	}
 
-	return nil, fmt.Errorf("unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.NumberKind: unknown type %s", data.Type)
 }
 
 func NumberKindToJSON(x NumberKind) ([]byte, error) {

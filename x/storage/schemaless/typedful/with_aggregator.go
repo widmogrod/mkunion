@@ -2,17 +2,23 @@ package typedful
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	. "github.com/widmogrod/mkunion/x/storage/schemaless"
-	"log"
 )
 
 func NewTypedRepoWithAggregator[T, C any](
 	store Repository[schema.Schema],
 	aggregator func() Aggregator[T, C],
 ) *TypedRepoWithAggregator[T, C] {
+	location, err := NewTypedLocation[Record[T]]()
+	if err != nil {
+		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
+	}
+
 	return &TypedRepoWithAggregator[T, C]{
+		loc:        location,
 		store:      store,
 		aggregator: aggregator,
 	}
@@ -21,25 +27,26 @@ func NewTypedRepoWithAggregator[T, C any](
 var _ Repository[any] = &TypedRepoWithAggregator[any, any]{}
 
 type TypedRepoWithAggregator[T any, C any] struct {
+	loc        *TypedLocation
 	store      Repository[schema.Schema]
 	aggregator func() Aggregator[T, C]
 }
 
-func (r *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType RecordType) (Record[T], error) {
-	v, err := r.store.Get(recordID, recordType)
+func (repo *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType RecordType) (Record[T], error) {
+	v, err := repo.store.Get(recordID, recordType)
 	if err != nil {
-		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.Get store error ID=%s Type=%s. %w", recordID, recordType, err)
+		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema store error ID=%s Type=%s. %w", recordID, recordType, err)
 	}
 
 	typed, err := RecordAs[T](v)
 	if err != nil {
-		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.Get type assertion error ID=%s Type=%s. %w", recordID, recordType, err)
+		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema type assertion error ID=%s Type=%s. %w", recordID, recordType, err)
 	}
 
 	return typed, nil
 }
 
-func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]) error {
+func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]) error {
 	schemas := UpdateRecords[Record[schema.Schema]]{
 		UpdatingPolicy: s.UpdatingPolicy,
 		Saving:         make(map[string]Record[schema.Schema]),
@@ -47,7 +54,7 @@ func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]
 	}
 
 	// This is fix to in memory aggregator
-	aggregate := r.aggregator()
+	aggregate := repo.aggregator()
 
 	for id, record := range s.Saving {
 		err := aggregate.Append(record)
@@ -79,7 +86,7 @@ func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]
 		schemas.Saving["indices:"+versionedData.ID+":"+versionedData.Type] = versionedData
 	}
 
-	err := r.store.UpdateRecords(schemas)
+	err := repo.store.UpdateRecords(schemas)
 	if err != nil {
 		return fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords schemas store err %w", err)
 	}
@@ -87,7 +94,7 @@ func (r *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]
 	return nil
 }
 
-func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error) {
+func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error) {
 	// Typed version of FindingRecords should work with different form of where and sort fields
 	// Typed version suggest that data stored in storage is typed,
 	// but in fact it stored as schema.Schema
@@ -97,16 +104,21 @@ func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Reco
 	// wheere internal representation Record[schema.Schen] is access it
 	//		Data["schema.Map"].Name, Data["schema.Map"].Age
 	// This means, that we need add between data path and
+
 	if query.Where != nil {
-		query.Where.Predicate = wrapLocationInShemaMap(query.Where.Predicate)
+		query.Where.Predicate = repo.wrapPredicate(query.Where.Predicate)
 	}
 
 	// do the same for sort fields
 	for i, sort := range query.Sort {
-		query.Sort[i].Field = wrapLocation(sort.Field)
+		var err error
+		query.Sort[i].Field, err = repo.loc.WrapLocationStr(sort.Field)
+		if err != nil {
+			return PageResult[Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords wrapLocation in sort; %w", err)
+		}
 	}
 
-	found, err := r.store.FindingRecords(FindingRecords[Record[schema.Schema]]{
+	found, err := repo.store.FindingRecords(FindingRecords[Record[schema.Schema]]{
 		RecordType: query.RecordType,
 		Where:      query.Where,
 		Sort:       query.Sort,
@@ -163,39 +175,40 @@ func (r *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Reco
 //     But, because synchronous index is from point of time, it needs to trigger reindex.
 //     Which imply that aggregator myst know when index was created, so it can know when to stop rebuilding process.
 //     This implies control plane. Versions of records should follow monotonically increasing order, that way it will be easier to detect when index is up to date.
-func (r *TypedRepoWithAggregator[T, C]) ReindexAll() {
+func (repo *TypedRepoWithAggregator[T, C]) ReindexAll() {
 	panic("not implemented")
 }
 
-func wrapLocationInShemaMap(x predicate.Predicate) predicate.Predicate {
-	if x == nil {
-		return nil
-	}
-
+func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) predicate.Predicate {
 	return predicate.MustMatchPredicate(
-		x,
+		p,
 		func(x *predicate.And) predicate.Predicate {
 			r := &predicate.And{}
 			for _, p := range x.L {
-				r.L = append(r.L, wrapLocationInShemaMap(p))
+				r.L = append(r.L, repo.wrapPredicate(p))
 			}
 			return r
 		},
 		func(x *predicate.Or) predicate.Predicate {
 			r := &predicate.Or{}
 			for _, p := range x.L {
-				r.L = append(r.L, wrapLocationInShemaMap(p))
+				r.L = append(r.L, repo.wrapPredicate(p))
 			}
 			return r
 		},
 		func(x *predicate.Not) predicate.Predicate {
 			r := &predicate.Not{}
-			r.P = wrapLocationInShemaMap(x.P)
+			r.P = repo.wrapPredicate(x.P)
 			return r
 		},
 		func(x *predicate.Compare) predicate.Predicate {
+			loc, err := repo.loc.WrapLocationStr(x.Location)
+			if err != nil {
+				panic(fmt.Errorf("wrapPredicate: %w", err))
+			}
+
 			return &predicate.Compare{
-				Location:  wrapLocation(x.Location),
+				Location:  loc,
 				Operation: x.Operation,
 				BindValue: predicate.MustMatchBindable(
 					x.BindValue,
@@ -206,34 +219,17 @@ func wrapLocationInShemaMap(x predicate.Predicate) predicate.Predicate {
 						return x
 					},
 					func(x *predicate.Locatable) predicate.Bindable {
+						loc, err := repo.loc.WrapLocationStr(x.Location)
+						if err != nil {
+							panic(fmt.Errorf("wrapPredicate: %w", err))
+						}
+
 						return &predicate.Locatable{
-							Location: wrapLocation(x.Location),
+							Location: loc,
 						}
 					},
 				),
 			}
 		},
 	)
-}
-
-func wrapLocation(x string) string {
-	loc, err := schema.ParseLocation(x)
-	if err != nil {
-		return x
-	}
-	if len(loc) >= 2 {
-		first := loc[0]
-		if fl, ok := first.(*schema.LocationField); ok && fl.Name != "Data" {
-			return x
-		}
-
-		rest := loc[1:]
-
-		newLoc := []schema.Location{first}
-		newLoc = append(newLoc, &schema.LocationField{Name: "schema.Map"})
-		newLoc = append(newLoc, rest...)
-		return schema.LocationToStr(newLoc)
-	}
-
-	return x
 }

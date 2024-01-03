@@ -82,8 +82,8 @@ func TestTreeSchema(t *testing.T) {
 		},
 	}
 
-	sch := schema.FromGo(tree)
-	result := schema.MustToGo(sch)
+	sch := schema.FromGo[Tree](tree)
+	result := schema.ToGo[Tree](sch)
 	assert.Equal(t, tree, result)
 }
 

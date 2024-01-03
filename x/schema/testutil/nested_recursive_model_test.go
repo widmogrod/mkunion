@@ -1,163 +1,114 @@
 package testutil
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
-	. "github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
+	"reflect"
 	"testing"
 )
 
-func TestSchemaSchemaSerDe(t *testing.T) {
-	subject := struct {
-		ID     string
-		Schema Schema
-	}{
-		ID: "foo",
-		Schema: MkMap(
-			MkField("name", MkString("Alpha")),
-			MkField("age", MkInt(42)),
-		),
+func TestToGo_ExampleOne(t *testing.T) {
+	inferred, err := shape.InferFromFile("nested_recursive_model.go")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	expected := MkMap(
-		MkField("ID", MkString("foo")),
-		MkField("Schema", MkMap(
-			MkField("schema.Map", MkMap(
-				MkField("name", MkString("Alpha")),
-				MkField("age", MkInt(42)),
-			)),
-		)),
-	)
-	schema := FromGo(subject)
-	assert.Equal(t, expected, schema)
+	exampleOne := inferred.RetrieveStruct("ExampleOne")
+	assert.NotNil(t, exampleOne)
 
-	got, err := ToGo(schema, WithExtraRules(
-		WhenPath([]string{}, UseStruct(struct {
-			ID     string
-			Schema Schema
-		}{})),
-	))
-
-	assert.NoError(t, err)
-	assert.Equal(t, subject, got)
-}
-
-func TestSchemaSchemaSerDeRecursive(t *testing.T) {
-	t.Skip("to remove this feature")
-	subject := &ExampleTwo{
-		TwoData: MkMap(
-			MkField("name", MkString("Alpha")),
-			MkField("age", MkInt(42)),
-		),
-		TwoNext: &ExampleTwo{
-			TwoData: MkInt(666),
-			TwoNext: &ExampleOne{
-				OneValue: "foo",
-			},
-		},
+	subject := ExampleOne{
+		OneValue: "hello",
 	}
 
-	expected := MkMap(
-		MkField("testutil.ExampleTwo", MkMap(
-			MkField("TwoData", MkMap(
-				MkField("schema.Map", MkMap(
-					MkField("name", MkString("Alpha")),
-					MkField("age", MkInt(42)),
-				)),
-			)),
-			MkField("TwoNext", MkMap(
-				MkField("testutil.ExampleTwo", MkMap(
-					MkField("TwoData", MkMap(
-						MkField("schema.Number", MkInt(666)),
-					)),
-					MkField("TwoNext", MkMap(
-						MkField("testutil.ExampleOne", MkMap(
-							MkField("OneValue", MkString("foo")),
-						)),
-					)),
-				)),
-			)),
-		)),
-	)
-
-	schema := FromGo(subject)
-	assert.Equal(t, expected, schema)
-
-	ajson, err := ToJSON(schema)
-	assert.NoError(t, err)
-
-	bjson, err := ToJSON(expected)
-	assert.NoError(t, err)
-
-	assert.JSONEq(t, string(bjson), string(ajson))
-
-	adata, err := FromJSON(ajson)
-	assert.NoError(t, err)
-
-	bdata, err := FromJSON(bjson)
-	assert.NoError(t, err)
-
-	assert.True(t, 0 == Compare(adata, bdata))
-
-	got, err := ToGo(schema)
-	assert.NoError(t, err)
-	assert.Equal(t, subject, got)
-}
-func TestSchemaSchemaSerDeRecursiveList(t *testing.T) {
-	t.Skip("to remove this feature")
-	subject := &ExampleTree{
-		Items: []Example{
-			&ExampleOne{OneValue: "foo"},
-			&ExampleTwo{TwoData: MkInt(666)}},
-		Schemas: []Schema{
-			MkMap(
-				MkField("name", MkString("Alpha")),
+	result := schema.FromGoReflect(exampleOne, reflect.ValueOf(subject))
+	assert.Equal(t,
+		schema.MkMap(
+			schema.MkField(
+				"OneValue", schema.MkString("hello"),
 			),
-			MkString("foo"),
+		),
+		result,
+	)
+
+	output, err := schema.ToGoReflect(exampleOne, result, reflect.TypeOf(ExampleOne{}))
+	assert.NoError(t, err)
+
+	assert.Equal(t, subject, output.Interface())
+}
+
+func TestToGo_ExampleTwo(t *testing.T) {
+	inferred, err := shape.InferFromFile("nested_recursive_model.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exampleTwo := inferred.RetrieveStruct("ExampleTwo")
+	assert.NotNil(t, exampleTwo)
+
+	subject := ExampleTwo{
+		TwoData: schema.MkBinary([]byte("world")),
+		TwoNext: &ExampleOne{
+			OneValue: "hello",
 		},
 	}
 
-	expected := MkMap(
-		MkField("testutil.ExampleTree", MkMap(
-			MkField("Items", MkList(
-				MkMap(
-					MkField("testutil.ExampleOne", MkMap(
-						MkField("OneValue", MkString("foo")),
-					)),
+	result := schema.FromGoReflect(exampleTwo, reflect.ValueOf(subject))
+
+	expected := schema.MkMap(
+		schema.MkField(
+			"TwoData",
+			schema.MkMap(
+				schema.MkField("$type", schema.MkString("schema.Binary")),
+				schema.MkField(
+					"schema.Binary", schema.MkBinary([]byte("world")),
 				),
-				MkMap(
-					MkField("testutil.ExampleTwo", MkMap(
-						MkField("TwoData", MkMap(
-							MkField("schema.Number", MkInt(666)),
-						)),
-						MkField("TwoNext", MkNone()),
-					)),
+			),
+		),
+		schema.MkField(
+			"TwoNext",
+			schema.MkMap(
+				schema.MkField("$type", schema.MkString("testutil.ExampleOne")),
+				schema.MkField(
+					"testutil.ExampleOne", schema.MkMap(
+						schema.MkField(
+							"OneValue", schema.MkString("hello"),
+						),
+					),
 				),
-			)),
-			MkField("Schemas", MkList(
-				MkMap(
-					MkField("schema.Map", MkMap(
-						MkField("name", MkString("Alpha")),
-					)),
-				),
-				MkMap(
-					MkField("schema.String", MkString("foo")),
-				),
-			)),
-		)),
+			),
+		),
 	)
 
-	schema := FromGo(subject)
-	assert.Equal(t, expected, schema)
+	if diff := cmp.Diff(expected, result); diff != "" {
+		t.Fatal(diff)
+	}
 
-	ajson, err := ToJSON(schema)
-	assert.NoError(t, err)
+	output, err := schema.ToGoReflect(exampleTwo, result, reflect.TypeOf(ExampleTwo{}))
+	if assert.NoError(t, err) {
+		assert.Equal(t, subject, output.Interface())
+	}
+}
 
-	bjson, err := ToJSON(expected)
-	assert.NoError(t, err)
+func Test_GetShapeLocation(t *testing.T) {
+	inferred, err := shape.InferFromFile("nested_recursive_model.go")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	assert.JSONEq(t, string(bjson), string(ajson))
+	exampleTwo := inferred.RetrieveStruct("ExampleTwo")
+	assert.NotNil(t, exampleTwo)
 
-	got, err := ToGo(schema)
-	assert.NoError(t, err)
-	assert.Equal(t, subject, got)
+	subject := ExampleTwo{
+		TwoData: schema.MkInt(1),
+		TwoNext: &ExampleOne{
+			OneValue: "hello",
+		},
+	}
+
+	result, resultShape := schema.Get(subject, "TwoNext[*].OneValue")
+
+	assert.Equal(t, schema.MkString("hello"), result)
+	assert.Equal(t, &shape.StringLike{}, resultShape)
 }

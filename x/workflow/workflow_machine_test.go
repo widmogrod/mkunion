@@ -2,9 +2,11 @@ package workflow
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"testing"
@@ -30,13 +32,6 @@ var functions = map[string]Function{
 }
 
 func TestExecution(t *testing.T) {
-	schema.RegisterRules([]schema.RuleMatcher{
-		schema.WhenPath([]string{"*", "BaseState"}, schema.UseStruct(BaseState{})),
-	})
-	schema.RegisterUnionTypes(
-		StateSchemaDef(),
-	)
-
 	program := &Flow{
 		Name: "hello_world_flow",
 		Arg:  "input",
@@ -74,7 +69,7 @@ func TestExecution(t *testing.T) {
 		},
 	}
 
-	store := schemaless.NewInMemoryRepository()
+	store := schemaless.NewInMemoryRepository[schema.Schema]()
 	repo := typedful.NewTypedRepository[State](store)
 	state, err := repo.Get("1", "workflow")
 	assert.ErrorIs(t, err, schemaless.ErrNotFound)
@@ -261,7 +256,6 @@ func TestMachine(t *testing.T) {
 				},
 			}).
 			ThenState(&Scheduled{
-				ParentRunID:          runID,
 				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 				BaseState: BaseState{
 					RunID:  runID,
@@ -304,7 +298,6 @@ func TestMachine(t *testing.T) {
 						ParentRunID: runID,
 					}).
 					ThenState(&ScheduleStopped{
-						ParentRunID: runID,
 						BaseState: BaseState{
 							RunID:  runID,
 							StepID: "",
@@ -323,7 +316,6 @@ func TestMachine(t *testing.T) {
 						ParentRunID: runID,
 					}).
 					ThenState(&Scheduled{
-						ParentRunID:          runID,
 						ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 						BaseState: BaseState{
 							RunID:  runID,
@@ -469,7 +461,9 @@ func TestMachine(t *testing.T) {
 			}).
 			ForkCase("retry execution", func(c *machine.Case[Command, State]) {
 				c.
-					GivenCommand(&TryRecover{},
+					GivenCommand(&TryRecover{
+						RunID: runID,
+					},
 						machine.WithBefore(func() {
 							di.FindFunctionF = func(funcID string) (Function, error) {
 								return nil, fmt.Errorf("function funcID='%s' not found", funcID)
@@ -522,11 +516,243 @@ func TestMachine(t *testing.T) {
 				},
 			})
 	})
+	suite.Case("scheduled run", func(c *machine.Case[Command, State]) {
+		c.
+			GivenCommand(&Run{
+				Flow:  &FlowRef{FlowID: "hello_world_flow_if"},
+				Input: schema.MkString("El Mundo"),
+				RunOption: &ScheduleRun{
+					Interval: "@every 1s",
+				},
+			}).
+			ThenState(&Scheduled{
+				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
+				BaseState: BaseState{
+					RunID:  runID,
+					StepID: "",
+					Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+					Variables: map[string]schema.Schema{
+						"input": schema.MkString("El Mundo"),
+					},
+					ExprResult:        map[string]schema.Schema{},
+					DefaultMaxRetries: 3,
+					RunOption: &ScheduleRun{
+						Interval:    "@every 1s",
+						ParentRunID: runID,
+					},
+				},
+			}).
+			ForkCase("run scheduled run", func(c *machine.Case[Command, State]) {
+				c.
+					GivenCommand(&Run{}).
+					ThenState(&Done{
+						Result: schema.MkString("only Spanish will work!"),
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "end-1",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("El Mundo"),
+								"res":   schema.MkString("hello El Mundo"),
+							},
+							ExprResult:        map[string]schema.Schema{},
+							DefaultMaxRetries: 3,
+							RunOption: &ScheduleRun{
+								Interval:    "@every 1s",
+								ParentRunID: runID,
+							},
+						},
+					})
+			}).
+			ForkCase("stop scheduled run", func(c *machine.Case[Command, State]) {
+				c.
+					GivenCommand(&StopSchedule{
+						ParentRunID: runID,
+					}).
+					ThenState(&ScheduleStopped{
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("El Mundo"),
+							},
+							ExprResult:        map[string]schema.Schema{},
+							DefaultMaxRetries: 3,
+							RunOption: &ScheduleRun{
+								Interval:    "@every 1s",
+								ParentRunID: runID,
+							},
+						},
+					}).
+					ForkCase("run stopped", func(c *machine.Case[Command, State]) {
+						c.
+							GivenCommand(&Run{}).
+							ThenStateAndError(&ScheduleStopped{
+								BaseState: BaseState{
+									RunID:  runID,
+									StepID: "",
+									Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+									Variables: map[string]schema.Schema{
+										"input": schema.MkString("El Mundo"),
+									},
+									ExprResult:        map[string]schema.Schema{},
+									DefaultMaxRetries: 3,
+									RunOption: &ScheduleRun{
+										Interval:    "@every 1s",
+										ParentRunID: runID,
+									},
+								},
+							}, ErrInvalidStateTransition)
+					}).
+					ForkCase("resume scheduled run", func(c *machine.Case[Command, State]) {
+						c.
+							GivenCommand(&ResumeSchedule{
+								ParentRunID: runID,
+							}).
+							ThenState(&Scheduled{
+								ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
+								BaseState: BaseState{
+									RunID:  runID,
+									StepID: "",
+									Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+									Variables: map[string]schema.Schema{
+										"input": schema.MkString("El Mundo"),
+									},
+									ExprResult:        map[string]schema.Schema{},
+									DefaultMaxRetries: 3,
+									RunOption: &ScheduleRun{
+										Interval:    "@every 1s",
+										ParentRunID: runID,
+									},
+								},
+							})
+					})
+
+			})
+	})
 
 	suite.Run(t)
 	suite.Fuzzy(t)
 
 	if true || suite.AssertSelfDocumentStateDiagram(t, "machine") {
 		suite.SelfDocumentStateDiagram(t, "machine")
+	}
+}
+
+func TestBaseState_Serde(t *testing.T) {
+	subject := BaseState{
+		RunID:  "qrwqer",
+		StepID: "end-1",
+		Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+		Variables: map[string]schema.Schema{
+			"input": schema.MkString("El Mundo"),
+			"res":   schema.MkString("hello El Mundo"),
+		},
+		ExprResult:        map[string]schema.Schema{},
+		DefaultMaxRetries: 3,
+	}
+
+	result, err := shared.JSONMarshal[BaseState](subject)
+	assert.NoError(t, err)
+
+	output, err := shared.JSONUnmarshal[BaseState](result)
+	assert.NoError(t, err)
+
+	if diff := cmp.Diff(subject, output); diff != "" {
+		t.Errorf("BaseState mismatch (-want +got):\n%s", diff)
+	}
+
+	expectedJSON := `{
+  "DefaultMaxRetries": 3,
+  "ExprResult": {},
+  "Flow": {
+    "$type": "workflow.FlowRef",
+    "workflow.FlowRef": {
+      "FlowID": "hello_world_flow_if"
+    }
+  },
+  "RunID": "qrwqer",
+  "RunOption": null,
+  "StepID": "end-1",
+  "Variables": {
+    "input": {
+      "$type": "schema.String",
+      "schema.String": "El Mundo"
+    },
+    "res": {
+      "$type": "schema.String",
+      "schema.String": "hello El Mundo"
+    }
+  }
+}
+`
+	if !assert.JSONEq(t, expectedJSON, string(result)) {
+		t.Log(string(result))
+	}
+
+}
+
+func TestState_Serde(t *testing.T) {
+	subject := &Done{
+		Result: schema.MkString("only Spanish will work!"),
+		BaseState: BaseState{
+			RunID:  "qrwqer",
+			StepID: "end-1",
+			Flow:   &FlowRef{FlowID: "hello_world_flow_if"},
+			Variables: map[string]schema.Schema{
+				"input": schema.MkString("El Mundo"),
+				"res":   schema.MkString("hello El Mundo"),
+			},
+			ExprResult:        map[string]schema.Schema{},
+			DefaultMaxRetries: 3,
+		},
+	}
+
+	result, err := shared.JSONMarshal[State](subject)
+	assert.NoError(t, err)
+
+	output, err := shared.JSONUnmarshal[State](result)
+	assert.NoError(t, err)
+
+	if diff := cmp.Diff(subject, output); diff != "" {
+		t.Errorf("State mismatch (-want +got):\n%s", diff)
+	}
+
+	expectedJSON := `{
+  "$type": "workflow.Done",
+  "workflow.Done": {
+    "BaseState": {
+      "DefaultMaxRetries": 3,
+      "ExprResult": {},
+      "Flow": {
+        "$type": "workflow.FlowRef",
+        "workflow.FlowRef": {
+          "FlowID": "hello_world_flow_if"
+        }
+      },
+      "RunID": "qrwqer",
+      "RunOption": null,
+      "StepID": "end-1",
+      "Variables": {
+        "input": {
+          "$type": "schema.String",
+          "schema.String": "El Mundo"
+        },
+        "res": {
+          "$type": "schema.String",
+          "schema.String": "hello El Mundo"
+        }
+      }
+    },
+    "Result": {
+      "$type": "schema.String",
+      "schema.String": "only Spanish will work!"
+    }
+  }
+}
+`
+	if !assert.JSONEq(t, expectedJSON, string(result)) {
+		t.Log(string(result))
 	}
 }

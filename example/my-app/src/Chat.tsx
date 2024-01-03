@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import './Chat.css';
+import * as openai from './workflow/index'
 import {ChatCMD, ChatResult} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
 
 type Message = {
@@ -7,11 +8,10 @@ type Message = {
     type: "user" | "system"
 }
 
-
 interface ChatParams {
     props: {
         name: string;
-        onFunctionCall?: (func: { Name: string, Arguments: string }) => void
+        onFunctionCall?: (func: openai.FunctionCall) => void
     };
 }
 
@@ -40,15 +40,18 @@ function mapChatResultToMessages(result: ChatResult): Message[] {
     ]
 }
 
-function getToolCalls(result: ChatResult): any[] {
-    if ("main.SystemResponse" in result) {
-        return result["main.SystemResponse"]["ToolCalls"] || []
-    } else if ("main.ChatResponses" in result) {
-        const responses = result["main.ChatResponses"]["Responses"] || [];
-        return responses.flatMap((response: ChatResult) => {
-            return getToolCalls(response)
-        }).filter((toolCall: any) => toolCall)
+function getToolCalls(result: ChatResult): openai.ToolCall[] {
+    switch (result.$type) {
+        case "main.SystemResponse":
+            return result["main.SystemResponse"].ToolCalls || [];
+
+        case "main.ChatResponses":
+            const responses = result["main.ChatResponses"]["Responses"] || [];
+            return responses.flatMap((response: ChatResult) => {
+                return getToolCalls(response)
+            }).filter((toolCall: any) => toolCall)
     }
+
     return []
 }
 
@@ -80,12 +83,12 @@ export function Chat({props}: ChatParams) {
         })
             .then(res => res.json() as Promise<ChatResult>)
             .then(data => {
-                    setMessages([...messages, ...mapChatResultToMessages(data)])
+                setMessages([...messages, ...mapChatResultToMessages(data)])
 
-                    let toolCalls = getToolCalls(data)
-                    toolCalls.forEach((toolCall: any) => {
-                        props.onFunctionCall && props.onFunctionCall(toolCall.Function);
-                    })
+                let toolCalls = getToolCalls(data)
+                toolCalls.forEach((toolCall: openai.ToolCall) => {
+                    props.onFunctionCall && props.onFunctionCall(toolCall.function);
+                })
             });
 
     }, [messages, props]);

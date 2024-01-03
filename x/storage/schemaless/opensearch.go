@@ -8,54 +8,53 @@ import (
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"io"
 	"strings"
 )
 
-func NewOpenSearchRepository(client *opensearch.Client, index string) *OpenSearchRepository {
-	return &OpenSearchRepository{
+//go:generate go run ../../../cmd/mkunion/main.go serde
+
+func NewOpenSearchRepository[A any](client *opensearch.Client, index string) *OpenSearchRepository[A] {
+	return &OpenSearchRepository[A]{
 		client:    client,
 		indexName: index,
 	}
 }
 
-var _ Repository[schema.Schema] = (*OpenSearchRepository)(nil)
+var _ Repository[any] = (*OpenSearchRepository[any])(nil)
 
-type OpenSearchRepository struct {
+type OpenSearchRepository[A any] struct {
 	client    *opensearch.Client
 	indexName string
 }
 
-func (os *OpenSearchRepository) Get(recordID string, recordType RecordType) (Record[schema.Schema], error) {
+func (os *OpenSearchRepository[A]) Get(recordID string, recordType RecordType) (Record[A], error) {
 	response, err := os.client.Get(os.indexName, os.recordID(recordType, recordID))
 	if err != nil {
-		return Record[schema.Schema]{}, err
+		return Record[A]{}, err
 	}
 
 	result, err := io.ReadAll(response.Body)
 	if err != nil {
-		return Record[schema.Schema]{}, err
+		return Record[A]{}, err
 	}
 
-	log.Println("OpenSearchRepository.Get result=", string(result))
+	log.Println("OpenSearchRepository.GetSchema result=", string(result))
 
-	schemed, err := schema.FromJSON(result)
+	typed, err := shared.JSONUnmarshal[OpenSearchSearchResultHit[Record[A]]](result)
 	if err != nil {
-		return Record[schema.Schema]{}, err
+		return Record[A]{}, fmt.Errorf("DynamoDBRepository.GetSchema type conversion error=%s. %w", err, ErrInvalidType)
 	}
 
-	typed, err := schema.ToGoG[*Record[schema.Schema]](schema.Get(schemed, "_source"), WithOnlyRecordSchemaOptions)
-	if err != nil {
-		return Record[schema.Schema]{}, fmt.Errorf("DynamoDBRepository.Get type conversion error=%s. %w", err, ErrInvalidType)
-	}
-
-	return *typed, nil
+	return typed.Item, nil
 }
 
-func (os *OpenSearchRepository) UpdateRecords(command UpdateRecords[Record[schema.Schema]]) error {
+func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) error {
 	for _, record := range command.Saving {
-		data, err := schema.ToJSON(schema.FromGo(record))
+		data, err := shared.JSONMarshal[Record[A]](record)
+		//data, err := schema.ToJSON(schema.FromPrimitiveGo(record))
 		if err != nil {
 			panic(err)
 		}
@@ -77,7 +76,23 @@ func (os *OpenSearchRepository) UpdateRecords(command UpdateRecords[Record[schem
 	return nil
 }
 
-func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schema.Schema]]) (PageResult[Record[schema.Schema]], error) {
+type (
+	//go:tag serde:"json"
+	OpenSearchSearchResult[A any] struct {
+		Hits OpenSearchSearchResultHits[A] `json:"hits"`
+	}
+	//go:tag serde:"json"
+	OpenSearchSearchResultHits[A any] struct {
+		Hits []OpenSearchSearchResultHit[A] `json:"hits"`
+	}
+	//go:tag serde:"json"
+	OpenSearchSearchResultHit[A any] struct {
+		Item A        `json:"_source"`
+		Sort []string `json:"sort"`
+	}
+)
+
+func (os *OpenSearchRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {
 	filters, sorters := os.toFiltersAndSorters(query)
 
 	queryTemplate := map[string]any{}
@@ -94,23 +109,9 @@ func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schem
 	}
 
 	if query.After != nil {
-		schemed, err := schema.FromJSON([]byte(*query.After))
+		afterSearch, err := shared.JSONUnmarshal[any]([]byte(*query.After))
 		if err != nil {
 			panic(err)
-		}
-
-		list, ok := schemed.(*schema.List)
-		if !ok {
-			panic(fmt.Errorf("expected list, got %T", schemed))
-		}
-
-		afterSearch := make([]string, len(*list))
-		for i, item := range *list {
-			str, ok := schema.As[string](item)
-			if !ok {
-				panic(fmt.Errorf("expected string, got %T", item))
-			}
-			afterSearch[i] = str
 		}
 
 		queryTemplate["search_after"] = afterSearch
@@ -132,76 +133,89 @@ func (os *OpenSearchRepository) FindingRecords(query FindingRecords[Record[schem
 			panic(err)
 		}
 
-		log.Println("OpenSearchRepository FindingRecords ", string(body))
+		log.Infof("OpenSearchRepository FindingRecords %s", string(body))
 
 		request.Body = bytes.NewReader(body)
 	})
 	if err != nil {
 		panic(err)
-		//return PageResult[Record[schema.Schema]]{}, err
+		//return PageResult[Record[A]]{}, err
 	}
 	result, err := io.ReadAll(response.Body)
 	if err != nil {
 		panic(err)
-		//return PageResult[Record[schema.Schema]]{}, err
+		//return PageResult[Record[A]]{}, err
 	}
 
-	schemed, err := schema.FromJSON(result)
+	hits, err := shared.JSONUnmarshal[OpenSearchSearchResult[Record[A]]](result)
 	if err != nil {
 		panic(err)
-		//return PageResult[Record[schema.Schema]]{}, err
+		//return PageResult[Record[A]]{}, err
+	}
+	//
+	//schemed, err := schema.FromJSON(result)
+	//if err != nil {
+	//	panic(err)
+	//	//return PageResult[Record[A]]{}, err
+	//}
+	//
+	//hists := schema.GetSchema(schemed, "hits.hits")
+	//var lastSort schema.Schema
+
+	var lastSort []string
+	var items []Record[A]
+	for _, hit := range hits.Hits.Hits {
+		items = append(items, hit.Item)
+		lastSort = hit.Sort
 	}
 
-	hists := schema.Get(schemed, "hits.hits")
-	var lastSort schema.Schema
-
-	items := schema.Reduce(
-		hists,
-		[]Record[schema.Schema]{},
-		func(s schema.Schema, result []Record[schema.Schema]) []Record[schema.Schema] {
-			typed, err := schema.ToGoG[*Record[schema.Schema]](schema.Get(s, "_source"), WithOnlyRecordSchemaOptions)
-			if err != nil {
-				panic(err)
-			}
-			result = append(result, *typed)
-
-			lastSort = schema.Get(s, "sort")
-
-			return result
-		})
+	//items := schema.Reduce(
+	//	hits.Hits,
+	//	[]Record[A]{},
+	//	func(s schema.Schema, result []Record[A]) []Record[A] {
+	//		typed, err := schema.ToGoG[*Record[A]](schema.GetSchema(s, "_source"))
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		result = append(result, *typed)
+	//
+	//		//lastSort = schema.GetSchema(s, "sort")
+	//
+	//		return result
+	//	})
 
 	if len(items) == int(query.Limit) && lastSort != nil {
 		// has next page of results
 		next := query
 
-		data, err := schema.ToJSON(lastSort)
+		data, err := shared.JSONMarshal[any](lastSort)
 		if err != nil {
 			panic(err)
 		}
 		after := string(data)
 		next.After = &after
 
-		return PageResult[Record[schema.Schema]]{
+		return PageResult[Record[A]]{
 			Items: items,
 			Next:  &next,
 		}, nil
 	}
 
-	return PageResult[Record[schema.Schema]]{
+	return PageResult[Record[A]]{
 		Items: items,
 		Next:  nil,
 	}, nil
 }
 
-func (os *OpenSearchRepository) toDocumentID(record Record[schema.Schema]) string {
+func (os *OpenSearchRepository[A]) toDocumentID(record Record[A]) string {
 	return os.recordID(record.Type, record.ID)
 }
 
-func (os *OpenSearchRepository) recordID(recordType, recordID string) string {
+func (os *OpenSearchRepository[A]) recordID(recordType, recordID string) string {
 	return fmt.Sprintf("%s-%s", recordType, recordID)
 }
 
-func (os *OpenSearchRepository) toFiltersAndSorters(query FindingRecords[Record[schema.Schema]]) (filters map[string]any, sorters []any) {
+func (os *OpenSearchRepository[A]) toFiltersAndSorters(query FindingRecords[Record[A]]) (filters map[string]any, sorters []any) {
 	filters = os.toFilters(
 		predicate.Optimize(query.Where.Predicate),
 		query.Where.Params,
@@ -233,7 +247,7 @@ var mapOfOperationToOpenSearchQuery = map[string]string{
 	"<=": "lte",
 }
 
-func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicate.ParamBinds) map[string]any {
+func (os *OpenSearchRepository[A]) toFilters(p predicate.Predicate, params predicate.ParamBinds) map[string]any {
 	return predicate.MustMatchPredicate(
 		p,
 		func(x *predicate.And) map[string]any {
@@ -306,7 +320,7 @@ func (os *OpenSearchRepository) toFilters(p predicate.Predicate, params predicat
 	)
 }
 
-func (os *OpenSearchRepository) attrName(location string) string {
+func (os *OpenSearchRepository[A]) attrName(location string) string {
 	locs, err := schema.ParseLocation(location)
 	if err != nil {
 		panic(err)
@@ -333,7 +347,7 @@ func (os *OpenSearchRepository) attrName(location string) string {
 	return strings.Join(result, ".")
 }
 
-func (os *OpenSearchRepository) ToSorters(sort []SortField) []any {
+func (os *OpenSearchRepository[A]) ToSorters(sort []SortField) []any {
 	var sorters []any
 	for _, s := range sort {
 		if s.Descending {

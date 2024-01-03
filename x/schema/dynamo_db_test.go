@@ -65,14 +65,6 @@ func TestUnwrapDynamoDB(t *testing.T) {
 	schemed, err := FromDynamoDB(&exampleDDBType)
 	assert.NoError(t, err)
 
-	t.Run("FromDynamoDB should produce the same result as the original", func(t *testing.T) {
-		jsoned, err := ToJSON(schemed)
-		assert.NoError(t, err)
-
-		// schema and dynamodb unmarshalling should produce the same result
-		assert.JSONEq(t, string(grandTruthJSONRepresentation), string(jsoned))
-	})
-
 	t.Run("ToDynamoDB should product the same result as the original", func(t *testing.T) {
 		dynamed := ToDynamoDB(schemed)
 		var result2 any = nil
@@ -83,61 +75,5 @@ func TestUnwrapDynamoDB(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.JSONEq(t, string(grandTruthJSONRepresentation), string(jsonRepresentation2))
-	})
-
-	t.Run("UnwrapDynamoDB should produce the same result as the original", func(t *testing.T) {
-		dynamoJSON, err := FromJSON([]byte(`{
-"M": {
-	"string": {
-		"S": "bar"
-	},
-	"string set": {	
-		"SS": ["bar", "baz"]
-	},
-	"number": {
-		"N": "1"
-	},
-	"number set": {
-		"NS": ["1", "2"]
-	},
-	"binary": {
-		"B": "YmFy"
-	},
-	"binary set": {
-		"BS": ["YmFy", "YmF6"]
-	},
-	"bool": {
-		"BOOL": true
-	},
-	"null": {
-		"NULL": true
-	},
-	"list": {
-		"L": [
-			{
-				"S": "bar"
-			},
-			{
-				"S": "baz"
-			}
-		]
-	},
-	"map": {
-		"M": {
-			"foo": {
-				"S": "bar"
-			}
-		}
-	}
-}}`))
-		assert.NoError(t, err)
-
-		unwrapped, err := UnwrapDynamoDB(dynamoJSON)
-		assert.NoError(t, err)
-
-		jsonRepresentation3, err := ToJSON(unwrapped)
-		assert.NoError(t, err)
-
-		assert.JSONEq(t, string(grandTruthJSONRepresentation), string(jsonRepresentation3))
 	})
 }

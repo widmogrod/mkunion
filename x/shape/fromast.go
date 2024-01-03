@@ -69,6 +69,7 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 		return &ListLike{
 			Element:          FromAST(y.Elt, fx...),
 			ElementIsPointer: IsStarExpr(y.Elt),
+			ArrayLen:         tryGetArrayLen(y.Len),
 		}
 
 	case *ast.MapType:
@@ -166,6 +167,7 @@ func InjectPkgImportName(pkgNameToImportName map[string]string) func(x Shape) {
 		}
 	}
 }
+
 func InjectPkgName(pkgName string) func(x Shape) {
 	return func(x Shape) {
 		switch y := x.(type) {
