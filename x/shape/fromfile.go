@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,7 +23,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 	}
 
 	result := &InferredInfo{
-		pkgImportName:        tryToPkgImportName(filename),
+		pkgImportName:        tryToFindPkgImportName(filename),
 		possibleVariantTypes: map[string][]string{},
 		possibleTaggedTypes:  map[string]map[string]Tag{},
 		shapes:               make(map[string]Shape),
@@ -38,43 +39,127 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 	return result, nil
 }
 
-// tryToPkgImportName contains import name of the package
-func tryToPkgImportName(filename string) string {
+// tryToFindPkgImportName contains import name of the package
+func tryToFindPkgImportName(filename string) string {
+	log.Debugf("shape.tryToFindPkgImportName: looking for go.mod file in %s", filename)
 	var toadd []string
 	for {
 		filename = path.Dir(filename)
 		if filename == "." || filename == "/" {
-			log.Infof("shape.InferFromFile: could not find go.mod file in %s, returning empty pkg name", filename)
+			log.Debugf("shape.tryToFindPkgImportName: could not find go.mod file in %s, returning empty pkg name", filename)
 			return ""
 		}
 
 		modpath := path.Join(filename, "go.mod")
+		log.Debugf("shape.tryToFindPkgImportName: checking modpath %s", modpath)
 		if _, err := os.Stat(modpath); err == nil {
 			f, err := os.Open(modpath)
 			defer f.Close()
 
 			data, err := io.ReadAll(f)
 			if err != nil {
-				log.Infof("shape.InferFromFile: could not read go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
+				log.Debugf("shape.tryToFindPkgImportName: could not read go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
 				return ""
 			}
 
 			parsed, err := modfile.Parse(modpath, data, nil)
 			if err != nil {
-				log.Infof("shape.InferFromFile: could not parse go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
+				log.Debugf("shape.tryToFindPkgImportName: could not parse go.mod file in %s, returning empty pkg name. %s", filename, err.Error())
 				return ""
 			}
 
 			if parsed.Module == nil {
-				log.Infof("shape.InferFromFile: could not find module name in go.mod file in %s, returning empty pkg name", filename)
+				log.Debugf("shape.tryToFindPkgImportName: could not find module name in go.mod file in %s, returning empty pkg name", filename)
 				return ""
 			}
 
-			return path.Join(append([]string{parsed.Module.Mod.Path}, toadd...)...)
+			result := path.Join(append([]string{parsed.Module.Mod.Path}, toadd...)...)
+
+			log.Infof("shape.tryToFindPkgImportName: found module name %s", result)
+			return result
+		} else {
+			log.Warnf("shape.tryToFindPkgImportName: could not find go.mod file in %s, continuing with parent directory", filename)
 		}
 
 		toadd = append([]string{path.Base(filename)}, toadd...)
 	}
+}
+
+func tryToFindPkgName(pkgImportName, defaultPkgName string) string {
+	if pkgImportName == "" {
+		return defaultPkgName
+	}
+
+	pkgPath, err := findPackagePath(pkgImportName)
+	if err != nil {
+		log.Debugf("shape.tryToFindPkgName: could not find package path for %s; %s", pkgImportName, err)
+		return defaultPkgName
+	}
+
+	// open any go file (except _test.go) in the package and extract package name
+	// this is a hack, but it works
+
+	var result string
+	err = filepath.WalkDir(
+		pkgPath,
+		func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				log.Debugf("shape.tryToFindPkgName: could not walk %s; %s", path, err)
+				// ignore errors
+				return nil
+			}
+
+			if d.IsDir() {
+				// if is hidden directory, skip it
+				if strings.HasPrefix(d.Name(), ".") ||
+					strings.HasPrefix(d.Name(), "_") {
+					return filepath.SkipDir
+				}
+
+				return nil
+			}
+
+			if filepath.Ext(path) != ".go" {
+				log.Debugf("shape.tryToFindPkgName: skipping non-go file %s", path)
+				return nil
+			}
+
+			if strings.HasSuffix(path, "_test.go") {
+				log.Debugf("shape.tryToFindPkgName: skipping test file %s", path)
+				return nil
+			}
+
+			pkgName, found := pkgNameFromFile(path)
+			if !found {
+				log.Debugf("shape.tryToFindPkgName: could not find package name in %s", path)
+				return nil
+			}
+
+			result = pkgName
+			return filepath.SkipAll
+		},
+	)
+
+	if err != nil {
+		log.Warnf("shape.tryToFindPkgName: could not find package name for %s; %s", pkgImportName, err)
+		return defaultPkgName
+	}
+
+	return result
+}
+
+func pkgNameFromFile(path string) (string, bool) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, path, nil, parser.PackageClauseOnly)
+	if err != nil {
+		return "", false
+	}
+
+	if f.Name == nil {
+		return "", false
+	}
+
+	return f.Name.String(), true
 }
 
 var (
@@ -82,7 +167,7 @@ var (
 )
 
 type InferredInfo struct {
-	packageName                string
+	pkgName                    string
 	pkgImportName              string
 	possibleVariantTypes       map[string][]string
 	shapes                     map[string]Shape
@@ -92,7 +177,7 @@ type InferredInfo struct {
 }
 
 func (f *InferredInfo) PackageName() string {
-	return f.packageName
+	return f.pkgName
 }
 
 func (f *InferredInfo) PackageImportName() string {
@@ -131,7 +216,7 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 
 	return &UnionLike{
 		Name:          name,
-		PkgName:       f.packageName,
+		PkgName:       f.pkgName,
 		PkgImportName: f.pkgImportName,
 		Variant:       variants,
 		Tags:          f.possibleTaggedTypes[name],
@@ -273,17 +358,22 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 
 	case *ast.File:
 		if t.Name != nil {
-			f.packageName = t.Name.String()
+			f.pkgName = t.Name.String()
 		}
 
 		f.packageNameToPackageImport = map[string]string{
-			f.packageName: f.pkgImportName,
+			f.pkgName: f.pkgImportName,
 		}
 		for _, imp := range t.Imports {
 			if imp.Name != nil {
 				f.packageNameToPackageImport[imp.Name.String()] = strings.Trim(imp.Path.Value, "\"")
 			} else {
-				f.packageNameToPackageImport[path.Base(strings.Trim(imp.Path.Value, "\""))] = strings.Trim(imp.Path.Value, "\"")
+				defaultPkgName := path.Base(strings.Trim(imp.Path.Value, "\""))
+				pkgName := tryToFindPkgName(strings.Trim(imp.Path.Value, "\""), defaultPkgName)
+				log.Debugf("shape.InferFromFile: defaultPkgName %s", defaultPkgName)
+				log.Debugf("shape.InferFromFile: pkgName %s", pkgName)
+				f.packageNameToPackageImport[pkgName] = strings.Trim(imp.Path.Value, "\"")
+				log.Debugf("shape.InferFromFile: importName %s", f.packageNameToPackageImport[pkgName])
 			}
 		}
 
@@ -300,7 +390,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			case "string":
 				f.shapes[f.currentType] = &AliasLike{
 					Name:          f.currentType,
-					PkgName:       f.packageName,
+					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
 					Type:          &StringLike{},
@@ -312,7 +402,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				"float64", "float32", "byte", "rune":
 				f.shapes[f.currentType] = &AliasLike{
 					Name:          f.currentType,
-					PkgName:       f.packageName,
+					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
 					Type: &NumberLike{
@@ -324,7 +414,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			case "bool":
 				f.shapes[f.currentType] = &AliasLike{
 					Name:          f.currentType,
-					PkgName:       f.packageName,
+					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
 					Type:          &BooleanLike{},
@@ -337,12 +427,12 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				//  type A ListOf
 				f.shapes[f.currentType] = &AliasLike{
 					Name:          f.currentType,
-					PkgName:       f.packageName,
+					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
 					Type: &RefName{
 						Name:          next.Name,
-						PkgName:       f.packageName,
+						PkgName:       f.pkgName,
 						PkgImportName: f.pkgImportName,
 					},
 					Tags: f.possibleTaggedTypes[f.currentType],
@@ -355,7 +445,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			//  type A time.Time
 			f.shapes[f.currentType] = &AliasLike{
 				Name:          f.currentType,
-				PkgName:       f.packageName,
+				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
 				IsAlias:       IsAlias(t),
 				Type:          f.selectExrToShape(next),
@@ -369,7 +459,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			//  type B ListOf[ListOf[any]]
 			f.shapes[f.currentType] = &AliasLike{
 				Name:          f.currentType,
-				PkgName:       f.packageName,
+				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
 				IsAlias:       IsAlias(t),
 				Type:          FromAST(next, opt...),
@@ -383,7 +473,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			//  type B ListOf2[ListOf2[string, int], ListOf2[string, int]]
 			f.shapes[f.currentType] = &AliasLike{
 				Name:          f.currentType,
-				PkgName:       f.packageName,
+				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
 				IsAlias:       IsAlias(t),
 				Type:          FromAST(next, opt...),
@@ -396,7 +486,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			//  type B map[string]ListOf2[string, int]
 			f.shapes[f.currentType] = &AliasLike{
 				Name:          f.currentType,
-				PkgName:       f.packageName,
+				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
 				IsAlias:       IsAlias(t),
 				Type: &MapLike{
@@ -411,7 +501,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		case *ast.ArrayType:
 			f.shapes[f.currentType] = &AliasLike{
 				Name:          f.currentType,
-				PkgName:       f.packageName,
+				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
 				IsAlias:       IsAlias(t),
 				Type: &ListLike{
@@ -425,7 +515,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		case *ast.StructType:
 			f.shapes[f.currentType] = &StructLike{
 				Name:          f.currentType,
-				PkgName:       f.packageName,
+				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
 				TypeParams:    f.extractTypeParams(t.TypeParams),
 				Tags:          f.possibleTaggedTypes[f.currentType],
@@ -730,7 +820,7 @@ func nameExistsInParams(name string, params []TypeParam) bool {
 
 func (f *InferredInfo) optionAST() []FromASTOption {
 	return []FromASTOption{
-		InjectPkgName(f.packageName),
+		InjectPkgName(f.pkgName),
 		InjectPkgImportName(f.packageNameToPackageImport),
 	}
 }
@@ -757,7 +847,7 @@ func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
 	for _, param := range params.List {
 		typ := FromAST(param.Type,
 			InjectPkgImportName(f.packageNameToPackageImport),
-			InjectPkgName(f.packageName),
+			InjectPkgName(f.pkgName),
 		)
 
 		if len(param.Names) == 0 {

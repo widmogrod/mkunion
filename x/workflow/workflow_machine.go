@@ -33,7 +33,7 @@ type (
 //go:generate go run ../../cmd/mkunion/main.go -name=Command
 type (
 	Run struct {
-		Flow  Worflow
+		Flow  Workflow
 		Input schema.Schema
 		// Schedule run
 		RunOption RunOption
@@ -91,9 +91,9 @@ type (
 
 //go:tag serde:"json"
 type BaseState struct {
-	Flow       Worflow // Flow is a reference to the flow that describes execution
-	RunID      string  // RunID is a unique identifier of the execution
-	StepID     string  // StepID is a unique identifier of the step in the execution
+	Flow       Workflow // Flow is a reference to the flow that describes execution
+	RunID      string   // RunID is a unique identifier of the execution
+	StepID     string   // StepID is a unique identifier of the step in the execution
 	Variables  map[string]schema.Schema
 	ExprResult map[string]schema.Schema
 
@@ -103,7 +103,7 @@ type BaseState struct {
 	RunOption RunOption
 }
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Worflow
+//go:generate go run ../../cmd/mkunion/main.go -name=Workflow
 type (
 	Flow struct {
 		Name string // name of the flow

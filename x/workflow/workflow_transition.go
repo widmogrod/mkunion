@@ -216,12 +216,12 @@ func cloneBaseState(base BaseState) BaseState {
 	return result
 }
 
-func getFlow(x Worflow, dep Dependency) (*Flow, error) {
+func getFlow(x Workflow, dep Dependency) (*Flow, error) {
 	if x == nil {
 		return nil, ErrFlowNotSet
 	}
 
-	return MustMatchWorflowR2(
+	return MustMatchWorkflowR2(
 		x,
 		func(x *Flow) (*Flow, error) {
 			return initStepID(x), nil

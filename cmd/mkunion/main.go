@@ -451,11 +451,8 @@ func main() {
 
 						for _, x := range inferred.RetrieveShapes() {
 							tsr.AddShape(x)
-							tsr.FollowRef(x)
 						}
 					}
-
-					tsr.FollowImports()
 
 					err := tsr.WriteToDir(c.String("output-dir"))
 					if err != nil {

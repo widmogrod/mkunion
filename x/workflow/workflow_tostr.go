@@ -15,10 +15,10 @@ import (
 //		res = concat("hello ", input)
 //		return res
 //	}
-func ToStrWorkflow(workflow Worflow, depth int) string {
+func ToStrWorkflow(workflow Workflow, depth int) string {
 	result := strings.Builder{}
 
-	return MustMatchWorflow(
+	return MustMatchWorkflow(
 		workflow,
 		func(x *Flow) string {
 			result.WriteString("flow ")

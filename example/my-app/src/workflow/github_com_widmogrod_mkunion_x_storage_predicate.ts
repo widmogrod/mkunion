@@ -3,28 +3,7 @@ export type WherePredicates = {
 	Predicate?: Predicate,
 	Params?: ParamBinds,
 }
-export type Expression = {
-	Or?: OrCondition[],
-}
-export type OrCondition = {
-	And?: Condition[],
-}
-export type Condition = {
-	Operand?: Comparable,
-	Not?: Condition,
-}
-export type Comparable = {
-	Location?: string,
-	Operator?: string,
-	BindName?: Value,
-}
-export type Value = {
-	BindName?: string,
-	Number?: number,
-	String?: string,
-	Bool?: string,
-	Location?: string,
-}
+
 export type Predicate = {
 	"$type"?: "predicate.And",
 	"predicate.And": And
@@ -72,6 +51,8 @@ export type BindValue = {
 	BindName?: BindName,
 }
 
+export type BindName = string
+
 export type Literal = {
 	Value?: schema.Schema,
 }
@@ -80,23 +61,8 @@ export type Locatable = {
 	Location?: string,
 }
 
-export type BindName = string
 export type ParamBinds = {[key: BindName]: schema.Schema}
-export type BindableUnionJSON = {
-	Type?: string,
-	BindValue?: json.RawMessage,
-	Literal?: json.RawMessage,
-	Locatable?: json.RawMessage,
-}
-export type PredicateUnionJSON = {
-	Type?: string,
-	And?: json.RawMessage,
-	Or?: json.RawMessage,
-	Not?: json.RawMessage,
-	Compare?: json.RawMessage,
-}
+
 
 //eslint-disable-next-line
 import * as schema from './github_com_widmogrod_mkunion_x_schema'
-//eslint-disable-next-line
-import * as json from './encoding_json'

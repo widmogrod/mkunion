@@ -303,6 +303,11 @@ func ExtractRefs(x Shape) []*RefName {
 		},
 		func(x *RefName) []*RefName {
 			var result []*RefName
+
+			// convert ref as ref also
+			// that way, every type that is used in file/module is recognized
+			result = append(result, x)
+
 			if x.Indexed != nil {
 				for _, v := range x.Indexed {
 					result = append(result, ExtractRefs(v)...)
@@ -312,7 +317,18 @@ func ExtractRefs(x Shape) []*RefName {
 			return append(result, x)
 		},
 		func(x *AliasLike) []*RefName {
-			return ExtractRefs(x.Type)
+			var result []*RefName
+			// convert alias as ref also
+			// that way, every type that is used in file/module is recognized
+
+			result = append(result, &RefName{
+				Name:          x.Name,
+				PkgName:       x.PkgName,
+				PkgImportName: x.PkgImportName,
+			})
+
+			result = append(result, ExtractRefs(x.Type)...)
+			return result
 		},
 		func(x *BooleanLike) []*RefName {
 			return nil
@@ -334,6 +350,16 @@ func ExtractRefs(x Shape) []*RefName {
 		},
 		func(x *StructLike) []*RefName {
 			var result []*RefName
+
+			// convert struct as ref also
+			// that way, every type that is used in file/module is recognized
+			result = append(result, &RefName{
+				Name:          x.Name,
+				PkgName:       x.PkgName,
+				PkgImportName: x.PkgImportName,
+				IsPointer:     x.IsPointer,
+			})
+
 			for _, field := range x.Fields {
 				result = append(result, ExtractRefs(field.Type)...)
 			}
@@ -344,6 +370,15 @@ func ExtractRefs(x Shape) []*RefName {
 		},
 		func(x *UnionLike) []*RefName {
 			var result []*RefName
+
+			// convert union as ref also
+			// that way, every type that is used in file/module is recognized
+			result = append(result, &RefName{
+				Name:          x.Name,
+				PkgName:       x.PkgName,
+				PkgImportName: x.PkgImportName,
+			})
+
 			for _, variant := range x.Variant {
 				result = append(result, ExtractRefs(variant)...)
 			}

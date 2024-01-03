@@ -110,6 +110,7 @@ var onDiskCache = sync.Map{}
 // it's suited for generators, that parse AST
 func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 	key := shapeFullName(x)
+	log.Infof("shape.LookupShapeOnDisk: %s", key)
 	if v, ok := onDiskCache.Load(key); ok {
 		return v.(Shape), true
 	}
@@ -187,6 +188,12 @@ func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
 			}
 
 			if d.IsDir() {
+				// skip hidden directories
+				if strings.HasPrefix(d.Name(), ".") ||
+					strings.HasPrefix(d.Name(), "_") {
+					return filepath.SkipDir
+				}
+
 				return nil
 			}
 
@@ -225,6 +232,12 @@ func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
 func findPackagePath(pkgImportName string) (string, error) {
 	if strings.Trim(pkgImportName, " ") == "" {
 		return "", fmt.Errorf("shape.findPackagePath: empty package name")
+	}
+
+	// optimisation: assumption that packages like fmt, context, etc
+	// are standard library packages
+	if len(strings.Split(pkgImportName, "/")) == 1 {
+		return checkPkgExistsInPaths(pkgImportName)
 	}
 
 	cwd := os.Getenv("PWD")
@@ -268,31 +281,80 @@ func findPackagePath(pkgImportName string) (string, error) {
 					log.Debugf("shape.findPackagePath: %s could not parse go.mod %s", pkgImportName, cwd)
 					break
 				} else {
-					log.Infof("shape.findPackagePath: %s parsed go.mod %s", pkgImportName, parsed.Module.Mod.Path)
 					if strings.Contains(pkgImportName, parsed.Module.Mod.Path) {
+						log.Infof("shape.findPackagePath: mod name Contains(%s. %s)", pkgImportName, parsed.Module.Mod.Path)
 						return filepath.Join(cwd, strings.TrimPrefix(pkgImportName, parsed.Module.Mod.Path)), nil
+					}
+
+					// check if package is in replace
+					// and if found, return path to replace
+					//for _, r := range parsed.Replace {
+					//	if strings.Contains(pkgImportName, r.Old.Path) {
+					//		log.Infof("shape.findPackagePath: %s found package in go.mod replace %s", pkgImportName, filepath.Join(cwd, r.New.Path))
+					//		return filepath.Join(cwd, r.New.Path), nil
+					//	}
+					//}
+
+					// check if package is in require
+					// it means that it's a dependency
+					// and we should look for it in vendor
+					for _, r := range parsed.Require {
+						if !strings.Contains(pkgImportName, r.Mod.Path) {
+							continue
+						}
+
+						log.Debugf("shape.findPackagePath: require Contains(%s, %s) ", pkgImportName, r.Mod.Path)
+						rest := strings.TrimPrefix(pkgImportName, r.Mod.Path)
+
+						// check if package is in replace
+						// and if found, return path to replace
+						for _, re := range parsed.Replace {
+							if strings.Contains(r.Mod.Path, re.Old.Path) {
+								p := filepath.Join(cwd, re.New.Path, rest)
+								log.Infof("shape.findPackagePath: %s found in replace %s", pkgImportName, p)
+								return p, nil
+							}
+						}
+
+						found, err := checkPkgExistsInPaths(r.Mod.String())
+						if err != nil {
+							return "", fmt.Errorf("shape.findPackagePath: %s could not find package in vendor %s", pkgImportName, err.Error())
+						}
+
+						log.Infof("shape.findPackagePath: %s found package in go.mod require %s", pkgImportName, filepath.Join(cwd, strings.TrimPrefix(pkgImportName, r.Mod.Path)))
+						return filepath.Join(found, rest), nil
 					}
 				}
 			}
 		}
 	}
 
+	log.Debugf("shape.findPackagePath: %s continue with other paths", pkgImportName)
+	return checkPkgExistsInPaths(pkgImportName)
+}
+
+func checkPkgExistsInPaths(pkgImportName string) (string, error) {
+	cwd := os.Getenv("PWD")
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+
 	paths := []string{
-		filepath.Join(cwd),
-		filepath.Join(cwd, "vendor"),
 		filepath.Join(os.Getenv("GOPATH"), "pkg/mod"),
-		//filepath.Join(os.Getenv("GOROOT"), "src"),
+		filepath.Join(cwd, "vendor"),
+		filepath.Join(os.Getenv("GOROOT"), "src"),
+		filepath.Join(cwd),
 	}
 
 	for _, p := range paths {
 		packPath := filepath.Join(p, pkgImportName)
 		if _, err := os.Stat(packPath); err == nil {
-			log.Infof("shape.findPackagePath: %s found package in fallback %s", pkgImportName, packPath)
+			log.Infof("shape.checkPkgExistsInPaths: %s found package in fallback %s", pkgImportName, packPath)
 			return packPath, nil
 		} else {
-			log.Debugf("shape.findPackagePath: %s could not find package in fallback path %s", pkgImportName, packPath)
+			log.Debugf("shape.checkPkgExistsInPaths: %s could not find package in fallback path %s", pkgImportName, packPath)
 		}
 	}
 
-	return "", fmt.Errorf("shape.findPackagePath: could not find package %s", pkgImportName)
+	return "", fmt.Errorf("shape.checkPkgExistsInPaths: could not find package %s", pkgImportName)
 }

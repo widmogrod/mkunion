@@ -32,11 +32,11 @@ import (
 )
 
 // this command make sure that all types that are imported will have generated typescript mapping
-//go:generate mkunion shape-export --language=typescript -o ./workflow
+//go:generate ../../cmd/mkunion/mkunion shape-export --language=typescript -o ./src/workflow
 
 // this lines defines all types that should have typescript mapping
 type (
-	Workflow       = workflow.Worflow
+	Workflow       = workflow.Workflow
 	State          = workflow.State
 	Command        = workflow.Command
 	Expr           = workflow.Expr
@@ -44,17 +44,20 @@ type (
 	Reshaper       = workflow.Reshaper
 	Schema         = schema.Schema
 	UpdateRecords  = schemaless.UpdateRecords[schemaless.Record[any]]
-	FindingRecords = schemaless.FindingRecords[schemaless.Record[any]]
+	FindRecords    = schemaless.FindingRecords[schemaless.Record[any]]
+	PageResult     = schemaless.PageResult[schemaless.Record[any]]
+	FunctionOutput = workflow.FunctionOutput
+	FunctionInput  = workflow.FunctionInput
 )
 
-//go:generate mkunion -name=ChatCMD
+//go:generate ../../cmd/mkunion/mkunion -name=ChatCMD
 type (
 	UserMessage struct {
 		Message string
 	}
 )
 
-//go:generate mkunion -name=ChatResult
+//go:generate ../../cmd/mkunion/mkunion -name=ChatResult -v
 type (
 	SystemResponse struct {
 		//ID 	  string
@@ -348,9 +351,9 @@ func main() {
 	})
 
 	e.POST("/flow", TypedJSONRequest(
-		workflow.WorflowFromJSON,
-		workflow.WorflowToJSON,
-		func(x workflow.Worflow) (workflow.Worflow, error) {
+		workflow.WorkflowFromJSON,
+		workflow.WorkflowToJSON,
+		func(x workflow.Workflow) (workflow.Workflow, error) {
 			flow, ok := x.(*workflow.Flow)
 			if !ok {
 				return nil, errors.New("expected *workflow.Flow")
@@ -378,7 +381,7 @@ func main() {
 			return err
 		}
 
-		result, err := shared.JSONMarshal[workflow.Worflow](record.Data)
+		result, err := shared.JSONMarshal[workflow.Workflow](record.Data)
 		if err != nil {
 			if errors.Is(err, schemaless.ErrNotFound) {
 				return c.JSONBlob(http.StatusNotFound, []byte(`{"error": "not found"}`))
@@ -507,7 +510,7 @@ func main() {
 			return err
 		}
 
-		program, err := workflow.WorflowFromJSON(data)
+		program, err := workflow.WorkflowFromJSON(data)
 		if err != nil {
 			log.Errorf("failed to convert to workflow: %v", err)
 			return err
