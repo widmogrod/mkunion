@@ -179,7 +179,7 @@ func ToGo[A any](x Schema) A {
 		panic(fmt.Errorf("schema.FromGo: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
 	}
 
-	s = shape.IndexWith(s, original.Indexed)
+	s = shape.IndexWith(s, original)
 
 	value, err := ToGoReflect(s, x, v)
 	if err != nil {
