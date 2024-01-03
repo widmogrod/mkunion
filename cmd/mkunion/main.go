@@ -401,7 +401,8 @@ func main() {
 				Name: "shape-export",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "type",
+						Name:        "language",
+						Aliases:     []string{"lang"},
 						DefaultText: "typescript",
 					},
 					&cli.StringFlag{
@@ -414,8 +415,18 @@ func main() {
 						Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:generate mkunion -name=MyUnionType`,
 						TakesFile: true,
 					},
+					&cli.BoolFlag{
+						Name:     "verbose",
+						Aliases:  []string{"v"},
+						Required: false,
+						Value:    false,
+					},
 				},
 				Action: func(c *cli.Context) error {
+					if c.Bool("verbose") {
+						log.SetLevel(log.DebugLevel)
+					}
+
 					sourcePaths := c.StringSlice("input-go-file")
 					if len(sourcePaths) == 0 && os.Getenv("GOFILE") != "" {
 						cwd, _ := syscall.Getwd()
@@ -440,8 +451,11 @@ func main() {
 
 						for _, x := range inferred.RetrieveShapes() {
 							tsr.AddShape(x)
+							tsr.FollowRef(x)
 						}
 					}
+
+					tsr.FollowImports()
 
 					err := tsr.WriteToDir(c.String("output-dir"))
 					if err != nil {
