@@ -69,6 +69,7 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 		return &ListLike{
 			Element:          FromAST(y.Elt, fx...),
 			ElementIsPointer: IsStarExpr(y.Elt),
+			ArrayLen:         tryGetArrayLen(y.Len),
 		}
 
 	case *ast.MapType:
