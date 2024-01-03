@@ -122,7 +122,8 @@ func MustMatchTreeR2[TOut1, TOut2 any](
 	return f.MustMatch7R2(x, f1, f2, f3, f4, f5, f6, f7)
 }
 
-// mkunion-extension:shape
+//mkunion-extension:shape
+
 func TreeShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Tree",
@@ -139,6 +140,7 @@ func TreeShape() shape.Shape {
 		},
 	}
 }
+
 func BranchShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Branch",
@@ -222,6 +224,7 @@ func BranchShape() shape.Shape {
 		},
 	}
 }
+
 func LeafShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Leaf",
@@ -237,6 +240,7 @@ func LeafShape() shape.Shape {
 		},
 	}
 }
+
 func KShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "K",
@@ -245,6 +249,7 @@ func KShape() shape.Shape {
 		Type:          &shape.StringLike{},
 	}
 }
+
 func PShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "P",
@@ -284,6 +289,7 @@ func PShape() shape.Shape {
 		},
 	}
 }
+
 func MaShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Ma",
@@ -299,6 +305,7 @@ func MaShape() shape.Shape {
 		},
 	}
 }
+
 func LaShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "La",
@@ -313,6 +320,7 @@ func LaShape() shape.Shape {
 		},
 	}
 }
+
 func KaShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Ka",

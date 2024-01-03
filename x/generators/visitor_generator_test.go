@@ -12,10 +12,7 @@ func TestVisitorGenerator(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
-	g := NewVisitorGenerator(
-		inferred.RetrieveUnion("Tree"),
-		NewHelper(WithPackageName("testutils")),
-	)
+	g := NewVisitorGenerator(inferred.RetrieveUnion("Tree"))
 
 	result, err := g.Generate()
 	assert.NoError(t, err)

@@ -85,7 +85,8 @@ func MustMatchAlphabetR2[TOut1, TOut2 any](
 	return f.MustMatch3R2(x, f1, f2, f3)
 }
 
-// mkunion-extension:shape
+//mkunion-extension:shape
+
 func AlphabetShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Alphabet",
@@ -98,6 +99,7 @@ func AlphabetShape() shape.Shape {
 		},
 	}
 }
+
 func A1Shape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "A1",
@@ -105,6 +107,7 @@ func A1Shape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 	}
 }
+
 func B2Shape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "B2",
@@ -112,6 +115,7 @@ func B2Shape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 	}
 }
+
 func C3Shape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "C3",

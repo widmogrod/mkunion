@@ -76,7 +76,8 @@ func MustMatchNumberR2[TOut1, TOut2 any](
 	return f.MustMatch2R2(x, f1, f2)
 }
 
-// mkunion-extension:shape
+//mkunion-extension:shape
+
 func NumberShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Number",
@@ -88,6 +89,7 @@ func NumberShape() shape.Shape {
 		},
 	}
 }
+
 func N0Shape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "N0",
@@ -95,6 +97,7 @@ func N0Shape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 	}
 }
+
 func N1Shape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "N1",

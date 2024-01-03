@@ -13,11 +13,10 @@ var (
 	deserJSONTmpl string
 )
 
-func SerdeJSONUnion(union *shape.UnionLike, helper *Helpers) *DeSerJSONGenerator {
+func SerdeJSONUnion(union *shape.UnionLike) *DeSerJSONGenerator {
 	return &DeSerJSONGenerator{
 		Union:                 union,
-		helper:                helper,
-		template:              template.Must(template.New("serde_json_union.go.tmpl").Funcs(helper.Func()).Parse(deserJSONTmpl)),
+		template:              template.Must(template.New("serde_json_union.go.tmpl").Parse(deserJSONTmpl)),
 		skipImportsAndPackage: false,
 		pkgUsed: PkgMap{
 			"json":   "encoding/json",
@@ -29,7 +28,6 @@ func SerdeJSONUnion(union *shape.UnionLike, helper *Helpers) *DeSerJSONGenerator
 
 type DeSerJSONGenerator struct {
 	Union                 *shape.UnionLike
-	helper                *Helpers
 	template              *template.Template
 	skipImportsAndPackage bool
 	pkgUsed               PkgMap
@@ -100,21 +98,6 @@ func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
 			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
 	)
-}
-func (g *DeSerJSONGenerator) OptionallyImport(x string) string {
-	hasStruct := false
-	for _, f := range g.Union.Variant {
-		if g.IsStruct(f) {
-			hasStruct = true
-			break
-		}
-	}
-
-	if hasStruct {
-		return g.helper.RenderImport(x)
-	}
-
-	return ""
 }
 
 func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
