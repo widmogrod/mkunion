@@ -202,14 +202,19 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 			return NumberKindToGoName(x.Kind)
 		},
 		func(x *ListLike) string {
-			return fmt.Sprintf("[]%s",
-				WrapPointerIf(ToGoTypeName(x.Element, options...), x.ElementIsPointer),
+			prefix := "[]"
+			if x.ArrayLen != nil {
+				prefix = fmt.Sprintf("[%d]", *x.ArrayLen)
+			}
+			return fmt.Sprintf("%s%s",
+				prefix,
+				WrapPointerIf2(ToGoTypeName(x.Element, options...), x.ElementIsPointer, x.Element),
 			)
 		},
 		func(x *MapLike) string {
 			return fmt.Sprintf("map[%s]%s",
-				WrapPointerIf(ToGoTypeName(x.Key, options...), x.KeyIsPointer),
-				WrapPointerIf(ToGoTypeName(x.Val, options...), x.ValIsPointer),
+				WrapPointerIf2(ToGoTypeName(x.Key, options...), x.KeyIsPointer, x.Key),
+				WrapPointerIf2(ToGoTypeName(x.Val, options...), x.ValIsPointer, x.Val),
 			)
 		},
 		func(x *StructLike) string {
@@ -226,7 +231,8 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 						strings.Join(instantiatedTypeParams, ","),
 					)
 
-					return packageWrap(options, x.PkgName, x.PkgImportName, result)
+					result = packageWrap(options, x.PkgName, x.PkgImportName, result)
+					return WrapPointerIf(result, x.IsPointer)
 				}
 			} else {
 				typeParams := ToGoTypeParamsNames(x)
@@ -236,11 +242,13 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 						strings.Join(typeParams, ","),
 					)
 
-					return packageWrap(options, x.PkgName, x.PkgImportName, result)
+					result = packageWrap(options, x.PkgName, x.PkgImportName, result)
+					return WrapPointerIf(result, x.IsPointer)
 				}
 			}
 
-			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
+			result := packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
+			return WrapPointerIf(result, x.IsPointer)
 		},
 		func(x *UnionLike) string {
 			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
@@ -330,6 +338,18 @@ func ToGoTypeParamsTypes(x Shape) []Shape {
 
 func WrapPointerIf(name string, isPointer bool) string {
 	if isPointer {
+		return fmt.Sprintf("*%s", name)
+	}
+	return name
+}
+
+func WrapPointerIf2(name string, isPointer bool, x Shape) string {
+	if isPointer {
+		ref, ok := x.(*RefName)
+		if ok && ref.IsPointer {
+			// because pointer was already applied
+			return name
+		}
 		return fmt.Sprintf("*%s", name)
 	}
 	return name
@@ -431,12 +451,11 @@ func ExtractPkgImportNames(x Shape) map[string]string {
 	)
 }
 
-func joinMaps(maps ...map[string]string) map[string]string {
-	result := make(map[string]string)
+func joinMaps(x map[string]string, maps ...map[string]string) map[string]string {
 	for _, m := range maps {
 		for k, v := range m {
-			result[k] = v
+			x[k] = v
 		}
 	}
-	return result
+	return x
 }
