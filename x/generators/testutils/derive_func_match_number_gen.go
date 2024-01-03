@@ -88,7 +88,6 @@ func NumberShape() shape.Shape {
 		},
 	}
 }
-
 func N0Shape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "N0",
@@ -96,7 +95,6 @@ func N0Shape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 	}
 }
-
 func N1Shape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "N1",
@@ -119,6 +117,13 @@ type NumberUnionJSON struct {
 }
 
 func NumberFromJSON(x []byte) (Number, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
 	var data NumberUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
@@ -192,24 +197,36 @@ var (
 )
 
 func (r *N0) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("testutils.N0.MarshalJSON: final step; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-
-	return output, nil
+	return r._marshalJSONN0(*r)
 }
-
-func (r *N0) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		}
-
-		return nil
-	})
+func (r *N0) _marshalJSONN0(x N0) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: N0._marshalJSONN0: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *N0) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONN0(data)
+	if err != nil {
+		return fmt.Errorf("testutils: N0.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *N0) _unmarshalJSONN0(data []byte) (N0, error) {
+	result := N0{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("testutils: N0._unmarshalJSONN0: native struct unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func N1FromJSON(x []byte) (*N1, error) {
@@ -232,22 +249,34 @@ var (
 )
 
 func (r *N1) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("testutils.N1.MarshalJSON: final step; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-
-	return output, nil
+	return r._marshalJSONN1(*r)
 }
-
-func (r *N1) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		}
-
-		return nil
-	})
+func (r *N1) _marshalJSONN1(x N1) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: N1._marshalJSONN1: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *N1) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONN1(data)
+	if err != nil {
+		return fmt.Errorf("testutils: N1.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *N1) _unmarshalJSONN1(data []byte) (N1, error) {
+	result := N1{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("testutils: N1._unmarshalJSONN1: native struct unwrap; %w", err)
+	}
+	return result, nil
 }

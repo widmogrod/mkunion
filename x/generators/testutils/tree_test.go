@@ -11,14 +11,32 @@ func TestTree_JSON(t *testing.T) {
 	var subject Tree = &Branch{
 		Lit: &Leaf{Value: 111},
 		List: []Tree{
-			shape.Ptr(K("kk")),
-		},
-		Map: map[string]Tree{
-			"op": &Leaf{
-				Value: 333,
+			shape.Ptr(K("alpha")),
+			&Ma{
+				"op": &Leaf{
+					Value: 222,
+				},
+				"to": shape.Ptr(K("beta")),
+			},
+			&La{
+				&Leaf{Value: 333},
+				shape.Ptr(K("gamma")),
+			},
+			&Ka{
+				{
+					"lp": shape.Ptr(K("delta")),
+				},
+				{
+					"ko": shape.Ptr(K("epsilon")),
+				},
 			},
 		},
-		Of: nil,
+		Map: map[string]Tree{
+			"zp": &Leaf{
+				Value: 444,
+			},
+		},
+		Of: nil, // problem?
 	}
 
 	result, err := TreeToJSON(subject)
@@ -28,10 +46,61 @@ func TestTree_JSON(t *testing.T) {
 	expected := `{
   "$type": "testutils.Branch",
   "testutils.Branch": {
+    "Kattr": [
+      null,
+      null
+    ],
     "List": [
       {
         "$type": "testutils.K",
-        "testutils.K": "kk"
+        "testutils.K": "alpha"
+      },
+      {
+        "$type": "testutils.Ma",
+        "testutils.Ma": {
+          "op": {
+            "$type": "testutils.Leaf",
+            "testutils.Leaf": {
+              "Value": 222
+            }
+          },
+          "to": {
+            "$type": "testutils.K",
+            "testutils.K": "beta"
+          }
+        }
+      },
+      {
+        "$type": "testutils.La",
+        "testutils.La": [
+          {
+            "$type": "testutils.Leaf",
+            "testutils.Leaf": {
+              "Value": 333
+            }
+          },
+          {
+            "$type": "testutils.K",
+            "testutils.K": "gamma"
+          }
+        ]
+      },
+      {
+        "$type": "testutils.Ka",
+        "testutils.Ka": [
+          {
+            "lp": {
+              "$type": "testutils.K",
+              "testutils.K": "delta"
+            }
+          },
+          {
+            "ko": {
+              "$type": "testutils.K",
+              "testutils.K": "epsilon"
+            }
+          }
+        ]
       }
     ],
     "Lit": {
@@ -41,15 +110,16 @@ func TestTree_JSON(t *testing.T) {
       }
     },
     "Map": {
-      "op": {
+      "zp": {
         "$type": "testutils.Leaf",
         "testutils.Leaf": {
-          "Value": 333
+          "Value": 444
         }
       }
     }
   }
-}`
+}
+`
 	assert.JSONEq(t, expected, string(result))
 
 	output, err := TreeFromJSON([]byte(expected))
@@ -112,28 +182,6 @@ func TestListOf2_SimpleType(t *testing.T) {
 func TestListOf2_ComplexType(t *testing.T) {
 	//kk := K("kk")
 	subject := ListOf2[Tree, ListOf[string]]{
-		//ID: "uuid",
-		//Data: &Branch{
-		//	Lit: &Leaf{Value: 111},
-		//	List: []Tree{
-		//		&kk,
-		//	},
-		//	Map: map[string]Tree{
-		//		"op": &Leaf{
-		//			Value: 333,
-		//		},
-		//	},
-		//},
-		//List: []ListOf[string]{
-		//	{
-		//		Data: "nothing happens",
-		//	},
-		//},
-		//Map: map[Tree]ListOf[string]{
-		//	&Leaf{Value: 666}: {
-		//		Data: "evil",
-		//	},
-		//},
 		ListOf: ListOf[Tree]{
 			Data: &Leaf{Value: 777},
 		},
