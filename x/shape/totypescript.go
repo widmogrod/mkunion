@@ -179,11 +179,6 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 			result.WriteString(toTypeTypeScriptTypeName(x, option))
 
 			result.WriteString("\n")
-			for _, variant := range x.Variant {
-				result.WriteString("\n")
-				result.WriteString(ToTypeScript(variant, option))
-			}
-			result.WriteString("\n")
 
 			return result.String()
 		},
@@ -211,7 +206,7 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 
 	// don't add shape twice
 	key := ToGoTypeName(x, WithPkgImportName())
-	if _, ok := r.shapeAdded[key]; ok {
+	if r.shapeAdded[key] {
 		return
 	}
 	r.shapeAdded[key] = true
@@ -227,6 +222,7 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 
 			res := ToTypeScript(x, options)
 			contents.WriteString(res)
+			contents.WriteString("\n")
 		},
 		func(x *AliasLike) {
 			contents := r.initContentsFor(x.PkgImportName)
@@ -234,6 +230,7 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 
 			res := ToTypeScript(x, options)
 			contents.WriteString(res)
+			contents.WriteString("\n")
 		},
 		func(x *BooleanLike) {
 			log.Infof("totypescript: AddShape BooleanLike is not supported")
@@ -256,6 +253,7 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 
 			res := ToTypeScript(x, options)
 			contents.WriteString(res)
+			contents.WriteString("\n")
 
 		},
 		func(x *UnionLike) {
@@ -264,14 +262,17 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 
 			res := ToTypeScript(x, options)
 			contents.WriteString(res)
+			contents.WriteString("\n")
 		},
 	)
+
+	r.FollowRef(x)
 }
 
 func (r *TypeScriptRenderer) FollowRef(x Shape) {
 	refs := ExtractRefs(x)
 	for _, ref := range refs {
-		log.Infof("totypescript: FollowRef %s", ToGoTypeName(ref))
+		log.Debugf("totypescript: FollowRef %s", ToGoTypeName(ref))
 		x, found := LookupShapeOnDisk(ref)
 		if found {
 			r.AddShape(x)
@@ -282,12 +283,10 @@ func (r *TypeScriptRenderer) FollowRef(x Shape) {
 func (r *TypeScriptRenderer) FollowImports() {
 	for _, options := range r.imports {
 		for _, imp := range options.imports {
-			log.Infof("totypescript: FollowImports %s", imp)
+			log.Debugf("totypescript: FollowImports %s", imp)
 			shapes := LookupPkgShapeOnDisk(imp)
 			for _, shape := range shapes {
-				log.Infof("totypescript: FollowImports %s: shape %s", imp, ToGoTypeName(shape))
 				r.AddShape(shape)
-				r.FollowRef(shape)
 			}
 		}
 	}
