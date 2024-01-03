@@ -121,7 +121,8 @@ func MustMatchSchemaR2[TOut1, TOut2 any](
 	return f.MustMatch7R2(x, f1, f2, f3, f4, f5, f6, f7)
 }
 
-// mkunion-extension:shape
+//mkunion-extension:shape
+
 func SchemaShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Schema",
@@ -152,7 +153,6 @@ func BoolShape() shape.Shape {
 		Name:          "Bool",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		IsAlias:       false,
 		Type:          &shape.BooleanLike{},
 	}
 }
@@ -162,7 +162,6 @@ func NumberShape() shape.Shape {
 		Name:          "Number",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		IsAlias:       false,
 		Type: &shape.NumberLike{
 			Kind: &shape.Float64{},
 		},
@@ -174,7 +173,6 @@ func StringShape() shape.Shape {
 		Name:          "String",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		IsAlias:       false,
 		Type:          &shape.StringLike{},
 	}
 }
@@ -184,12 +182,10 @@ func BinaryShape() shape.Shape {
 		Name:          "Binary",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		IsAlias:       false,
 		Type: &shape.ListLike{
 			Element: &shape.NumberLike{
 				Kind: &shape.UInt8{},
 			},
-			ElementIsPointer: false,
 		},
 	}
 }
@@ -199,15 +195,12 @@ func ListShape() shape.Shape {
 		Name:          "List",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		IsAlias:       false,
 		Type: &shape.ListLike{
 			Element: &shape.RefName{
 				Name:          "Schema",
 				PkgName:       "schema",
 				PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				IsPointer:     false,
 			},
-			ElementIsPointer: false,
 		},
 	}
 }
@@ -217,17 +210,13 @@ func MapShape() shape.Shape {
 		Name:          "Map",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		IsAlias:       false,
 		Type: &shape.MapLike{
-			Key:          &shape.StringLike{},
-			KeyIsPointer: false,
+			Key: &shape.StringLike{},
 			Val: &shape.RefName{
 				Name:          "Schema",
 				PkgName:       "schema",
 				PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				IsPointer:     false,
 			},
-			ValIsPointer: false,
 		},
 	}
 }
@@ -256,6 +245,13 @@ type SchemaUnionJSON struct {
 }
 
 func SchemaFromJSON(x []byte) (Schema, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
 	var data SchemaUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
@@ -404,24 +400,36 @@ var (
 )
 
 func (r *None) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("schema.None.MarshalJSON: final step; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-
-	return output, nil
+	return r._marshalJSONNone(*r)
 }
-
-func (r *None) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		}
-
-		return nil
-	})
+func (r *None) _marshalJSONNone(x None) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schema: None._marshalJSONNone: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *None) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONNone(data)
+	if err != nil {
+		return fmt.Errorf("schema: None.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *None) _unmarshalJSONNone(data []byte) (None, error) {
+	result := None{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schema: None._unmarshalJSONNone: native struct unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func BoolFromJSON(x []byte) (*Bool, error) {
@@ -444,20 +452,45 @@ var (
 )
 
 func (r *Bool) MarshalJSON() ([]byte, error) {
-	result, err := shared.JSONMarshal[bool](*r)
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONBool(*r)
+}
+func (r *Bool) _marshalJSONBool(x Bool) ([]byte, error) {
+	return r._marshalJSONbool(bool(x))
+}
+func (r *Bool) _marshalJSONbool(x bool) ([]byte, error) {
+	result, err := json.Marshal(x)
 	if err != nil {
-		return nil, fmt.Errorf("schema.Bool.MarshalJSON: %w", err)
+		return nil, fmt.Errorf("schema: Bool._marshalJSONbool:; %w", err)
 	}
 	return result, nil
 }
-
-func (r *Bool) UnmarshalJSON(bytes []byte) error {
-	result, err := shared.JSONUnmarshal[bool](bytes)
+func (r *Bool) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONBool(data)
 	if err != nil {
-		return fmt.Errorf("schema.Bool.UnmarshalJSON: %w", err)
+		return fmt.Errorf("schema: Bool.UnmarshalJSON: %w", err)
 	}
-	*r = Bool(result)
+	*r = result
 	return nil
+}
+func (r *Bool) _unmarshalJSONBool(data []byte) (Bool, error) {
+	var result Bool
+	intermidiary, err := r._unmarshalJSONbool(data)
+	if err != nil {
+		return result, fmt.Errorf("schema: Bool._unmarshalJSONBool: alias; %w", err)
+	}
+	result = Bool(intermidiary)
+	return result, nil
+}
+func (r *Bool) _unmarshalJSONbool(data []byte) (bool, error) {
+	var result bool
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schema: Bool._unmarshalJSONbool: native boolean unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func NumberFromJSON(x []byte) (*Number, error) {
@@ -480,20 +513,45 @@ var (
 )
 
 func (r *Number) MarshalJSON() ([]byte, error) {
-	result, err := shared.JSONMarshal[float64](*r)
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONNumber(*r)
+}
+func (r *Number) _marshalJSONNumber(x Number) ([]byte, error) {
+	return r._marshalJSONfloat64(float64(x))
+}
+func (r *Number) _marshalJSONfloat64(x float64) ([]byte, error) {
+	result, err := json.Marshal(x)
 	if err != nil {
-		return nil, fmt.Errorf("schema.Number.MarshalJSON: %w", err)
+		return nil, fmt.Errorf("schema: Number._marshalJSONfloat64:; %w", err)
 	}
 	return result, nil
 }
-
-func (r *Number) UnmarshalJSON(bytes []byte) error {
-	result, err := shared.JSONUnmarshal[float64](bytes)
+func (r *Number) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONNumber(data)
 	if err != nil {
-		return fmt.Errorf("schema.Number.UnmarshalJSON: %w", err)
+		return fmt.Errorf("schema: Number.UnmarshalJSON: %w", err)
 	}
-	*r = Number(result)
+	*r = result
 	return nil
+}
+func (r *Number) _unmarshalJSONNumber(data []byte) (Number, error) {
+	var result Number
+	intermidiary, err := r._unmarshalJSONfloat64(data)
+	if err != nil {
+		return result, fmt.Errorf("schema: Number._unmarshalJSONNumber: alias; %w", err)
+	}
+	result = Number(intermidiary)
+	return result, nil
+}
+func (r *Number) _unmarshalJSONfloat64(data []byte) (float64, error) {
+	var result float64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schema: Number._unmarshalJSONfloat64: native number unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func StringFromJSON(x []byte) (*String, error) {
@@ -516,20 +574,45 @@ var (
 )
 
 func (r *String) MarshalJSON() ([]byte, error) {
-	result, err := shared.JSONMarshal[string](*r)
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONString(*r)
+}
+func (r *String) _marshalJSONString(x String) ([]byte, error) {
+	return r._marshalJSONstring(string(x))
+}
+func (r *String) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
 	if err != nil {
-		return nil, fmt.Errorf("schema.String.MarshalJSON: %w", err)
+		return nil, fmt.Errorf("schema: String._marshalJSONstring:; %w", err)
 	}
 	return result, nil
 }
-
-func (r *String) UnmarshalJSON(bytes []byte) error {
-	result, err := shared.JSONUnmarshal[string](bytes)
+func (r *String) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONString(data)
 	if err != nil {
-		return fmt.Errorf("schema.String.UnmarshalJSON: %w", err)
+		return fmt.Errorf("schema: String.UnmarshalJSON: %w", err)
 	}
-	*r = String(result)
+	*r = result
 	return nil
+}
+func (r *String) _unmarshalJSONString(data []byte) (String, error) {
+	var result String
+	intermidiary, err := r._unmarshalJSONstring(data)
+	if err != nil {
+		return result, fmt.Errorf("schema: String._unmarshalJSONString: alias; %w", err)
+	}
+	result = String(intermidiary)
+	return result, nil
+}
+func (r *String) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schema: String._unmarshalJSONstring: native string unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func BinaryFromJSON(x []byte) (*Binary, error) {
@@ -552,20 +635,76 @@ var (
 )
 
 func (r *Binary) MarshalJSON() ([]byte, error) {
-	result, err := shared.JSONMarshal[[]uint8](*r)
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONBinary(*r)
+}
+func (r *Binary) _marshalJSONBinary(x Binary) ([]byte, error) {
+	return r._marshalJSONSliceuint8([]uint8(x))
+}
+func (r *Binary) _marshalJSONSliceuint8(x []uint8) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONuint8(v)
+		if err != nil {
+			return nil, fmt.Errorf("schema: Binary._marshalJSONSliceuint8: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("schema.Binary.MarshalJSON: %w", err)
+		return nil, fmt.Errorf("schema: Binary._marshalJSONSliceuint8:; %w", err)
 	}
 	return result, nil
 }
-
-func (r *Binary) UnmarshalJSON(bytes []byte) error {
-	result, err := shared.JSONUnmarshal[[]uint8](bytes)
+func (r *Binary) _marshalJSONuint8(x uint8) ([]byte, error) {
+	result, err := json.Marshal(x)
 	if err != nil {
-		return fmt.Errorf("schema.Binary.UnmarshalJSON: %w", err)
+		return nil, fmt.Errorf("schema: Binary._marshalJSONuint8:; %w", err)
 	}
-	*r = Binary(result)
+	return result, nil
+}
+func (r *Binary) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONBinary(data)
+	if err != nil {
+		return fmt.Errorf("schema: Binary.UnmarshalJSON: %w", err)
+	}
+	*r = result
 	return nil
+}
+func (r *Binary) _unmarshalJSONBinary(data []byte) (Binary, error) {
+	var result Binary
+	intermidiary, err := r._unmarshalJSONSliceuint8(data)
+	if err != nil {
+		return result, fmt.Errorf("schema: Binary._unmarshalJSONBinary: alias; %w", err)
+	}
+	result = Binary(intermidiary)
+	return result, nil
+}
+func (r *Binary) _unmarshalJSONSliceuint8(data []byte) ([]uint8, error) {
+	result := make([]uint8, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schema: Binary._unmarshalJSONSliceuint8: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONuint8(v)
+		if err != nil {
+			return result, fmt.Errorf("schema: Binary._unmarshalJSONSliceuint8: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *Binary) _unmarshalJSONuint8(data []byte) (uint8, error) {
+	var result uint8
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schema: Binary._unmarshalJSONuint8: native number unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func ListFromJSON(x []byte) (*List, error) {
@@ -588,20 +727,75 @@ var (
 )
 
 func (r *List) MarshalJSON() ([]byte, error) {
-	result, err := shared.JSONMarshal[[]Schema](*r)
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONList(*r)
+}
+func (r *List) _marshalJSONList(x List) ([]byte, error) {
+	return r._marshalJSONSliceSchema([]Schema(x))
+}
+func (r *List) _marshalJSONSliceSchema(x []Schema) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONSchema(v)
+		if err != nil {
+			return nil, fmt.Errorf("schema: List._marshalJSONSliceSchema: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("schema.List.MarshalJSON: %w", err)
+		return nil, fmt.Errorf("schema: List._marshalJSONSliceSchema:; %w", err)
 	}
 	return result, nil
 }
-
-func (r *List) UnmarshalJSON(bytes []byte) error {
-	result, err := shared.JSONUnmarshal[[]Schema](bytes)
+func (r *List) _marshalJSONSchema(x Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[Schema](x)
 	if err != nil {
-		return fmt.Errorf("schema.List.UnmarshalJSON: %w", err)
+		return nil, fmt.Errorf("schema: List._marshalJSONSchema:; %w", err)
 	}
-	*r = List(result)
+	return result, nil
+}
+func (r *List) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONList(data)
+	if err != nil {
+		return fmt.Errorf("schema: List.UnmarshalJSON: %w", err)
+	}
+	*r = result
 	return nil
+}
+func (r *List) _unmarshalJSONList(data []byte) (List, error) {
+	var result List
+	intermidiary, err := r._unmarshalJSONSliceSchema(data)
+	if err != nil {
+		return result, fmt.Errorf("schema: List._unmarshalJSONList: alias; %w", err)
+	}
+	result = List(intermidiary)
+	return result, nil
+}
+func (r *List) _unmarshalJSONSliceSchema(data []byte) ([]Schema, error) {
+	result := make([]Schema, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schema: List._unmarshalJSONSliceSchema: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONSchema(v)
+		if err != nil {
+			return result, fmt.Errorf("schema: List._unmarshalJSONSliceSchema: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *List) _unmarshalJSONSchema(data []byte) (Schema, error) {
+	result, err := shared.JSONUnmarshal[Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("schema: List._unmarshalJSONSchema: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func MapFromJSON(x []byte) (*Map, error) {
@@ -624,29 +818,90 @@ var (
 )
 
 func (r *Map) MarshalJSON() ([]byte, error) {
-	fieldMap := make(map[string]json.RawMessage)
-	for k, v := range *r {
-		key, value, err := shared.JSONMarshalMap[string, Schema](k, v)
-		if err != nil {
-			return nil, fmt.Errorf("schema.Map.MarshalJSON:; %w", err)
-		}
-		fieldMap[key] = value
+	if r == nil {
+		return nil, nil
 	}
-	result, err := json.Marshal(fieldMap)
+	return r._marshalJSONMap(*r)
+}
+func (r *Map) _marshalJSONMap(x Map) ([]byte, error) {
+	return r._marshalJSONmapLb_string_bLSchema(map[string]Schema(x))
+}
+func (r *Map) _marshalJSONmapLb_string_bLSchema(x map[string]Schema) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	for k, v := range x {
+		key := string(k)
+		value, err := r._marshalJSONSchema(v)
+		if err != nil {
+			return nil, fmt.Errorf("schema: Map._marshalJSONmapLb_string_bLSchema: value; %w", err)
+		}
+		partial[string(key)] = value
+	}
+	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("schema.Map.MarshalJSON:; %w", err)
+		return nil, fmt.Errorf("schema: Map._marshalJSONmapLb_string_bLSchema:; %w", err)
 	}
 	return result, nil
 }
-
-func (r *Map) UnmarshalJSON(bytes []byte) error {
-	*r = make(Map)
-	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
-		k, v, err := shared.JSONUnmarshalMap[string, Schema](key, value)
+func (r *Map) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("schema: Map._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Map) _marshalJSONSchema(x Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[Schema](x)
+	if err != nil {
+		return nil, fmt.Errorf("schema: Map._marshalJSONSchema:; %w", err)
+	}
+	return result, nil
+}
+func (r *Map) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONMap(data)
+	if err != nil {
+		return fmt.Errorf("schema: Map.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Map) _unmarshalJSONMap(data []byte) (Map, error) {
+	var result Map
+	intermidiary, err := r._unmarshalJSONmapLb_string_bLSchema(data)
+	if err != nil {
+		return result, fmt.Errorf("schema: Map._unmarshalJSONMap: alias; %w", err)
+	}
+	result = Map(intermidiary)
+	return result, nil
+}
+func (r *Map) _unmarshalJSONmapLb_string_bLSchema(data []byte) (map[string]Schema, error) {
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return nil, fmt.Errorf("schema: Map._unmarshalJSONmapLb_string_bLSchema: native map unwrap; %w", err)
+	}
+	result := make(map[string]Schema)
+	for k, v := range partial {
+		key := string(k)
+		value, err := r._unmarshalJSONSchema(v)
 		if err != nil {
-			return fmt.Errorf("schema.Map.UnmarshalJSON: key %s; %w", key, err)
+			return nil, fmt.Errorf("schema: Map._unmarshalJSONmapLb_string_bLSchema: value; %w", err)
 		}
-		(*r)[k] = v
-		return nil
-	})
+		result[key] = value
+	}
+	return result, nil
+}
+func (r *Map) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schema: Map._unmarshalJSONstring: native string unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Map) _unmarshalJSONSchema(data []byte) (Schema, error) {
+	result, err := shared.JSONUnmarshal[Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("schema: Map._unmarshalJSONSchema: native ref unwrap; %w", err)
+	}
+	return result, nil
 }

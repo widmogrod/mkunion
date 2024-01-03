@@ -9,8 +9,178 @@ import (
 )
 
 func init() {
-	shape.Register(RecordShape())
 	shape.Register(PageResultShape())
+	shape.Register(RecordShape())
+}
+
+var (
+	_ json.Unmarshaler = (*PageResult[any])(nil)
+	_ json.Marshaler   = (*PageResult[any])(nil)
+)
+
+func (r *PageResult[A]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONPageResultLb_A_bL(*r)
+}
+func (r *PageResult[A]) _marshalJSONPageResultLb_A_bL(x PageResult[A]) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldItems []byte
+	fieldItems, err = r._marshalJSONSliceA(x.Items)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Items; %w", err)
+	}
+	partial["Items"] = fieldItems
+	if x.Next != nil {
+		var fieldNext []byte
+		fieldNext, err = r._marshalJSONPtrFindingRecordsLb_A_bL(x.Next)
+		if err != nil {
+			return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Next; %w", err)
+		}
+		partial["Next"] = fieldNext
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *PageResult[A]) _marshalJSONSliceA(x []A) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONA(v)
+		if err != nil {
+			return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONSliceA: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONSliceA:; %w", err)
+	}
+	return result, nil
+}
+func (r *PageResult[A]) _marshalJSONA(x A) ([]byte, error) {
+	result, err := shared.JSONMarshal[A](x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONA:; %w", err)
+	}
+	return result, nil
+}
+func (r *PageResult[A]) _marshalJSONPtrFindingRecordsLb_A_bL(x *FindingRecords[A]) ([]byte, error) {
+	result, err := shared.JSONMarshal[*FindingRecords[A]](x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPtrFindingRecordsLb_A_bL:; %w", err)
+	}
+	return result, nil
+}
+func (r *PageResult[A]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONPageResultLb_A_bL(data)
+	if err != nil {
+		return fmt.Errorf("schemaless: PageResult[A].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *PageResult[A]) _unmarshalJSONPageResultLb_A_bL(data []byte) (PageResult[A], error) {
+	result := PageResult[A]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: native struct unwrap; %w", err)
+	}
+	if fieldItems, ok := partial["Items"]; ok {
+		result.Items, err = r._unmarshalJSONSliceA(fieldItems)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: field Items; %w", err)
+		}
+	}
+	if fieldNext, ok := partial["Next"]; ok {
+		result.Next, err = r._unmarshalJSONPtrFindingRecordsLb_A_bL(fieldNext)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: field Next; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *PageResult[A]) _unmarshalJSONSliceA(data []byte) ([]A, error) {
+	result := make([]A, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONSliceA: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONA(v)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONSliceA: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *PageResult[A]) _unmarshalJSONA(data []byte) (A, error) {
+	result, err := shared.JSONUnmarshal[A](data)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONA: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *PageResult[A]) _unmarshalJSONPtrFindingRecordsLb_A_bL(data []byte) (*FindingRecords[A], error) {
+	result, err := shared.JSONUnmarshal[*FindingRecords[A]](data)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPtrFindingRecordsLb_A_bL: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func PageResultShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "PageResult",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Items",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name:          "A",
+						PkgName:       "",
+						PkgImportName: "",
+					},
+				},
+			},
+			{
+				Name: "Next",
+				Type: &shape.RefName{
+					Name:          "FindingRecords",
+					PkgName:       "schemaless",
+					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+					IsPointer:     true,
+					Indexed: []shape.Shape{
+						&shape.RefName{
+							Name:          "A",
+							PkgName:       "",
+							PkgImportName: "",
+						},
+					},
+				},
+				IsPointer: true,
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
 }
 
 var (
@@ -175,176 +345,6 @@ func RecordShape() shape.Shape {
 				Type: &shape.NumberLike{
 					Kind: &shape.UInt16{},
 				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
-var (
-	_ json.Unmarshaler = (*PageResult[any])(nil)
-	_ json.Marshaler   = (*PageResult[any])(nil)
-)
-
-func (r *PageResult[A]) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONPageResultLb_A_bL(*r)
-}
-func (r *PageResult[A]) _marshalJSONPageResultLb_A_bL(x PageResult[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldItems []byte
-	fieldItems, err = r._marshalJSONSliceA(x.Items)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Items; %w", err)
-	}
-	partial["Items"] = fieldItems
-	if x.Next != nil {
-		var fieldNext []byte
-		fieldNext, err = r._marshalJSONPtrFindingRecordsLb_A_bL(x.Next)
-		if err != nil {
-			return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Next; %w", err)
-		}
-		partial["Next"] = fieldNext
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *PageResult[A]) _marshalJSONSliceA(x []A) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONA(v)
-		if err != nil {
-			return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONSliceA: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONSliceA:; %w", err)
-	}
-	return result, nil
-}
-func (r *PageResult[A]) _marshalJSONA(x A) ([]byte, error) {
-	result, err := shared.JSONMarshal[A](x)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONA:; %w", err)
-	}
-	return result, nil
-}
-func (r *PageResult[A]) _marshalJSONPtrFindingRecordsLb_A_bL(x *FindingRecords[A]) ([]byte, error) {
-	result, err := shared.JSONMarshal[*FindingRecords[A]](x)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPtrFindingRecordsLb_A_bL:; %w", err)
-	}
-	return result, nil
-}
-func (r *PageResult[A]) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONPageResultLb_A_bL(data)
-	if err != nil {
-		return fmt.Errorf("schemaless: PageResult[A].UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *PageResult[A]) _unmarshalJSONPageResultLb_A_bL(data []byte) (PageResult[A], error) {
-	result := PageResult[A]{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: native struct unwrap; %w", err)
-	}
-	if fieldItems, ok := partial["Items"]; ok {
-		result.Items, err = r._unmarshalJSONSliceA(fieldItems)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: field Items; %w", err)
-		}
-	}
-	if fieldNext, ok := partial["Next"]; ok {
-		result.Next, err = r._unmarshalJSONPtrFindingRecordsLb_A_bL(fieldNext)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: field Next; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *PageResult[A]) _unmarshalJSONSliceA(data []byte) ([]A, error) {
-	result := make([]A, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONSliceA: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONA(v)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONSliceA: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *PageResult[A]) _unmarshalJSONA(data []byte) (A, error) {
-	result, err := shared.JSONUnmarshal[A](data)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONA: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *PageResult[A]) _unmarshalJSONPtrFindingRecordsLb_A_bL(data []byte) (*FindingRecords[A], error) {
-	result, err := shared.JSONUnmarshal[*FindingRecords[A]](data)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPtrFindingRecordsLb_A_bL: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func PageResultShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "PageResult",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Items",
-				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name:          "A",
-						PkgName:       "",
-						PkgImportName: "",
-					},
-				},
-			},
-			{
-				Name: "Next",
-				Type: &shape.RefName{
-					Name:          "FindingRecords",
-					PkgName:       "schemaless",
-					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-					IsPointer:     true,
-					Indexed: []shape.Shape{
-						&shape.RefName{
-							Name:          "A",
-							PkgName:       "",
-							PkgImportName: "",
-						},
-					},
-				},
-				IsPointer: true,
 			},
 		},
 		Tags: map[string]shape.Tag{

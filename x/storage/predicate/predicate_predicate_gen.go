@@ -94,7 +94,8 @@ func MustMatchPredicateR2[TOut1, TOut2 any](
 	return f.MustMatch4R2(x, f1, f2, f3, f4)
 }
 
-// mkunion-extension:shape
+//mkunion-extension:shape
+
 func PredicateShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Predicate",
@@ -108,6 +109,7 @@ func PredicateShape() shape.Shape {
 		},
 	}
 }
+
 func AndShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "And",
@@ -127,6 +129,7 @@ func AndShape() shape.Shape {
 		},
 	}
 }
+
 func OrShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Or",
@@ -146,6 +149,7 @@ func OrShape() shape.Shape {
 		},
 	}
 }
+
 func NotShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Not",
@@ -163,6 +167,7 @@ func NotShape() shape.Shape {
 		},
 	}
 }
+
 func CompareShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Compare",

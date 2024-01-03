@@ -86,7 +86,8 @@ func MustMatchBindableR2[TOut1, TOut2 any](
 	return f.MustMatch3R2(x, f1, f2, f3)
 }
 
-// mkunion-extension:shape
+//mkunion-extension:shape
+
 func BindableShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Bindable",
@@ -99,6 +100,7 @@ func BindableShape() shape.Shape {
 		},
 	}
 }
+
 func BindValueShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "BindValue",
@@ -116,6 +118,7 @@ func BindValueShape() shape.Shape {
 		},
 	}
 }
+
 func LiteralShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Literal",
@@ -133,6 +136,7 @@ func LiteralShape() shape.Shape {
 		},
 	}
 }
+
 func LocatableShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Locatable",

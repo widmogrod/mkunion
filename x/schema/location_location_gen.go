@@ -93,6 +93,13 @@ type LocationUnionJSON struct {
 }
 
 func LocationFromJSON(x []byte) (Location, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
 	var data LocationUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
@@ -181,38 +188,63 @@ var (
 )
 
 func (r *LocationField) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldName, err := shared.JSONMarshal[string](r.Name)
-	if err != nil {
-		return nil, fmt.Errorf("schema.LocationField.MarshalJSON: field Name; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-	result["Name"] = fieldName
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("schema.LocationField.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONLocationField(*r)
 }
-
-func (r *LocationField) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "Name":
-			var err error
-			r.Name, err = shared.JSONUnmarshal[string](bytes)
-			if err != nil {
-				return fmt.Errorf("schema.LocationField.UnmarshalJSON: field Name; %w", err)
-			}
-			return nil
-
+func (r *LocationField) _marshalJSONLocationField(x LocationField) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldName []byte
+	fieldName, err = r._marshalJSONstring(x.Name)
+	if err != nil {
+		return nil, fmt.Errorf("schema: LocationField._marshalJSONLocationField: field name Name; %w", err)
+	}
+	partial["Name"] = fieldName
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schema: LocationField._marshalJSONLocationField: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *LocationField) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("schema: LocationField._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *LocationField) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONLocationField(data)
+	if err != nil {
+		return fmt.Errorf("schema: LocationField.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *LocationField) _unmarshalJSONLocationField(data []byte) (LocationField, error) {
+	result := LocationField{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schema: LocationField._unmarshalJSONLocationField: native struct unwrap; %w", err)
+	}
+	if fieldName, ok := partial["Name"]; ok {
+		result.Name, err = r._unmarshalJSONstring(fieldName)
+		if err != nil {
+			return result, fmt.Errorf("schema: LocationField._unmarshalJSONLocationField: field Name; %w", err)
 		}
-
-		return nil
-	})
+	}
+	return result, nil
+}
+func (r *LocationField) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schema: LocationField._unmarshalJSONstring: native string unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func LocationIndexFromJSON(x []byte) (*LocationIndex, error) {
@@ -235,38 +267,63 @@ var (
 )
 
 func (r *LocationIndex) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldIndex, err := shared.JSONMarshal[int](r.Index)
-	if err != nil {
-		return nil, fmt.Errorf("schema.LocationIndex.MarshalJSON: field Index; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-	result["Index"] = fieldIndex
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("schema.LocationIndex.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONLocationIndex(*r)
 }
-
-func (r *LocationIndex) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "Index":
-			var err error
-			r.Index, err = shared.JSONUnmarshal[int](bytes)
-			if err != nil {
-				return fmt.Errorf("schema.LocationIndex.UnmarshalJSON: field Index; %w", err)
-			}
-			return nil
-
+func (r *LocationIndex) _marshalJSONLocationIndex(x LocationIndex) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldIndex []byte
+	fieldIndex, err = r._marshalJSONint(x.Index)
+	if err != nil {
+		return nil, fmt.Errorf("schema: LocationIndex._marshalJSONLocationIndex: field name Index; %w", err)
+	}
+	partial["Index"] = fieldIndex
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schema: LocationIndex._marshalJSONLocationIndex: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *LocationIndex) _marshalJSONint(x int) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("schema: LocationIndex._marshalJSONint:; %w", err)
+	}
+	return result, nil
+}
+func (r *LocationIndex) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONLocationIndex(data)
+	if err != nil {
+		return fmt.Errorf("schema: LocationIndex.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *LocationIndex) _unmarshalJSONLocationIndex(data []byte) (LocationIndex, error) {
+	result := LocationIndex{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schema: LocationIndex._unmarshalJSONLocationIndex: native struct unwrap; %w", err)
+	}
+	if fieldIndex, ok := partial["Index"]; ok {
+		result.Index, err = r._unmarshalJSONint(fieldIndex)
+		if err != nil {
+			return result, fmt.Errorf("schema: LocationIndex._unmarshalJSONLocationIndex: field Index; %w", err)
 		}
-
-		return nil
-	})
+	}
+	return result, nil
+}
+func (r *LocationIndex) _unmarshalJSONint(data []byte) (int, error) {
+	var result int
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schema: LocationIndex._unmarshalJSONint: native number unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func LocationAnythingFromJSON(x []byte) (*LocationAnything, error) {
@@ -289,22 +346,34 @@ var (
 )
 
 func (r *LocationAnything) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("schema.LocationAnything.MarshalJSON: final step; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-
-	return output, nil
+	return r._marshalJSONLocationAnything(*r)
 }
-
-func (r *LocationAnything) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		}
-
-		return nil
-	})
+func (r *LocationAnything) _marshalJSONLocationAnything(x LocationAnything) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schema: LocationAnything._marshalJSONLocationAnything: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *LocationAnything) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONLocationAnything(data)
+	if err != nil {
+		return fmt.Errorf("schema: LocationAnything.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *LocationAnything) _unmarshalJSONLocationAnything(data []byte) (LocationAnything, error) {
+	result := LocationAnything{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schema: LocationAnything._unmarshalJSONLocationAnything: native struct unwrap; %w", err)
+	}
+	return result, nil
 }
