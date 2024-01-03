@@ -1,7 +1,6 @@
 package shape
 
 import (
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
@@ -590,33 +589,29 @@ func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape 
 	)
 }
 
-func IndexWith(y Shape, indexed []Shape) Shape {
+func IndexWith(y Shape, ref *RefName) Shape {
 	x, ok := y.(*StructLike)
 	if !ok {
 		return y
 	}
 
-	if len(x.TypeParams) != len(indexed) ||
+	z := x
+	z.IsPointer = ref.IsPointer
+
+	if len(x.TypeParams) != len(ref.Indexed) ||
 		len(x.TypeParams) == 0 {
-		return x
+		return z
 	}
 
-	params := map[string]*RefName{}
+	params := make(map[string]Shape, len(x.TypeParams))
 	for i, param := range x.TypeParams {
-		typ := indexed[i]
-
-		ref, ok := typ.(*RefName)
-		if !ok {
-			panic(fmt.Errorf("IndexWith: expected indexed type to be *RefName, got %T", typ))
-		}
-
-		params[param.Name] = ref
+		params[param.Name] = ref.Indexed[i]
 	}
 
-	return InstantiateTypeThatAreOvershadowByTypeParam(x, params)
+	return InstantiateTypeThatAreOvershadowByTypeParam(z, params)
 }
 
-func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[string]*RefName) Shape {
+func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[string]Shape) Shape {
 	return MustMatchShape(
 		typ,
 		func(x *Any) Shape {
@@ -663,6 +658,7 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 			result := &ListLike{
 				Element:          InstantiateTypeThatAreOvershadowByTypeParam(x.Element, replacement),
 				ElementIsPointer: x.ElementIsPointer,
+				ArrayLen:         x.ArrayLen,
 			}
 			return result
 		},
@@ -680,8 +676,19 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 				Name:          x.Name,
 				PkgName:       x.PkgName,
 				PkgImportName: x.PkgImportName,
-				TypeParams:    x.TypeParams,
 				Tags:          x.Tags,
+				IsPointer:     x.IsPointer,
+			}
+
+			// change names of type params, to represent substitution
+			for _, param := range x.TypeParams {
+				param := param
+				if rep, ok := replacement[param.Name]; ok {
+					param.Name = ToGoTypeName(rep, WithRootPackage(x.PkgName))
+					param.Type = rep
+				}
+
+				result.TypeParams = append(result.TypeParams, param)
 			}
 
 			for _, field := range x.Fields {
