@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -75,6 +76,72 @@ func tryToPkgImportName(filename string) string {
 
 		toadd = append([]string{path.Base(filename)}, toadd...)
 	}
+}
+
+func tryToFindPkgName(pkgImportName, defaultPkgName string) string {
+	if pkgImportName == "" {
+		return defaultPkgName
+	}
+
+	pkgPath, err := findPackagePath(pkgImportName)
+	if err != nil {
+		log.Debugf("shape.tryToFindPkgName: could not find package path for %s; %s", pkgImportName, err)
+		return defaultPkgName
+	}
+
+	// open any go file (except _test.go) in the package and extract package name
+	// this is a hack, but it works
+
+	var result string
+	err = filepath.WalkDir(
+		pkgPath,
+		func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				log.Debugf("shape.tryToFindPkgName: could not walk %s; %s", path, err)
+				// ignore errors
+				return nil
+			}
+
+			if d.IsDir() {
+				return nil
+			}
+
+			if filepath.Ext(path) != ".go" {
+				log.Debugf("shape.tryToFindPkgName: skipping non-go file %s", path)
+				return nil
+			}
+
+			if strings.HasSuffix(path, "_test.go") {
+				log.Debugf("shape.tryToFindPkgName: skipping test file %s", path)
+				return nil
+			}
+
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, path, nil, parser.PackageClauseOnly)
+			if err != nil {
+				log.Debugf("shape.tryToFindPkgName: could not parse file %s; %s", path, err)
+				return nil
+			}
+
+			if f.Name == nil {
+				return nil
+			}
+
+			if f.Name.Name == "" {
+				return nil
+			}
+
+			result = f.Name.String()
+			return filepath.SkipAll
+		},
+	)
+
+	if err != nil {
+		log.Warnf("shape.tryToFindPkgName: could not find package name for %s; %s", pkgImportName, err)
+		return defaultPkgName
+	}
+
+	return result
 }
 
 var (
@@ -283,7 +350,9 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			if imp.Name != nil {
 				f.packageNameToPackageImport[imp.Name.String()] = strings.Trim(imp.Path.Value, "\"")
 			} else {
-				f.packageNameToPackageImport[path.Base(strings.Trim(imp.Path.Value, "\""))] = strings.Trim(imp.Path.Value, "\"")
+				defaultPkgName := path.Base(strings.Trim(imp.Path.Value, "\""))
+				pkgName := tryToFindPkgName(strings.Trim(imp.Path.Value, "\""), defaultPkgName)
+				f.packageNameToPackageImport[pkgName] = strings.Trim(imp.Path.Value, "\"")
 			}
 		}
 
