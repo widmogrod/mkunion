@@ -16,6 +16,9 @@ func NewShapeTagged(shape shape.Shape) *ShapeTagged {
 		shape:                 shape,
 		skipImportsAndPackage: false,
 		skipInitFunc:          false,
+		pkgUsed: PkgMap{
+			"shape": "github.com/widmogrod/mkunion/x/shape",
+		},
 	}
 }
 
@@ -23,6 +26,7 @@ type ShapeTagged struct {
 	shape                 shape.Shape
 	skipImportsAndPackage bool
 	skipInitFunc          bool
+	pkgUsed               PkgMap
 }
 
 func (g *ShapeTagged) SkipImportsAndPackage(flag bool) *ShapeTagged {
@@ -36,17 +40,24 @@ func (g *ShapeTagged) SkipInitFunc(flag bool) *ShapeTagged {
 }
 
 func (g *ShapeTagged) Generate() (string, error) {
-	result := &strings.Builder{}
+	body := &bytes.Buffer{}
+	marshalPart, err := g.generateShapeFunc(g.shape)
+	if err != nil {
+		return "", fmt.Errorf("generators.ShapeTagged.Generate: when generating shape func; %w", err)
 
+	}
+	body.WriteString(marshalPart)
+
+	head := &strings.Builder{}
 	if !g.skipImportsAndPackage {
-		result.WriteString(fmt.Sprintf("package %s\n\n", shape.ToGoPkgName(g.shape)))
+		head.WriteString(fmt.Sprintf("package %s\n\n", shape.ToGoPkgName(g.shape)))
 
 		pkgMap := g.ExtractImports(g.shape)
 		impPart, err := g.GenerateImports(pkgMap)
 		if err != nil {
 			return "", fmt.Errorf("generators.ShapeTagged.Generate: when generating imports; %w", err)
 		}
-		result.WriteString(impPart)
+		head.WriteString(impPart)
 	}
 
 	if !g.skipInitFunc {
@@ -55,18 +66,15 @@ func (g *ShapeTagged) Generate() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("generators.ShapeTagged.Generate: when generating func init(); %w", err)
 		}
-		result.WriteString(varPart)
-
+		head.WriteString(varPart)
 	}
 
-	marshalPart, err := g.GenerateShapeFunc(g.shape)
-	if err != nil {
-		return "", fmt.Errorf("generators.ShapeTagged.Generate: when generating shape func; %w", err)
-
+	if head.Len() > 0 {
+		head.WriteString(body.String())
+		return head.String(), nil
+	} else {
+		return body.String(), nil
 	}
-	result.WriteString(marshalPart)
-
-	return result.String(), nil
 }
 
 func (g *ShapeTagged) GenerateImports(pkgMap PkgMap) (string, error) {
@@ -74,25 +82,12 @@ func (g *ShapeTagged) GenerateImports(pkgMap PkgMap) (string, error) {
 }
 
 func (g *ShapeTagged) ExtractImports(x shape.Shape) PkgMap {
-	pkgMap := shape.ExtractPkgImportNames(x)
-	if pkgMap == nil {
-		pkgMap = make(map[string]string)
-	}
-
 	// add default and necessary imports
-	defaults := g.defaultImportsFor(x)
-	pkgMap = MergePkgMaps(pkgMap, defaults)
+	pkgMap := g.pkgUsed
 
 	// remove self from importing
 	delete(pkgMap, shape.ToGoPkgName(x))
 	return pkgMap
-}
-
-func (g *ShapeTagged) defaultImportsFor(x shape.Shape) PkgMap {
-	return map[string]string{
-		"fmt":   "fmt",
-		"shape": "github.com/widmogrod/mkunion/x/shape",
-	}
 }
 
 func (g *ShapeTagged) ExtractImportFuncs(s shape.Shape) []string {
@@ -101,23 +96,88 @@ func (g *ShapeTagged) ExtractImportFuncs(s shape.Shape) []string {
 		return nil
 	}
 
-	return []string{
+	result := []string{
 		fmt.Sprintf("shape.Register(%sShape())", name),
 	}
+
+	switch x := s.(type) {
+	case *shape.UnionLike:
+		for _, variant := range x.Variant {
+			result = append(result, g.ExtractImportFuncs(variant)...)
+		}
+	}
+
+	return result
 }
 
 func (g *ShapeTagged) GenerateInitFunc(init []string) (string, error) {
 	return GenerateInitFunc(init), nil
 }
 
-func (g *ShapeTagged) GenerateShapeFunc(s shape.Shape) (string, error) {
+func (g *ShapeTagged) generateShapeFunc(s shape.Shape) (string, error) {
+	switch x := s.(type) {
+	case *shape.UnionLike:
+		result := &bytes.Buffer{}
+		// union func name is composed from those functions
+		union, err := g.generateUnionFunc(x)
+		if err != nil {
+			return "", fmt.Errorf("generators.ShapeTagged.generateShapeFunc: when generating union func; %w", err)
+		}
+
+		result.WriteString("\n")
+		result.WriteString(union)
+
+		// for each variant generate a func
+		for _, variant := range x.Variant {
+			partial, err := g.generateVariantFunc(variant)
+			if err != nil {
+				return "", fmt.Errorf("generators.ShapeTagged.generateShapeFunc: when generating variant func; %w", err)
+			}
+
+			result.WriteString("\n")
+			result.WriteString(partial)
+		}
+
+		return result.String(), nil
+	}
+
+	return g.generateVariantFunc(s)
+}
+
+func (g *ShapeTagged) generateUnionFunc(s *shape.UnionLike) (string, error) {
 	name, supports := TypeNameIfSupports(s)
 	if !supports {
-		return "", fmt.Errorf("generators.ShapeTagged.GenerateShapeFunc: %w", ErrNotSupported)
+		return "", fmt.Errorf("generators.ShapeTagged.generateUnionFunc: %w", ErrNotSupported)
 	}
 
 	result := &bytes.Buffer{}
+	fmt.Fprintf(result, "func %sShape() shape.Shape {\n", name)
+	fmt.Fprintf(result, "\treturn &shape.UnionLike{\n")
+	fmt.Fprintf(result, "\t\tName: \"%s\",\n", s.Name)
+	fmt.Fprintf(result, "\t\tPkgName: \"%s\",\n", s.PkgName)
+	fmt.Fprintf(result, "\t\tPkgImportName: \"%s\",\n", s.PkgImportName)
+	fmt.Fprintf(result, "\t\tVariant: []shape.Shape{\n")
+	for _, variant := range s.Variant {
+		variantName, supports := TypeNameIfSupports(variant)
+		if !supports {
+			return "", fmt.Errorf("generators.ShapeTagged.generateUnionFunc: variant %v does not have name; %w", variant, ErrNotSupported)
+		}
+		fmt.Fprintf(result, "\t\t\t%sShape(),\n", variantName)
+	}
+	fmt.Fprintf(result, "\t\t},\n")
+	fmt.Fprintf(result, "\t}\n")
+	fmt.Fprintf(result, "}\n")
 
+	return result.String(), nil
+}
+
+func (g *ShapeTagged) generateVariantFunc(s shape.Shape) (string, error) {
+	name, supports := TypeNameIfSupports(s)
+	if !supports {
+		return "", fmt.Errorf("generators.ShapeTagged.generateVariantFunc: %w", ErrNotSupported)
+	}
+
+	result := &bytes.Buffer{}
 	fmt.Fprintf(result, "func %sShape() shape.Shape {\n", name)
 	fmt.Fprintf(result, "\treturn %s\n", padLeftTabs2(1, ShapeToString(s)))
 	fmt.Fprintf(result, "}\n")
@@ -198,6 +258,9 @@ func ShapeToString(x shape.Shape) string {
 			fmt.Fprintf(result, "\tElement: %s,\n", padLeftTabs2(1, ShapeToString(x.Element)))
 			if x.ElementIsPointer {
 				fmt.Fprintf(result, "\tElementIsPointer: %v,\n", x.ElementIsPointer)
+			}
+			if x.ArrayLen != nil {
+				fmt.Fprintf(result, "\tArrayLen: shape.Ptr(%d),\n", *x.ArrayLen)
 			}
 			fmt.Fprintf(result, "}")
 

@@ -21,10 +21,7 @@ func TestShapeTagged_Struct(t *testing.T) {
 	assert.Equal(t, `package testutils
 
 import (
-	"fmt"
-	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shape"
-	"time"
 )
 
 func init() {
