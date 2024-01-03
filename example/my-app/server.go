@@ -32,7 +32,7 @@ import (
 )
 
 // this command make sure that all types that are imported will have generated typescript mapping
-//go:generate mkunion shape-export --language=typescript -o ./workflow
+//go:generate mkunion shape-export --language=typescript -o ./src/workflow -v
 
 // this lines defines all types that should have typescript mapping
 type (
