@@ -19,6 +19,11 @@ func NewDeSerJSONGenerator(union *shape.UnionLike, helper *Helpers) *DeSerJSONGe
 		helper:                helper,
 		template:              template.Must(template.New("deser_json_generator.go.tmpl").Funcs(helper.Func()).Parse(deserJSONTmpl)),
 		skipImportsAndPackage: false,
+		pkgUsed: PkgMap{
+			"json":   "encoding/json",
+			"fmt":    "fmt",
+			"shared": "github.com/widmogrod/mkunion/x/shared",
+		},
 	}
 }
 
@@ -27,6 +32,7 @@ type DeSerJSONGenerator struct {
 	helper                *Helpers
 	template              *template.Template
 	skipImportsAndPackage bool
+	pkgUsed               PkgMap
 }
 
 func (g *DeSerJSONGenerator) SkipImportsAndPackage(x bool) {
@@ -44,20 +50,11 @@ func (g *DeSerJSONGenerator) ExtractImports(x shape.Shape) PkgMap {
 	}
 
 	// add default and necessary imports
-	defaults := g.defaultImportsFor(x)
-	pkgMap = MergePkgMaps(pkgMap, defaults)
+	pkgMap = MergePkgMaps(pkgMap, g.pkgUsed)
 
 	// remove self from importing
 	delete(pkgMap, shape.ToGoPkgName(x))
 	return pkgMap
-}
-
-func (g *DeSerJSONGenerator) defaultImportsFor(x shape.Shape) PkgMap {
-	return map[string]string{
-		"json":   "encoding/json",
-		"fmt":    "fmt",
-		"shared": "github.com/widmogrod/mkunion/x/shared",
-	}
 }
 
 func (g *DeSerJSONGenerator) IsStruct(x shape.Shape) bool {
@@ -121,39 +118,41 @@ func (g *DeSerJSONGenerator) OptionallyImport(x string) string {
 }
 
 func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
-	result := &bytes.Buffer{}
+	body := &bytes.Buffer{}
+	err := g.template.ExecuteTemplate(body, "deser_json_generator.go.tmpl", g)
+	if err != nil {
+		return nil, err
+	}
 
+	head := &bytes.Buffer{}
 	if !g.skipImportsAndPackage {
-		result.WriteString(fmt.Sprintf("package %s\n\n", shape.ToGoPkgName(g.Union)))
+		head.WriteString(fmt.Sprintf("package %s\n\n", shape.ToGoPkgName(g.Union)))
 
 		pkgMap := g.ExtractImports(g.Union)
 		impPart, err := g.GenerateImports(pkgMap)
 		if err != nil {
 			return nil, fmt.Errorf("generators.SerdeJSONTagged.Generate: when generating imports %w", err)
 		}
-		result.WriteString(impPart)
+		head.WriteString(impPart)
 	}
 
-	err := g.template.ExecuteTemplate(result, "deser_json_generator.go.tmpl", g)
-	if err != nil {
-		return nil, err
+	if head.Len() > 0 {
+		head.WriteString(body.String())
+		return head.Bytes(), nil
+	} else {
+		return body.Bytes(), nil
 	}
-
-	return result.Bytes(), nil
 }
 
 func (g *DeSerJSONGenerator) Serde(x shape.Shape) string {
-	//switch x.(type) {
-	//case *shape.AliasLike:
-	//	return ""
-	//}
-
 	serde := NewSerdeJSONTagged(x)
 	serde.SkipImportsAndPackage(true)
 	result, err := serde.Generate()
 	if err != nil {
 		panic(err)
 	}
+
+	g.pkgUsed = MergePkgMaps(g.pkgUsed, serde.ExtractImports(x))
 
 	return result
 }

@@ -15,6 +15,13 @@ type {{ .Union.Name }}UnionJSON struct {
 }
 
 func {{ .Union.Name }}FromJSON(x []byte) ({{ .Union.Name }}, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
 	var data {{ .Union.Name }}UnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
