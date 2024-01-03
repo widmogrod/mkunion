@@ -242,30 +242,30 @@ func findPackagePath(pkgImportName string) (string, error) {
 	for {
 		cwd = path.Dir(cwd)
 		if cwd == "." || cwd == "/" {
-			log.Infof("shape.findPackagePath: %s could not find go.mod file in CWD or parent directories %s, continue with other paths", pkgImportName, cwd)
+			log.Debugf("shape.findPackagePath: %s could not find go.mod file in CWD or parent directories %s, continue with other paths", pkgImportName, cwd)
 			break
 		}
 
 		modpath := path.Join(cwd, "go.mod")
 		_, err := os.Stat(modpath)
-		log.Infof("shape.findPackagePath: %s checking modpath %s; %s", pkgImportName, modpath, err)
+		log.Debugf("shape.findPackagePath: %s checking modpath %s; err=%s", pkgImportName, modpath, err)
 		if err == nil {
 			f, err := os.Open(modpath)
 			if err != nil {
-				log.Infof("shape.findPackagePath: %s could not open %s", pkgImportName, cwd)
+				log.Debugf("shape.findPackagePath: %s could not open %s", pkgImportName, cwd)
 				continue
 			}
 			defer f.Close()
 
 			data, err := io.ReadAll(f)
 			if err != nil {
-				log.Infof("shape.findPackagePath: %s could not read %s", pkgImportName, cwd)
+				log.Debugf("shape.findPackagePath: %s could not read %s", pkgImportName, cwd)
 				continue
 				//return "", fmt.Errorf("shape.findPackagePath: could not read %s; %w", cwd, err)
 			} else {
 				parsed, err := modfile.Parse(modpath, data, nil)
 				if err != nil {
-					log.Infof("shape.findPackagePath: %s could not parse go.mod %s", pkgImportName, cwd)
+					log.Debugf("shape.findPackagePath: %s could not parse go.mod %s", pkgImportName, cwd)
 					break
 				} else {
 					log.Infof("shape.findPackagePath: %s parsed go.mod %s", pkgImportName, parsed.Module.Mod.Path)
@@ -277,19 +277,20 @@ func findPackagePath(pkgImportName string) (string, error) {
 		}
 	}
 
-	//otherwise fallback to GOPATH/pkg/mod
-	gopath := os.Getenv("GOPATH")
 	paths := []string{
 		filepath.Join(cwd),
 		filepath.Join(cwd, "vendor"),
-		filepath.Join(gopath, "pkg/mod"),
-		filepath.Join(gopath, "src"),
+		filepath.Join(os.Getenv("GOPATH"), "pkg/mod"),
+		//filepath.Join(os.Getenv("GOROOT"), "src"),
 	}
 
 	for _, p := range paths {
 		packPath := filepath.Join(p, pkgImportName)
 		if _, err := os.Stat(packPath); err == nil {
+			log.Infof("shape.findPackagePath: %s found package in fallback %s", pkgImportName, packPath)
 			return packPath, nil
+		} else {
+			log.Debugf("shape.findPackagePath: %s could not find package in fallback path %s", pkgImportName, packPath)
 		}
 	}
 
