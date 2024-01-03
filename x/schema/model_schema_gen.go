@@ -644,24 +644,9 @@ func (r *Binary) _marshalJSONBinary(x Binary) ([]byte, error) {
 	return r._marshalJSONSliceuint8([]uint8(x))
 }
 func (r *Binary) _marshalJSONSliceuint8(x []uint8) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONuint8(v)
-		if err != nil {
-			return nil, fmt.Errorf("schema: Binary._marshalJSONSliceuint8: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schema: Binary._marshalJSONSliceuint8:; %w", err)
-	}
-	return result, nil
-}
-func (r *Binary) _marshalJSONuint8(x uint8) ([]byte, error) {
 	result, err := json.Marshal(x)
 	if err != nil {
-		return nil, fmt.Errorf("schema: Binary._marshalJSONuint8:; %w", err)
+		return nil, fmt.Errorf("schema: Binary._marshalJSONSliceuint8:; %w", err)
 	}
 	return result, nil
 }
@@ -683,26 +668,10 @@ func (r *Binary) _unmarshalJSONBinary(data []byte) (Binary, error) {
 	return result, nil
 }
 func (r *Binary) _unmarshalJSONSliceuint8(data []byte) ([]uint8, error) {
-	result := make([]uint8, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("schema: Binary._unmarshalJSONSliceuint8: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONuint8(v)
-		if err != nil {
-			return result, fmt.Errorf("schema: Binary._unmarshalJSONSliceuint8: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *Binary) _unmarshalJSONuint8(data []byte) (uint8, error) {
-	var result uint8
+	var result []uint8
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: Binary._unmarshalJSONuint8: native number unwrap; %w", err)
+		return result, fmt.Errorf("schema: Binary._unmarshalJSONSliceuint8: native list unwrap; %w", err)
 	}
 	return result, nil
 }
