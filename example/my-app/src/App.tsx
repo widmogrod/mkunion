@@ -1,6 +1,6 @@
 import React, {useEffect, useReducer, useState} from 'react';
 import './App.css';
-import * as openai from './workflow/'
+import * as openai from './workflow/github_com_sashabaranov_go-openai'
 import * as schemaless from './workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import * as workflow from './workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
@@ -15,7 +15,7 @@ function flowCreate(flow: workflow.Flow) {
         .then(data => console.log("save-flow-result", data))
 }
 
-function flowToString(flow: workflow.Worflow) {
+function flowToString(flow: workflow.Workflow) {
     return fetch('http://localhost:8080/workflow-to-str', {
         method: 'POST',
         body: JSON.stringify(flow),
@@ -1264,7 +1264,7 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
 }
 
 
-function WorkflowToString(props: { flow?: workflow.Worflow }) {
+function WorkflowToString(props: { flow?: workflow.Workflow }) {
     const [str, setStr] = useState("")
 
     useEffect(() => {

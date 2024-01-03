@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 import './Chat.css';
-import * as openai from './workflow/index'
+import * as openai from './workflow/github_com_sashabaranov_go-openai'
 import {ChatCMD, ChatResult} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
 
 type Message = {
@@ -87,7 +87,7 @@ export function Chat({props}: ChatParams) {
 
                 let toolCalls = getToolCalls(data)
                 toolCalls.forEach((toolCall: openai.ToolCall) => {
-                    props.onFunctionCall && props.onFunctionCall(toolCall.function);
+                    props.onFunctionCall && toolCall.Function && props.onFunctionCall(toolCall.Function);
                 })
             });
 
