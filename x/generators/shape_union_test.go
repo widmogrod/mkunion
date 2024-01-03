@@ -12,7 +12,7 @@ func TestShapeGenerator(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
-	g := NewShapeGenerator(inferred.RetrieveUnion("Tree"))
+	g := NewShapeUnion(inferred.RetrieveUnion("Tree"))
 
 	result, err := g.Generate()
 	assert.NoError(t, err)
