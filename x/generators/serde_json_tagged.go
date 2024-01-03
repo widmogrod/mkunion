@@ -338,6 +338,16 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 		},
 		func(y *shape.ListLike) (string, error) {
 			body := &strings.Builder{}
+
+			if shape.IsBinary(y) {
+				body.WriteString(fmt.Sprintf("result, err := json.Marshal(x)\n"))
+				body.WriteString(fmt.Sprintf("if err != nil {\n"))
+				body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s; %%w\", err)\n", errorContext))
+				body.WriteString(fmt.Sprintf("}\n"))
+				body.WriteString(fmt.Sprintf("return result, nil\n"))
+				return methodWrap(body)
+			}
+
 			body.WriteString(fmt.Sprintf("partial := make([]json.RawMessage, len(x))\n"))
 			body.WriteString(fmt.Sprintf("for i, v := range x {\n"))
 			body.WriteString(fmt.Sprintf("\titem, err := r.%s(v)\n", g.methodNameWithPrefix(y.Element, marshalJSONMethodPrefix)))
@@ -614,6 +624,17 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 		},
 		func(y *shape.ListLike) (string, error) {
 			body := &strings.Builder{}
+
+			if shape.IsBinary(y) {
+				body.WriteString(fmt.Sprintf("var result %s\n", typeName))
+				body.WriteString(fmt.Sprintf("err := json.Unmarshal(data, &result)\n"))
+				body.WriteString(fmt.Sprintf("if err != nil {\n"))
+				body.WriteString(fmt.Sprintf("\treturn result, fmt.Errorf(\"%s native list unwrap; %%w\", err)\n", errorContext))
+				body.WriteString(fmt.Sprintf("}\n"))
+				body.WriteString(fmt.Sprintf("return result, nil\n"))
+				return methodWrap(body)
+			}
+
 			if y.ArrayLen != nil {
 				body.WriteString(fmt.Sprintf("result := %s{}\n", typeName))
 			} else {
