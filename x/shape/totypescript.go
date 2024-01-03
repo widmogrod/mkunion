@@ -17,6 +17,7 @@ type (
 
 	packageImportName = string
 	packageName       = string
+	shapeName         = string
 )
 
 func (o *TypeScriptOptions) IsCurrentPkgName(pkgName string) bool {
@@ -191,20 +192,29 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 
 func NewTypeScriptRenderer() *TypeScriptRenderer {
 	return &TypeScriptRenderer{
-		imports:  make(map[packageName]*TypeScriptOptions),
-		contents: make(map[packageName]*strings.Builder),
+		imports:    make(map[packageName]*TypeScriptOptions),
+		contents:   make(map[packageName]*strings.Builder),
+		shapeAdded: make(map[shapeName]bool),
 	}
 }
 
 type TypeScriptRenderer struct {
-	imports  map[packageName]*TypeScriptOptions
-	contents map[packageName]*strings.Builder
+	imports    map[packageName]*TypeScriptOptions
+	contents   map[packageName]*strings.Builder
+	shapeAdded map[shapeName]bool
 }
 
 func (r *TypeScriptRenderer) AddShape(x Shape) {
 	if x == nil {
 		return
 	}
+
+	// don't add shape twice
+	key := ToGoTypeName(x, WithPkgImportName())
+	if _, ok := r.shapeAdded[key]; ok {
+		return
+	}
+	r.shapeAdded[key] = true
 
 	MustMatchShapeR0(
 		x,
@@ -224,7 +234,6 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 
 			res := ToTypeScript(x, options)
 			contents.WriteString(res)
-
 		},
 		func(x *BooleanLike) {
 			log.Infof("totypescript: AddShape BooleanLike is not supported")
@@ -257,6 +266,31 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 			contents.WriteString(res)
 		},
 	)
+}
+
+func (r *TypeScriptRenderer) FollowRef(x Shape) {
+	refs := ExtractRefs(x)
+	for _, ref := range refs {
+		log.Infof("totypescript: FollowRef %s", ToGoTypeName(ref))
+		x, found := LookupShapeOnDisk(ref)
+		if found {
+			r.AddShape(x)
+		}
+	}
+}
+
+func (r *TypeScriptRenderer) FollowImports() {
+	for _, options := range r.imports {
+		for _, imp := range options.imports {
+			log.Infof("totypescript: FollowImports %s", imp)
+			shapes := LookupPkgShapeOnDisk(imp)
+			for _, shape := range shapes {
+				log.Infof("totypescript: FollowImports %s: shape %s", imp, ToGoTypeName(shape))
+				r.AddShape(shape)
+				r.FollowRef(shape)
+			}
+		}
+	}
 }
 
 func (r *TypeScriptRenderer) initImportsFor(pkgName, pkgImportName string) *TypeScriptOptions {

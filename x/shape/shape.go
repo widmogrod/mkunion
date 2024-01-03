@@ -294,3 +294,60 @@ func IsString(x Shape) bool {
 	_, ok := x.(*StringLike)
 	return ok
 }
+
+func ExtractRefs(x Shape) []*RefName {
+	return MustMatchShape(
+		x,
+		func(x *Any) []*RefName {
+			return nil
+		},
+		func(x *RefName) []*RefName {
+			var result []*RefName
+			if x.Indexed != nil {
+				for _, v := range x.Indexed {
+					result = append(result, ExtractRefs(v)...)
+				}
+			}
+
+			return append(result, x)
+		},
+		func(x *AliasLike) []*RefName {
+			return ExtractRefs(x.Type)
+		},
+		func(x *BooleanLike) []*RefName {
+			return nil
+		},
+		func(x *StringLike) []*RefName {
+			return nil
+		},
+		func(x *NumberLike) []*RefName {
+			return nil
+		},
+		func(x *ListLike) []*RefName {
+			return ExtractRefs(x.Element)
+		},
+		func(x *MapLike) []*RefName {
+			var result []*RefName
+			result = append(result, ExtractRefs(x.Key)...)
+			result = append(result, ExtractRefs(x.Val)...)
+			return result
+		},
+		func(x *StructLike) []*RefName {
+			var result []*RefName
+			for _, field := range x.Fields {
+				result = append(result, ExtractRefs(field.Type)...)
+			}
+			for _, param := range x.TypeParams {
+				result = append(result, ExtractRefs(param.Type)...)
+			}
+			return result
+		},
+		func(x *UnionLike) []*RefName {
+			var result []*RefName
+			for _, variant := range x.Variant {
+				result = append(result, ExtractRefs(variant)...)
+			}
+			return result
+		},
+	)
+}
