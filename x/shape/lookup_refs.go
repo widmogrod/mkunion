@@ -82,7 +82,7 @@ func LookupShapeReflectAndIndex[A any]() (Shape, bool) {
 		return nil, false
 	}
 
-	s = IndexWith(s, original.Indexed)
+	s = IndexWith(s, original)
 	return s, true
 }
 
