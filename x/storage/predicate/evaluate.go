@@ -16,7 +16,7 @@ func Evaluate[A any](predicate Predicate, data A, bind ParamBinds) bool {
 		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
 	}
 
-	s = shape.IndexWith(s, original.Indexed)
+	s = shape.IndexWith(s, original)
 
 	sdata := schema.FromGo[A](data)
 

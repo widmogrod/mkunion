@@ -99,7 +99,6 @@ func BindableShape() shape.Shape {
 		},
 	}
 }
-
 func BindValueShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "BindValue",
@@ -112,13 +111,11 @@ func BindValueShape() shape.Shape {
 					Name:          "BindName",
 					PkgName:       "predicate",
 					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-					IsPointer:     false,
 				},
 			},
 		},
 	}
 }
-
 func LiteralShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Literal",
@@ -131,13 +128,11 @@ func LiteralShape() shape.Shape {
 					Name:          "Schema",
 					PkgName:       "schema",
 					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					IsPointer:     false,
 				},
 			},
 		},
 	}
 }
-
 func LocatableShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Locatable",
@@ -168,6 +163,13 @@ type BindableUnionJSON struct {
 }
 
 func BindableFromJSON(x []byte) (Bindable, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
 	var data BindableUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
@@ -256,38 +258,62 @@ var (
 )
 
 func (r *BindValue) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldBindName, err := shared.JSONMarshal[BindName](r.BindName)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.BindValue.MarshalJSON: field BindName; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-	result["BindName"] = fieldBindName
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.BindValue.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONBindValue(*r)
 }
-
-func (r *BindValue) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "BindName":
-			var err error
-			r.BindName, err = shared.JSONUnmarshal[BindName](bytes)
-			if err != nil {
-				return fmt.Errorf("predicate.BindValue.UnmarshalJSON: field BindName; %w", err)
-			}
-			return nil
-
+func (r *BindValue) _marshalJSONBindValue(x BindValue) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldBindName []byte
+	fieldBindName, err = r._marshalJSONBindName(x.BindName)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: BindValue._marshalJSONBindValue: field name BindName; %w", err)
+	}
+	partial["BindName"] = fieldBindName
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: BindValue._marshalJSONBindValue: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *BindValue) _marshalJSONBindName(x BindName) ([]byte, error) {
+	result, err := shared.JSONMarshal[BindName](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: BindValue._marshalJSONBindName:; %w", err)
+	}
+	return result, nil
+}
+func (r *BindValue) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONBindValue(data)
+	if err != nil {
+		return fmt.Errorf("predicate: BindValue.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *BindValue) _unmarshalJSONBindValue(data []byte) (BindValue, error) {
+	result := BindValue{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: BindValue._unmarshalJSONBindValue: native struct unwrap; %w", err)
+	}
+	if fieldBindName, ok := partial["BindName"]; ok {
+		result.BindName, err = r._unmarshalJSONBindName(fieldBindName)
+		if err != nil {
+			return result, fmt.Errorf("predicate: BindValue._unmarshalJSONBindValue: field BindName; %w", err)
 		}
-
-		return nil
-	})
+	}
+	return result, nil
+}
+func (r *BindValue) _unmarshalJSONBindName(data []byte) (BindName, error) {
+	result, err := shared.JSONUnmarshal[BindName](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: BindValue._unmarshalJSONBindName: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func LiteralFromJSON(x []byte) (*Literal, error) {
@@ -310,38 +336,62 @@ var (
 )
 
 func (r *Literal) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldValue, err := shared.JSONMarshal[schema.Schema](r.Value)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Literal.MarshalJSON: field Value; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-	result["Value"] = fieldValue
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Literal.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONLiteral(*r)
 }
-
-func (r *Literal) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "Value":
-			var err error
-			r.Value, err = shared.JSONUnmarshal[schema.Schema](bytes)
-			if err != nil {
-				return fmt.Errorf("predicate.Literal.UnmarshalJSON: field Value; %w", err)
-			}
-			return nil
-
+func (r *Literal) _marshalJSONLiteral(x Literal) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldValue []byte
+	fieldValue, err = r._marshalJSONschema_Schema(x.Value)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Literal._marshalJSONLiteral: field name Value; %w", err)
+	}
+	partial["Value"] = fieldValue
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Literal._marshalJSONLiteral: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Literal) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[schema.Schema](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Literal._marshalJSONschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *Literal) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONLiteral(data)
+	if err != nil {
+		return fmt.Errorf("predicate: Literal.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Literal) _unmarshalJSONLiteral(data []byte) (Literal, error) {
+	result := Literal{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Literal._unmarshalJSONLiteral: native struct unwrap; %w", err)
+	}
+	if fieldValue, ok := partial["Value"]; ok {
+		result.Value, err = r._unmarshalJSONschema_Schema(fieldValue)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Literal._unmarshalJSONLiteral: field Value; %w", err)
 		}
-
-		return nil
-	})
+	}
+	return result, nil
+}
+func (r *Literal) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
+	result, err := shared.JSONUnmarshal[schema.Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Literal._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func LocatableFromJSON(x []byte) (*Locatable, error) {
@@ -364,36 +414,61 @@ var (
 )
 
 func (r *Locatable) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldLocation, err := shared.JSONMarshal[string](r.Location)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Locatable.MarshalJSON: field Location; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-	result["Location"] = fieldLocation
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Locatable.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONLocatable(*r)
 }
-
-func (r *Locatable) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "Location":
-			var err error
-			r.Location, err = shared.JSONUnmarshal[string](bytes)
-			if err != nil {
-				return fmt.Errorf("predicate.Locatable.UnmarshalJSON: field Location; %w", err)
-			}
-			return nil
-
+func (r *Locatable) _marshalJSONLocatable(x Locatable) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldLocation []byte
+	fieldLocation, err = r._marshalJSONstring(x.Location)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Locatable._marshalJSONLocatable: field name Location; %w", err)
+	}
+	partial["Location"] = fieldLocation
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Locatable._marshalJSONLocatable: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Locatable) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Locatable._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Locatable) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONLocatable(data)
+	if err != nil {
+		return fmt.Errorf("predicate: Locatable.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Locatable) _unmarshalJSONLocatable(data []byte) (Locatable, error) {
+	result := Locatable{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Locatable._unmarshalJSONLocatable: native struct unwrap; %w", err)
+	}
+	if fieldLocation, ok := partial["Location"]; ok {
+		result.Location, err = r._unmarshalJSONstring(fieldLocation)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Locatable._unmarshalJSONLocatable: field Location; %w", err)
 		}
-
-		return nil
-	})
+	}
+	return result, nil
+}
+func (r *Locatable) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Locatable._unmarshalJSONstring: native string unwrap; %w", err)
+	}
+	return result, nil
 }

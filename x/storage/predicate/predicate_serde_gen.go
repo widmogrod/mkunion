@@ -19,33 +19,113 @@ var (
 )
 
 func (r *ParamBinds) MarshalJSON() ([]byte, error) {
-	fieldMap := make(map[string]json.RawMessage)
-	for k, v := range *r {
-		key, value, err := shared.JSONMarshalMap[BindName, schema.Schema](k, v)
-		if err != nil {
-			return nil, fmt.Errorf("predicate.ParamBinds.MarshalJSON:; %w", err)
-		}
-		fieldMap[key] = value
+	if r == nil {
+		return nil, nil
 	}
-	result, err := json.Marshal(fieldMap)
+	return r._marshalJSONParamBinds(*r)
+}
+func (r *ParamBinds) _marshalJSONParamBinds(x ParamBinds) ([]byte, error) {
+	return r._marshalJSONmapLb_BindName_bLschema_Schema(map[BindName]schema.Schema(x))
+}
+func (r *ParamBinds) _marshalJSONmapLb_BindName_bLschema_Schema(x map[BindName]schema.Schema) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var keyType BindName
+	_, isString := any(keyType).(string)
+	for k, v := range x {
+		var key []byte
+		if isString {
+			key = []byte(any(k).(string))
+		} else {
+			key, err = r._marshalJSONBindName(k)
+			if err != nil {
+				return nil, fmt.Errorf("predicate: ParamBinds._marshalJSONmapLb_BindName_bLschema_Schema: key; %w", err)
+			}
+		}
+		value, err := r._marshalJSONschema_Schema(v)
+		if err != nil {
+			return nil, fmt.Errorf("predicate: ParamBinds._marshalJSONmapLb_BindName_bLschema_Schema: value; %w", err)
+		}
+		partial[string(key)] = value
+	}
+	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("predicate.ParamBinds.MarshalJSON:; %w", err)
+		return nil, fmt.Errorf("predicate: ParamBinds._marshalJSONmapLb_BindName_bLschema_Schema:; %w", err)
 	}
 	return result, nil
 }
-
-func (r *ParamBinds) UnmarshalJSON(bytes []byte) error {
-	*r = make(ParamBinds)
-	return shared.JSONParseObject(bytes, func(key string, value []byte) error {
-		k, v, err := shared.JSONUnmarshalMap[BindName, schema.Schema](key, value)
-		if err != nil {
-			return fmt.Errorf("predicate.ParamBinds.UnmarshalJSON: key %s; %w", key, err)
-		}
-		(*r)[k] = v
-		return nil
-	})
+func (r *ParamBinds) _marshalJSONBindName(x BindName) ([]byte, error) {
+	result, err := shared.JSONMarshal[BindName](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: ParamBinds._marshalJSONBindName:; %w", err)
+	}
+	return result, nil
 }
-
+func (r *ParamBinds) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[schema.Schema](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: ParamBinds._marshalJSONschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *ParamBinds) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONParamBinds(data)
+	if err != nil {
+		return fmt.Errorf("predicate: ParamBinds.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *ParamBinds) _unmarshalJSONParamBinds(data []byte) (ParamBinds, error) {
+	var result ParamBinds
+	intermidiary, err := r._unmarshalJSONmapLb_BindName_bLschema_Schema(data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: ParamBinds._unmarshalJSONParamBinds: alias; %w", err)
+	}
+	result = ParamBinds(intermidiary)
+	return result, nil
+}
+func (r *ParamBinds) _unmarshalJSONmapLb_BindName_bLschema_Schema(data []byte) (map[BindName]schema.Schema, error) {
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: ParamBinds._unmarshalJSONmapLb_BindName_bLschema_Schema: native map unwrap; %w", err)
+	}
+	result := make(map[BindName]schema.Schema)
+	var keyType BindName
+	_, isString := any(keyType).(string)
+	for k, v := range partial {
+		var key BindName
+		if isString {
+			key = any(k).(BindName)
+		} else {
+			key, err = r._unmarshalJSONBindName([]byte(k))
+			if err != nil {
+				return nil, fmt.Errorf("predicate: ParamBinds._unmarshalJSONmapLb_BindName_bLschema_Schema: key; %w", err)
+			}
+		}
+		value, err := r._unmarshalJSONschema_Schema(v)
+		if err != nil {
+			return nil, fmt.Errorf("predicate: ParamBinds._unmarshalJSONmapLb_BindName_bLschema_Schema: value; %w", err)
+		}
+		result[key] = value
+	}
+	return result, nil
+}
+func (r *ParamBinds) _unmarshalJSONBindName(data []byte) (BindName, error) {
+	result, err := shared.JSONUnmarshal[BindName](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: ParamBinds._unmarshalJSONBindName: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *ParamBinds) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
+	result, err := shared.JSONUnmarshal[schema.Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: ParamBinds._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
 func ParamBindsShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "ParamBinds",

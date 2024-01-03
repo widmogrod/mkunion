@@ -108,7 +108,6 @@ func PredicateShape() shape.Shape {
 		},
 	}
 }
-
 func AndShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "And",
@@ -122,15 +121,12 @@ func AndShape() shape.Shape {
 						Name:          "Predicate",
 						PkgName:       "predicate",
 						PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-						IsPointer:     false,
 					},
-					ElementIsPointer: false,
 				},
 			},
 		},
 	}
 }
-
 func OrShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Or",
@@ -144,15 +140,12 @@ func OrShape() shape.Shape {
 						Name:          "Predicate",
 						PkgName:       "predicate",
 						PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-						IsPointer:     false,
 					},
-					ElementIsPointer: false,
 				},
 			},
 		},
 	}
 }
-
 func NotShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Not",
@@ -165,13 +158,11 @@ func NotShape() shape.Shape {
 					Name:          "Predicate",
 					PkgName:       "predicate",
 					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-					IsPointer:     false,
 				},
 			},
 		},
 	}
 }
-
 func CompareShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Compare",
@@ -192,7 +183,6 @@ func CompareShape() shape.Shape {
 					Name:          "Bindable",
 					PkgName:       "predicate",
 					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-					IsPointer:     false,
 				},
 			},
 		},
@@ -217,6 +207,13 @@ type PredicateUnionJSON struct {
 }
 
 func PredicateFromJSON(x []byte) (Predicate, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
 	var data PredicateUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
@@ -320,50 +317,93 @@ var (
 )
 
 func (r *And) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldL := make([]json.RawMessage, len(r.L))
-	for i, v := range r.L {
-		fieldL[i], err = shared.JSONMarshal[Predicate](v)
-		if err != nil {
-			return nil, fmt.Errorf("predicate.And.MarshalJSON: field L[%d]; %w", i, err)
-		}
+	if r == nil {
+		return nil, nil
 	}
-	result["L"], err = json.Marshal(fieldL)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.And.MarshalJSON: field L; %w", err)
-	}
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.And.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONAnd(*r)
 }
-
-func (r *And) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "L":
-			err := shared.JSONParseList(bytes, func(index int, bytes []byte) error {
-				item, err := shared.JSONUnmarshal[Predicate](bytes)
-				if err != nil {
-					return fmt.Errorf("predicate.And.UnmarshalJSON: field L[%d]; %w", index, err)
-				}
-				r.L = append(r.L, item)
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("predicate.And.UnmarshalJSON: field L; %w", err)
-			}
-			return nil
-
+func (r *And) _marshalJSONAnd(x And) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldL []byte
+	fieldL, err = r._marshalJSONSlicePredicate(x.L)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: And._marshalJSONAnd: field name L; %w", err)
+	}
+	partial["L"] = fieldL
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: And._marshalJSONAnd: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *And) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONPredicate(v)
+		if err != nil {
+			return nil, fmt.Errorf("predicate: And._marshalJSONSlicePredicate: at index %d; %w", i, err)
 		}
-
-		return nil
-	})
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: And._marshalJSONSlicePredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *And) _marshalJSONPredicate(x Predicate) ([]byte, error) {
+	result, err := shared.JSONMarshal[Predicate](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: And._marshalJSONPredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *And) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONAnd(data)
+	if err != nil {
+		return fmt.Errorf("predicate: And.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *And) _unmarshalJSONAnd(data []byte) (And, error) {
+	result := And{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: And._unmarshalJSONAnd: native struct unwrap; %w", err)
+	}
+	if fieldL, ok := partial["L"]; ok {
+		result.L, err = r._unmarshalJSONSlicePredicate(fieldL)
+		if err != nil {
+			return result, fmt.Errorf("predicate: And._unmarshalJSONAnd: field L; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *And) _unmarshalJSONSlicePredicate(data []byte) ([]Predicate, error) {
+	result := make([]Predicate, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: And._unmarshalJSONSlicePredicate: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONPredicate(v)
+		if err != nil {
+			return result, fmt.Errorf("predicate: And._unmarshalJSONSlicePredicate: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *And) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
+	result, err := shared.JSONUnmarshal[Predicate](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: And._unmarshalJSONPredicate: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func OrFromJSON(x []byte) (*Or, error) {
@@ -386,50 +426,93 @@ var (
 )
 
 func (r *Or) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldL := make([]json.RawMessage, len(r.L))
-	for i, v := range r.L {
-		fieldL[i], err = shared.JSONMarshal[Predicate](v)
-		if err != nil {
-			return nil, fmt.Errorf("predicate.Or.MarshalJSON: field L[%d]; %w", i, err)
-		}
+	if r == nil {
+		return nil, nil
 	}
-	result["L"], err = json.Marshal(fieldL)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Or.MarshalJSON: field L; %w", err)
-	}
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Or.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONOr(*r)
 }
-
-func (r *Or) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "L":
-			err := shared.JSONParseList(bytes, func(index int, bytes []byte) error {
-				item, err := shared.JSONUnmarshal[Predicate](bytes)
-				if err != nil {
-					return fmt.Errorf("predicate.Or.UnmarshalJSON: field L[%d]; %w", index, err)
-				}
-				r.L = append(r.L, item)
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("predicate.Or.UnmarshalJSON: field L; %w", err)
-			}
-			return nil
-
+func (r *Or) _marshalJSONOr(x Or) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldL []byte
+	fieldL, err = r._marshalJSONSlicePredicate(x.L)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Or._marshalJSONOr: field name L; %w", err)
+	}
+	partial["L"] = fieldL
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Or._marshalJSONOr: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Or) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONPredicate(v)
+		if err != nil {
+			return nil, fmt.Errorf("predicate: Or._marshalJSONSlicePredicate: at index %d; %w", i, err)
 		}
-
-		return nil
-	})
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Or._marshalJSONSlicePredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *Or) _marshalJSONPredicate(x Predicate) ([]byte, error) {
+	result, err := shared.JSONMarshal[Predicate](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Or._marshalJSONPredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *Or) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONOr(data)
+	if err != nil {
+		return fmt.Errorf("predicate: Or.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Or) _unmarshalJSONOr(data []byte) (Or, error) {
+	result := Or{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Or._unmarshalJSONOr: native struct unwrap; %w", err)
+	}
+	if fieldL, ok := partial["L"]; ok {
+		result.L, err = r._unmarshalJSONSlicePredicate(fieldL)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Or._unmarshalJSONOr: field L; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Or) _unmarshalJSONSlicePredicate(data []byte) ([]Predicate, error) {
+	result := make([]Predicate, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Or._unmarshalJSONSlicePredicate: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONPredicate(v)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Or._unmarshalJSONSlicePredicate: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *Or) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
+	result, err := shared.JSONUnmarshal[Predicate](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Or._unmarshalJSONPredicate: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func NotFromJSON(x []byte) (*Not, error) {
@@ -452,38 +535,62 @@ var (
 )
 
 func (r *Not) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldP, err := shared.JSONMarshal[Predicate](r.P)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Not.MarshalJSON: field P; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-	result["P"] = fieldP
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Not.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONNot(*r)
 }
-
-func (r *Not) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "P":
-			var err error
-			r.P, err = shared.JSONUnmarshal[Predicate](bytes)
-			if err != nil {
-				return fmt.Errorf("predicate.Not.UnmarshalJSON: field P; %w", err)
-			}
-			return nil
-
+func (r *Not) _marshalJSONNot(x Not) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldP []byte
+	fieldP, err = r._marshalJSONPredicate(x.P)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Not._marshalJSONNot: field name P; %w", err)
+	}
+	partial["P"] = fieldP
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Not._marshalJSONNot: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Not) _marshalJSONPredicate(x Predicate) ([]byte, error) {
+	result, err := shared.JSONMarshal[Predicate](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Not._marshalJSONPredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *Not) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONNot(data)
+	if err != nil {
+		return fmt.Errorf("predicate: Not.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Not) _unmarshalJSONNot(data []byte) (Not, error) {
+	result := Not{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Not._unmarshalJSONNot: native struct unwrap; %w", err)
+	}
+	if fieldP, ok := partial["P"]; ok {
+		result.P, err = r._unmarshalJSONPredicate(fieldP)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Not._unmarshalJSONNot: field P; %w", err)
 		}
-
-		return nil
-	})
+	}
+	return result, nil
+}
+func (r *Not) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
+	result, err := shared.JSONUnmarshal[Predicate](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Not._unmarshalJSONPredicate: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func CompareFromJSON(x []byte) (*Compare, error) {
@@ -506,64 +613,99 @@ var (
 )
 
 func (r *Compare) MarshalJSON() ([]byte, error) {
-	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldLocation, err := shared.JSONMarshal[string](r.Location)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Compare.MarshalJSON: field Location; %w", err)
+	if r == nil {
+		return nil, nil
 	}
-	result["Location"] = fieldLocation
-
-	fieldOperation, err := shared.JSONMarshal[string](r.Operation)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Compare.MarshalJSON: field Operation; %w", err)
-	}
-	result["Operation"] = fieldOperation
-
-	fieldBindValue, err := shared.JSONMarshal[Bindable](r.BindValue)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Compare.MarshalJSON: field BindValue; %w", err)
-	}
-	result["BindValue"] = fieldBindValue
-
-	output, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("predicate.Compare.MarshalJSON: final step; %w", err)
-	}
-
-	return output, nil
+	return r._marshalJSONCompare(*r)
 }
-
-func (r *Compare) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "Location":
-			var err error
-			r.Location, err = shared.JSONUnmarshal[string](bytes)
-			if err != nil {
-				return fmt.Errorf("predicate.Compare.UnmarshalJSON: field Location; %w", err)
-			}
-			return nil
-
-		case "Operation":
-			var err error
-			r.Operation, err = shared.JSONUnmarshal[string](bytes)
-			if err != nil {
-				return fmt.Errorf("predicate.Compare.UnmarshalJSON: field Operation; %w", err)
-			}
-			return nil
-
-		case "BindValue":
-			var err error
-			r.BindValue, err = shared.JSONUnmarshal[Bindable](bytes)
-			if err != nil {
-				return fmt.Errorf("predicate.Compare.UnmarshalJSON: field BindValue; %w", err)
-			}
-			return nil
-
+func (r *Compare) _marshalJSONCompare(x Compare) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldLocation []byte
+	fieldLocation, err = r._marshalJSONstring(x.Location)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: field name Location; %w", err)
+	}
+	partial["Location"] = fieldLocation
+	var fieldOperation []byte
+	fieldOperation, err = r._marshalJSONstring(x.Operation)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: field name Operation; %w", err)
+	}
+	partial["Operation"] = fieldOperation
+	var fieldBindValue []byte
+	fieldBindValue, err = r._marshalJSONBindable(x.BindValue)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: field name BindValue; %w", err)
+	}
+	partial["BindValue"] = fieldBindValue
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Compare._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) _marshalJSONBindable(x Bindable) ([]byte, error) {
+	result, err := shared.JSONMarshal[Bindable](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: Compare._marshalJSONBindable:; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONCompare(data)
+	if err != nil {
+		return fmt.Errorf("predicate: Compare.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Compare) _unmarshalJSONCompare(data []byte) (Compare, error) {
+	result := Compare{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Compare._unmarshalJSONCompare: native struct unwrap; %w", err)
+	}
+	if fieldLocation, ok := partial["Location"]; ok {
+		result.Location, err = r._unmarshalJSONstring(fieldLocation)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Compare._unmarshalJSONCompare: field Location; %w", err)
 		}
-
-		return nil
-	})
+	}
+	if fieldOperation, ok := partial["Operation"]; ok {
+		result.Operation, err = r._unmarshalJSONstring(fieldOperation)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Compare._unmarshalJSONCompare: field Operation; %w", err)
+		}
+	}
+	if fieldBindValue, ok := partial["BindValue"]; ok {
+		result.BindValue, err = r._unmarshalJSONBindable(fieldBindValue)
+		if err != nil {
+			return result, fmt.Errorf("predicate: Compare._unmarshalJSONCompare: field BindValue; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Compare) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Compare._unmarshalJSONstring: native string unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) _unmarshalJSONBindable(data []byte) (Bindable, error) {
+	result, err := shared.JSONUnmarshal[Bindable](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: Compare._unmarshalJSONBindable: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
