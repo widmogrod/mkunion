@@ -54,6 +54,8 @@ type (
 		TypeParams    []TypeParam
 		Fields        []*FieldLike
 		Tags          map[string]Tag
+		// this refers when struct is instantiated
+		IsPointer bool
 	}
 	UnionLike struct {
 		Name          string
@@ -263,4 +265,32 @@ func Tags(x Shape) map[string]Tag {
 
 func Ptr[A any](x A) *A {
 	return &x
+}
+
+func IsPointer(x Shape) bool {
+	switch y := x.(type) {
+	case *RefName:
+		return y.IsPointer
+	case *StructLike:
+		return y.IsPointer
+	}
+
+	return false
+}
+
+func UnwrapPointer(x string) string {
+	if len(x) == 0 {
+		return x
+	}
+
+	if x[0] == '*' {
+		return x[1:]
+	}
+
+	return x
+}
+
+func IsString(x Shape) bool {
+	_, ok := x.(*StringLike)
+	return ok
 }
