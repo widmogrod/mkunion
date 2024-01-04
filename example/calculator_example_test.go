@@ -28,7 +28,7 @@ func TestCalculatorExample(t *testing.T) {
 }
 
 func Cal(x Calc) int {
-	return MustMatchCalc(x, func(x *Lit) int {
+	return MatchCalcR1(x, func(x *Lit) int {
 		return x.V
 	}, func(x *Sum) int {
 		return Cal(x.Left) + Cal(x.Right)

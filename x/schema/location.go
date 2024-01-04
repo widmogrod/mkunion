@@ -19,7 +19,7 @@ type (
 func LocationToStr(location []Location) string {
 	var result string
 	for _, l := range location {
-		result += MustMatchLocation(
+		result += MatchLocationR1(
 			l,
 			func(x *LocationField) string {
 				if strings.Contains(x.Name, ".") {

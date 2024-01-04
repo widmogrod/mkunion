@@ -21,7 +21,7 @@ func As[A int | int8 | int16 | int32 | int64 |
 		return def, false
 	}
 
-	return MustMatchSchemaR2(
+	return MatchSchemaR2(
 		x,
 		func(x *None) (A, bool) {
 			if any(def) == nil {
@@ -168,7 +168,7 @@ func GetSchemaLocation(data Schema, locations []Location) Schema {
 		location := locations[0]
 		locations = locations[1:]
 
-		data, locations = MustMatchLocationR2(
+		data, locations = MatchLocationR2(
 			location,
 			func(x *LocationField) (Schema, []Location) {
 				mapData, ok := data.(*Map)
@@ -256,7 +256,7 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 		location := locations[0]
 		locations = locations[1:]
 
-		res := MustMatchLocation(
+		res := MatchLocationR1(
 			location,
 			func(x *LocationField) *locres {
 				switch y := s.(type) {
@@ -539,7 +539,7 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 		return init
 	}
 
-	return MustMatchSchema(
+	return MatchSchemaR1(
 		data,
 		func(x *None) A {
 			return init
@@ -581,7 +581,7 @@ func Compare(a, b Schema) int {
 		b = none
 	}
 
-	return MustMatchSchema(
+	return MatchSchemaR1(
 		a,
 		func(x *None) int {
 			switch b.(type) {

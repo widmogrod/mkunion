@@ -75,7 +75,7 @@ func MustWhere(query string, params ParamBinds) *WherePredicates {
 }
 
 func bindValuesFromPredicate(predicate Predicate, params []string) []string {
-	return MustMatchPredicate(
+	return MatchPredicateR1(
 		predicate,
 		func(x *And) []string {
 			for _, p := range x.L {

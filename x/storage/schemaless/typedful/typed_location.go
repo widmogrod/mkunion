@@ -45,7 +45,7 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 		return loc
 	}
 
-	return schema.MustMatchLocation(
+	return schema.MatchLocationR1(
 		loc[0],
 		func(x *schema.LocationField) []schema.Location {
 			return shape.MustMatchShape(

@@ -248,7 +248,7 @@ var mapOfOperationToOpenSearchQuery = map[string]string{
 }
 
 func (os *OpenSearchRepository[A]) toFilters(p predicate.Predicate, params predicate.ParamBinds) map[string]any {
-	return predicate.MustMatchPredicate(
+	return predicate.MatchPredicateR1(
 		p,
 		func(x *predicate.And) map[string]any {
 			var must []any
@@ -328,7 +328,7 @@ func (os *OpenSearchRepository[A]) attrName(location string) string {
 
 	var result []string
 	for _, loc := range locs {
-		val := schema.MustMatchLocation(
+		val := schema.MatchLocationR1(
 			loc,
 			func(x *schema.LocationField) string {
 				return x.Name
@@ -343,7 +343,7 @@ func (os *OpenSearchRepository[A]) attrName(location string) string {
 		result = append(result, val)
 	}
 
-	// TODO(schema.Union) find better way to represent union map
+	// TODO(schema.union) find better way to represent union map
 	return strings.Join(result, ".")
 }
 

@@ -95,7 +95,7 @@ func FromPrimitiveGo(x any) Schema {
 }
 
 func ToGoPrimitive(x Schema) (any, error) {
-	return MustMatchSchemaR2(
+	return MatchSchemaR2(
 		x,
 		func(x *None) (any, error) {
 			return nil, nil

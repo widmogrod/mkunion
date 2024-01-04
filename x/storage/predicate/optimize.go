@@ -1,7 +1,7 @@
 package predicate
 
 func Optimize(p Predicate) Predicate {
-	return MustMatchPredicate(
+	return MatchPredicateR1(
 		p,
 		func(x *And) Predicate {
 			// flatten nested predicates
