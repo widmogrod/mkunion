@@ -9,183 +9,9 @@ import (
 )
 
 func init() {
-	shape.Register(RecordShape())
 	shape.Register(SortFieldShape())
 	shape.Register(PageResultShape())
-}
-
-var (
-	_ json.Unmarshaler = (*Record[any])(nil)
-	_ json.Marshaler   = (*Record[any])(nil)
-)
-
-func (r *Record[A]) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONRecordLb_A_bL(*r)
-}
-func (r *Record[A]) _marshalJSONRecordLb_A_bL(x Record[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name ID; %w", err)
-	}
-	partial["ID"] = fieldID
-	var fieldType []byte
-	fieldType, err = r._marshalJSONstring(x.Type)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Type; %w", err)
-	}
-	partial["Type"] = fieldType
-	var fieldData []byte
-	fieldData, err = r._marshalJSONA(x.Data)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Data; %w", err)
-	}
-	partial["Data"] = fieldData
-	var fieldVersion []byte
-	fieldVersion, err = r._marshalJSONuint16(x.Version)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Version; %w", err)
-	}
-	partial["Version"] = fieldVersion
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Record[A]) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Record[A]) _marshalJSONA(x A) ([]byte, error) {
-	result, err := shared.JSONMarshal[A](x)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONA:; %w", err)
-	}
-	return result, nil
-}
-func (r *Record[A]) _marshalJSONuint16(x uint16) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONuint16:; %w", err)
-	}
-	return result, nil
-}
-func (r *Record[A]) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONRecordLb_A_bL(data)
-	if err != nil {
-		return fmt.Errorf("schemaless: Record[A].UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Record[A]) _unmarshalJSONRecordLb_A_bL(data []byte) (Record[A], error) {
-	result := Record[A]{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: native struct unwrap; %w", err)
-	}
-	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field ID; %w", err)
-		}
-	}
-	if fieldType, ok := partial["Type"]; ok {
-		result.Type, err = r._unmarshalJSONstring(fieldType)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field Type; %w", err)
-		}
-	}
-	if fieldData, ok := partial["Data"]; ok {
-		result.Data, err = r._unmarshalJSONA(fieldData)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field Data; %w", err)
-		}
-	}
-	if fieldVersion, ok := partial["Version"]; ok {
-		result.Version, err = r._unmarshalJSONuint16(fieldVersion)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field Version; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Record[A]) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Record[A]) _unmarshalJSONA(data []byte) (A, error) {
-	result, err := shared.JSONUnmarshal[A](data)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONA: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Record[A]) _unmarshalJSONuint16(data []byte) (uint16, error) {
-	var result uint16
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONuint16: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func RecordShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Record",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "ID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Type",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Data",
-				Type: &shape.RefName{
-					Name:          "A",
-					PkgName:       "",
-					PkgImportName: "",
-				},
-			},
-			{
-				Name: "Version",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.UInt16{},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
+	shape.Register(RecordShape())
 }
 
 var (
@@ -479,6 +305,180 @@ func PageResultShape() shape.Shape {
 								PkgImportName: "",
 							},
 						},
+					},
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
+}
+
+var (
+	_ json.Unmarshaler = (*Record[any])(nil)
+	_ json.Marshaler   = (*Record[any])(nil)
+)
+
+func (r *Record[A]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONRecordLb_A_bL(*r)
+}
+func (r *Record[A]) _marshalJSONRecordLb_A_bL(x Record[A]) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldID []byte
+	fieldID, err = r._marshalJSONstring(x.ID)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name ID; %w", err)
+	}
+	partial["ID"] = fieldID
+	var fieldType []byte
+	fieldType, err = r._marshalJSONstring(x.Type)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Type; %w", err)
+	}
+	partial["Type"] = fieldType
+	var fieldData []byte
+	fieldData, err = r._marshalJSONA(x.Data)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Data; %w", err)
+	}
+	partial["Data"] = fieldData
+	var fieldVersion []byte
+	fieldVersion, err = r._marshalJSONuint16(x.Version)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Version; %w", err)
+	}
+	partial["Version"] = fieldVersion
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Record[A]) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Record[A]) _marshalJSONA(x A) ([]byte, error) {
+	result, err := shared.JSONMarshal[A](x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONA:; %w", err)
+	}
+	return result, nil
+}
+func (r *Record[A]) _marshalJSONuint16(x uint16) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONuint16:; %w", err)
+	}
+	return result, nil
+}
+func (r *Record[A]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONRecordLb_A_bL(data)
+	if err != nil {
+		return fmt.Errorf("schemaless: Record[A].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Record[A]) _unmarshalJSONRecordLb_A_bL(data []byte) (Record[A], error) {
+	result := Record[A]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: native struct unwrap; %w", err)
+	}
+	if fieldID, ok := partial["ID"]; ok {
+		result.ID, err = r._unmarshalJSONstring(fieldID)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field ID; %w", err)
+		}
+	}
+	if fieldType, ok := partial["Type"]; ok {
+		result.Type, err = r._unmarshalJSONstring(fieldType)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field Type; %w", err)
+		}
+	}
+	if fieldData, ok := partial["Data"]; ok {
+		result.Data, err = r._unmarshalJSONA(fieldData)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field Data; %w", err)
+		}
+	}
+	if fieldVersion, ok := partial["Version"]; ok {
+		result.Version, err = r._unmarshalJSONuint16(fieldVersion)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONRecordLb_A_bL: field Version; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Record[A]) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Record[A]) _unmarshalJSONA(data []byte) (A, error) {
+	result, err := shared.JSONUnmarshal[A](data)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONA: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Record[A]) _unmarshalJSONuint16(data []byte) (uint16, error) {
+	var result uint16
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: Record[A]._unmarshalJSONuint16: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func RecordShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Record",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "ID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Type",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Data",
+				Type: &shape.RefName{
+					Name:          "A",
+					PkgName:       "",
+					PkgImportName: "",
+				},
+			},
+			{
+				Name: "Version",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.UInt16{},
 					},
 				},
 			},

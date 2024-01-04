@@ -32,38 +32,21 @@ export type ChatResponses = {
 	Responses?: ChatResult[],
 }
 
-export type Command = workflow.Command
-
-export type RefreshStates = {}
-
-export type GenerateImage = {
-	Width?: number,
-	Height?: number,
-}
-
-export type PageResult = schemaless.PageResult<schemaless.Record<any>>
-
-export type Service<CMD, State> = {}
-
-export type FunctionOutput = workflow.FunctionOutput
-
-export type State = workflow.State
-
-export type Workflow = workflow.Workflow
-
-export type Predicate = workflow.Predicate
-
-export type Schema = schema.Schema
-
 export type RefreshFlows = {}
-
-export type Expr = workflow.Expr
-
-export type UpdateRecords = schemaless.UpdateRecords<schemaless.Record<any>>
 
 export type Reshaper = workflow.Reshaper
 
+export type FunctionOutput = workflow.FunctionOutput
+
+export type RefreshStates = {}
+
+export type PageResult = schemaless.PageResult<schemaless.Record<any>>
+
 export type FindRecords = schemaless.FindingRecords<schemaless.Record<any>>
+
+export type Schema = schema.Schema
+
+export type UpdateRecords = schemaless.UpdateRecords<schemaless.Record<any>>
 
 export type FunctionInput = workflow.FunctionInput
 
@@ -73,12 +56,29 @@ export type ListWorkflowsFn = {
 	EnumTest?: string,
 }
 
+export type GenerateImage = {
+	Width?: number,
+	Height?: number,
+}
 
-//eslint-disable-next-line
-import * as schema from './github_com_widmogrod_mkunion_x_schema'
+export type Workflow = workflow.Workflow
+
+export type Predicate = workflow.Predicate
+
+export type Command = workflow.Command
+
+export type Expr = workflow.Expr
+
+export type State = workflow.State
+
+export type Service<CMD, State> = {}
+
+
 //eslint-disable-next-line
 import * as openai from './github_com_sashabaranov_go-openai'
 //eslint-disable-next-line
 import * as workflow from './github_com_widmogrod_mkunion_x_workflow'
 //eslint-disable-next-line
 import * as schemaless from './github_com_widmogrod_mkunion_x_storage_schemaless'
+//eslint-disable-next-line
+import * as schema from './github_com_widmogrod_mkunion_x_schema'
