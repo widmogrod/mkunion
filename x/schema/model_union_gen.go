@@ -202,7 +202,7 @@ func BoolShape() shape.Shape {
 		Name:          "Bool",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Type:          &shape.BooleanLike{},
+		Type:          &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
 	}
 }
 
@@ -211,8 +211,10 @@ func NumberShape() shape.Shape {
 		Name:          "Number",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Type: &shape.NumberLike{
-			Kind: &shape.Float64{},
+		Type: &shape.PrimitiveLike{
+			Kind: &shape.NumberLike{
+				Kind: &shape.Float64{},
+			},
 		},
 	}
 }
@@ -222,7 +224,7 @@ func StringShape() shape.Shape {
 		Name:          "String",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Type:          &shape.StringLike{},
+		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 
@@ -232,8 +234,10 @@ func BinaryShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Type: &shape.ListLike{
-			Element: &shape.NumberLike{
-				Kind: &shape.UInt8{},
+			Element: &shape.PrimitiveLike{
+				Kind: &shape.NumberLike{
+					Kind: &shape.UInt8{},
+				},
 			},
 		},
 	}
@@ -260,7 +264,7 @@ func MapShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Type: &shape.MapLike{
-			Key: &shape.StringLike{},
+			Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			Val: &shape.RefName{
 				Name:          "Schema",
 				PkgName:       "schema",
@@ -535,7 +539,7 @@ func (r *Bool) _unmarshalJSONbool(data []byte) (bool, error) {
 	var result bool
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: Bool._unmarshalJSONbool: native boolean unwrap; %w", err)
+		return result, fmt.Errorf("schema: Bool._unmarshalJSONbool: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -596,7 +600,7 @@ func (r *Number) _unmarshalJSONfloat64(data []byte) (float64, error) {
 	var result float64
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: Number._unmarshalJSONfloat64: native number unwrap; %w", err)
+		return result, fmt.Errorf("schema: Number._unmarshalJSONfloat64: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -657,7 +661,7 @@ func (r *String) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: String._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("schema: String._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -910,7 +914,7 @@ func (r *Map) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: Map._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("schema: Map._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

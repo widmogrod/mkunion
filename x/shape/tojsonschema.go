@@ -22,14 +22,19 @@ func toJsonSchema(s Shape, definitions map[string]string, depth int, desc *strin
 		func(x *AliasLike) string {
 			panic("not implemented")
 		},
-		func(x *BooleanLike) string {
-			return `{"type": "boolean"` + toDescription(desc) + `}`
-		},
-		func(x *StringLike) string {
-			return `{"type": "string"` + toDescription(desc) + `}`
-		},
-		func(x *NumberLike) string {
-			return `{"type": "number"` + toDescription(desc) + `}`
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return `{"type": "boolean"` + toDescription(desc) + `}`
+				},
+				func(x *StringLike) string {
+					return `{"type": "string"` + toDescription(desc) + `}`
+				},
+				func(x *NumberLike) string {
+					return `{"type": "number"` + toDescription(desc) + `}`
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return `{"type": "array", "items": ` + toJsonSchema(x.Element, definitions, depth+1, nil) + toDefinitions(definitions, depth) + toDescription(desc) + `}`

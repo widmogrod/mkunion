@@ -11,13 +11,13 @@ import (
 func FromGo(x any) Shape {
 	switch y := x.(type) {
 	case string:
-		return &StringLike{}
+		return &PrimitiveLike{Kind: &StringLike{}}
 	case bool:
-		return &BooleanLike{}
+		return &PrimitiveLike{Kind: &BooleanLike{}}
 	case int, int8, int16, int32, int64,
 		uint, uint8, uint16, uint32, uint64,
 		float64, float32:
-		return &NumberLike{}
+		return &PrimitiveLike{Kind: &NumberLike{}}
 	case []any:
 		return &ListLike{
 			Element: FromGo(y[0]),
@@ -35,13 +35,13 @@ func FromGo(x any) Shape {
 func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape {
 	switch x.Kind() {
 	case reflect.String:
-		return &StringLike{}
+		return &PrimitiveLike{Kind: &StringLike{}}
 	case reflect.Bool:
-		return &BooleanLike{}
+		return &PrimitiveLike{Kind: &BooleanLike{}}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Float64, reflect.Float32:
-		return &NumberLike{}
+		return &PrimitiveLike{Kind: &NumberLike{}}
 	case reflect.Slice:
 		return &ListLike{
 			Element:          FromGoReflect(x.Elem(), infiniteRecursionFix),

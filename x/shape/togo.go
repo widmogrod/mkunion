@@ -18,13 +18,7 @@ func ToGoPkgName(x Shape) string {
 		func(x *AliasLike) string {
 			return x.PkgName
 		},
-		func(x *BooleanLike) string {
-			return ""
-		},
-		func(x *StringLike) string {
-			return ""
-		},
-		func(x *NumberLike) string {
+		func(x *PrimitiveLike) string {
 			return ""
 		},
 		func(x *ListLike) string {
@@ -54,13 +48,7 @@ func ToGoPkgImportName(x Shape) string {
 		func(x *AliasLike) string {
 			return x.PkgImportName
 		},
-		func(x *BooleanLike) string {
-			return ""
-		},
-		func(x *StringLike) string {
-			return ""
-		},
-		func(x *NumberLike) string {
+		func(x *PrimitiveLike) string {
 			return ""
 		},
 		func(x *ListLike) string {
@@ -192,14 +180,19 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 		func(x *AliasLike) string {
 			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 		},
-		func(x *BooleanLike) string {
-			return "bool"
-		},
-		func(x *StringLike) string {
-			return "string"
-		},
-		func(x *NumberLike) string {
-			return NumberKindToGoName(x.Kind)
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "bool"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return NumberKindToGoName(x.Kind)
+				},
+			)
 		},
 		func(x *ListLike) string {
 			prefix := "[]"
@@ -268,13 +261,7 @@ func ToGoTypeParamsNames(x Shape) []string {
 		func(x *AliasLike) []string {
 			return nil
 		},
-		func(x *BooleanLike) []string {
-			return nil
-		},
-		func(x *StringLike) []string {
-			return nil
-		},
-		func(x *NumberLike) []string {
+		func(x *PrimitiveLike) []string {
 			return nil
 		},
 		func(x *ListLike) []string {
@@ -308,13 +295,7 @@ func ToGoTypeParamsTypes(x Shape) []Shape {
 		func(x *AliasLike) []Shape {
 			return nil
 		},
-		func(x *BooleanLike) []Shape {
-			return nil
-		},
-		func(x *StringLike) []Shape {
-			return nil
-		},
-		func(x *NumberLike) []Shape {
+		func(x *PrimitiveLike) []Shape {
 			return nil
 		},
 		func(x *ListLike) []Shape {
@@ -399,13 +380,7 @@ func ExtractPkgImportNames(x Shape) map[string]string {
 
 			return result
 		},
-		func(y *BooleanLike) map[string]string {
-			return nil
-		},
-		func(x *StringLike) map[string]string {
-			return nil
-		},
-		func(x *NumberLike) map[string]string {
+		func(x *PrimitiveLike) map[string]string {
 			return nil
 		},
 		func(x *ListLike) map[string]string {

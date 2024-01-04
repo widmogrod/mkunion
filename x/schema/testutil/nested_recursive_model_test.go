@@ -110,5 +110,5 @@ func Test_GetShapeLocation(t *testing.T) {
 	result, resultShape := schema.Get(subject, "TwoNext[*].OneValue")
 
 	assert.Equal(t, schema.MkString("hello"), result)
-	assert.Equal(t, &shape.StringLike{}, resultShape)
+	assert.Equal(t, &shape.PrimitiveLike{Kind: &shape.StringLike{}}, resultShape)
 }

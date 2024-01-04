@@ -64,13 +64,7 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 				func(y *shape.AliasLike) []schema.Location {
 					panic("not implemented")
 				},
-				func(y *shape.BooleanLike) []schema.Location {
-					panic("not implemented")
-				},
-				func(y *shape.StringLike) []schema.Location {
-					panic("not implemented")
-				},
-				func(y *shape.NumberLike) []schema.Location {
+				func(x *shape.PrimitiveLike) []schema.Location {
 					panic("not implemented")
 				},
 				func(y *shape.ListLike) []schema.Location {
@@ -132,26 +126,31 @@ func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []schema.Locatio
 		func(x *shape.AliasLike) []schema.Location {
 			panic("not implemented")
 		},
-		func(x *shape.BooleanLike) []schema.Location {
-			return []schema.Location{
-				&schema.LocationField{
-					Name: "schema.Boolean",
+		func(x *shape.PrimitiveLike) []schema.Location {
+			return shape.MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *shape.BooleanLike) []schema.Location {
+					return []schema.Location{
+						&schema.LocationField{
+							Name: "schema.Boolean",
+						},
+					}
 				},
-			}
-		},
-		func(x *shape.StringLike) []schema.Location {
-			return []schema.Location{
-				&schema.LocationField{
-					Name: "schema.String",
+				func(x *shape.StringLike) []schema.Location {
+					return []schema.Location{
+						&schema.LocationField{
+							Name: "schema.String",
+						},
+					}
 				},
-			}
-		},
-		func(x *shape.NumberLike) []schema.Location {
-			return []schema.Location{
-				&schema.LocationField{
-					Name: "schema.Number",
+				func(x *shape.NumberLike) []schema.Location {
+					return []schema.Location{
+						&schema.LocationField{
+							Name: "schema.Number",
+						},
+					}
 				},
-			}
+			)
 		},
 		func(x *shape.ListLike) []schema.Location {
 			panic("not implemented")

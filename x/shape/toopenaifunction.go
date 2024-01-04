@@ -39,20 +39,25 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 				Type: jsonschema.String,
 			}
 		},
-		func(x *BooleanLike) *jsonschema.Definition {
-			return &jsonschema.Definition{
-				Type: jsonschema.Boolean,
-			}
-		},
-		func(x *StringLike) *jsonschema.Definition {
-			return &jsonschema.Definition{
-				Type: jsonschema.String,
-			}
-		},
-		func(x *NumberLike) *jsonschema.Definition {
-			return &jsonschema.Definition{
-				Type: jsonschema.Number,
-			}
+		func(x *PrimitiveLike) *jsonschema.Definition {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) *jsonschema.Definition {
+					return &jsonschema.Definition{
+						Type: jsonschema.Boolean,
+					}
+				},
+				func(x *StringLike) *jsonschema.Definition {
+					return &jsonschema.Definition{
+						Type: jsonschema.String,
+					}
+				},
+				func(x *NumberLike) *jsonschema.Definition {
+					return &jsonschema.Definition{
+						Type: jsonschema.Number,
+					}
+				},
+			)
 		},
 		func(x *ListLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
@@ -122,19 +127,19 @@ func toVariantName(x Shape) string {
 		func(x *AliasLike) string {
 			panic("not implemented")
 		},
-		func(x *BooleanLike) string {
-			return "boolean"
-			//panic("not implemented")
-		},
-		func(x *StringLike) string {
-			return "string"
-			//panic("not implemented")
-
-		},
-		func(x *NumberLike) string {
-			return "number"
-			//panic("not implemented")
-
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "boolean"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return "number"
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return "list"

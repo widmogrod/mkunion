@@ -129,7 +129,7 @@ func LocationFieldShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Name",
-				Type: &shape.StringLike{},
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
 	}
@@ -143,7 +143,9 @@ func LocationIndexShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Index",
-				Type: &shape.NumberLike{},
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{},
+				},
 			},
 		},
 	}
@@ -320,7 +322,7 @@ func (r *LocationField) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: LocationField._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("schema: LocationField._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -399,7 +401,7 @@ func (r *LocationIndex) _unmarshalJSONint(data []byte) (int, error) {
 	var result int
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: LocationIndex._unmarshalJSONint: native number unwrap; %w", err)
+		return result, fmt.Errorf("schema: LocationIndex._unmarshalJSONint: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

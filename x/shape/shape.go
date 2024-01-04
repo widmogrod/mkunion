@@ -13,6 +13,9 @@ type (
 		IsPointer     bool
 		Indexed       []Shape
 	}
+	//PointerLike struct {
+	//	Type Shape
+	//}
 	AliasLike struct {
 		Name          string
 		PkgName       string
@@ -21,16 +24,8 @@ type (
 		Type          Shape
 		Tags          map[string]Tag
 	}
-	BooleanLike struct{}
-	// StringLike is a string type, and when it has name, it means it named type.
-	// For example:
-	// 	type C string
-	StringLike struct {
-		//Guard Guard
-	}
-	NumberLike struct {
-		Kind NumberKind
-		//Guard Guard
+	PrimitiveLike struct {
+		Kind PrimitiveKind
 	}
 	ListLike struct {
 		//Extend *ListLike
@@ -64,6 +59,21 @@ type (
 		PkgImportName string
 		Variant       []Shape
 		Tags          map[string]Tag
+	}
+)
+
+//go:tag mkunion:"PrimitiveKind"
+type (
+	BooleanLike struct{}
+	// StringLike is a string type, and when it has name, it means it named type.
+	// For example:
+	// 	type C string
+	StringLike struct {
+		//Guard Guard
+	}
+	NumberLike struct {
+		Kind NumberKind
+		//Guard Guard
 	}
 )
 
@@ -108,7 +118,12 @@ func IsBinary(x Shape) bool {
 		return false
 	}
 
-	num, isNumber := list.Element.(*NumberLike)
+	prim, isPrimitive := list.Element.(*PrimitiveLike)
+	if !isPrimitive {
+		return false
+	}
+
+	num, isNumber := prim.Kind.(*NumberLike)
 	if !isNumber {
 		return false
 	}
@@ -240,14 +255,19 @@ func Tags(x Shape) map[string]Tag {
 		func(x *AliasLike) map[string]Tag {
 			return x.Tags
 		},
-		func(x *BooleanLike) map[string]Tag {
-			return nil
-		},
-		func(x *StringLike) map[string]Tag {
-			return nil
-		},
-		func(x *NumberLike) map[string]Tag {
-			return nil
+		func(x *PrimitiveLike) map[string]Tag {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) map[string]Tag {
+					return nil
+				},
+				func(x *StringLike) map[string]Tag {
+					return nil
+				},
+				func(x *NumberLike) map[string]Tag {
+					return nil
+				},
+			)
 		},
 		func(x *ListLike) map[string]Tag {
 			return nil
@@ -292,7 +312,12 @@ func UnwrapPointer(x string) string {
 }
 
 func IsString(x Shape) bool {
-	_, ok := x.(*StringLike)
+	prim, isPrimitive := x.(*PrimitiveLike)
+	if !isPrimitive {
+		return false
+	}
+
+	_, ok := prim.Kind.(*StringLike)
 	return ok
 }
 
@@ -331,14 +356,19 @@ func ExtractRefs(x Shape) []*RefName {
 			result = append(result, ExtractRefs(x.Type)...)
 			return result
 		},
-		func(x *BooleanLike) []*RefName {
-			return nil
-		},
-		func(x *StringLike) []*RefName {
-			return nil
-		},
-		func(x *NumberLike) []*RefName {
-			return nil
+		func(x *PrimitiveLike) []*RefName {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) []*RefName {
+					return nil
+				},
+				func(x *StringLike) []*RefName {
+					return nil
+				},
+				func(x *NumberLike) []*RefName {
+					return nil
+				},
+			)
 		},
 		func(x *ListLike) []*RefName {
 			return ExtractRefs(x.Element)

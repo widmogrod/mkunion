@@ -393,7 +393,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
-					Type:          &StringLike{},
+					Type:          &PrimitiveLike{Kind: &StringLike{}},
 					Tags:          f.possibleTaggedTypes[f.currentType],
 				}
 
@@ -405,8 +405,10 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
-					Type: &NumberLike{
-						Kind: TypeStringToNumberKindMap[next.Name],
+					Type: &PrimitiveLike{
+						Kind: &NumberLike{
+							Kind: TypeStringToNumberKindMap[next.Name],
+						},
 					},
 					Tags: f.possibleTaggedTypes[f.currentType],
 				}
@@ -417,7 +419,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
-					Type:          &BooleanLike{},
+					Type:          &PrimitiveLike{Kind: &BooleanLike{}},
 					Tags:          f.possibleTaggedTypes[f.currentType],
 				}
 
@@ -635,15 +637,8 @@ func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape 
 
 			return x
 		},
-		func(x *BooleanLike) Shape {
+		func(x *PrimitiveLike) Shape {
 			return x
-		},
-		func(x *StringLike) Shape {
-			return x
-		},
-		func(x *NumberLike) Shape {
-			return x
-
 		},
 		func(x *ListLike) Shape {
 			x.Element = CleanTypeThatAreOvershadowByTypeParam(x.Element, params)
@@ -735,13 +730,7 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 			}
 			return result
 		},
-		func(x *BooleanLike) Shape {
-			return x
-		},
-		func(x *StringLike) Shape {
-			return x
-		},
-		func(x *NumberLike) Shape {
+		func(x *PrimitiveLike) Shape {
 			return x
 		},
 		func(x *ListLike) Shape {

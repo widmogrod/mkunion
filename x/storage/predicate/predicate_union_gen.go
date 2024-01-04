@@ -209,11 +209,11 @@ func CompareShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Location",
-				Type: &shape.StringLike{},
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 			{
 				Name: "Operation",
-				Type: &shape.StringLike{},
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 			{
 				Name: "BindValue",
@@ -734,7 +734,7 @@ func (r *Compare) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("predicate: Compare._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("predicate: Compare._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -896,7 +896,7 @@ func LocatableShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Location",
-				Type: &shape.StringLike{},
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
 	}
@@ -1221,7 +1221,7 @@ func (r *Locatable) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("predicate: Locatable._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("predicate: Locatable._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

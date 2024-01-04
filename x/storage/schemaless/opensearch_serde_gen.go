@@ -9,9 +9,113 @@ import (
 )
 
 func init() {
+	shape.Register(OpenSearchSearchResultShape())
 	shape.Register(OpenSearchSearchResultHitsShape())
 	shape.Register(OpenSearchSearchResultHitShape())
-	shape.Register(OpenSearchSearchResultShape())
+}
+
+var (
+	_ json.Unmarshaler = (*OpenSearchSearchResult[any])(nil)
+	_ json.Marshaler   = (*OpenSearchSearchResult[any])(nil)
+)
+
+func (r *OpenSearchSearchResult[A]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONOpenSearchSearchResultLb_A_bL(*r)
+}
+func (r *OpenSearchSearchResult[A]) _marshalJSONOpenSearchSearchResultLb_A_bL(x OpenSearchSearchResult[A]) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldHits []byte
+	fieldHits, err = r._marshalJSONOpenSearchSearchResultHitsLb_A_bL(x.Hits)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultLb_A_bL: field name Hits; %w", err)
+	}
+	partial["hits"] = fieldHits
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultLb_A_bL: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *OpenSearchSearchResult[A]) _marshalJSONOpenSearchSearchResultHitsLb_A_bL(x OpenSearchSearchResultHits[A]) ([]byte, error) {
+	result, err := shared.JSONMarshal[OpenSearchSearchResultHits[A]](x)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultHitsLb_A_bL:; %w", err)
+	}
+	return result, nil
+}
+func (r *OpenSearchSearchResult[A]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONOpenSearchSearchResultLb_A_bL(data)
+	if err != nil {
+		return fmt.Errorf("schemaless: OpenSearchSearchResult[A].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *OpenSearchSearchResult[A]) _unmarshalJSONOpenSearchSearchResultLb_A_bL(data []byte) (OpenSearchSearchResult[A], error) {
+	result := OpenSearchSearchResult[A]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._unmarshalJSONOpenSearchSearchResultLb_A_bL: native struct unwrap; %w", err)
+	}
+	if fieldHits, ok := partial["hits"]; ok {
+		result.Hits, err = r._unmarshalJSONOpenSearchSearchResultHitsLb_A_bL(fieldHits)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._unmarshalJSONOpenSearchSearchResultLb_A_bL: field Hits; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *OpenSearchSearchResult[A]) _unmarshalJSONOpenSearchSearchResultHitsLb_A_bL(data []byte) (OpenSearchSearchResultHits[A], error) {
+	result, err := shared.JSONUnmarshal[OpenSearchSearchResultHits[A]](data)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._unmarshalJSONOpenSearchSearchResultHitsLb_A_bL: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func OpenSearchSearchResultShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "OpenSearchSearchResult",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Hits",
+				Type: &shape.RefName{
+					Name:          "OpenSearchSearchResultHits",
+					PkgName:       "schemaless",
+					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+					Indexed: []shape.Shape{
+						&shape.RefName{
+							Name:          "A",
+							PkgName:       "",
+							PkgImportName: "",
+						},
+					},
+				},
+				Tags: map[string]shape.Tag{
+					"json": {
+						Value: "hits",
+					},
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
 }
 
 var (
@@ -268,7 +372,7 @@ func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONstring(data []byte) (string
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -300,115 +404,11 @@ func OpenSearchSearchResultHitShape() shape.Shape {
 			{
 				Name: "Sort",
 				Type: &shape.ListLike{
-					Element: &shape.StringLike{},
+					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 				},
 				Tags: map[string]shape.Tag{
 					"json": {
 						Value: "sort",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
-var (
-	_ json.Unmarshaler = (*OpenSearchSearchResult[any])(nil)
-	_ json.Marshaler   = (*OpenSearchSearchResult[any])(nil)
-)
-
-func (r *OpenSearchSearchResult[A]) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONOpenSearchSearchResultLb_A_bL(*r)
-}
-func (r *OpenSearchSearchResult[A]) _marshalJSONOpenSearchSearchResultLb_A_bL(x OpenSearchSearchResult[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldHits []byte
-	fieldHits, err = r._marshalJSONOpenSearchSearchResultHitsLb_A_bL(x.Hits)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultLb_A_bL: field name Hits; %w", err)
-	}
-	partial["hits"] = fieldHits
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultLb_A_bL: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *OpenSearchSearchResult[A]) _marshalJSONOpenSearchSearchResultHitsLb_A_bL(x OpenSearchSearchResultHits[A]) ([]byte, error) {
-	result, err := shared.JSONMarshal[OpenSearchSearchResultHits[A]](x)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultHitsLb_A_bL:; %w", err)
-	}
-	return result, nil
-}
-func (r *OpenSearchSearchResult[A]) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONOpenSearchSearchResultLb_A_bL(data)
-	if err != nil {
-		return fmt.Errorf("schemaless: OpenSearchSearchResult[A].UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *OpenSearchSearchResult[A]) _unmarshalJSONOpenSearchSearchResultLb_A_bL(data []byte) (OpenSearchSearchResult[A], error) {
-	result := OpenSearchSearchResult[A]{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._unmarshalJSONOpenSearchSearchResultLb_A_bL: native struct unwrap; %w", err)
-	}
-	if fieldHits, ok := partial["hits"]; ok {
-		result.Hits, err = r._unmarshalJSONOpenSearchSearchResultHitsLb_A_bL(fieldHits)
-		if err != nil {
-			return result, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._unmarshalJSONOpenSearchSearchResultLb_A_bL: field Hits; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *OpenSearchSearchResult[A]) _unmarshalJSONOpenSearchSearchResultHitsLb_A_bL(data []byte) (OpenSearchSearchResultHits[A], error) {
-	result, err := shared.JSONUnmarshal[OpenSearchSearchResultHits[A]](data)
-	if err != nil {
-		return result, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._unmarshalJSONOpenSearchSearchResultHitsLb_A_bL: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func OpenSearchSearchResultShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "OpenSearchSearchResult",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Hits",
-				Type: &shape.RefName{
-					Name:          "OpenSearchSearchResultHits",
-					PkgName:       "schemaless",
-					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-					Indexed: []shape.Shape{
-						&shape.RefName{
-							Name:          "A",
-							PkgName:       "",
-							PkgImportName: "",
-						},
-					},
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "hits",
 					},
 				},
 			},

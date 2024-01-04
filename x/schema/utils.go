@@ -358,28 +358,31 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						}
 					}
 
-				case *shape.NumberLike:
-					numData, ok := data.(*Number)
-					if !ok {
-						return nil
-					}
+				case *shape.PrimitiveLike:
+					switch y.Kind.(type) {
+					case *shape.NumberLike:
+						numData, ok := data.(*Number)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  numData,
-						loc:   locations,
-						shape: s,
-					}
+						return &locres{
+							data:  numData,
+							loc:   locations,
+							shape: s,
+						}
 
-				case *shape.StringLike:
-					strData, ok := data.(*String)
-					if !ok {
-						return nil
-					}
+					case *shape.StringLike:
+						strData, ok := data.(*String)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  strData,
-						loc:   locations,
-						shape: s,
+						return &locres{
+							data:  strData,
+							loc:   locations,
+							shape: s,
+						}
 					}
 
 				default:
@@ -405,28 +408,31 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 			},
 			func(x *LocationAnything) *locres {
 				switch y := s.(type) {
-				case *shape.StringLike:
-					strData, ok := data.(*String)
-					if !ok {
-						return nil
-					}
+				case *shape.PrimitiveLike:
+					switch y.Kind.(type) {
+					case *shape.StringLike:
+						strData, ok := data.(*String)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  strData,
-						shape: s,
-						loc:   locations,
-					}
+						return &locres{
+							data:  strData,
+							shape: s,
+							loc:   locations,
+						}
 
-				case *shape.NumberLike:
-					numData, ok := data.(*Number)
-					if !ok {
-						return nil
-					}
+					case *shape.NumberLike:
+						numData, ok := data.(*Number)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  numData,
-						shape: s,
-						loc:   locations,
+						return &locres{
+							data:  numData,
+							shape: s,
+							loc:   locations,
+						}
 					}
 
 				case *shape.MapLike:

@@ -52,24 +52,23 @@ func ToTypeScriptOptimisation(x Shape) Shape {
 			x.Type = ToTypeScriptOptimisation(x.Type)
 			return x
 		},
-		func(x *BooleanLike) Shape {
-			return x
-		},
-		func(x *StringLike) Shape {
-			return x
-		},
-		func(x *NumberLike) Shape {
+		func(x *PrimitiveLike) Shape {
 			return x
 		},
 		func(x *ListLike) Shape {
 			// do forward lookup and detect if we can optimise and convert to string
 			switch y := x.Element.(type) {
-			case *NumberLike:
-				switch y.Kind.(type) {
-				// byte is uint8
-				// rune is int32
-				case *UInt8, *Int32:
-					return &StringLike{}
+			case *PrimitiveLike:
+				switch z := y.Kind.(type) {
+				case *NumberLike:
+					switch z.Kind.(type) {
+					// byte is uint8
+					// rune is int32
+					case *UInt8, *Int32:
+						return &PrimitiveLike{
+							Kind: &StringLike{},
+						}
+					}
 				}
 			}
 
@@ -130,14 +129,19 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 		func(x *AliasLike) string {
 			return fmt.Sprintf("export type %s = %s\n", x.Name, ToTypeScript(x.Type, option))
 		},
-		func(x *BooleanLike) string {
-			return "boolean"
-		},
-		func(x *StringLike) string {
-			return "string"
-		},
-		func(x *NumberLike) string {
-			return "number"
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "boolean"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return "number"
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))
@@ -232,14 +236,8 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 			contents.WriteString(res)
 			contents.WriteString("\n")
 		},
-		func(x *BooleanLike) {
-			log.Infof("totypescript: AddShape BooleanLike is not supported")
-		},
-		func(x *StringLike) {
-			log.Infof("totypescript: AddShape StringLike is not supported")
-		},
-		func(x *NumberLike) {
-			log.Infof("totypescript: AddShape NumberLike is not supported")
+		func(x *PrimitiveLike) {
+			log.Infof("totypescript: AddShape PrimitiveLike is not supported")
 		},
 		func(x *ListLike) {
 			log.Infof("totypescript: AddShape ListLike is not supported")
@@ -402,14 +400,19 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 
 			return result.String()
 		},
-		func(x *BooleanLike) string {
-			return "boolean"
-		},
-		func(x *StringLike) string {
-			return "string"
-		},
-		func(x *NumberLike) string {
-			return "number"
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "boolean"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return "number"
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return fmt.Sprintf("%s[]", ToTypeScript(x.Element, option))

@@ -29,7 +29,7 @@ func TestInferFromFile(t *testing.T) {
 				Fields: []*FieldLike{
 					{
 						Name:      "Name",
-						Type:      &StringLike{},
+						Type:      &PrimitiveLike{Kind: &StringLike{}},
 						Desc:      ptr("Name of the person"),
 						Guard:     nil,
 						IsPointer: false,
@@ -51,7 +51,7 @@ func TestInferFromFile(t *testing.T) {
 				Fields: []*FieldLike{
 					{
 						Name:      "Age",
-						Type:      &NumberLike{},
+						Type:      &PrimitiveLike{Kind: &NumberLike{}},
 						Desc:      nil,
 						Guard:     nil,
 						IsPointer: false,
@@ -93,29 +93,29 @@ func TestInferFromFile(t *testing.T) {
 				Name:          "C",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				Type:          &StringLike{},
+				Type:          &PrimitiveLike{Kind: &StringLike{}},
 			},
 			&AliasLike{
 				Name:          "D",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				Type: &NumberLike{
+				Type: &PrimitiveLike{Kind: &NumberLike{
 					Kind: &Int64{},
-				},
+				}},
 			},
 			&AliasLike{
 				Name:          "E",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				Type: &NumberLike{
+				Type: &PrimitiveLike{Kind: &NumberLike{
 					Kind: &Float64{},
-				},
+				}},
 			},
 			&AliasLike{
 				Name:          "F",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				Type:          &BooleanLike{},
+				Type:          &PrimitiveLike{Kind: &BooleanLike{}},
 			},
 
 			&AliasLike{
@@ -124,7 +124,7 @@ func TestInferFromFile(t *testing.T) {
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				IsAlias:       false,
 				Type: &MapLike{
-					Key: &StringLike{},
+					Key: &PrimitiveLike{Kind: &StringLike{}},
 					Val: &RefName{
 						Name:          "Example",
 						PkgName:       "testasset",
@@ -155,7 +155,7 @@ func TestInferFromFile(t *testing.T) {
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				IsAlias:       false,
 				Type: &ListLike{
-					Element:          &StringLike{},
+					Element:          &PrimitiveLike{Kind: &StringLike{}},
 					ElementIsPointer: false,
 					ArrayLen:         ptr(2),
 				},
@@ -258,9 +258,9 @@ func TestInferFromFile(t *testing.T) {
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 							IsPointer:     true,
 							Indexed: []Shape{
-								&NumberLike{
+								&PrimitiveLike{Kind: &NumberLike{
 									Kind: &Int64{},
-								},
+								}},
 								&RefName{
 									Name:          "Duration",
 									PkgName:       "time",

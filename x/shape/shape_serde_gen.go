@@ -109,7 +109,7 @@ func TypeParamShape() Shape {
 		Fields: []*FieldLike{
 			{
 				Name: "Name",
-				Type: &StringLike{},
+				Type: &PrimitiveLike{Kind: &StringLike{}},
 			},
 			{
 				Name: "Type",

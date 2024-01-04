@@ -15,16 +15,16 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 		case "any":
 			return &Any{}
 		case "string":
-			return &StringLike{}
+			return &PrimitiveLike{Kind: &StringLike{}}
 
 		case "bool":
-			return &BooleanLike{}
+			return &PrimitiveLike{Kind: &BooleanLike{}}
 		case "int", "int8", "int16", "int32", "int64",
 			"uint", "uint8", "uint16", "uint32", "uint64",
 			"float64", "float32", "byte", "rune":
-			return &NumberLike{
+			return &PrimitiveLike{Kind: &NumberLike{
 				Kind: TypeStringToNumberKindMap[y.Name],
-			}
+			}}
 		default:
 			if !y.IsExported() {
 				log.Infof("formast: skipping non exported type %s", y.Name)
