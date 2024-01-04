@@ -95,7 +95,7 @@ func padLeftTabs2(n int, s string) string {
 }
 
 func TypeNameIfSupports(s shape.Shape) (string, bool) {
-	return shape.MustMatchShapeR2(
+	return shape.MatchShapeR2(
 		s,
 		func(x *shape.Any) (string, bool) {
 			return "", false
@@ -131,7 +131,7 @@ func TypeNameIfSupports(s shape.Shape) (string, bool) {
 }
 
 func TemplateHelperShapeVariantToName(x shape.Shape) string {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		x,
 		func(x *shape.Any) string {
 			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: %T not suported", x))

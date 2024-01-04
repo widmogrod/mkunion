@@ -186,7 +186,7 @@ func (g *ShapeTagged) generateVariantFunc(s shape.Shape) (string, error) {
 }
 
 func ShapeToString(x shape.Shape) string {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		x,
 		func(x *shape.Any) string {
 			return `&shape.Any{}`
@@ -339,7 +339,7 @@ func ShapeToString(x shape.Shape) string {
 }
 
 func KindToGoName(kind shape.NumberKind) string {
-	return shape.MustMatchNumberKind(
+	return shape.MatchNumberKindR1(
 		kind,
 		func(x *shape.UInt8) string {
 			return "shape.UInt8{}"
@@ -414,7 +414,7 @@ func GuardToString(x shape.Guard) string {
 		return "nil"
 	}
 
-	return shape.MustMatchGuard(
+	return shape.MatchGuardR1(
 		x,
 		func(x *shape.Enum) string {
 			result := &bytes.Buffer{}

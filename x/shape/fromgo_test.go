@@ -232,6 +232,10 @@ func TestFromGoo(t *testing.T) {
 										},
 									},
 								},
+								{
+									Name: "IsPointer",
+									Type: &BooleanLike{},
+								},
 							},
 						},
 						&StructLike{

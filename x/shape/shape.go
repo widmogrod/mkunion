@@ -1,8 +1,9 @@
 package shape
 
-// go:generate go run ../../cmd/mkunion/main.go serde
+// go:generate ../../cmd/mkunion/mkunion
+// go:generate ../../cmd/mkunion/mkunion serde
 
-// go:generate go run ../../cmd/mkunion/main.go -name=Shape
+//go:tag mkunion:"Shape"
 type (
 	Any     struct{}
 	RefName struct {
@@ -72,7 +73,7 @@ type TypeParam struct {
 	Type Shape
 }
 
-// go:generate go run ../../cmd/mkunion/main.go -name=NumberKind
+//go:tag mkunion:"NumberKind"
 type (
 	UInt8   struct{}
 	UInt16  struct{}
@@ -121,7 +122,7 @@ func NumberKindToGoName(x NumberKind) string {
 		return "int"
 	}
 
-	return MustMatchNumberKind(
+	return MatchNumberKindR1(
 		x,
 		func(x *UInt8) string {
 			return "uint8"
@@ -187,7 +188,7 @@ func TagGetValue(x map[string]Tag, tag, defaults string) string {
 	return t.Value
 }
 
-// go:generate go run ../../cmd/mkunion/main.go -name=Guard
+//go:tag mkunion:"Guard"
 type (
 	Enum struct {
 		Val []string
@@ -228,7 +229,7 @@ func ConcatGuard(a, b Guard) Guard {
 }
 
 func Tags(x Shape) map[string]Tag {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) map[string]Tag {
 			return nil
@@ -296,7 +297,7 @@ func IsString(x Shape) bool {
 }
 
 func ExtractRefs(x Shape) []*RefName {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) []*RefName {
 			return nil

@@ -48,7 +48,7 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 	return schema.MatchLocationR1(
 		loc[0],
 		func(x *schema.LocationField) []schema.Location {
-			return shape.MustMatchShape(
+			return shape.MatchShapeR1(
 				s,
 				func(y *shape.Any) []schema.Location {
 					panic("not implemented")
@@ -117,7 +117,7 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 }
 
 func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []schema.Location {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		x,
 		func(x *shape.Any) []schema.Location {
 			panic("not implemented")

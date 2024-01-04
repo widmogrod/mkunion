@@ -610,7 +610,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 }
 
 func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape {
-	return MustMatchShape(
+	return MatchShapeR1(
 		typ,
 		func(x *Any) Shape {
 			return x
@@ -702,7 +702,7 @@ func IndexWith(y Shape, ref *RefName) Shape {
 }
 
 func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[string]Shape) Shape {
-	return MustMatchShape(
+	return MatchShapeR1(
 		typ,
 		func(x *Any) Shape {
 			return x

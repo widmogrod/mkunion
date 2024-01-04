@@ -11,7 +11,7 @@ func ToJsonSchema(s Shape) string {
 }
 
 func toJsonSchema(s Shape, definitions map[string]string, depth int, desc *string) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		s,
 		func(x *Any) string {
 			return `{"type": "any"` + toDescription(desc) + `}`

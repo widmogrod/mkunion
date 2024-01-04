@@ -65,7 +65,7 @@ func (g *SerdeJSONUnion) VariantName(x shape.Shape) string {
 }
 
 func (g *SerdeJSONUnion) JSONVariantName(x shape.Shape) string {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		x,
 		func(y *shape.Any) string {
 			panic(fmt.Errorf("generators.JSONVariantName: %T not suported", y))

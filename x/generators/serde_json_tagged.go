@@ -99,7 +99,7 @@ func (g *SerdeJSONTagged) ExtractImports(x shape.Shape) PkgMap {
 }
 
 func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
-	return shape.MustMatchShapeR2(
+	return shape.MatchShapeR2(
 		x,
 		func(x *shape.Any) (string, error) {
 			panic("not implemented any var casting")
@@ -254,7 +254,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 		return result.String(), nil
 	}
 
-	return shape.MustMatchShapeR2(
+	return shape.MatchShapeR2(
 		x,
 		func(y *shape.Any) (string, error) {
 			body := &strings.Builder{}
@@ -533,7 +533,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 		return result.String(), nil
 	}
 
-	return shape.MustMatchShapeR2(
+	return shape.MatchShapeR2(
 		x,
 		func(y *shape.Any) (string, error) {
 			body := &strings.Builder{}

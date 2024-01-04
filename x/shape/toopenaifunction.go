@@ -16,7 +16,7 @@ func ToOpenAIFunctionDefinition(name, desc string, in Shape) openai.FunctionDefi
 }
 
 func toFunctionParameters(in Shape) *jsonschema.Definition {
-	return MustMatchShape(
+	return MatchShapeR1(
 		in,
 		func(x *Any) *jsonschema.Definition {
 			//TODO: this should be list of all possible types [object, string, number, boolean, null]
@@ -109,7 +109,7 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 }
 
 func toVariantName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(a *Any) string {
 			return "any"
@@ -171,7 +171,7 @@ func toOpenAIFieldName(guard Guard, field *jsonschema.Definition) *jsonschema.De
 		return field
 	}
 
-	return MustMatchGuard(
+	return MatchGuardR1(
 		guard,
 		func(y *Enum) *jsonschema.Definition {
 			field.Enum = y.Val

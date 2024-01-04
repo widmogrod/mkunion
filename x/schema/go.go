@@ -203,7 +203,7 @@ func FromGo[A any](x A) Schema {
 }
 
 func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		xschema,
 		func(x *shape.Any) Schema {
 			panic("not implemented")
@@ -261,7 +261,7 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 				return MkInt(int(yreflect.Int()))
 			}
 
-			return shape.MustMatchNumberKind(
+			return shape.MatchNumberKindR1(
 				x.Kind,
 				func(x *shape.UInt8) Schema {
 					return MkInt(int(yreflect.Uint()))
@@ -407,7 +407,7 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 		return reflect.Zero(zreflect), nil
 	}
 
-	return shape.MustMatchShapeR2(
+	return shape.MatchShapeR2(
 		xshape,
 		func(x *shape.Any) (reflect.Value, error) {
 			panic("not implemented")
@@ -463,7 +463,7 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 				return reflect.ValueOf(int(*data)).Convert(zreflect), nil
 			}
 
-			return shape.MustMatchNumberKindR2(
+			return shape.MatchNumberKindR2(
 				x.Kind,
 				func(x *shape.UInt8) (reflect.Value, error) {
 					return reflect.ValueOf(uint8(*data)), nil

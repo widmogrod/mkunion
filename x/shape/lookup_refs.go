@@ -20,7 +20,7 @@ func Register(x Shape) {
 }
 
 func shapeFullName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return "any"

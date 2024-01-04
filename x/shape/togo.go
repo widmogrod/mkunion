@@ -7,7 +7,7 @@ import (
 )
 
 func ToGoPkgName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return ""
@@ -43,7 +43,7 @@ func ToGoPkgName(x Shape) string {
 }
 
 func ToGoPkgImportName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return ""
@@ -166,7 +166,7 @@ func ToGoFullTypeNameFromReflect(x reflect.Type) string {
 }
 
 func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return "any"
@@ -257,7 +257,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 }
 
 func ToGoTypeParamsNames(x Shape) []string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) []string {
 			return nil
@@ -297,7 +297,7 @@ func ToGoTypeParamsNames(x Shape) []string {
 }
 
 func ToGoTypeParamsTypes(x Shape) []Shape {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) []Shape {
 			return nil
@@ -372,7 +372,7 @@ func WrapPointerIfField(name string, field *FieldLike) string {
 }
 
 func ExtractPkgImportNames(x Shape) map[string]string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(y *Any) map[string]string {
 			return nil

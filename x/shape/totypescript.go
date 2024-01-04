@@ -37,7 +37,7 @@ func (o *TypeScriptOptions) NeedsToImportPkgName(pkg packageName, imp packageImp
 }
 
 func ToTypeScriptOptimisation(x Shape) Shape {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) Shape {
 			return x
@@ -101,7 +101,7 @@ func ToTypeScriptOptimisation(x Shape) Shape {
 
 func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 	x = ToTypeScriptOptimisation(x)
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return "any"
@@ -211,7 +211,7 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 	}
 	r.shapeAdded[key] = true
 
-	MustMatchShapeR0(
+	MatchShapeR0(
 		x,
 		func(x *Any) {
 			log.Infof("totypescript: AddShape Any is not supported")
@@ -368,7 +368,7 @@ func (r *TypeScriptRenderer) normaliseImport(imp packageImportName) string {
 }
 
 func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		variant,
 		func(x *Any) string {
 			return "any"
