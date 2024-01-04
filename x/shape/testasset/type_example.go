@@ -4,7 +4,9 @@ import (
 	"time"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go -name Example
+//go:generate go run ../../../cmd/mkunion/main.go
+//go:generate go run ../../../cmd/mkunion/main.go serde
+
 //go:tag mkunion:"Example"
 type (
 	A struct {
@@ -35,7 +37,7 @@ type (
 
 // List is a list of elements
 //
-//go:tag serde:"json" json:"list,omitempty"
+//go:tag json:"list,omitempty"
 type List struct{}
 
 //go:tag serde:"json" json:"list_of,omitempty"

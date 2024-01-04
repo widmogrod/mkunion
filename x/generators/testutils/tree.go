@@ -5,9 +5,10 @@ import (
 	"time"
 )
 
+//go:generate go run ../../../cmd/mkunion/main.go
 //go:generate go run ../../../cmd/mkunion/main.go serde
 
-//go:generate go run ../../../cmd/mkunion/main.go -name=Tree
+//go:tag mkunion:"Tree"
 type (
 	Branch struct {
 		Lit   Tree

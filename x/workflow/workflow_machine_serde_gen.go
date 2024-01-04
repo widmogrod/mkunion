@@ -10,94 +10,9 @@ import (
 )
 
 func init() {
-	shape.Register(ApplyAwaitOptionsShape())
 	shape.Register(BaseStateShape())
+	shape.Register(ApplyAwaitOptionsShape())
 	shape.Register(ResumeOptionsShape())
-}
-
-var (
-	_ json.Unmarshaler = (*ApplyAwaitOptions)(nil)
-	_ json.Marshaler   = (*ApplyAwaitOptions)(nil)
-)
-
-func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONApplyAwaitOptions(*r)
-}
-func (r *ApplyAwaitOptions) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldTimeout []byte
-	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name Timeout; %w", err)
-	}
-	partial["Timeout"] = fieldTimeout
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *ApplyAwaitOptions) _marshalJSONint64(x int64) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONint64:; %w", err)
-	}
-	return result, nil
-}
-func (r *ApplyAwaitOptions) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONApplyAwaitOptions(data)
-	if err != nil {
-		return fmt.Errorf("workflow: ApplyAwaitOptions.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *ApplyAwaitOptions) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyAwaitOptions, error) {
-	result := ApplyAwaitOptions{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: native struct unwrap; %w", err)
-	}
-	if fieldTimeout, ok := partial["Timeout"]; ok {
-		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
-		if err != nil {
-			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field Timeout; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *ApplyAwaitOptions) _unmarshalJSONint64(data []byte) (int64, error) {
-	var result int64
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONint64: native number unwrap; %w", err)
-	}
-	return result, nil
-}
-func ApplyAwaitOptionsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ApplyAwaitOptions",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timeout",
-				Type: &shape.NumberLike{
-					Kind: &shape.Int64{},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }
 
 var (
@@ -382,6 +297,91 @@ func BaseStateShape() shape.Shape {
 					Name:          "RunOption",
 					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
+}
+
+var (
+	_ json.Unmarshaler = (*ApplyAwaitOptions)(nil)
+	_ json.Marshaler   = (*ApplyAwaitOptions)(nil)
+)
+
+func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONApplyAwaitOptions(*r)
+}
+func (r *ApplyAwaitOptions) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldTimeout []byte
+	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name Timeout; %w", err)
+	}
+	partial["Timeout"] = fieldTimeout
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *ApplyAwaitOptions) _marshalJSONint64(x int64) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONint64:; %w", err)
+	}
+	return result, nil
+}
+func (r *ApplyAwaitOptions) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONApplyAwaitOptions(data)
+	if err != nil {
+		return fmt.Errorf("workflow: ApplyAwaitOptions.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *ApplyAwaitOptions) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyAwaitOptions, error) {
+	result := ApplyAwaitOptions{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: native struct unwrap; %w", err)
+	}
+	if fieldTimeout, ok := partial["Timeout"]; ok {
+		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
+		if err != nil {
+			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field Timeout; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *ApplyAwaitOptions) _unmarshalJSONint64(data []byte) (int64, error) {
+	var result int64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONint64: native number unwrap; %w", err)
+	}
+	return result, nil
+}
+func ApplyAwaitOptionsShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ApplyAwaitOptions",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Timeout",
+				Type: &shape.NumberLike{
+					Kind: &shape.Int64{},
 				},
 			},
 		},

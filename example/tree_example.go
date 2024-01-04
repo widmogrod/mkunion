@@ -1,6 +1,8 @@
 package example
 
-//go:generate go run ../cmd/mkunion/main.go -name=Tree -include-extension=reducer_bfs,reducer_dfs,default_visitor,default_reducer
+//go:generate go run ../cmd/mkunion/main.go
+
+//go:tag mkunion:"Tree"
 type (
 	Branch struct{ L, R Tree }
 	Leaf   struct{ Value int }
