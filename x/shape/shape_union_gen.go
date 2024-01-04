@@ -268,10 +268,6 @@ func RefNameShape() Shape {
 				Type: &PrimitiveLike{Kind: &StringLike{}},
 			},
 			{
-				Name: "IsPointer",
-				Type: &PrimitiveLike{Kind: &BooleanLike{}},
-			},
-			{
 				Name: "Indexed",
 				Type: &ListLike{
 					Element: &RefName{
@@ -381,13 +377,11 @@ func ListLikeShape() Shape {
 				},
 			},
 			{
-				Name: "ElementIsPointer",
-				Type: &PrimitiveLike{Kind: &BooleanLike{}},
-			},
-			{
 				Name: "ArrayLen",
-				Type: &PrimitiveLike{
-					Kind: &NumberLike{},
+				Type: &PointerLike{
+					Type: &PrimitiveLike{
+						Kind: &NumberLike{},
+					},
 				},
 			},
 		},
@@ -415,14 +409,6 @@ func MapLikeShape() Shape {
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 				},
-			},
-			{
-				Name: "KeyIsPointer",
-				Type: &PrimitiveLike{Kind: &BooleanLike{}},
-			},
-			{
-				Name: "ValIsPointer",
-				Type: &PrimitiveLike{Kind: &BooleanLike{}},
 			},
 		},
 	}
@@ -459,10 +445,12 @@ func StructLikeShape() Shape {
 			{
 				Name: "Fields",
 				Type: &ListLike{
-					Element: &RefName{
-						Name:          "FieldLike",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					Element: &PointerLike{
+						Type: &RefName{
+							Name:          "FieldLike",
+							PkgName:       "shape",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+						},
 					},
 				},
 			},
@@ -476,10 +464,6 @@ func StructLikeShape() Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 					},
 				},
-			},
-			{
-				Name: "IsPointer",
-				Type: &PrimitiveLike{Kind: &BooleanLike{}},
 			},
 		},
 	}
@@ -528,29 +512,29 @@ func UnionLikeShape() Shape {
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Shape", ShapeFromJSON, ShapeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Any", AnyFromJSON, AnyToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/RefName", RefNameFromJSON, RefNameToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/PointerLike", PointerLikeFromJSON, PointerLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/AliasLike", AliasLikeFromJSON, AliasLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/PrimitiveLike", PrimitiveLikeFromJSON, PrimitiveLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/ListLike", ListLikeFromJSON, ListLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/MapLike", MapLikeFromJSON, MapLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/StructLike", StructLikeFromJSON, StructLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/UnionLike", UnionLikeFromJSON, UnionLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Shape", ShapeFromJSON, ShapeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Any", AnyFromJSON, AnyToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.RefName", RefNameFromJSON, RefNameToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PointerLike", PointerLikeFromJSON, PointerLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AliasLike", AliasLikeFromJSON, AliasLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveLike", PrimitiveLikeFromJSON, PrimitiveLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.ListLike", ListLikeFromJSON, ListLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.MapLike", MapLikeFromJSON, MapLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StructLike", StructLikeFromJSON, StructLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UnionLike", UnionLikeFromJSON, UnionLikeToJSON)
 }
 
 type ShapeUnionJSON struct {
 	Type          string          `json:"$type,omitempty"`
-	Any           json.RawMessage `json:"Any,omitempty"`
-	RefName       json.RawMessage `json:"RefName,omitempty"`
-	PointerLike   json.RawMessage `json:"PointerLike,omitempty"`
-	AliasLike     json.RawMessage `json:"AliasLike,omitempty"`
-	PrimitiveLike json.RawMessage `json:"PrimitiveLike,omitempty"`
-	ListLike      json.RawMessage `json:"ListLike,omitempty"`
-	MapLike       json.RawMessage `json:"MapLike,omitempty"`
-	StructLike    json.RawMessage `json:"StructLike,omitempty"`
-	UnionLike     json.RawMessage `json:"UnionLike,omitempty"`
+	Any           json.RawMessage `json:"shape.Any,omitempty"`
+	RefName       json.RawMessage `json:"shape.RefName,omitempty"`
+	PointerLike   json.RawMessage `json:"shape.PointerLike,omitempty"`
+	AliasLike     json.RawMessage `json:"shape.AliasLike,omitempty"`
+	PrimitiveLike json.RawMessage `json:"shape.PrimitiveLike,omitempty"`
+	ListLike      json.RawMessage `json:"shape.ListLike,omitempty"`
+	MapLike       json.RawMessage `json:"shape.MapLike,omitempty"`
+	StructLike    json.RawMessage `json:"shape.StructLike,omitempty"`
+	UnionLike     json.RawMessage `json:"shape.UnionLike,omitempty"`
 }
 
 func ShapeFromJSON(x []byte) (Shape, error) {
@@ -568,23 +552,23 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 	}
 
 	switch data.Type {
-	case "Any":
+	case "shape.Any":
 		return AnyFromJSON(data.Any)
-	case "RefName":
+	case "shape.RefName":
 		return RefNameFromJSON(data.RefName)
-	case "PointerLike":
+	case "shape.PointerLike":
 		return PointerLikeFromJSON(data.PointerLike)
-	case "AliasLike":
+	case "shape.AliasLike":
 		return AliasLikeFromJSON(data.AliasLike)
-	case "PrimitiveLike":
+	case "shape.PrimitiveLike":
 		return PrimitiveLikeFromJSON(data.PrimitiveLike)
-	case "ListLike":
+	case "shape.ListLike":
 		return ListLikeFromJSON(data.ListLike)
-	case "MapLike":
+	case "shape.MapLike":
 		return MapLikeFromJSON(data.MapLike)
-	case "StructLike":
+	case "shape.StructLike":
 		return StructLikeFromJSON(data.StructLike)
-	case "UnionLike":
+	case "shape.UnionLike":
 		return UnionLikeFromJSON(data.UnionLike)
 	}
 
@@ -608,7 +592,7 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 		return UnionLikeFromJSON(data.UnionLike)
 	}
 
-	return nil, fmt.Errorf("Shape: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.Shape: unknown type %s", data.Type)
 }
 
 func ShapeToJSON(x Shape) ([]byte, error) {
@@ -624,7 +608,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type: "Any",
+				Type: "shape.Any",
 				Any:  body,
 			})
 		},
@@ -635,7 +619,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:    "RefName",
+				Type:    "shape.RefName",
 				RefName: body,
 			})
 		},
@@ -646,7 +630,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:        "PointerLike",
+				Type:        "shape.PointerLike",
 				PointerLike: body,
 			})
 		},
@@ -657,7 +641,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:      "AliasLike",
+				Type:      "shape.AliasLike",
 				AliasLike: body,
 			})
 		},
@@ -668,7 +652,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:          "PrimitiveLike",
+				Type:          "shape.PrimitiveLike",
 				PrimitiveLike: body,
 			})
 		},
@@ -679,7 +663,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:     "ListLike",
+				Type:     "shape.ListLike",
 				ListLike: body,
 			})
 		},
@@ -690,7 +674,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:    "MapLike",
+				Type:    "shape.MapLike",
 				MapLike: body,
 			})
 		},
@@ -701,7 +685,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:       "StructLike",
+				Type:       "shape.StructLike",
 				StructLike: body,
 			})
 		},
@@ -712,7 +696,7 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			}
 
 			return json.Marshal(ShapeUnionJSON{
-				Type:      "UnionLike",
+				Type:      "shape.UnionLike",
 				UnionLike: body,
 			})
 		},
@@ -817,7 +801,6 @@ func (r *RefName) _marshalJSONRefName(x RefName) ([]byte, error) {
 		return nil, fmt.Errorf("shape: RefName._marshalJSONRefName: field name PkgImportName; %w", err)
 	}
 	partial["PkgImportName"] = fieldPkgImportName
-
 	var fieldIndexed []byte
 	fieldIndexed, err = r._marshalJSONSliceShape(x.Indexed)
 	if err != nil {
@@ -834,13 +817,6 @@ func (r *RefName) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
 	if err != nil {
 		return nil, fmt.Errorf("shape: RefName._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *RefName) _marshalJSONbool(x bool) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: RefName._marshalJSONbool:; %w", err)
 	}
 	return result, nil
 }
@@ -899,7 +875,6 @@ func (r *RefName) _unmarshalJSONRefName(data []byte) (RefName, error) {
 			return result, fmt.Errorf("shape: RefName._unmarshalJSONRefName: field PkgImportName; %w", err)
 		}
 	}
-
 	if fieldIndexed, ok := partial["Indexed"]; ok {
 		result.Indexed, err = r._unmarshalJSONSliceShape(fieldIndexed)
 		if err != nil {
@@ -913,14 +888,6 @@ func (r *RefName) _unmarshalJSONstring(data []byte) (string, error) {
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return result, fmt.Errorf("shape: RefName._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *RefName) _unmarshalJSONbool(data []byte) (bool, error) {
-	var result bool
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("shape: RefName._unmarshalJSONbool: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -1353,12 +1320,14 @@ func (r *ListLike) _marshalJSONListLike(x ListLike) ([]byte, error) {
 		return nil, fmt.Errorf("shape: ListLike._marshalJSONListLike: field name Element; %w", err)
 	}
 	partial["Element"] = fieldElement
-	var fieldElementIsPointer []byte
+	var fieldArrayLen []byte
+	fieldArrayLen, err = r._marshalJSONPtrint(x.ArrayLen)
 	if err != nil {
-		return nil, fmt.Errorf("shape: ListLike._marshalJSONListLike: field name ElementIsPointer; %w", err)
+		return nil, fmt.Errorf("shape: ListLike._marshalJSONListLike: field name ArrayLen; %w", err)
 	}
-	partial["ElementIsPointer"] = fieldElementIsPointer
-
+	if fieldArrayLen != nil {
+		partial["ArrayLen"] = fieldArrayLen
+	}
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("shape: ListLike._marshalJSONListLike: struct; %w", err)
@@ -1372,12 +1341,11 @@ func (r *ListLike) _marshalJSONShape(x Shape) ([]byte, error) {
 	}
 	return result, nil
 }
-func (r *ListLike) _marshalJSONbool(x bool) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: ListLike._marshalJSONbool:; %w", err)
+func (r *ListLike) _marshalJSONPtrint(x *int) ([]byte, error) {
+	if x == nil {
+		return nil, nil
 	}
-	return result, nil
+	return r._marshalJSONint(*x)
 }
 func (r *ListLike) _marshalJSONint(x int) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -1407,6 +1375,12 @@ func (r *ListLike) _unmarshalJSONListLike(data []byte) (ListLike, error) {
 			return result, fmt.Errorf("shape: ListLike._unmarshalJSONListLike: field Element; %w", err)
 		}
 	}
+	if fieldArrayLen, ok := partial["ArrayLen"]; ok {
+		result.ArrayLen, err = r._unmarshalJSONPtrint(fieldArrayLen)
+		if err != nil {
+			return result, fmt.Errorf("shape: ListLike._unmarshalJSONListLike: field ArrayLen; %w", err)
+		}
+	}
 	return result, nil
 }
 func (r *ListLike) _unmarshalJSONShape(data []byte) (Shape, error) {
@@ -1416,13 +1390,18 @@ func (r *ListLike) _unmarshalJSONShape(data []byte) (Shape, error) {
 	}
 	return result, nil
 }
-func (r *ListLike) _unmarshalJSONbool(data []byte) (bool, error) {
-	var result bool
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("shape: ListLike._unmarshalJSONbool: native primitive unwrap; %w", err)
+func (r *ListLike) _unmarshalJSONPtrint(data []byte) (*int, error) {
+	if len(data) == 0 {
+		return nil, nil
 	}
-	return result, nil
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONint(data)
+	if err != nil {
+		return nil, fmt.Errorf("shape: ListLike._unmarshalJSONPtrint: pointer; %w", err)
+	}
+	return &result, nil
 }
 func (r *ListLike) _unmarshalJSONint(data []byte) (int, error) {
 	var result int
@@ -1486,13 +1465,6 @@ func (r *MapLike) _marshalJSONShape(x Shape) ([]byte, error) {
 	}
 	return result, nil
 }
-func (r *MapLike) _marshalJSONbool(x bool) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: MapLike._marshalJSONbool:; %w", err)
-	}
-	return result, nil
-}
 func (r *MapLike) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONMapLike(data)
 	if err != nil {
@@ -1526,14 +1498,6 @@ func (r *MapLike) _unmarshalJSONShape(data []byte) (Shape, error) {
 	result, err := shared.JSONUnmarshal[Shape](data)
 	if err != nil {
 		return result, fmt.Errorf("shape: MapLike._unmarshalJSONShape: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *MapLike) _unmarshalJSONbool(data []byte) (bool, error) {
-	var result bool
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("shape: MapLike._unmarshalJSONbool: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -1602,9 +1566,6 @@ func (r *StructLike) _marshalJSONStructLike(x StructLike) ([]byte, error) {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: field name Tags; %w", err)
 	}
 	partial["Tags"] = fieldTags
-	var fieldIsPointer []byte
-
-	partial["IsPointer"] = fieldIsPointer
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: struct; %w", err)
@@ -1656,9 +1617,15 @@ func (r *StructLike) _marshalJSONSlicePtrFieldLike(x []*FieldLike) ([]byte, erro
 	return result, nil
 }
 func (r *StructLike) _marshalJSONPtrFieldLike(x *FieldLike) ([]byte, error) {
-	result, err := shared.JSONMarshal[*FieldLike](x)
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONFieldLike(*x)
+}
+func (r *StructLike) _marshalJSONFieldLike(x FieldLike) ([]byte, error) {
+	result, err := shared.JSONMarshal[FieldLike](x)
 	if err != nil {
-		return nil, fmt.Errorf("shape: StructLike._marshalJSONPtrFieldLike:; %w", err)
+		return nil, fmt.Errorf("shape: StructLike._marshalJSONFieldLike:; %w", err)
 	}
 	return result, nil
 }
@@ -1682,13 +1649,6 @@ func (r *StructLike) _marshalJSONTag(x Tag) ([]byte, error) {
 	result, err := shared.JSONMarshal[Tag](x)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONTag:; %w", err)
-	}
-	return result, nil
-}
-func (r *StructLike) _marshalJSONbool(x bool) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: StructLike._marshalJSONbool:; %w", err)
 	}
 	return result, nil
 }
@@ -1743,7 +1703,6 @@ func (r *StructLike) _unmarshalJSONStructLike(data []byte) (StructLike, error) {
 			return result, fmt.Errorf("shape: StructLike._unmarshalJSONStructLike: field Tags; %w", err)
 		}
 	}
-
 	return result, nil
 }
 func (r *StructLike) _unmarshalJSONstring(data []byte) (string, error) {
@@ -1794,9 +1753,22 @@ func (r *StructLike) _unmarshalJSONSlicePtrFieldLike(data []byte) ([]*FieldLike,
 	return result, nil
 }
 func (r *StructLike) _unmarshalJSONPtrFieldLike(data []byte) (*FieldLike, error) {
-	result, err := shared.JSONUnmarshal[*FieldLike](data)
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONFieldLike(data)
 	if err != nil {
-		return result, fmt.Errorf("shape: StructLike._unmarshalJSONPtrFieldLike: native ref unwrap; %w", err)
+		return nil, fmt.Errorf("shape: StructLike._unmarshalJSONPtrFieldLike: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *StructLike) _unmarshalJSONFieldLike(data []byte) (FieldLike, error) {
+	result, err := shared.JSONUnmarshal[FieldLike](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: StructLike._unmarshalJSONFieldLike: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -1821,14 +1793,6 @@ func (r *StructLike) _unmarshalJSONTag(data []byte) (Tag, error) {
 	result, err := shared.JSONUnmarshal[Tag](data)
 	if err != nil {
 		return result, fmt.Errorf("shape: StructLike._unmarshalJSONTag: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *StructLike) _unmarshalJSONbool(data []byte) (bool, error) {
-	var result bool
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("shape: StructLike._unmarshalJSONbool: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -2192,17 +2156,17 @@ func NumberLikeShape() Shape {
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/PrimitiveKind", PrimitiveKindFromJSON, PrimitiveKindToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/BooleanLike", BooleanLikeFromJSON, BooleanLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/StringLike", StringLikeFromJSON, StringLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/NumberLike", NumberLikeFromJSON, NumberLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveKind", PrimitiveKindFromJSON, PrimitiveKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.BooleanLike", BooleanLikeFromJSON, BooleanLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StringLike", StringLikeFromJSON, StringLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberLike", NumberLikeFromJSON, NumberLikeToJSON)
 }
 
 type PrimitiveKindUnionJSON struct {
 	Type        string          `json:"$type,omitempty"`
-	BooleanLike json.RawMessage `json:"BooleanLike,omitempty"`
-	StringLike  json.RawMessage `json:"StringLike,omitempty"`
-	NumberLike  json.RawMessage `json:"NumberLike,omitempty"`
+	BooleanLike json.RawMessage `json:"shape.BooleanLike,omitempty"`
+	StringLike  json.RawMessage `json:"shape.StringLike,omitempty"`
+	NumberLike  json.RawMessage `json:"shape.NumberLike,omitempty"`
 }
 
 func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
@@ -2220,11 +2184,11 @@ func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
 	}
 
 	switch data.Type {
-	case "BooleanLike":
+	case "shape.BooleanLike":
 		return BooleanLikeFromJSON(data.BooleanLike)
-	case "StringLike":
+	case "shape.StringLike":
 		return StringLikeFromJSON(data.StringLike)
-	case "NumberLike":
+	case "shape.NumberLike":
 		return NumberLikeFromJSON(data.NumberLike)
 	}
 
@@ -2236,7 +2200,7 @@ func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
 		return NumberLikeFromJSON(data.NumberLike)
 	}
 
-	return nil, fmt.Errorf("PrimitiveKind: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.PrimitiveKind: unknown type %s", data.Type)
 }
 
 func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
@@ -2252,7 +2216,7 @@ func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 			}
 
 			return json.Marshal(PrimitiveKindUnionJSON{
-				Type:        "BooleanLike",
+				Type:        "shape.BooleanLike",
 				BooleanLike: body,
 			})
 		},
@@ -2263,7 +2227,7 @@ func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 			}
 
 			return json.Marshal(PrimitiveKindUnionJSON{
-				Type:       "StringLike",
+				Type:       "shape.StringLike",
 				StringLike: body,
 			})
 		},
@@ -2274,7 +2238,7 @@ func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 			}
 
 			return json.Marshal(PrimitiveKindUnionJSON{
-				Type:       "NumberLike",
+				Type:       "shape.NumberLike",
 				NumberLike: body,
 			})
 		},
@@ -2761,31 +2725,31 @@ func Float64Shape() Shape {
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/NumberKind", NumberKindFromJSON, NumberKindToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/UInt8", UInt8FromJSON, UInt8ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/UInt16", UInt16FromJSON, UInt16ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/UInt32", UInt32FromJSON, UInt32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/UInt64", UInt64FromJSON, UInt64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberKind", NumberKindFromJSON, NumberKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt8", UInt8FromJSON, UInt8ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt16", UInt16FromJSON, UInt16ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt32", UInt32FromJSON, UInt32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt64", UInt64FromJSON, UInt64ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int8", Int8FromJSON, Int8ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Int16", Int16FromJSON, Int16ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Int32", Int32FromJSON, Int32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Int64", Int64FromJSON, Int64ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Float32", Float32FromJSON, Float32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Float64", Float64FromJSON, Float64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int16", Int16FromJSON, Int16ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int32", Int32FromJSON, Int32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int64", Int64FromJSON, Int64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float32", Float32FromJSON, Float32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float64", Float64FromJSON, Float64ToJSON)
 }
 
 type NumberKindUnionJSON struct {
 	Type    string          `json:"$type,omitempty"`
-	UInt8   json.RawMessage `json:"UInt8,omitempty"`
-	UInt16  json.RawMessage `json:"UInt16,omitempty"`
-	UInt32  json.RawMessage `json:"UInt32,omitempty"`
-	UInt64  json.RawMessage `json:"UInt64,omitempty"`
-	Int8    json.RawMessage `json:"Int8,omitempty"`
-	Int16   json.RawMessage `json:"Int16,omitempty"`
-	Int32   json.RawMessage `json:"Int32,omitempty"`
-	Int64   json.RawMessage `json:"Int64,omitempty"`
-	Float32 json.RawMessage `json:"Float32,omitempty"`
-	Float64 json.RawMessage `json:"Float64,omitempty"`
+	UInt8   json.RawMessage `json:"shape.UInt8,omitempty"`
+	UInt16  json.RawMessage `json:"shape.UInt16,omitempty"`
+	UInt32  json.RawMessage `json:"shape.UInt32,omitempty"`
+	UInt64  json.RawMessage `json:"shape.UInt64,omitempty"`
+	Int8    json.RawMessage `json:"shape.Int8,omitempty"`
+	Int16   json.RawMessage `json:"shape.Int16,omitempty"`
+	Int32   json.RawMessage `json:"shape.Int32,omitempty"`
+	Int64   json.RawMessage `json:"shape.Int64,omitempty"`
+	Float32 json.RawMessage `json:"shape.Float32,omitempty"`
+	Float64 json.RawMessage `json:"shape.Float64,omitempty"`
 }
 
 func NumberKindFromJSON(x []byte) (NumberKind, error) {
@@ -2803,25 +2767,25 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 	}
 
 	switch data.Type {
-	case "UInt8":
+	case "shape.UInt8":
 		return UInt8FromJSON(data.UInt8)
-	case "UInt16":
+	case "shape.UInt16":
 		return UInt16FromJSON(data.UInt16)
-	case "UInt32":
+	case "shape.UInt32":
 		return UInt32FromJSON(data.UInt32)
-	case "UInt64":
+	case "shape.UInt64":
 		return UInt64FromJSON(data.UInt64)
-	case "Int8":
+	case "shape.Int8":
 		return Int8FromJSON(data.Int8)
-	case "Int16":
+	case "shape.Int16":
 		return Int16FromJSON(data.Int16)
-	case "Int32":
+	case "shape.Int32":
 		return Int32FromJSON(data.Int32)
-	case "Int64":
+	case "shape.Int64":
 		return Int64FromJSON(data.Int64)
-	case "Float32":
+	case "shape.Float32":
 		return Float32FromJSON(data.Float32)
-	case "Float64":
+	case "shape.Float64":
 		return Float64FromJSON(data.Float64)
 	}
 
@@ -2847,7 +2811,7 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 		return Float64FromJSON(data.Float64)
 	}
 
-	return nil, fmt.Errorf("NumberKind: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.NumberKind: unknown type %s", data.Type)
 }
 
 func NumberKindToJSON(x NumberKind) ([]byte, error) {
@@ -2863,7 +2827,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:  "UInt8",
+				Type:  "shape.UInt8",
 				UInt8: body,
 			})
 		},
@@ -2874,7 +2838,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:   "UInt16",
+				Type:   "shape.UInt16",
 				UInt16: body,
 			})
 		},
@@ -2885,7 +2849,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:   "UInt32",
+				Type:   "shape.UInt32",
 				UInt32: body,
 			})
 		},
@@ -2896,7 +2860,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:   "UInt64",
+				Type:   "shape.UInt64",
 				UInt64: body,
 			})
 		},
@@ -2907,7 +2871,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type: "Int8",
+				Type: "shape.Int8",
 				Int8: body,
 			})
 		},
@@ -2918,7 +2882,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:  "Int16",
+				Type:  "shape.Int16",
 				Int16: body,
 			})
 		},
@@ -2929,7 +2893,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:  "Int32",
+				Type:  "shape.Int32",
 				Int32: body,
 			})
 		},
@@ -2940,7 +2904,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:  "Int64",
+				Type:  "shape.Int64",
 				Int64: body,
 			})
 		},
@@ -2951,7 +2915,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:    "Float32",
+				Type:    "shape.Float32",
 				Float32: body,
 			})
 		},
@@ -2962,7 +2926,7 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			}
 
 			return json.Marshal(NumberKindUnionJSON{
-				Type:    "Float64",
+				Type:    "shape.Float64",
 				Float64: body,
 			})
 		},
@@ -3639,17 +3603,17 @@ func AndGuardShape() Shape {
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Guard", GuardFromJSON, GuardToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Enum", EnumFromJSON, EnumToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/Required", RequiredFromJSON, RequiredToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/AndGuard", AndGuardFromJSON, AndGuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AndGuard", AndGuardFromJSON, AndGuardToJSON)
 }
 
 type GuardUnionJSON struct {
 	Type     string          `json:"$type,omitempty"`
-	Enum     json.RawMessage `json:"Enum,omitempty"`
-	Required json.RawMessage `json:"Required,omitempty"`
-	AndGuard json.RawMessage `json:"AndGuard,omitempty"`
+	Enum     json.RawMessage `json:"shape.Enum,omitempty"`
+	Required json.RawMessage `json:"shape.Required,omitempty"`
+	AndGuard json.RawMessage `json:"shape.AndGuard,omitempty"`
 }
 
 func GuardFromJSON(x []byte) (Guard, error) {
@@ -3667,11 +3631,11 @@ func GuardFromJSON(x []byte) (Guard, error) {
 	}
 
 	switch data.Type {
-	case "Enum":
+	case "shape.Enum":
 		return EnumFromJSON(data.Enum)
-	case "Required":
+	case "shape.Required":
 		return RequiredFromJSON(data.Required)
-	case "AndGuard":
+	case "shape.AndGuard":
 		return AndGuardFromJSON(data.AndGuard)
 	}
 
@@ -3683,7 +3647,7 @@ func GuardFromJSON(x []byte) (Guard, error) {
 		return AndGuardFromJSON(data.AndGuard)
 	}
 
-	return nil, fmt.Errorf("Guard: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.Guard: unknown type %s", data.Type)
 }
 
 func GuardToJSON(x Guard) ([]byte, error) {
@@ -3699,7 +3663,7 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			}
 
 			return json.Marshal(GuardUnionJSON{
-				Type: "Enum",
+				Type: "shape.Enum",
 				Enum: body,
 			})
 		},
@@ -3710,7 +3674,7 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			}
 
 			return json.Marshal(GuardUnionJSON{
-				Type:     "Required",
+				Type:     "shape.Required",
 				Required: body,
 			})
 		},
@@ -3721,7 +3685,7 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			}
 
 			return json.Marshal(GuardUnionJSON{
-				Type:     "AndGuard",
+				Type:     "shape.AndGuard",
 				AndGuard: body,
 			})
 		},
