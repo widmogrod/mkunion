@@ -11,7 +11,7 @@ func ToJsonSchema(s Shape) string {
 }
 
 func toJsonSchema(s Shape, definitions map[string]string, depth int, desc *string) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		s,
 		func(x *Any) string {
 			return `{"type": "any"` + toDescription(desc) + `}`
@@ -19,17 +19,25 @@ func toJsonSchema(s Shape, definitions map[string]string, depth int, desc *strin
 		func(x *RefName) string {
 			return `{"$ref": "#/$defs/` + x.Name + `"` + toDescription(desc) + `}`
 		},
+		func(x *PointerLike) string {
+			return toJsonSchema(x.Type, definitions, depth, desc)
+		},
 		func(x *AliasLike) string {
 			panic("not implemented")
 		},
-		func(x *BooleanLike) string {
-			return `{"type": "boolean"` + toDescription(desc) + `}`
-		},
-		func(x *StringLike) string {
-			return `{"type": "string"` + toDescription(desc) + `}`
-		},
-		func(x *NumberLike) string {
-			return `{"type": "number"` + toDescription(desc) + `}`
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return `{"type": "boolean"` + toDescription(desc) + `}`
+				},
+				func(x *StringLike) string {
+					return `{"type": "string"` + toDescription(desc) + `}`
+				},
+				func(x *NumberLike) string {
+					return `{"type": "number"` + toDescription(desc) + `}`
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return `{"type": "array", "items": ` + toJsonSchema(x.Element, definitions, depth+1, nil) + toDefinitions(definitions, depth) + toDescription(desc) + `}`

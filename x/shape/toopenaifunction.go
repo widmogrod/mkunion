@@ -16,7 +16,7 @@ func ToOpenAIFunctionDefinition(name, desc string, in Shape) openai.FunctionDefi
 }
 
 func toFunctionParameters(in Shape) *jsonschema.Definition {
-	return MustMatchShape(
+	return MatchShapeR1(
 		in,
 		func(x *Any) *jsonschema.Definition {
 			//TODO: this should be list of all possible types [object, string, number, boolean, null]
@@ -34,25 +34,33 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 				Type: jsonschema.Null,
 			}
 		},
+		func(x *PointerLike) *jsonschema.Definition {
+			return toFunctionParameters(x.Type)
+		},
 		func(x *AliasLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
 				Type: jsonschema.String,
 			}
 		},
-		func(x *BooleanLike) *jsonschema.Definition {
-			return &jsonschema.Definition{
-				Type: jsonschema.Boolean,
-			}
-		},
-		func(x *StringLike) *jsonschema.Definition {
-			return &jsonschema.Definition{
-				Type: jsonschema.String,
-			}
-		},
-		func(x *NumberLike) *jsonschema.Definition {
-			return &jsonschema.Definition{
-				Type: jsonschema.Number,
-			}
+		func(x *PrimitiveLike) *jsonschema.Definition {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) *jsonschema.Definition {
+					return &jsonschema.Definition{
+						Type: jsonschema.Boolean,
+					}
+				},
+				func(x *StringLike) *jsonschema.Definition {
+					return &jsonschema.Definition{
+						Type: jsonschema.String,
+					}
+				},
+				func(x *NumberLike) *jsonschema.Definition {
+					return &jsonschema.Definition{
+						Type: jsonschema.Number,
+					}
+				},
+			)
 		},
 		func(x *ListLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
@@ -109,7 +117,7 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 }
 
 func toVariantName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(a *Any) string {
 			return "any"
@@ -119,22 +127,25 @@ func toVariantName(x Shape) string {
 			//panic("not implemented")
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
+		func(x *PointerLike) string {
+			return toVariantName(x.Type)
+		},
 		func(x *AliasLike) string {
 			panic("not implemented")
 		},
-		func(x *BooleanLike) string {
-			return "boolean"
-			//panic("not implemented")
-		},
-		func(x *StringLike) string {
-			return "string"
-			//panic("not implemented")
-
-		},
-		func(x *NumberLike) string {
-			return "number"
-			//panic("not implemented")
-
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "boolean"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return "number"
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return "list"
@@ -171,7 +182,7 @@ func toOpenAIFieldName(guard Guard, field *jsonschema.Definition) *jsonschema.De
 		return field
 	}
 
-	return MustMatchGuard(
+	return MatchGuardR1(
 		guard,
 		func(y *Enum) *jsonschema.Definition {
 			field.Enum = y.Val

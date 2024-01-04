@@ -286,7 +286,7 @@ func (d *DynamoDBRepository[A]) buildFilterExpression(query FindingRecords[Recor
 }
 
 func toExpression(where predicate.Predicate, names map[string]string) string {
-	return predicate.MustMatchPredicate(
+	return predicate.MatchPredicateR1(
 		where,
 		func(x *predicate.And) string {
 			var result []string
@@ -320,7 +320,7 @@ func toExpression(where predicate.Predicate, names map[string]string) string {
 			}
 
 			for _, loc := range locs {
-				part := schema.MustMatchLocation(
+				part := schema.MatchLocationR1(
 					loc,
 					func(x *schema.LocationField) string {
 						return x.Name
@@ -347,7 +347,7 @@ func toExpression(where predicate.Predicate, names map[string]string) string {
 
 			//for _, part := range parts {
 			//	if _, ok := names[part]; !ok {
-			//		// TODO(schema.Union) find a better way to handle # union separator
+			//		// TODO(schema.union) find a better way to handle # union separator
 			//		// for example insteaf hard coded schema.Map use schema.UnionType....
 			//		if part == "[*]" {
 			//			part = "schema.Map"
@@ -359,7 +359,7 @@ func toExpression(where predicate.Predicate, names map[string]string) string {
 			//	named = append(named, names[part])
 			//}
 
-			return predicate.MustMatchBindable(
+			return predicate.MatchBindableR1(
 				x.BindValue,
 				func(y *predicate.BindValue) string {
 					return strings.Join(named, ".") + " " + x.Operation + " " + y.BindName

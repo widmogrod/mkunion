@@ -95,7 +95,7 @@ func FromPrimitiveGo(x any) Schema {
 }
 
 func ToGoPrimitive(x Schema) (any, error) {
-	return MustMatchSchemaR2(
+	return MatchSchemaR2(
 		x,
 		func(x *None) (any, error) {
 			return nil, nil
@@ -203,7 +203,7 @@ func FromGo[A any](x A) Schema {
 }
 
 func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		xschema,
 		func(x *shape.Any) Schema {
 			panic("not implemented")
@@ -219,6 +219,9 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 
 			return FromGoReflect(y, yreflect)
 		},
+		func(x *shape.PointerLike) Schema {
+			return FromGoReflect(x.Type, yreflect)
+		},
 		func(x *shape.AliasLike) Schema {
 			if yreflect.Kind() == reflect.Ptr {
 				yreflect = yreflect.Elem()
@@ -226,72 +229,77 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 
 			return FromGoReflect(x.Type, yreflect)
 		},
-		func(x *shape.BooleanLike) Schema {
-			yreflect, y := toTheCoreValue(yreflect)
-			if y != nil {
-				return y
-			}
-
-			if yreflect.Kind() != reflect.Bool {
-				panic(fmt.Errorf("schema.FromGoReflect: shape.BooleanLike expected reflect.Bool, got %s", yreflect.String()))
-			}
-
-			return MkBool(yreflect.Bool())
-		},
-		func(x *shape.StringLike) Schema {
-			yreflect, y := toTheCoreValue(yreflect)
-			if y != nil {
-				return y
-			}
-
-			if yreflect.Kind() != reflect.String {
-				panic(fmt.Errorf("schema.FromGoReflect: shape.StringLike expected reflect.String, got %s", yreflect.String()))
-			}
-
-			return MkString(yreflect.String())
-		},
-		func(x *shape.NumberLike) Schema {
-			yreflect, y := toTheCoreValue(yreflect)
-			if y != nil {
-				return y
-			}
-
-			// this is "int" type
-			if x.Kind == nil {
-				return MkInt(int(yreflect.Int()))
-			}
-
-			return shape.MustMatchNumberKind(
+		func(x *shape.PrimitiveLike) Schema {
+			return shape.MatchPrimitiveKindR1(
 				x.Kind,
-				func(x *shape.UInt8) Schema {
-					return MkInt(int(yreflect.Uint()))
+				func(x *shape.BooleanLike) Schema {
+					yreflect, y := toTheCoreValue(yreflect)
+					if y != nil {
+						return y
+					}
+
+					if yreflect.Kind() != reflect.Bool {
+						panic(fmt.Errorf("schema.FromGoReflect: shape.BooleanLike expected reflect.Bool, got %s", yreflect.String()))
+					}
+
+					return MkBool(yreflect.Bool())
 				},
-				func(x *shape.UInt16) Schema {
-					return MkInt(int(yreflect.Uint()))
+				func(x *shape.StringLike) Schema {
+					yreflect, y := toTheCoreValue(yreflect)
+					if y != nil {
+						return y
+					}
+
+					if yreflect.Kind() != reflect.String {
+						panic(fmt.Errorf("schema.FromGoReflect: shape.StringLike expected reflect.String, got %s", yreflect.String()))
+					}
+
+					return MkString(yreflect.String())
 				},
-				func(x *shape.UInt32) Schema {
-					return MkInt(int(yreflect.Uint()))
-				},
-				func(x *shape.UInt64) Schema {
-					return MkInt(int(yreflect.Uint()))
-				},
-				func(x *shape.Int8) Schema {
-					return MkInt(int(yreflect.Int()))
-				},
-				func(x *shape.Int16) Schema {
-					return MkInt(int(yreflect.Int()))
-				},
-				func(x *shape.Int32) Schema {
-					return MkInt(int(yreflect.Int()))
-				},
-				func(x *shape.Int64) Schema {
-					return MkInt(int(yreflect.Int()))
-				},
-				func(x *shape.Float32) Schema {
-					return MkFloat(yreflect.Float())
-				},
-				func(x *shape.Float64) Schema {
-					return MkFloat(yreflect.Float())
+				func(x *shape.NumberLike) Schema {
+					yreflect, y := toTheCoreValue(yreflect)
+					if y != nil {
+						return y
+					}
+
+					// this is "int" type
+					if x.Kind == nil {
+						return MkInt(int(yreflect.Int()))
+					}
+
+					return shape.MatchNumberKindR1(
+						x.Kind,
+						func(x *shape.UInt8) Schema {
+							return MkInt(int(yreflect.Uint()))
+						},
+						func(x *shape.UInt16) Schema {
+							return MkInt(int(yreflect.Uint()))
+						},
+						func(x *shape.UInt32) Schema {
+							return MkInt(int(yreflect.Uint()))
+						},
+						func(x *shape.UInt64) Schema {
+							return MkInt(int(yreflect.Uint()))
+						},
+						func(x *shape.Int8) Schema {
+							return MkInt(int(yreflect.Int()))
+						},
+						func(x *shape.Int16) Schema {
+							return MkInt(int(yreflect.Int()))
+						},
+						func(x *shape.Int32) Schema {
+							return MkInt(int(yreflect.Int()))
+						},
+						func(x *shape.Int64) Schema {
+							return MkInt(int(yreflect.Int()))
+						},
+						func(x *shape.Float32) Schema {
+							return MkFloat(yreflect.Float())
+						},
+						func(x *shape.Float64) Schema {
+							return MkFloat(yreflect.Float())
+						},
+					)
 				},
 			)
 		},
@@ -407,7 +415,7 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 		return reflect.Zero(zreflect), nil
 	}
 
-	return shape.MustMatchShapeR2(
+	return shape.MatchShapeR2(
 		xshape,
 		func(x *shape.Any) (reflect.Value, error) {
 			panic("not implemented")
@@ -419,6 +427,9 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 			}
 
 			return ToGoReflect(newShape, ydata, zreflect)
+		},
+		func(x *shape.PointerLike) (reflect.Value, error) {
+			return ToGoReflect(x.Type, ydata, zreflect)
 		},
 		func(x *shape.AliasLike) (reflect.Value, error) {
 			value, err := ToGoReflect(x.Type, ydata, zreflect)
@@ -438,65 +449,71 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 
 			return value.Convert(zreflect), nil
 		},
-		func(x *shape.BooleanLike) (reflect.Value, error) {
-			data, ok := ydata.(*Bool)
-			if !ok {
-				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.BooleanLike expected *Bool, got %T", ydata)
-			}
-
-			return reflect.ValueOf(bool(*data)), nil
-		},
-		func(x *shape.StringLike) (reflect.Value, error) {
-			data, ok := ydata.(*String)
-			if !ok {
-				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.StringLike expected *String, got %T", ydata)
-			}
-			return reflect.ValueOf(string(*data)), nil
-		},
-		func(x *shape.NumberLike) (reflect.Value, error) {
-			data, ok := ydata.(*Number)
-			if !ok {
-				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.NumberLike expected *Number, got %T", ydata)
-			}
-
-			if nil == x.Kind {
-				return reflect.ValueOf(int(*data)).Convert(zreflect), nil
-			}
-
-			return shape.MustMatchNumberKindR2(
+		func(x *shape.PrimitiveLike) (reflect.Value, error) {
+			return shape.MatchPrimitiveKindR2(
 				x.Kind,
-				func(x *shape.UInt8) (reflect.Value, error) {
-					return reflect.ValueOf(uint8(*data)), nil
+				func(x *shape.BooleanLike) (reflect.Value, error) {
+					data, ok := ydata.(*Bool)
+					if !ok {
+						return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.BooleanLike expected *Bool, got %T", ydata)
+					}
+
+					return reflect.ValueOf(bool(*data)), nil
 				},
-				func(x *shape.UInt16) (reflect.Value, error) {
-					return reflect.ValueOf(uint16(*data)), nil
+				func(x *shape.StringLike) (reflect.Value, error) {
+					data, ok := ydata.(*String)
+					if !ok {
+						return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.StringLike expected *String, got %T", ydata)
+					}
+					return reflect.ValueOf(string(*data)), nil
 				},
-				func(x *shape.UInt32) (reflect.Value, error) {
-					return reflect.ValueOf(uint32(*data)), nil
-				},
-				func(x *shape.UInt64) (reflect.Value, error) {
-					return reflect.ValueOf(uint64(*data)), nil
-				},
-				func(x *shape.Int8) (reflect.Value, error) {
-					return reflect.ValueOf(int8(*data)), nil
-				},
-				func(x *shape.Int16) (reflect.Value, error) {
-					return reflect.ValueOf(int16(*data)), nil
-				},
-				func(x *shape.Int32) (reflect.Value, error) {
-					return reflect.ValueOf(int32(*data)), nil
-				},
-				func(x *shape.Int64) (reflect.Value, error) {
-					return reflect.ValueOf(int64(*data)), nil
-				},
-				func(x *shape.Float32) (reflect.Value, error) {
-					return reflect.ValueOf(float32(*data)), nil
-				},
-				func(x *shape.Float64) (reflect.Value, error) {
-					return reflect.ValueOf(float64(*data)), nil
+				func(x *shape.NumberLike) (reflect.Value, error) {
+					data, ok := ydata.(*Number)
+					if !ok {
+						return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.NumberLike expected *Number, got %T", ydata)
+					}
+
+					if nil == x.Kind {
+						return reflect.ValueOf(int(*data)).Convert(zreflect), nil
+					}
+
+					return shape.MatchNumberKindR2(
+						x.Kind,
+						func(x *shape.UInt8) (reflect.Value, error) {
+							return reflect.ValueOf(uint8(*data)), nil
+						},
+						func(x *shape.UInt16) (reflect.Value, error) {
+							return reflect.ValueOf(uint16(*data)), nil
+						},
+						func(x *shape.UInt32) (reflect.Value, error) {
+							return reflect.ValueOf(uint32(*data)), nil
+						},
+						func(x *shape.UInt64) (reflect.Value, error) {
+							return reflect.ValueOf(uint64(*data)), nil
+						},
+						func(x *shape.Int8) (reflect.Value, error) {
+							return reflect.ValueOf(int8(*data)), nil
+						},
+						func(x *shape.Int16) (reflect.Value, error) {
+							return reflect.ValueOf(int16(*data)), nil
+						},
+						func(x *shape.Int32) (reflect.Value, error) {
+							return reflect.ValueOf(int32(*data)), nil
+						},
+						func(x *shape.Int64) (reflect.Value, error) {
+							return reflect.ValueOf(int64(*data)), nil
+						},
+						func(x *shape.Float32) (reflect.Value, error) {
+							return reflect.ValueOf(float32(*data)), nil
+						},
+						func(x *shape.Float64) (reflect.Value, error) {
+							return reflect.ValueOf(float64(*data)), nil
+						},
+					)
 				},
 			)
 		},
+
 		func(x *shape.ListLike) (reflect.Value, error) {
 			switch data := ydata.(type) {
 			case *Binary:

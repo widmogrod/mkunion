@@ -1,16 +1,19 @@
 package shape
 
-// go:generate go run ../../cmd/mkunion/main.go serde
+// go:generate ../../cmd/mkunion/mkunion
+// go:generate ../../cmd/mkunion/mkunion serde
 
-// go:generate go run ../../cmd/mkunion/main.go -name=Shape
+//go:tag mkunion:"Shape"
 type (
 	Any     struct{}
 	RefName struct {
 		Name          string
 		PkgName       string
 		PkgImportName string
-		IsPointer     bool
 		Indexed       []Shape
+	}
+	PointerLike struct {
+		Type Shape
 	}
 	AliasLike struct {
 		Name          string
@@ -20,6 +23,41 @@ type (
 		Type          Shape
 		Tags          map[string]Tag
 	}
+	PrimitiveLike struct {
+		Kind PrimitiveKind
+	}
+	ListLike struct {
+		//Extend *ListLike
+		//Guard  Guard
+		Element Shape
+		// ArrayLen is a pointer to int, when it's nil, it means it's a slice.
+		ArrayLen *int
+	}
+	MapLike struct {
+		//Extend *MapLike
+		//Guard  Guard
+		Key Shape
+		Val Shape
+	}
+	StructLike struct {
+		Name          string
+		PkgName       string
+		PkgImportName string
+		TypeParams    []TypeParam
+		Fields        []*FieldLike
+		Tags          map[string]Tag
+	}
+	UnionLike struct {
+		Name          string
+		PkgName       string
+		PkgImportName string
+		Variant       []Shape
+		Tags          map[string]Tag
+	}
+)
+
+//go:tag mkunion:"PrimitiveKind"
+type (
 	BooleanLike struct{}
 	// StringLike is a string type, and when it has name, it means it named type.
 	// For example:
@@ -31,39 +69,6 @@ type (
 		Kind NumberKind
 		//Guard Guard
 	}
-	ListLike struct {
-		//Extend *ListLike
-		//Guard  Guard
-		Element          Shape
-		ElementIsPointer bool
-		// ArrayLen is a pointer to int, when it's nil, it means it's a slice.
-		ArrayLen *int
-	}
-	MapLike struct {
-		//Extend *MapLike
-		//Guard  Guard
-		Key          Shape
-		Val          Shape
-		KeyIsPointer bool
-		ValIsPointer bool
-	}
-	StructLike struct {
-		Name          string
-		PkgName       string
-		PkgImportName string
-		TypeParams    []TypeParam
-		Fields        []*FieldLike
-		Tags          map[string]Tag
-		// this refers when struct is instantiated
-		IsPointer bool
-	}
-	UnionLike struct {
-		Name          string
-		PkgName       string
-		PkgImportName string
-		Variant       []Shape
-		Tags          map[string]Tag
-	}
 )
 
 //go:tag serde:"json"
@@ -72,7 +77,7 @@ type TypeParam struct {
 	Type Shape
 }
 
-// go:generate go run ../../cmd/mkunion/main.go -name=NumberKind
+//go:tag mkunion:"NumberKind"
 type (
 	UInt8   struct{}
 	UInt16  struct{}
@@ -107,7 +112,12 @@ func IsBinary(x Shape) bool {
 		return false
 	}
 
-	num, isNumber := list.Element.(*NumberLike)
+	prim, isPrimitive := list.Element.(*PrimitiveLike)
+	if !isPrimitive {
+		return false
+	}
+
+	num, isNumber := prim.Kind.(*NumberLike)
 	if !isNumber {
 		return false
 	}
@@ -121,7 +131,7 @@ func NumberKindToGoName(x NumberKind) string {
 		return "int"
 	}
 
-	return MustMatchNumberKind(
+	return MatchNumberKindR1(
 		x,
 		func(x *UInt8) string {
 			return "uint8"
@@ -157,12 +167,11 @@ func NumberKindToGoName(x NumberKind) string {
 }
 
 type FieldLike struct {
-	Name      string
-	Type      Shape
-	Desc      *string
-	Guard     Guard
-	IsPointer bool
-	Tags      map[string]Tag
+	Name  string
+	Type  Shape
+	Desc  *string
+	Guard Guard
+	Tags  map[string]Tag
 }
 
 type Tag struct {
@@ -187,7 +196,7 @@ func TagGetValue(x map[string]Tag, tag, defaults string) string {
 	return t.Value
 }
 
-// go:generate go run ../../cmd/mkunion/main.go -name=Guard
+//go:tag mkunion:"Guard"
 type (
 	Enum struct {
 		Val []string
@@ -204,6 +213,11 @@ type (
 		L []Guard
 	}
 )
+
+func IsRequired(x Guard) bool {
+	_, isRequired := x.(*Required)
+	return isRequired
+}
 
 func ConcatGuard(a, b Guard) Guard {
 	if a == nil {
@@ -228,7 +242,7 @@ func ConcatGuard(a, b Guard) Guard {
 }
 
 func Tags(x Shape) map[string]Tag {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) map[string]Tag {
 			return nil
@@ -236,17 +250,25 @@ func Tags(x Shape) map[string]Tag {
 		func(x *RefName) map[string]Tag {
 			return nil
 		},
+		func(x *PointerLike) map[string]Tag {
+			return nil
+		},
 		func(x *AliasLike) map[string]Tag {
 			return x.Tags
 		},
-		func(x *BooleanLike) map[string]Tag {
-			return nil
-		},
-		func(x *StringLike) map[string]Tag {
-			return nil
-		},
-		func(x *NumberLike) map[string]Tag {
-			return nil
+		func(x *PrimitiveLike) map[string]Tag {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) map[string]Tag {
+					return nil
+				},
+				func(x *StringLike) map[string]Tag {
+					return nil
+				},
+				func(x *NumberLike) map[string]Tag {
+					return nil
+				},
+			)
 		},
 		func(x *ListLike) map[string]Tag {
 			return nil
@@ -268,11 +290,9 @@ func Ptr[A any](x A) *A {
 }
 
 func IsPointer(x Shape) bool {
-	switch y := x.(type) {
-	case *RefName:
-		return y.IsPointer
-	case *StructLike:
-		return y.IsPointer
+	switch x.(type) {
+	case *PointerLike:
+		return true
 	}
 
 	return false
@@ -291,12 +311,17 @@ func UnwrapPointer(x string) string {
 }
 
 func IsString(x Shape) bool {
-	_, ok := x.(*StringLike)
+	prim, isPrimitive := x.(*PrimitiveLike)
+	if !isPrimitive {
+		return false
+	}
+
+	_, ok := prim.Kind.(*StringLike)
 	return ok
 }
 
 func ExtractRefs(x Shape) []*RefName {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) []*RefName {
 			return nil
@@ -316,6 +341,9 @@ func ExtractRefs(x Shape) []*RefName {
 
 			return append(result, x)
 		},
+		func(x *PointerLike) []*RefName {
+			return ExtractRefs(x.Type)
+		},
 		func(x *AliasLike) []*RefName {
 			var result []*RefName
 			// convert alias as ref also
@@ -330,14 +358,19 @@ func ExtractRefs(x Shape) []*RefName {
 			result = append(result, ExtractRefs(x.Type)...)
 			return result
 		},
-		func(x *BooleanLike) []*RefName {
-			return nil
-		},
-		func(x *StringLike) []*RefName {
-			return nil
-		},
-		func(x *NumberLike) []*RefName {
-			return nil
+		func(x *PrimitiveLike) []*RefName {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) []*RefName {
+					return nil
+				},
+				func(x *StringLike) []*RefName {
+					return nil
+				},
+				func(x *NumberLike) []*RefName {
+					return nil
+				},
+			)
 		},
 		func(x *ListLike) []*RefName {
 			return ExtractRefs(x.Element)
@@ -357,7 +390,6 @@ func ExtractRefs(x Shape) []*RefName {
 				Name:          x.Name,
 				PkgName:       x.PkgName,
 				PkgImportName: x.PkgImportName,
-				IsPointer:     x.IsPointer,
 			})
 
 			for _, field := range x.Fields {

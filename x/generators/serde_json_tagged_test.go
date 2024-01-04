@@ -73,12 +73,12 @@ func (r *ListOf2[T1,T2]) _marshalJSONListOf2Lb_T1CommaT2_bL(x ListOf2[T1,T2]) ([
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name ListOf; %w", err)
 	}
 	partial["ListOf"] = fieldListOf
-	if x.ListOfPtr != nil {
-		var fieldListOfPtr []byte
-		fieldListOfPtr, err = r._marshalJSONPtrListOfLb_T2_bL(x.ListOfPtr)
-		if err != nil {
-			return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name ListOfPtr; %w", err)
-		}
+	var fieldListOfPtr []byte
+	fieldListOfPtr, err = r._marshalJSONPtrListOfLb_T2_bL(x.ListOfPtr)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name ListOfPtr; %w", err)
+	}
+	if fieldListOfPtr != nil {
 		partial["ListOfPtr"] = fieldListOfPtr
 	}
 	var fieldTime []byte
@@ -170,9 +170,15 @@ func (r *ListOf2[T1,T2]) _marshalJSONListOfLb_T1_bL(x ListOf[T1]) ([]byte, error
 	return result, nil
 }
 func (r *ListOf2[T1,T2]) _marshalJSONPtrListOfLb_T2_bL(x *ListOf[T2]) ([]byte, error) {
-	result, err := shared.JSONMarshal[*ListOf[T2]](x)
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONListOfLb_T2_bL(*x)
+}
+func (r *ListOf2[T1,T2]) _marshalJSONListOfLb_T2_bL(x ListOf[T2]) ([]byte, error) {
+	result, err := shared.JSONMarshal[ListOf[T2]](x)
 	if err != nil {
-		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONPtrListOfLb_T2_bL:; %w", err)
+		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOfLb_T2_bL:; %w", err)
 	}
 	return result, nil
 }
@@ -259,7 +265,7 @@ func (r *ListOf2[T1,T2]) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: ListOf2[T1,T2]._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: ListOf2[T1,T2]._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -328,9 +334,22 @@ func (r *ListOf2[T1,T2]) _unmarshalJSONListOfLb_T1_bL(data []byte) (ListOf[T1], 
 	return result, nil
 }
 func (r *ListOf2[T1,T2]) _unmarshalJSONPtrListOfLb_T2_bL(data []byte) (*ListOf[T2], error) {
-	result, err := shared.JSONUnmarshal[*ListOf[T2]](data)
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONListOfLb_T2_bL(data)
 	if err != nil {
-		return result, fmt.Errorf("testutils: ListOf2[T1,T2]._unmarshalJSONPtrListOfLb_T2_bL: native ref unwrap; %w", err)
+		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._unmarshalJSONPtrListOfLb_T2_bL: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *ListOf2[T1,T2]) _unmarshalJSONListOfLb_T2_bL(data []byte) (ListOf[T2], error) {
+	result, err := shared.JSONUnmarshal[ListOf[T2]](data)
+	if err != nil {
+		return result, fmt.Errorf("testutils: ListOf2[T1,T2]._unmarshalJSONListOfLb_T2_bL: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -412,7 +431,7 @@ func (r *K) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -552,7 +571,7 @@ func (r *Ka) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

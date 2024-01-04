@@ -7,7 +7,7 @@ import (
 )
 
 func ToDynamoDB(x Schema) types.AttributeValue {
-	return MustMatchSchema(
+	return MatchSchemaR1(
 		x,
 		func(x *None) types.AttributeValue {
 			return &types.AttributeValueMemberNULL{

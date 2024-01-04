@@ -186,7 +186,7 @@ func (g *ShapeTagged) generateVariantFunc(s shape.Shape) (string, error) {
 }
 
 func ShapeToString(x shape.Shape) string {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		x,
 		func(x *shape.Any) string {
 			return `&shape.Any{}`
@@ -199,9 +199,9 @@ func ShapeToString(x shape.Shape) string {
 			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
 			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
 
-			if x.IsPointer {
-				fmt.Fprintf(result, "\tIsPointer: %v,\n", x.IsPointer)
-			}
+			//if x.IsPointer {
+			//	fmt.Fprintf(result, "\tIsPointer: %v,\n", x.IsPointer)
+			//}
 
 			if len(x.Indexed) > 0 {
 				fmt.Fprintf(result, "\tIndexed: []shape.Shape{\n")
@@ -211,6 +211,15 @@ func ShapeToString(x shape.Shape) string {
 				fmt.Fprintf(result, "\t},\n")
 			}
 
+			fmt.Fprintf(result, "}")
+
+			return result.String()
+		},
+		func(x *shape.PointerLike) string {
+			result := &bytes.Buffer{}
+
+			fmt.Fprintf(result, "&shape.PointerLike{\n")
+			fmt.Fprintf(result, "\tType: %s,\n", padLeftTabs2(1, ShapeToString(x.Type)))
 			fmt.Fprintf(result, "}")
 
 			return result.String()
@@ -233,32 +242,36 @@ func ShapeToString(x shape.Shape) string {
 
 			return result.String()
 		},
-		func(x *shape.BooleanLike) string {
-			return "&shape.BooleanLike{}"
-		},
-		func(x *shape.StringLike) string {
-			return "&shape.StringLike{}"
-		},
-		func(x *shape.NumberLike) string {
-			result := &bytes.Buffer{}
+		func(x *shape.PrimitiveLike) string {
+			return shape.MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *shape.BooleanLike) string {
+					return "&shape.PrimitiveLike{Kind: &shape.BooleanLike{}}"
+				},
+				func(x *shape.StringLike) string {
+					return "&shape.PrimitiveLike{Kind: &shape.StringLike{}}"
+				},
+				func(x *shape.NumberLike) string {
+					result := &bytes.Buffer{}
 
-			fmt.Fprintf(result, "&shape.NumberLike{")
-			if x.Kind != nil {
-				fmt.Fprintf(result, "\n")
-				fmt.Fprintf(result, "\tKind: &%s,\n", KindToGoName(x.Kind))
-			}
-			fmt.Fprintf(result, "}")
+					fmt.Fprintf(result, "&shape.PrimitiveLike{\n")
+					fmt.Fprintf(result, "\tKind: &shape.NumberLike{")
+					if x.Kind != nil {
+						fmt.Fprintf(result, "\n")
+						fmt.Fprintf(result, "\t\tKind: &%s,\n", KindToGoName(x.Kind))
+					}
+					fmt.Fprintf(result, "\t},\n")
+					fmt.Fprintf(result, "}")
 
-			return result.String()
+					return result.String()
+				},
+			)
 		},
 		func(x *shape.ListLike) string {
 			result := &bytes.Buffer{}
 
 			fmt.Fprintf(result, "&shape.ListLike{\n")
 			fmt.Fprintf(result, "\tElement: %s,\n", padLeftTabs2(1, ShapeToString(x.Element)))
-			if x.ElementIsPointer {
-				fmt.Fprintf(result, "\tElementIsPointer: %v,\n", x.ElementIsPointer)
-			}
 			if x.ArrayLen != nil {
 				fmt.Fprintf(result, "\tArrayLen: shape.Ptr(%d),\n", *x.ArrayLen)
 			}
@@ -271,14 +284,7 @@ func ShapeToString(x shape.Shape) string {
 
 			fmt.Fprintf(result, "&shape.MapLike{\n")
 			fmt.Fprintf(result, "\tKey: %s,\n", padLeftTabs2(1, ShapeToString(x.Key)))
-			if x.KeyIsPointer {
-				fmt.Fprintf(result, "\tKeyIsPointer: %v,\n", x.KeyIsPointer)
-			}
 			fmt.Fprintf(result, "\tVal: %s,\n", padLeftTabs2(1, ShapeToString(x.Val)))
-			if x.ValIsPointer {
-				fmt.Fprintf(result, "\tValIsPointer: %v,\n", x.ValIsPointer)
-			}
-
 			fmt.Fprintf(result, "}")
 
 			return result.String()
@@ -339,7 +345,7 @@ func ShapeToString(x shape.Shape) string {
 }
 
 func KindToGoName(kind shape.NumberKind) string {
-	return shape.MustMatchNumberKind(
+	return shape.MatchNumberKindR1(
 		kind,
 		func(x *shape.UInt8) string {
 			return "shape.UInt8{}"
@@ -398,9 +404,6 @@ func FieldLikeToString(x *shape.FieldLike, removeTypeName bool) string {
 	if x.Guard != nil {
 		fmt.Fprintf(result, "\tGuard: %s,\n", padLeftTabs2(1, GuardToString(x.Guard)))
 	}
-	if x.IsPointer {
-		fmt.Fprintf(result, "\tIsPointer: true,\n")
-	}
 	if len(x.Tags) > 0 {
 		fmt.Fprintf(result, "\tTags: %s,\n", padLeftTabs2(1, TagsToStr(x.Tags)))
 	}
@@ -414,7 +417,7 @@ func GuardToString(x shape.Guard) string {
 		return "nil"
 	}
 
-	return shape.MustMatchGuard(
+	return shape.MatchGuardR1(
 		x,
 		func(x *shape.Enum) string {
 			result := &bytes.Buffer{}

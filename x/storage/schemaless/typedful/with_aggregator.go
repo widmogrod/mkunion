@@ -180,7 +180,7 @@ func (repo *TypedRepoWithAggregator[T, C]) ReindexAll() {
 }
 
 func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) predicate.Predicate {
-	return predicate.MustMatchPredicate(
+	return predicate.MatchPredicateR1(
 		p,
 		func(x *predicate.And) predicate.Predicate {
 			r := &predicate.And{}
@@ -210,7 +210,7 @@ func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) 
 			return &predicate.Compare{
 				Location:  loc,
 				Operation: x.Operation,
-				BindValue: predicate.MustMatchBindable(
+				BindValue: predicate.MatchBindableR1(
 					x.BindValue,
 					func(x *predicate.BindValue) predicate.Bindable {
 						return x

@@ -372,7 +372,7 @@ func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONstring(data []byte) (string
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -404,7 +404,7 @@ func OpenSearchSearchResultHitShape() shape.Shape {
 			{
 				Name: "Sort",
 				Type: &shape.ListLike{
-					Element: &shape.StringLike{},
+					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 				},
 				Tags: map[string]shape.Tag{
 					"json": {

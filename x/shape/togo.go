@@ -7,7 +7,7 @@ import (
 )
 
 func ToGoPkgName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return ""
@@ -15,16 +15,13 @@ func ToGoPkgName(x Shape) string {
 		func(x *RefName) string {
 			return x.PkgName
 		},
+		func(x *PointerLike) string {
+			return ToGoPkgName(x.Type)
+		},
 		func(x *AliasLike) string {
 			return x.PkgName
 		},
-		func(x *BooleanLike) string {
-			return ""
-		},
-		func(x *StringLike) string {
-			return ""
-		},
-		func(x *NumberLike) string {
+		func(x *PrimitiveLike) string {
 			return ""
 		},
 		func(x *ListLike) string {
@@ -43,7 +40,7 @@ func ToGoPkgName(x Shape) string {
 }
 
 func ToGoPkgImportName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return ""
@@ -51,16 +48,13 @@ func ToGoPkgImportName(x Shape) string {
 		func(x *RefName) string {
 			return x.PkgImportName
 		},
+		func(x *PointerLike) string {
+			return ToGoPkgImportName(x.Type)
+		},
 		func(x *AliasLike) string {
 			return x.PkgImportName
 		},
-		func(x *BooleanLike) string {
-			return ""
-		},
-		func(x *StringLike) string {
-			return ""
-		},
-		func(x *NumberLike) string {
+		func(x *PrimitiveLike) string {
 			return ""
 		},
 		func(x *ListLike) string {
@@ -166,7 +160,7 @@ func ToGoFullTypeNameFromReflect(x reflect.Type) string {
 }
 
 func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return "any"
@@ -187,19 +181,27 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 				result = fmt.Sprintf("%s[%s]", result, strings.Join(names, ","))
 			}
 
-			return WrapPointerIf(result, x.IsPointer)
+			return result
+		},
+		func(x *PointerLike) string {
+			return fmt.Sprintf("*%s", ToGoTypeName(x.Type, options...))
 		},
 		func(x *AliasLike) string {
 			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 		},
-		func(x *BooleanLike) string {
-			return "bool"
-		},
-		func(x *StringLike) string {
-			return "string"
-		},
-		func(x *NumberLike) string {
-			return NumberKindToGoName(x.Kind)
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "bool"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return NumberKindToGoName(x.Kind)
+				},
+			)
 		},
 		func(x *ListLike) string {
 			prefix := "[]"
@@ -208,13 +210,13 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 			}
 			return fmt.Sprintf("%s%s",
 				prefix,
-				WrapPointerIf2(ToGoTypeName(x.Element, options...), x.ElementIsPointer, x.Element),
+				ToGoTypeName(x.Element, options...),
 			)
 		},
 		func(x *MapLike) string {
 			return fmt.Sprintf("map[%s]%s",
-				WrapPointerIf2(ToGoTypeName(x.Key, options...), x.KeyIsPointer, x.Key),
-				WrapPointerIf2(ToGoTypeName(x.Val, options...), x.ValIsPointer, x.Val),
+				ToGoTypeName(x.Key, options...),
+				ToGoTypeName(x.Val, options...),
 			)
 		},
 		func(x *StructLike) string {
@@ -232,7 +234,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 					)
 
 					result = packageWrap(options, x.PkgName, x.PkgImportName, result)
-					return WrapPointerIf(result, x.IsPointer)
+					return result
 				}
 			} else {
 				typeParams := ToGoTypeParamsNames(x)
@@ -243,12 +245,12 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 					)
 
 					result = packageWrap(options, x.PkgName, x.PkgImportName, result)
-					return WrapPointerIf(result, x.IsPointer)
+					return result
 				}
 			}
 
 			result := packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
-			return WrapPointerIf(result, x.IsPointer)
+			return result
 		},
 		func(x *UnionLike) string {
 			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
@@ -257,7 +259,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 }
 
 func ToGoTypeParamsNames(x Shape) []string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) []string {
 			return nil
@@ -265,16 +267,13 @@ func ToGoTypeParamsNames(x Shape) []string {
 		func(x *RefName) []string {
 			return nil
 		},
+		func(x *PointerLike) []string {
+			return ToGoTypeParamsNames(x.Type)
+		},
 		func(x *AliasLike) []string {
 			return nil
 		},
-		func(x *BooleanLike) []string {
-			return nil
-		},
-		func(x *StringLike) []string {
-			return nil
-		},
-		func(x *NumberLike) []string {
+		func(x *PrimitiveLike) []string {
 			return nil
 		},
 		func(x *ListLike) []string {
@@ -297,7 +296,7 @@ func ToGoTypeParamsNames(x Shape) []string {
 }
 
 func ToGoTypeParamsTypes(x Shape) []Shape {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) []Shape {
 			return nil
@@ -305,16 +304,13 @@ func ToGoTypeParamsTypes(x Shape) []Shape {
 		func(x *RefName) []Shape {
 			return nil
 		},
+		func(x *PointerLike) []Shape {
+			return ToGoTypeParamsTypes(x.Type)
+		},
 		func(x *AliasLike) []Shape {
 			return nil
 		},
-		func(x *BooleanLike) []Shape {
-			return nil
-		},
-		func(x *StringLike) []Shape {
-			return nil
-		},
-		func(x *NumberLike) []Shape {
+		func(x *PrimitiveLike) []Shape {
 			return nil
 		},
 		func(x *ListLike) []Shape {
@@ -336,43 +332,8 @@ func ToGoTypeParamsTypes(x Shape) []Shape {
 	)
 }
 
-func WrapPointerIf(name string, isPointer bool) string {
-	if isPointer {
-		return fmt.Sprintf("*%s", name)
-	}
-	return name
-}
-
-func WrapPointerIf2(name string, isPointer bool, x Shape) string {
-	if isPointer {
-		ref, ok := x.(*RefName)
-		if ok && ref.IsPointer {
-			// because pointer was already applied
-			return name
-		}
-		return fmt.Sprintf("*%s", name)
-	}
-	return name
-}
-
-func WrapPointerIfField(name string, field *FieldLike) string {
-	if !field.IsPointer {
-		return name
-	}
-
-	switch typ := field.Type.(type) {
-	case *RefName:
-		if typ.IsPointer {
-			// because pointer was already applied
-			return name
-		}
-	}
-
-	return fmt.Sprintf("*%s", name)
-}
-
 func ExtractPkgImportNames(x Shape) map[string]string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(y *Any) map[string]string {
 			return nil
@@ -389,6 +350,11 @@ func ExtractPkgImportNames(x Shape) map[string]string {
 
 			return result
 		},
+		func(x *PointerLike) map[string]string {
+			result := make(map[string]string)
+			result = joinMaps(result, ExtractPkgImportNames(x.Type))
+			return result
+		},
 		func(y *AliasLike) map[string]string {
 			result := make(map[string]string)
 			if y.PkgName != "" {
@@ -399,13 +365,7 @@ func ExtractPkgImportNames(x Shape) map[string]string {
 
 			return result
 		},
-		func(y *BooleanLike) map[string]string {
-			return nil
-		},
-		func(x *StringLike) map[string]string {
-			return nil
-		},
-		func(x *NumberLike) map[string]string {
+		func(x *PrimitiveLike) map[string]string {
 			return nil
 		},
 		func(x *ListLike) map[string]string {

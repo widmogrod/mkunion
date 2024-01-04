@@ -4,6 +4,9 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
+//go:generate go run ../../cmd/mkunion/main.go
+//go:generate go run ../../cmd/mkunion/main.go serde
+
 type Execution struct {
 	FlowID    string
 	Status    State
@@ -13,9 +16,7 @@ type Execution struct {
 	Variables map[string]schema.Schema
 }
 
-//go:generate go run ../../cmd/mkunion/main.go serde
-
-//go:generate go run ../../cmd/mkunion/main.go -name=RunOption
+//go:tag mkunion:"RunOption"
 type (
 	ScheduleRun struct {
 		// CRON like definition
@@ -30,7 +31,7 @@ type (
 	}
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Command
+//go:tag mkunion:"Command"
 type (
 	Run struct {
 		Flow  Workflow
@@ -55,7 +56,7 @@ type (
 	}
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -name=State
+//go:tag mkunion:"State"
 type (
 	NextOperation struct {
 		Result    schema.Schema
@@ -103,7 +104,7 @@ type BaseState struct {
 	RunOption RunOption
 }
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Workflow
+//go:tag mkunion:"Workflow"
 type (
 	Flow struct {
 		Name string // name of the flow
@@ -115,7 +116,7 @@ type (
 	}
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Expr
+//go:tag mkunion:"Expr"
 type (
 	End struct {
 		ID     string
@@ -215,7 +216,7 @@ type ApplyAwaitOptions struct {
 	//Timeout time.DelayBySeconds
 }
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Reshaper
+//go:tag mkunion:"Reshaper"
 type (
 	GetValue struct {
 		Path string
@@ -225,7 +226,7 @@ type (
 	}
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Predicate
+//go:tag mkunion:"Predicate"
 type (
 	And struct {
 		L []Predicate

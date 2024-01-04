@@ -4,11 +4,16 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/widmogrod/mkunion/f"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
-//mkunion-extension:visitor
+func init() {
+	shape.Register(LocationShape())
+	shape.Register(LocationFieldShape())
+	shape.Register(LocationIndexShape())
+	shape.Register(LocationAnythingShape())
+}
 
 type LocationVisitor interface {
 	VisitLocationField(v *LocationField) any
@@ -20,64 +25,139 @@ type Location interface {
 	AcceptLocation(g LocationVisitor) any
 }
 
-func (r *LocationField) AcceptLocation(v LocationVisitor) any    { return v.VisitLocationField(r) }
-func (r *LocationIndex) AcceptLocation(v LocationVisitor) any    { return v.VisitLocationIndex(r) }
-func (r *LocationAnything) AcceptLocation(v LocationVisitor) any { return v.VisitLocationAnything(r) }
-
 var (
 	_ Location = (*LocationField)(nil)
 	_ Location = (*LocationIndex)(nil)
 	_ Location = (*LocationAnything)(nil)
 )
 
-func MatchLocation[TOut any](
+func (r *LocationField) AcceptLocation(v LocationVisitor) any    { return v.VisitLocationField(r) }
+func (r *LocationIndex) AcceptLocation(v LocationVisitor) any    { return v.VisitLocationIndex(r) }
+func (r *LocationAnything) AcceptLocation(v LocationVisitor) any { return v.VisitLocationAnything(r) }
+
+func MatchLocationR3[T0, T1, T2 any](
 	x Location,
-	f1 func(x *LocationField) TOut,
-	f2 func(x *LocationIndex) TOut,
-	f3 func(x *LocationAnything) TOut,
-	df func(x Location) TOut,
-) TOut {
-	return f.Match3(x, f1, f2, f3, df)
+	f1 func(x *LocationField) (T0, T1, T2),
+	f2 func(x *LocationIndex) (T0, T1, T2),
+	f3 func(x *LocationAnything) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *LocationField:
+		return f1(v)
+	case *LocationIndex:
+		return f2(v)
+	case *LocationAnything:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
 }
 
-func MatchLocationR2[TOut1, TOut2 any](
+func MatchLocationR2[T0, T1 any](
 	x Location,
-	f1 func(x *LocationField) (TOut1, TOut2),
-	f2 func(x *LocationIndex) (TOut1, TOut2),
-	f3 func(x *LocationAnything) (TOut1, TOut2),
-	df func(x Location) (TOut1, TOut2),
-) (TOut1, TOut2) {
-	return f.Match3R2(x, f1, f2, f3, df)
+	f1 func(x *LocationField) (T0, T1),
+	f2 func(x *LocationIndex) (T0, T1),
+	f3 func(x *LocationAnything) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *LocationField:
+		return f1(v)
+	case *LocationIndex:
+		return f2(v)
+	case *LocationAnything:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
 }
 
-func MustMatchLocation[TOut any](
+func MatchLocationR1[T0 any](
 	x Location,
-	f1 func(x *LocationField) TOut,
-	f2 func(x *LocationIndex) TOut,
-	f3 func(x *LocationAnything) TOut,
-) TOut {
-	return f.MustMatch3(x, f1, f2, f3)
+	f1 func(x *LocationField) T0,
+	f2 func(x *LocationIndex) T0,
+	f3 func(x *LocationAnything) T0,
+) T0 {
+	switch v := x.(type) {
+	case *LocationField:
+		return f1(v)
+	case *LocationIndex:
+		return f2(v)
+	case *LocationAnything:
+		return f3(v)
+	}
+	var result1 T0
+	return result1
 }
 
-func MustMatchLocationR0(
+func MatchLocationR0(
 	x Location,
 	f1 func(x *LocationField),
 	f2 func(x *LocationIndex),
 	f3 func(x *LocationAnything),
 ) {
-	f.MustMatch3R0(x, f1, f2, f3)
+	switch v := x.(type) {
+	case *LocationField:
+		f1(v)
+	case *LocationIndex:
+		f2(v)
+	case *LocationAnything:
+		f3(v)
+	}
 }
 
-func MustMatchLocationR2[TOut1, TOut2 any](
-	x Location,
-	f1 func(x *LocationField) (TOut1, TOut2),
-	f2 func(x *LocationIndex) (TOut1, TOut2),
-	f3 func(x *LocationAnything) (TOut1, TOut2),
-) (TOut1, TOut2) {
-	return f.MustMatch3R2(x, f1, f2, f3)
+func LocationShape() shape.Shape {
+	return &shape.UnionLike{
+		Name:          "Location",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Variant: []shape.Shape{
+			LocationFieldShape(),
+			LocationIndexShape(),
+			LocationAnythingShape(),
+		},
+	}
 }
 
-// mkunion-extension:json
+func LocationFieldShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "LocationField",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Name",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+	}
+}
+
+func LocationIndexShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "LocationIndex",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Index",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{},
+				},
+			},
+		},
+	}
+}
+
+func LocationAnythingShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "LocationAnything",
+		PkgName:       "schema",
+		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+	}
+}
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Location", LocationFromJSON, LocationToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationField", LocationFieldFromJSON, LocationFieldToJSON)
@@ -130,7 +210,7 @@ func LocationToJSON(x Location) ([]byte, error) {
 	if x == nil {
 		return nil, nil
 	}
-	return MustMatchLocationR2(
+	return MatchLocationR2(
 		x,
 		func(x *LocationField) ([]byte, error) {
 			body, err := LocationFieldToJSON(x)
@@ -242,7 +322,7 @@ func (r *LocationField) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: LocationField._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("schema: LocationField._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -321,7 +401,7 @@ func (r *LocationIndex) _unmarshalJSONint(data []byte) (int, error) {
 	var result int
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: LocationIndex._unmarshalJSONint: native number unwrap; %w", err)
+		return result, fmt.Errorf("schema: LocationIndex._unmarshalJSONint: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

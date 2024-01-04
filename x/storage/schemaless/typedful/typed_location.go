@@ -45,10 +45,10 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 		return loc
 	}
 
-	return schema.MustMatchLocation(
+	return schema.MatchLocationR1(
 		loc[0],
 		func(x *schema.LocationField) []schema.Location {
-			return shape.MustMatchShape(
+			return shape.MatchShapeR1(
 				s,
 				func(y *shape.Any) []schema.Location {
 					panic("not implemented")
@@ -61,16 +61,13 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 
 					return location.wrapLocationShapeAware(loc, s)
 				},
+				func(x *shape.PointerLike) []schema.Location {
+					return location.wrapLocationShapeAware(loc, x.Type)
+				},
 				func(y *shape.AliasLike) []schema.Location {
 					panic("not implemented")
 				},
-				func(y *shape.BooleanLike) []schema.Location {
-					panic("not implemented")
-				},
-				func(y *shape.StringLike) []schema.Location {
-					panic("not implemented")
-				},
-				func(y *shape.NumberLike) []schema.Location {
+				func(x *shape.PrimitiveLike) []schema.Location {
 					panic("not implemented")
 				},
 				func(y *shape.ListLike) []schema.Location {
@@ -117,7 +114,7 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 }
 
 func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []schema.Location {
-	return shape.MustMatchShape(
+	return shape.MatchShapeR1(
 		x,
 		func(x *shape.Any) []schema.Location {
 			panic("not implemented")
@@ -129,29 +126,37 @@ func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []schema.Locatio
 			}
 			return location.shapeToSchemaName(s)
 		},
+		func(x *shape.PointerLike) []schema.Location {
+			return location.shapeToSchemaName(x.Type)
+		},
 		func(x *shape.AliasLike) []schema.Location {
 			panic("not implemented")
 		},
-		func(x *shape.BooleanLike) []schema.Location {
-			return []schema.Location{
-				&schema.LocationField{
-					Name: "schema.Boolean",
+		func(x *shape.PrimitiveLike) []schema.Location {
+			return shape.MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *shape.BooleanLike) []schema.Location {
+					return []schema.Location{
+						&schema.LocationField{
+							Name: "schema.Boolean",
+						},
+					}
 				},
-			}
-		},
-		func(x *shape.StringLike) []schema.Location {
-			return []schema.Location{
-				&schema.LocationField{
-					Name: "schema.String",
+				func(x *shape.StringLike) []schema.Location {
+					return []schema.Location{
+						&schema.LocationField{
+							Name: "schema.String",
+						},
+					}
 				},
-			}
-		},
-		func(x *shape.NumberLike) []schema.Location {
-			return []schema.Location{
-				&schema.LocationField{
-					Name: "schema.Number",
+				func(x *shape.NumberLike) []schema.Location {
+					return []schema.Location{
+						&schema.LocationField{
+							Name: "schema.Number",
+						},
+					}
 				},
-			}
+			)
 		},
 		func(x *shape.ListLike) []schema.Location {
 			panic("not implemented")

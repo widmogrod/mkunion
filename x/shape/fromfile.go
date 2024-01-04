@@ -393,7 +393,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
-					Type:          &StringLike{},
+					Type:          &PrimitiveLike{Kind: &StringLike{}},
 					Tags:          f.possibleTaggedTypes[f.currentType],
 				}
 
@@ -405,8 +405,10 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
-					Type: &NumberLike{
-						Kind: TypeStringToNumberKindMap[next.Name],
+					Type: &PrimitiveLike{
+						Kind: &NumberLike{
+							Kind: TypeStringToNumberKindMap[next.Name],
+						},
 					},
 					Tags: f.possibleTaggedTypes[f.currentType],
 				}
@@ -417,7 +419,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
 					IsAlias:       IsAlias(t),
-					Type:          &BooleanLike{},
+					Type:          &PrimitiveLike{Kind: &BooleanLike{}},
 					Tags:          f.possibleTaggedTypes[f.currentType],
 				}
 
@@ -490,10 +492,10 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				PkgImportName: f.pkgImportName,
 				IsAlias:       IsAlias(t),
 				Type: &MapLike{
-					Key:          FromAST(next.Key, opt...),
-					Val:          FromAST(next.Value, opt...),
-					KeyIsPointer: IsStarExpr(next.Key),
-					ValIsPointer: IsStarExpr(next.Value),
+					Key: FromAST(next.Key, opt...),
+					Val: FromAST(next.Value, opt...),
+					//KeyIsPointer: IsStarExpr(next.Key),
+					//ValIsPointer: IsStarExpr(next.Value),
 				},
 				Tags: f.possibleTaggedTypes[f.currentType],
 			}
@@ -505,9 +507,9 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				PkgImportName: f.pkgImportName,
 				IsAlias:       IsAlias(t),
 				Type: &ListLike{
-					Element:          FromAST(next.Elt, opt...),
-					ElementIsPointer: IsStarExpr(next.Elt),
-					ArrayLen:         tryGetArrayLen(next.Len),
+					Element: FromAST(next.Elt, opt...),
+					//ElementIsPointer: IsStarExpr(next.Elt),
+					ArrayLen: tryGetArrayLen(next.Len),
 				},
 				Tags: f.possibleTaggedTypes[f.currentType],
 			}
@@ -564,9 +566,8 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				case *ast.StarExpr:
 					if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
 						typ = f.selectExrToShape(selector)
-						switch x := typ.(type) {
-						case *RefName:
-							x.IsPointer = true
+						typ = &PointerLike{
+							Type: typ,
 						}
 					} else {
 						typ = FromAST(ttt, opt...)
@@ -592,12 +593,11 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				guard := TagsToGuard(tags)
 
 				structShape.Fields = append(structShape.Fields, &FieldLike{
-					Name:      fieldName.Name,
-					Type:      typ,
-					Desc:      desc,
-					Guard:     guard,
-					Tags:      tags,
-					IsPointer: IsStarExpr(field.Type),
+					Name:  fieldName.Name,
+					Type:  typ,
+					Desc:  desc,
+					Guard: guard,
+					Tags:  tags,
 				})
 			}
 		}
@@ -610,7 +610,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 }
 
 func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape {
-	return MustMatchShape(
+	return MatchShapeR1(
 		typ,
 		func(x *Any) Shape {
 			return x
@@ -627,6 +627,10 @@ func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape 
 
 			return x
 		},
+		func(x *PointerLike) Shape {
+			x.Type = CleanTypeThatAreOvershadowByTypeParam(x.Type, params)
+			return x
+		},
 		func(x *AliasLike) Shape {
 			if nameExistsInParams(x.Name, params) {
 				x.PkgName = ""
@@ -635,15 +639,8 @@ func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape 
 
 			return x
 		},
-		func(x *BooleanLike) Shape {
+		func(x *PrimitiveLike) Shape {
 			return x
-		},
-		func(x *StringLike) Shape {
-			return x
-		},
-		func(x *NumberLike) Shape {
-			return x
-
 		},
 		func(x *ListLike) Shape {
 			x.Element = CleanTypeThatAreOvershadowByTypeParam(x.Element, params)
@@ -686,7 +683,6 @@ func IndexWith(y Shape, ref *RefName) Shape {
 	}
 
 	z := x
-	z.IsPointer = ref.IsPointer
 
 	if len(x.TypeParams) != len(ref.Indexed) ||
 		len(x.TypeParams) == 0 {
@@ -702,7 +698,7 @@ func IndexWith(y Shape, ref *RefName) Shape {
 }
 
 func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[string]Shape) Shape {
-	return MustMatchShape(
+	return MatchShapeR1(
 		typ,
 		func(x *Any) Shape {
 			return x
@@ -716,12 +712,17 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 				Name:          x.Name,
 				PkgName:       x.PkgName,
 				PkgImportName: x.PkgImportName,
-				IsPointer:     x.IsPointer,
 			}
 			for _, name := range x.Indexed {
 				result.Indexed = append(result.Indexed, InstantiateTypeThatAreOvershadowByTypeParam(name, replacement))
 			}
 
+			return result
+		},
+		func(x *PointerLike) Shape {
+			result := &PointerLike{
+				Type: InstantiateTypeThatAreOvershadowByTypeParam(x.Type, replacement),
+			}
 			return result
 		},
 		func(x *AliasLike) Shape {
@@ -735,29 +736,23 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 			}
 			return result
 		},
-		func(x *BooleanLike) Shape {
-			return x
-		},
-		func(x *StringLike) Shape {
-			return x
-		},
-		func(x *NumberLike) Shape {
+		func(x *PrimitiveLike) Shape {
 			return x
 		},
 		func(x *ListLike) Shape {
 			result := &ListLike{
-				Element:          InstantiateTypeThatAreOvershadowByTypeParam(x.Element, replacement),
-				ElementIsPointer: x.ElementIsPointer,
-				ArrayLen:         x.ArrayLen,
+				Element: InstantiateTypeThatAreOvershadowByTypeParam(x.Element, replacement),
+				//ElementIsPointer: x.ElementIsPointer,
+				ArrayLen: x.ArrayLen,
 			}
 			return result
 		},
 		func(x *MapLike) Shape {
 			result := &MapLike{
-				Key:          InstantiateTypeThatAreOvershadowByTypeParam(x.Key, replacement),
-				KeyIsPointer: x.KeyIsPointer,
-				Val:          InstantiateTypeThatAreOvershadowByTypeParam(x.Val, replacement),
-				ValIsPointer: x.ValIsPointer,
+				Key: InstantiateTypeThatAreOvershadowByTypeParam(x.Key, replacement),
+				//KeyIsPointer: x.KeyIsPointer,
+				Val: InstantiateTypeThatAreOvershadowByTypeParam(x.Val, replacement),
+				//ValIsPointer: x.ValIsPointer,
 			}
 			return result
 		},
@@ -767,7 +762,6 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 				PkgName:       x.PkgName,
 				PkgImportName: x.PkgImportName,
 				Tags:          x.Tags,
-				IsPointer:     x.IsPointer,
 			}
 
 			// change names of type params, to represent substitution
@@ -783,12 +777,11 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 
 			for _, field := range x.Fields {
 				result.Fields = append(result.Fields, &FieldLike{
-					Name:      field.Name,
-					Type:      InstantiateTypeThatAreOvershadowByTypeParam(field.Type, replacement),
-					Desc:      field.Desc,
-					Guard:     field.Guard,
-					IsPointer: field.IsPointer,
-					Tags:      field.Tags,
+					Name:  field.Name,
+					Type:  InstantiateTypeThatAreOvershadowByTypeParam(field.Type, replacement),
+					Desc:  field.Desc,
+					Guard: field.Guard,
+					Tags:  field.Tags,
 				})
 			}
 			return result

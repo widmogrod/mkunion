@@ -4,9 +4,10 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
+//go:generate go run ../../../cmd/mkunion/main.go
 //go:generate go run ../../../cmd/mkunion/main.go serde
 
-//go:generate go run ../../../cmd/mkunion/main.go -name=Predicate
+//go:tag mkunion:"Predicate"
 type (
 	And struct {
 		L []Predicate
@@ -24,7 +25,7 @@ type (
 	}
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go -name=Bindable
+//go:tag mkunion:"Bindable"
 type (
 	BindValue struct{ BindName BindName }
 	Literal   struct{ Value schema.Schema }

@@ -13,8 +13,8 @@ var (
 	deserJSONTmpl string
 )
 
-func SerdeJSONUnion(union *shape.UnionLike) *DeSerJSONGenerator {
-	return &DeSerJSONGenerator{
+func NewSerdeJSONUnion(union *shape.UnionLike) *SerdeJSONUnion {
+	return &SerdeJSONUnion{
 		Union:                 union,
 		template:              template.Must(template.New("serde_json_union.go.tmpl").Parse(deserJSONTmpl)),
 		skipImportsAndPackage: false,
@@ -26,22 +26,22 @@ func SerdeJSONUnion(union *shape.UnionLike) *DeSerJSONGenerator {
 	}
 }
 
-type DeSerJSONGenerator struct {
+type SerdeJSONUnion struct {
 	Union                 *shape.UnionLike
 	template              *template.Template
 	skipImportsAndPackage bool
 	pkgUsed               PkgMap
 }
 
-func (g *DeSerJSONGenerator) SkipImportsAndPackage(x bool) {
+func (g *SerdeJSONUnion) SkipImportsAndPackage(x bool) {
 	g.skipImportsAndPackage = x
 }
 
-func (g *DeSerJSONGenerator) GenerateImports(pkgMap PkgMap) (string, error) {
+func (g *SerdeJSONUnion) GenerateImports(pkgMap PkgMap) (string, error) {
 	return GenerateImports(pkgMap), nil
 }
 
-func (g *DeSerJSONGenerator) ExtractImports(x shape.Shape) PkgMap {
+func (g *SerdeJSONUnion) ExtractImports(x shape.Shape) PkgMap {
 	pkgMap := shape.ExtractPkgImportNames(x)
 	if pkgMap == nil {
 		pkgMap = make(map[string]string)
@@ -55,17 +55,17 @@ func (g *DeSerJSONGenerator) ExtractImports(x shape.Shape) PkgMap {
 	return pkgMap
 }
 
-func (g *DeSerJSONGenerator) IsStruct(x shape.Shape) bool {
+func (g *SerdeJSONUnion) IsStruct(x shape.Shape) bool {
 	_, ok := x.(*shape.StructLike)
 	return ok
 }
 
-func (g *DeSerJSONGenerator) VariantName(x shape.Shape) string {
+func (g *SerdeJSONUnion) VariantName(x shape.Shape) string {
 	return TemplateHelperShapeVariantToName(x)
 }
 
-func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
-	return shape.MustMatchShape(
+func (g *SerdeJSONUnion) JSONVariantName(x shape.Shape) string {
+	return shape.MatchShapeR1(
 		x,
 		func(y *shape.Any) string {
 			panic(fmt.Errorf("generators.JSONVariantName: %T not suported", y))
@@ -73,16 +73,13 @@ func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
 		func(y *shape.RefName) string {
 			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
-		func(x *shape.AliasLike) string {
-			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		func(x *shape.PointerLike) string {
+			return g.JSONVariantName(x.Type)
 		},
-		func(y *shape.BooleanLike) string {
-			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
+		func(y *shape.AliasLike) string {
+			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
-		func(y *shape.StringLike) string {
-			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
-		},
-		func(y *shape.NumberLike) string {
+		func(y *shape.PrimitiveLike) string {
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.ListLike) string {
@@ -100,7 +97,7 @@ func (g *DeSerJSONGenerator) JSONVariantName(x shape.Shape) string {
 	)
 }
 
-func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
+func (g *SerdeJSONUnion) Generate() ([]byte, error) {
 	body := &bytes.Buffer{}
 	err := g.template.ExecuteTemplate(body, "serde_json_union.go.tmpl", g)
 	if err != nil {
@@ -127,7 +124,7 @@ func (g *DeSerJSONGenerator) Generate() ([]byte, error) {
 	}
 }
 
-func (g *DeSerJSONGenerator) Serde(x shape.Shape) string {
+func (g *SerdeJSONUnion) Serde(x shape.Shape) string {
 	serde := NewSerdeJSONTagged(x)
 	serde.SkipImportsAndPackage(true)
 	result, err := serde.Generate()
@@ -138,4 +135,8 @@ func (g *DeSerJSONGenerator) Serde(x shape.Shape) string {
 	g.pkgUsed = MergePkgMaps(g.pkgUsed, serde.ExtractImports(x))
 
 	return result
+}
+
+func (g *SerdeJSONUnion) MatchFuncName(x *shape.UnionLike, returns int) string {
+	return MatchUnionFuncName(x, returns)
 }

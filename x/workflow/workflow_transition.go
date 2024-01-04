@@ -43,7 +43,7 @@ func Transition(cmd Command, state State, dep Dependency) (State, error) {
 		return nil, ErrStateReachEnd
 	}
 
-	return MustMatchCommandR2(
+	return MatchCommandR2(
 		cmd,
 		func(x *Run) (State, error) {
 			switch s := state.(type) {
@@ -221,7 +221,7 @@ func getFlow(x Workflow, dep Dependency) (*Flow, error) {
 		return nil, ErrFlowNotSet
 	}
 
-	return MustMatchWorkflowR2(
+	return MatchWorkflowR2(
 		x,
 		func(x *Flow) (*Flow, error) {
 			return initStepID(x), nil
@@ -240,7 +240,7 @@ func getFlow(x Workflow, dep Dependency) (*Flow, error) {
 var cronParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 
 func calculateExpectedRunTimestamp(x RunOption, dep Dependency) (int64, error) {
-	return MustMatchRunOptionR2(
+	return MatchRunOptionR2(
 		x,
 		func(x *ScheduleRun) (int64, error) {
 			schedule, err := cronParser.Parse(x.Interval)
@@ -261,7 +261,7 @@ func calculateExpectedRunTimestamp(x RunOption, dep Dependency) (int64, error) {
 }
 
 func extractParentRunID(context BaseState) string {
-	return MustMatchRunOption(
+	return MatchRunOptionR1(
 		context.RunOption,
 		func(y *ScheduleRun) string {
 			if y.ParentRunID == "" {
@@ -278,7 +278,7 @@ func extractParentRunID(context BaseState) string {
 }
 
 func completeParentRunID(context BaseState) RunOption {
-	return MustMatchRunOption(
+	return MatchRunOptionR1(
 		context.RunOption,
 		func(y *ScheduleRun) RunOption {
 			if y.ParentRunID == "" {
@@ -313,7 +313,7 @@ func ExecuteAll(context BaseState, x *Flow, dep Dependency) State {
 }
 
 func GetBaseState(status State) BaseState {
-	return MustMatchState(
+	return MatchStateR1(
 		status,
 		func(x *NextOperation) BaseState {
 			return x.BaseState
@@ -368,7 +368,7 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 		return nil, nil
 	}
 
-	return MustMatchReshaperR2(
+	return MatchReshaperR2(
 		reshaper,
 		func(x *GetValue) (schema.Schema, error) {
 			loc, err := schema.ParseLocation(x.Path)
@@ -393,7 +393,7 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 }
 
 func ExecutePredicate(context BaseState, predicate Predicate, dep Dependency) (bool, error) {
-	return MustMatchPredicateR2(
+	return MatchPredicateR2(
 		predicate,
 		func(x *And) (bool, error) {
 			for _, p := range x.L {
@@ -464,7 +464,7 @@ func ExecutePredicate(context BaseState, predicate Predicate, dep Dependency) (b
 }
 
 func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
-	return MustMatchExpr(
+	return MatchExprR1(
 		expr,
 		func(x *End) State {
 			newContext := cloneBaseState(context)
@@ -649,7 +649,7 @@ func initStepID(x *Flow) *Flow {
 }
 
 func initExprStepID(x Expr, steps map[string]int) Expr {
-	return MustMatchExpr(
+	return MatchExprR1(
 		x,
 		func(x *End) Expr {
 			x.ID = stepId(x.ID, "end", steps)

@@ -60,7 +60,7 @@ func TestTreeSumUsingReducer(t *testing.T) {
 }
 
 func ReduceTreeF[B any](x Tree, f func(int, B) B, init B) B {
-	return MustMatchTree(
+	return MatchTreeR1(
 		x,
 		func(x *Branch) B {
 			return ReduceTreeF(x.L, f, ReduceTreeF(x.R, f, init))

@@ -25,7 +25,6 @@ func MkRefNameFromString(x string) *RefName {
 
 	// example: "*some.Type2[int, some.Type[int]]"
 	if strings.HasPrefix(x, "*") {
-		result.IsPointer = true
 		x = x[1:]
 	}
 

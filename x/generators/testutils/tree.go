@@ -5,17 +5,19 @@ import (
 	"time"
 )
 
+//go:generate go run ../../../cmd/mkunion/main.go
 //go:generate go run ../../../cmd/mkunion/main.go serde
 
-//go:generate go run ../../../cmd/mkunion/main.go -name=Tree
+//go:tag mkunion:"Tree"
 type (
 	Branch struct {
-		Lit   Tree
-		List  []Tree
-		Map   map[string]Tree
-		Of    *ListOf[Tree] `json:"just_of"`
-		L     *Leaf
-		Kattr [2]*Leaf
+		Lit    Tree
+		List   []Tree
+		Map    map[string]Tree
+		Of     *ListOf[Tree] `json:"just_of"`
+		L      *Leaf
+		Kattr  [2]*Leaf
+		IntPtr *int64
 	}
 	Leaf struct{ Value int64 }
 	K    string

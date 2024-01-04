@@ -46,7 +46,7 @@ func ListOf2Shape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
-				Type: &shape.StringLike{},
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 			{
 				Name: "Data",
@@ -103,20 +103,20 @@ func ListOf2Shape() shape.Shape {
 			},
 			{
 				Name: "ListOfPtr",
-				Type: &shape.RefName{
-					Name: "ListOf",
-					PkgName: "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: true,
-					Indexed: []shape.Shape{
-						&shape.RefName{
-							Name: "T2",
-							PkgName: "",
-							PkgImportName: "",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name: "ListOf",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						Indexed: []shape.Shape{
+							&shape.RefName{
+								Name: "T2",
+								PkgName: "",
+								PkgImportName: "",
+							},
 						},
 					},
 				},
-				IsPointer: true,
 			},
 			{
 				Name: "Time",

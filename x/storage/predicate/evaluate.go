@@ -24,7 +24,7 @@ func Evaluate[A any](predicate Predicate, data A, bind ParamBinds) bool {
 }
 
 func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind ParamBinds) bool {
-	return MustMatchPredicate(
+	return MatchPredicateR1(
 		predicate,
 		func(x *And) bool {
 			for _, p := range x.L {
@@ -79,7 +79,7 @@ func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind 
 }
 
 func EvaluateSchema(predicate Predicate, data schema.Schema, bind ParamBinds) bool {
-	return MustMatchPredicate(
+	return MatchPredicateR1(
 		predicate,
 		func(x *And) bool {
 			for _, p := range x.L {
@@ -131,7 +131,7 @@ func EvaluateSchema(predicate Predicate, data schema.Schema, bind ParamBinds) bo
 }
 
 func GetValue(x Bindable, params ParamBinds, data schema.Schema) (schema.Schema, bool) {
-	return MustMatchBindableR2(
+	return MatchBindableR2(
 		x,
 		func(x *BindValue) (schema.Schema, bool) {
 			result, ok := params[x.BindName]

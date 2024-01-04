@@ -17,54 +17,90 @@ var (
 )
 
 func (r *TypeParam) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONTypeParam(*r)
+}
+func (r *TypeParam) _marshalJSONTypeParam(x TypeParam) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
 	var err error
-	result := make(map[string]json.RawMessage)
-
-	fieldName, err := shared.JSONMarshal[string](r.Name)
+	var fieldName []byte
+	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
-		return nil, fmt.Errorf("TypeParam.MarshalJSON: field Name; %w", err)
+		return nil, fmt.Errorf("shape: TypeParam._marshalJSONTypeParam: field name Name; %w", err)
 	}
-	result["Name"] = fieldName
-
-	fieldType, err := shared.JSONMarshal[Shape](r.Type)
+	partial["Name"] = fieldName
+	var fieldType []byte
+	fieldType, err = r._marshalJSONShape(x.Type)
 	if err != nil {
-		return nil, fmt.Errorf("TypeParam.MarshalJSON: field Type; %w", err)
+		return nil, fmt.Errorf("shape: TypeParam._marshalJSONTypeParam: field name Type; %w", err)
 	}
-	result["Type"] = fieldType
-
-	output, err := json.Marshal(result)
+	partial["Type"] = fieldType
+	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("TypeParam.MarshalJSON: final step; %w", err)
+		return nil, fmt.Errorf("shape: TypeParam._marshalJSONTypeParam: struct; %w", err)
 	}
-
-	return output, nil
+	return result, nil
 }
-
-func (r *TypeParam) UnmarshalJSON(bytes []byte) error {
-	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-		switch key {
-		case "Name":
-			var err error
-			r.Name, err = shared.JSONUnmarshal[string](bytes)
-			if err != nil {
-				return fmt.Errorf("TypeParam.UnmarshalJSON: field Name; %w", err)
-			}
-			return nil
-
-		case "Type":
-			var err error
-			r.Type, err = shared.JSONUnmarshal[Shape](bytes)
-			if err != nil {
-				return fmt.Errorf("TypeParam.UnmarshalJSON: field Type; %w", err)
-			}
-			return nil
-
+func (r *TypeParam) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: TypeParam._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *TypeParam) _marshalJSONShape(x Shape) ([]byte, error) {
+	result, err := shared.JSONMarshal[Shape](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: TypeParam._marshalJSONShape:; %w", err)
+	}
+	return result, nil
+}
+func (r *TypeParam) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONTypeParam(data)
+	if err != nil {
+		return fmt.Errorf("shape: TypeParam.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *TypeParam) _unmarshalJSONTypeParam(data []byte) (TypeParam, error) {
+	result := TypeParam{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: TypeParam._unmarshalJSONTypeParam: native struct unwrap; %w", err)
+	}
+	if fieldName, ok := partial["Name"]; ok {
+		result.Name, err = r._unmarshalJSONstring(fieldName)
+		if err != nil {
+			return result, fmt.Errorf("shape: TypeParam._unmarshalJSONTypeParam: field Name; %w", err)
 		}
-
-		return nil
-	})
+	}
+	if fieldType, ok := partial["Type"]; ok {
+		result.Type, err = r._unmarshalJSONShape(fieldType)
+		if err != nil {
+			return result, fmt.Errorf("shape: TypeParam._unmarshalJSONTypeParam: field Type; %w", err)
+		}
+	}
+	return result, nil
 }
-
+func (r *TypeParam) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("shape: TypeParam._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *TypeParam) _unmarshalJSONShape(data []byte) (Shape, error) {
+	result, err := shared.JSONUnmarshal[Shape](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: TypeParam._unmarshalJSONShape: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
 func TypeParamShape() Shape {
 	return &StructLike{
 		Name:          "TypeParam",
@@ -73,7 +109,7 @@ func TypeParamShape() Shape {
 		Fields: []*FieldLike{
 			{
 				Name: "Name",
-				Type: &StringLike{},
+				Type: &PrimitiveLike{Kind: &StringLike{}},
 			},
 			{
 				Name: "Type",

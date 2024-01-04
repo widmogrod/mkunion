@@ -23,7 +23,7 @@ func TestFromGoo(t *testing.T) {
 		Fields: []*FieldLike{
 			{
 				Name: "Name",
-				Type: &StringLike{},
+				Type: &PrimitiveLike{Kind: &StringLike{}},
 				Desc: ptr("Name of the person"),
 				Tags: map[string]Tag{
 					"desc": {Value: "Name of the person"},
@@ -50,19 +50,15 @@ func TestFromGoo(t *testing.T) {
 							Fields: []*FieldLike{
 								{
 									Name: "Name",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "PkgName",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "PkgImportName",
-									Type: &StringLike{},
-								},
-								{
-									Name: "IsPointer",
-									Type: &BooleanLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "Indexed",
@@ -77,21 +73,36 @@ func TestFromGoo(t *testing.T) {
 							},
 						},
 						&StructLike{
+							Name:          "PointerLike",
+							PkgName:       "shape",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+							Fields: []*FieldLike{
+								{
+									Name: "Type",
+									Type: &RefName{
+										Name:          "Shape",
+										PkgName:       "shape",
+										PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+									},
+								},
+							},
+						},
+						&StructLike{
 							Name:          "AliasLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 							Fields: []*FieldLike{
-								{Name: "Name", Type: &StringLike{}},
-								{Name: "PkgName", Type: &StringLike{}},
-								{Name: "PkgImportName", Type: &StringLike{}},
-								{Name: "IsAlias", Type: &BooleanLike{}},
+								{Name: "Name", Type: &PrimitiveLike{Kind: &StringLike{}}},
+								{Name: "PkgName", Type: &PrimitiveLike{Kind: &StringLike{}}},
+								{Name: "PkgImportName", Type: &PrimitiveLike{Kind: &StringLike{}}},
+								{Name: "IsAlias", Type: &PrimitiveLike{Kind: &BooleanLike{}}},
 								{Name: "Type", Type: &RefName{
 									Name:          "Shape",
 									PkgName:       "shape",
 									PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 								}},
 								{Name: "Tags", Type: &MapLike{
-									Key: &StringLike{},
+									Key: &PrimitiveLike{Kind: &StringLike{}},
 									Val: &RefName{
 										Name:          "Tag",
 										PkgName:       "shape",
@@ -101,26 +112,14 @@ func TestFromGoo(t *testing.T) {
 							},
 						},
 						&StructLike{
-							Name:          "BooleanLike",
-							PkgName:       "shape",
-							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        nil,
-						},
-						&StructLike{
-							Name:          "StringLike",
-							PkgName:       "shape",
-							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-							Fields:        nil,
-						},
-						&StructLike{
-							Name:          "NumberLike",
+							Name:          "PrimitiveLike",
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 							Fields: []*FieldLike{
 								{
 									Name: "Kind",
 									Type: &RefName{
-										Name:          "NumberKind",
+										Name:          "PrimitiveKind",
 										PkgName:       "shape",
 										PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 									},
@@ -141,13 +140,8 @@ func TestFromGoo(t *testing.T) {
 									},
 								},
 								{
-									Name: "ElementIsPointer",
-									Type: &BooleanLike{},
-								},
-								{
-									Name:      "ArrayLen",
-									Type:      &NumberLike{},
-									IsPointer: true,
+									Name: "ArrayLen",
+									Type: &PointerLike{Type: &PrimitiveLike{&NumberLike{}}},
 								},
 							},
 						},
@@ -172,14 +166,6 @@ func TestFromGoo(t *testing.T) {
 										PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 									},
 								},
-								{
-									Name: "KeyIsPointer",
-									Type: &BooleanLike{},
-								},
-								{
-									Name: "ValIsPointer",
-									Type: &BooleanLike{},
-								},
 							},
 						},
 						&StructLike{
@@ -189,15 +175,15 @@ func TestFromGoo(t *testing.T) {
 							Fields: []*FieldLike{
 								{
 									Name: "Name",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "PkgName",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "PkgImportName",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "TypeParams",
@@ -212,19 +198,19 @@ func TestFromGoo(t *testing.T) {
 								{
 									Name: "Fields",
 									Type: &ListLike{
-										Element: &RefName{
-											Name:          "FieldLike",
-											PkgName:       "shape",
-											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-											IsPointer:     true,
+										Element: &PointerLike{
+											Type: &RefName{
+												Name:          "FieldLike",
+												PkgName:       "shape",
+												PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+											},
 										},
-										ElementIsPointer: true,
 									},
 								},
 								{
 									Name: "Tags",
 									Type: &MapLike{
-										Key: &StringLike{},
+										Key: &PrimitiveLike{Kind: &StringLike{}},
 										Val: &RefName{
 											Name:          "Tag",
 											PkgName:       "shape",
@@ -241,15 +227,15 @@ func TestFromGoo(t *testing.T) {
 							Fields: []*FieldLike{
 								{
 									Name: "Name",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "PkgName",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "PkgImportName",
-									Type: &StringLike{},
+									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
 									Name: "Variant",
@@ -264,7 +250,7 @@ func TestFromGoo(t *testing.T) {
 								{
 									Name: "Tags",
 									Type: &MapLike{
-										Key: &StringLike{},
+										Key: &PrimitiveLike{Kind: &StringLike{}},
 										Val: &RefName{
 											Name:          "Tag",
 											PkgName:       "shape",

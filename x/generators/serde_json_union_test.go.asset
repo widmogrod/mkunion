@@ -83,7 +83,7 @@ func TreeToJSON(x Tree) ([]byte, error) {
 	if x == nil {
 		return nil, nil
 	}
-	return MustMatchTreeR2(
+	return MatchTreeR2(
 		x,
 		func(x *Branch) ([]byte, error) {
 			body, err := BranchToJSON(x)
@@ -211,20 +211,20 @@ func (r *Branch) _marshalJSONBranch(x Branch) ([]byte, error) {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Map; %w", err)
 	}
 	partial["Map"] = fieldMap
-	if x.Of != nil {
-		var fieldOf []byte
-		fieldOf, err = r._marshalJSONPtrListOfLb_Tree_bL(x.Of)
-		if err != nil {
-			return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Of; %w", err)
-		}
+	var fieldOf []byte
+	fieldOf, err = r._marshalJSONPtrListOfLb_Tree_bL(x.Of)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Of; %w", err)
+	}
+	if fieldOf != nil {
 		partial["just_of"] = fieldOf
 	}
-	if x.L != nil {
-		var fieldL []byte
-		fieldL, err = r._marshalJSONPtrLeaf(x.L)
-		if err != nil {
-			return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name L; %w", err)
-		}
+	var fieldL []byte
+	fieldL, err = r._marshalJSONPtrLeaf(x.L)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name L; %w", err)
+	}
+	if fieldL != nil {
 		partial["L"] = fieldL
 	}
 	var fieldKattr []byte
@@ -233,6 +233,14 @@ func (r *Branch) _marshalJSONBranch(x Branch) ([]byte, error) {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Kattr; %w", err)
 	}
 	partial["Kattr"] = fieldKattr
+	var fieldIntPtr []byte
+	fieldIntPtr, err = r._marshalJSONPtrint64(x.IntPtr)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name IntPtr; %w", err)
+	}
+	if fieldIntPtr != nil {
+		partial["IntPtr"] = fieldIntPtr
+	}
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: struct; %w", err)
@@ -285,16 +293,28 @@ func (r *Branch) _marshalJSONstring(x string) ([]byte, error) {
 	return result, nil
 }
 func (r *Branch) _marshalJSONPtrListOfLb_Tree_bL(x *ListOf[Tree]) ([]byte, error) {
-	result, err := shared.JSONMarshal[*ListOf[Tree]](x)
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONListOfLb_Tree_bL(*x)
+}
+func (r *Branch) _marshalJSONListOfLb_Tree_bL(x ListOf[Tree]) ([]byte, error) {
+	result, err := shared.JSONMarshal[ListOf[Tree]](x)
 	if err != nil {
-		return nil, fmt.Errorf("testutils: Branch._marshalJSONPtrListOfLb_Tree_bL:; %w", err)
+		return nil, fmt.Errorf("testutils: Branch._marshalJSONListOfLb_Tree_bL:; %w", err)
 	}
 	return result, nil
 }
 func (r *Branch) _marshalJSONPtrLeaf(x *Leaf) ([]byte, error) {
-	result, err := shared.JSONMarshal[*Leaf](x)
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONLeaf(*x)
+}
+func (r *Branch) _marshalJSONLeaf(x Leaf) ([]byte, error) {
+	result, err := shared.JSONMarshal[Leaf](x)
 	if err != nil {
-		return nil, fmt.Errorf("testutils: Branch._marshalJSONPtrLeaf:; %w", err)
+		return nil, fmt.Errorf("testutils: Branch._marshalJSONLeaf:; %w", err)
 	}
 	return result, nil
 }
@@ -310,6 +330,19 @@ func (r *Branch) _marshalJSONLb_2_bLPtrLeaf(x [2]*Leaf) ([]byte, error) {
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONLb_2_bLPtrLeaf:; %w", err)
+	}
+	return result, nil
+}
+func (r *Branch) _marshalJSONPtrint64(x *int64) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONint64(*x)
+}
+func (r *Branch) _marshalJSONint64(x int64) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Branch._marshalJSONint64:; %w", err)
 	}
 	return result, nil
 }
@@ -364,6 +397,12 @@ func (r *Branch) _unmarshalJSONBranch(data []byte) (Branch, error) {
 			return result, fmt.Errorf("testutils: Branch._unmarshalJSONBranch: field Kattr; %w", err)
 		}
 	}
+	if fieldIntPtr, ok := partial["IntPtr"]; ok {
+		result.IntPtr, err = r._unmarshalJSONPtrint64(fieldIntPtr)
+		if err != nil {
+			return result, fmt.Errorf("testutils: Branch._unmarshalJSONBranch: field IntPtr; %w", err)
+		}
+	}
 	return result, nil
 }
 func (r *Branch) _unmarshalJSONTree(data []byte) (Tree, error) {
@@ -410,21 +449,47 @@ func (r *Branch) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Branch._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Branch._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
 func (r *Branch) _unmarshalJSONPtrListOfLb_Tree_bL(data []byte) (*ListOf[Tree], error) {
-	result, err := shared.JSONUnmarshal[*ListOf[Tree]](data)
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONListOfLb_Tree_bL(data)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Branch._unmarshalJSONPtrListOfLb_Tree_bL: native ref unwrap; %w", err)
+		return nil, fmt.Errorf("testutils: Branch._unmarshalJSONPtrListOfLb_Tree_bL: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *Branch) _unmarshalJSONListOfLb_Tree_bL(data []byte) (ListOf[Tree], error) {
+	result, err := shared.JSONUnmarshal[ListOf[Tree]](data)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Branch._unmarshalJSONListOfLb_Tree_bL: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
 func (r *Branch) _unmarshalJSONPtrLeaf(data []byte) (*Leaf, error) {
-	result, err := shared.JSONUnmarshal[*Leaf](data)
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONLeaf(data)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Branch._unmarshalJSONPtrLeaf: native ref unwrap; %w", err)
+		return nil, fmt.Errorf("testutils: Branch._unmarshalJSONPtrLeaf: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *Branch) _unmarshalJSONLeaf(data []byte) (Leaf, error) {
+	result, err := shared.JSONUnmarshal[Leaf](data)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Branch._unmarshalJSONLeaf: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -441,6 +506,27 @@ func (r *Branch) _unmarshalJSONLb_2_bLPtrLeaf(data []byte) ([2]*Leaf, error) {
 			return result, fmt.Errorf("testutils: Branch._unmarshalJSONLb_2_bLPtrLeaf: at index %d; %w", i, err)
 		}
 		result[i] = item
+	}
+	return result, nil
+}
+func (r *Branch) _unmarshalJSONPtrint64(data []byte) (*int64, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONint64(data)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Branch._unmarshalJSONPtrint64: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *Branch) _unmarshalJSONint64(data []byte) (int64, error) {
+	var result int64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Branch._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -520,7 +606,7 @@ func (r *Leaf) _unmarshalJSONint64(data []byte) (int64, error) {
 	var result int64
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Leaf._unmarshalJSONint64: native number unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Leaf._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -582,7 +668,7 @@ func (r *K) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -745,7 +831,7 @@ func (r *Ma) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Ma._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Ma._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -977,7 +1063,7 @@ func (r *Ka) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

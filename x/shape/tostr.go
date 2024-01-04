@@ -6,7 +6,7 @@ import (
 )
 
 func ToStr(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return "any"
@@ -14,17 +14,29 @@ func ToStr(x Shape) string {
 		func(x *RefName) string {
 			return fmt.Sprintf("%s:%s.%s", x.PkgImportName, x.PkgName, x.Name)
 		},
+		func(x *PointerLike) string {
+			return fmt.Sprintf("*%s", ToStr(x.Type))
+		},
 		func(x *AliasLike) string {
-			panic("not implemented")
+			if x.IsAlias {
+				return fmt.Sprintf("%s:%s.%s = %s", x.PkgImportName, x.PkgName, x.Name, ToStr(x.Type))
+			} else {
+				return fmt.Sprintf("%s:%s.%s{%s}", x.PkgImportName, x.PkgName, x.Name, ToStr(x.Type))
+			}
 		},
-		func(x *BooleanLike) string {
-			return "bool"
-		},
-		func(x *StringLike) string {
-			return "string"
-		},
-		func(x *NumberLike) string {
-			return "number"
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "bool"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return "number"
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return fmt.Sprintf("%s[]", ToStr(x.Element))

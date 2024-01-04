@@ -31,6 +31,9 @@ import (
 	"syscall"
 )
 
+// generate all unions
+//go:generate ../../cmd/mkunion/mkunion
+
 // this command make sure that all types that are imported will have generated typescript mapping
 //go:generate ../../cmd/mkunion/mkunion shape-export --language=typescript -o ./src/workflow
 
@@ -50,14 +53,14 @@ type (
 	FunctionInput  = workflow.FunctionInput
 )
 
-//go:generate ../../cmd/mkunion/mkunion -name=ChatCMD
+//go:tag mkunion:"ChatCMD"
 type (
 	UserMessage struct {
 		Message string
 	}
 )
 
-//go:generate ../../cmd/mkunion/mkunion -name=ChatResult -v
+//go:tag mkunion:"ChatResult"
 type (
 	SystemResponse struct {
 		//ID 	  string

@@ -15,7 +15,7 @@ func TestSerdeJSONUnion(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
 
-	g := SerdeJSONUnion(inferred.RetrieveUnion("Tree"))
+	g := NewSerdeJSONUnion(inferred.RetrieveUnion("Tree"))
 
 	result, err := g.Generate()
 	assert.NoError(t, err)

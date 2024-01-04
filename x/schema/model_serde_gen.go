@@ -91,7 +91,7 @@ func (r *Field) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schema: Field._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("schema: Field._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -110,7 +110,7 @@ func FieldShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Name",
-				Type: &shape.StringLike{},
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 			{
 				Name: "Value",

@@ -20,7 +20,7 @@ func Register(x Shape) {
 }
 
 func shapeFullName(x Shape) string {
-	return MustMatchShape(
+	return MatchShapeR1(
 		x,
 		func(x *Any) string {
 			return "any"
@@ -34,6 +34,9 @@ func shapeFullName(x Shape) string {
 
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
+		func(x *PointerLike) string {
+			return fmt.Sprintf("*%s", shapeFullName(x.Type))
+		},
 		func(x *AliasLike) string {
 			if x.PkgName == "" {
 				return x.Name
@@ -41,14 +44,19 @@ func shapeFullName(x Shape) string {
 
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
-		func(x *BooleanLike) string {
-			return "bool"
-		},
-		func(x *StringLike) string {
-			return "string"
-		},
-		func(x *NumberLike) string {
-			return "number"
+		func(x *PrimitiveLike) string {
+			return MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *BooleanLike) string {
+					return "bool"
+				},
+				func(x *StringLike) string {
+					return "string"
+				},
+				func(x *NumberLike) string {
+					return "number"
+				},
+			)
 		},
 		func(x *ListLike) string {
 			return fmt.Sprintf("[]%s", shapeFullName(x.Element))

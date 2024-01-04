@@ -21,7 +21,7 @@ func As[A int | int8 | int16 | int32 | int64 |
 		return def, false
 	}
 
-	return MustMatchSchemaR2(
+	return MatchSchemaR2(
 		x,
 		func(x *None) (A, bool) {
 			if any(def) == nil {
@@ -168,7 +168,7 @@ func GetSchemaLocation(data Schema, locations []Location) Schema {
 		location := locations[0]
 		locations = locations[1:]
 
-		data, locations = MustMatchLocationR2(
+		data, locations = MatchLocationR2(
 			location,
 			func(x *LocationField) (Schema, []Location) {
 				mapData, ok := data.(*Map)
@@ -256,7 +256,7 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 		location := locations[0]
 		locations = locations[1:]
 
-		res := MustMatchLocation(
+		res := MatchLocationR1(
 			location,
 			func(x *LocationField) *locres {
 				switch y := s.(type) {
@@ -358,28 +358,31 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						}
 					}
 
-				case *shape.NumberLike:
-					numData, ok := data.(*Number)
-					if !ok {
-						return nil
-					}
+				case *shape.PrimitiveLike:
+					switch y.Kind.(type) {
+					case *shape.NumberLike:
+						numData, ok := data.(*Number)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  numData,
-						loc:   locations,
-						shape: s,
-					}
+						return &locres{
+							data:  numData,
+							loc:   locations,
+							shape: s,
+						}
 
-				case *shape.StringLike:
-					strData, ok := data.(*String)
-					if !ok {
-						return nil
-					}
+					case *shape.StringLike:
+						strData, ok := data.(*String)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  strData,
-						loc:   locations,
-						shape: s,
+						return &locres{
+							data:  strData,
+							loc:   locations,
+							shape: s,
+						}
 					}
 
 				default:
@@ -405,28 +408,31 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 			},
 			func(x *LocationAnything) *locres {
 				switch y := s.(type) {
-				case *shape.StringLike:
-					strData, ok := data.(*String)
-					if !ok {
-						return nil
-					}
+				case *shape.PrimitiveLike:
+					switch y.Kind.(type) {
+					case *shape.StringLike:
+						strData, ok := data.(*String)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  strData,
-						shape: s,
-						loc:   locations,
-					}
+						return &locres{
+							data:  strData,
+							shape: s,
+							loc:   locations,
+						}
 
-				case *shape.NumberLike:
-					numData, ok := data.(*Number)
-					if !ok {
-						return nil
-					}
+					case *shape.NumberLike:
+						numData, ok := data.(*Number)
+						if !ok {
+							return nil
+						}
 
-					return &locres{
-						data:  numData,
-						shape: s,
-						loc:   locations,
+						return &locres{
+							data:  numData,
+							shape: s,
+							loc:   locations,
+						}
 					}
 
 				case *shape.MapLike:
@@ -539,7 +545,7 @@ func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {
 		return init
 	}
 
-	return MustMatchSchema(
+	return MatchSchemaR1(
 		data,
 		func(x *None) A {
 			return init
@@ -581,7 +587,7 @@ func Compare(a, b Schema) int {
 		b = none
 	}
 
-	return MustMatchSchema(
+	return MatchSchemaR1(
 		a,
 		func(x *None) int {
 			switch b.(type) {

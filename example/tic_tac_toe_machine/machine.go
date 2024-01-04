@@ -18,7 +18,7 @@ var (
 )
 
 func Transition(cmd Command, state State) (State, error) {
-	return MustMatchCommandR2(
+	return MatchCommandR2(
 		cmd,
 		func(x *CreateGameCMD) (State, error) {
 			if state != nil {

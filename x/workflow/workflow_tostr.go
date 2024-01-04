@@ -18,7 +18,7 @@ import (
 func ToStrWorkflow(workflow Workflow, depth int) string {
 	result := strings.Builder{}
 
-	return MustMatchWorkflow(
+	return MatchWorkflowR1(
 		workflow,
 		func(x *Flow) string {
 			result.WriteString("flow ")
@@ -43,7 +43,7 @@ func ToStrWorkflow(workflow Workflow, depth int) string {
 func ToStrExpr(expr Expr, depth int) string {
 	result := strings.Builder{}
 
-	return MustMatchExpr(
+	return MatchExprR1(
 		expr,
 		func(x *End) string {
 			result.WriteString(strings.Repeat("\t", depth))
@@ -105,7 +105,7 @@ func ToStrExpr(expr Expr, depth int) string {
 }
 
 func ToStrReshaper(reshaper Reshaper, depth int) string {
-	return MustMatchReshaper(
+	return MatchReshaperR1(
 		reshaper,
 		func(x *GetValue) string {
 			return x.Path
@@ -117,7 +117,7 @@ func ToStrReshaper(reshaper Reshaper, depth int) string {
 }
 
 func ToStrSchema(x schema.Schema, depth int) string {
-	return schema.MustMatchSchema(
+	return schema.MatchSchemaR1(
 		x,
 		func(x *schema.None) string {
 			return "none"
@@ -165,7 +165,7 @@ func ToStrSchema(x schema.Schema, depth int) string {
 }
 
 func ToStrPredicate(predicate Predicate, depth int) string {
-	return MustMatchPredicate(
+	return MatchPredicateR1(
 		predicate,
 		func(x *And) string {
 			result := strings.Builder{}
