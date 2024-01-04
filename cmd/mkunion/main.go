@@ -122,7 +122,7 @@ func main() {
 						return fmt.Errorf("union %s not found in %s", union.Name, sourcePath)
 					}
 
-					jsonGenerator := generators.SerdeJSONUnion(union)
+					jsonGenerator := generators.NewSerdeJSONUnion(union)
 					shapeGenerator := generators.NewShapeUnion(union)
 					visitor := generators.NewVisitorGenerator(union)
 
