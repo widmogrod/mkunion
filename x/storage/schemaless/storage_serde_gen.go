@@ -322,12 +322,12 @@ func (r *PageResult[A]) _marshalJSONPageResultLb_A_bL(x PageResult[A]) ([]byte, 
 		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Items; %w", err)
 	}
 	partial["Items"] = fieldItems
-	if x.Next != nil {
-		var fieldNext []byte
-		fieldNext, err = r._marshalJSONPtrFindingRecordsLb_A_bL(x.Next)
-		if err != nil {
-			return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Next; %w", err)
-		}
+	var fieldNext []byte
+	fieldNext, err = r._marshalJSONPtrFindingRecordsLb_A_bL(x.Next)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Next; %w", err)
+	}
+	if fieldNext != nil {
 		partial["Next"] = fieldNext
 	}
 	result, err := json.Marshal(partial)
@@ -359,9 +359,15 @@ func (r *PageResult[A]) _marshalJSONA(x A) ([]byte, error) {
 	return result, nil
 }
 func (r *PageResult[A]) _marshalJSONPtrFindingRecordsLb_A_bL(x *FindingRecords[A]) ([]byte, error) {
-	result, err := shared.JSONMarshal[*FindingRecords[A]](x)
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONFindingRecordsLb_A_bL(*x)
+}
+func (r *PageResult[A]) _marshalJSONFindingRecordsLb_A_bL(x FindingRecords[A]) ([]byte, error) {
+	result, err := shared.JSONMarshal[FindingRecords[A]](x)
 	if err != nil {
-		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPtrFindingRecordsLb_A_bL:; %w", err)
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONFindingRecordsLb_A_bL:; %w", err)
 	}
 	return result, nil
 }
@@ -418,9 +424,22 @@ func (r *PageResult[A]) _unmarshalJSONA(data []byte) (A, error) {
 	return result, nil
 }
 func (r *PageResult[A]) _unmarshalJSONPtrFindingRecordsLb_A_bL(data []byte) (*FindingRecords[A], error) {
-	result, err := shared.JSONUnmarshal[*FindingRecords[A]](data)
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONFindingRecordsLb_A_bL(data)
 	if err != nil {
-		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPtrFindingRecordsLb_A_bL: native ref unwrap; %w", err)
+		return nil, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPtrFindingRecordsLb_A_bL: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *PageResult[A]) _unmarshalJSONFindingRecordsLb_A_bL(data []byte) (FindingRecords[A], error) {
+	result, err := shared.JSONUnmarshal[FindingRecords[A]](data)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONFindingRecordsLb_A_bL: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -448,20 +467,20 @@ func PageResultShape() shape.Shape {
 			},
 			{
 				Name: "Next",
-				Type: &shape.RefName{
-					Name:          "FindingRecords",
-					PkgName:       "schemaless",
-					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-					IsPointer:     true,
-					Indexed: []shape.Shape{
-						&shape.RefName{
-							Name:          "A",
-							PkgName:       "",
-							PkgImportName: "",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "FindingRecords",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+						Indexed: []shape.Shape{
+							&shape.RefName{
+								Name:          "A",
+								PkgName:       "",
+								PkgImportName: "",
+							},
 						},
 					},
 				},
-				IsPointer: true,
 			},
 		},
 		Tags: map[string]shape.Tag{

@@ -19,6 +19,9 @@ func toJsonSchema(s Shape, definitions map[string]string, depth int, desc *strin
 		func(x *RefName) string {
 			return `{"$ref": "#/$defs/` + x.Name + `"` + toDescription(desc) + `}`
 		},
+		func(x *PointerLike) string {
+			return toJsonSchema(x.Type, definitions, depth, desc)
+		},
 		func(x *AliasLike) string {
 			panic("not implemented")
 		},

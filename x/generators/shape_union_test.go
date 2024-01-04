@@ -88,20 +88,20 @@ func BranchShape() shape.Shape {
 			},
 			{
 				Name: "Of",
-				Type: &shape.RefName{
-					Name: "ListOf",
-					PkgName: "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: true,
-					Indexed: []shape.Shape{
-						&shape.RefName{
-							Name: "Tree",
-							PkgName: "testutils",
-							PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name: "ListOf",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						Indexed: []shape.Shape{
+							&shape.RefName{
+								Name: "Tree",
+								PkgName: "testutils",
+								PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+							},
 						},
 					},
 				},
-				IsPointer: true,
 				Tags: map[string]shape.Tag{
 					"json": {
 						Value: "just_of",
@@ -110,25 +110,35 @@ func BranchShape() shape.Shape {
 			},
 			{
 				Name: "L",
-				Type: &shape.RefName{
-					Name: "Leaf",
-					PkgName: "testutils",
-					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					IsPointer: true,
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name: "Leaf",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					},
 				},
-				IsPointer: true,
 			},
 			{
 				Name: "Kattr",
 				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name: "Leaf",
-						PkgName: "testutils",
-						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-						IsPointer: true,
+					Element: &shape.PointerLike{
+						Type: &shape.RefName{
+							Name: "Leaf",
+							PkgName: "testutils",
+							PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						},
 					},
-					ElementIsPointer: true,
 					ArrayLen: shape.Ptr(2),
+				},
+			},
+			{
+				Name: "IntPtr",
+				Type: &shape.PointerLike{
+					Type: &shape.PrimitiveLike{
+						Kind: &shape.NumberLike{
+							Kind: &shape.Int64{},
+						},
+					},
 				},
 			},
 		},
@@ -180,22 +190,24 @@ func PShape() shape.Shape {
 							&shape.Any{},
 						},
 					},
-					&shape.RefName{
-						Name: "ListOf2",
-						PkgName: "testutils",
-						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-						IsPointer: true,
-						Indexed: []shape.Shape{
-							&shape.PrimitiveLike{
-								Kind: &shape.NumberLike{
-									Kind: &shape.Int64{},
+					&shape.PointerLike{
+						Type: &shape.RefName{
+							Name: "ListOf2",
+							PkgName: "testutils",
+							PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+							Indexed: []shape.Shape{
+								&shape.PrimitiveLike{
+									Kind: &shape.NumberLike{
+										Kind: &shape.Int64{},
+									},
 								},
-							},
-							&shape.RefName{
-								Name: "Duration",
-								PkgName: "time",
-								PkgImportName: "time",
-								IsPointer: true,
+								&shape.PointerLike{
+									Type: &shape.RefName{
+										Name: "Duration",
+										PkgName: "time",
+										PkgImportName: "time",
+									},
+								},
 							},
 						},
 					},

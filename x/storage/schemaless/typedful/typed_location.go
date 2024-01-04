@@ -61,6 +61,9 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 
 					return location.wrapLocationShapeAware(loc, s)
 				},
+				func(x *shape.PointerLike) []schema.Location {
+					return location.wrapLocationShapeAware(loc, x.Type)
+				},
 				func(y *shape.AliasLike) []schema.Location {
 					panic("not implemented")
 				},
@@ -122,6 +125,9 @@ func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []schema.Locatio
 				panic(fmt.Errorf("shapeToSchemaName: shape.RefName not found %s; %w", x.Name, shape.ErrShapeNotFound))
 			}
 			return location.shapeToSchemaName(s)
+		},
+		func(x *shape.PointerLike) []schema.Location {
+			return location.shapeToSchemaName(x.Type)
 		},
 		func(x *shape.AliasLike) []schema.Location {
 			panic("not implemented")

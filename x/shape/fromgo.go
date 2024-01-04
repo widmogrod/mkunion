@@ -44,19 +44,21 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		return &PrimitiveLike{Kind: &NumberLike{}}
 	case reflect.Slice:
 		return &ListLike{
-			Element:          FromGoReflect(x.Elem(), infiniteRecursionFix),
-			ElementIsPointer: x.Elem().Kind() == reflect.Ptr,
+			Element: FromGoReflect(x.Elem(), infiniteRecursionFix),
+			//ElementIsPointer: x.Elem().Kind() == reflect.Ptr,
 		}
 	case reflect.Map:
 		return &MapLike{
-			Key:          FromGoReflect(x.Key(), infiniteRecursionFix),
-			KeyIsPointer: x.Key().Kind() == reflect.Ptr,
-			Val:          FromGoReflect(x.Elem(), infiniteRecursionFix),
-			ValIsPointer: x.Elem().Kind() == reflect.Ptr,
+			Key: FromGoReflect(x.Key(), infiniteRecursionFix),
+			//KeyIsPointer: x.Key().Kind() == reflect.Ptr,
+			Val: FromGoReflect(x.Elem(), infiniteRecursionFix),
+			//ValIsPointer: x.Elem().Kind() == reflect.Ptr,
 		}
 
 	case reflect.Ptr:
-		return FromGoReflect(x.Elem(), infiniteRecursionFix)
+		return &PointerLike{
+			Type: FromGoReflect(x.Elem(), infiniteRecursionFix),
+		}
 
 	case reflect.Interface:
 		shape, found := LookupShape(MkRefNameFromReflect(x))
@@ -121,12 +123,11 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 			guard = TagsToGuard(tags)
 
 			fields = append(fields, &FieldLike{
-				Name:      field.Name,
-				Type:      FromGoReflect(field.Type, infiniteRecursionFix),
-				Desc:      desc,
-				Guard:     guard,
-				Tags:      tags,
-				IsPointer: field.Type.Kind() == reflect.Ptr,
+				Name:  field.Name,
+				Type:  FromGoReflect(field.Type, infiniteRecursionFix),
+				Desc:  desc,
+				Guard: guard,
+				Tags:  tags,
 			})
 		}
 

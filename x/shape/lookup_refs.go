@@ -34,6 +34,9 @@ func shapeFullName(x Shape) string {
 
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
+		func(x *PointerLike) string {
+			return fmt.Sprintf("*%s", shapeFullName(x.Type))
+		},
 		func(x *AliasLike) string {
 			if x.PkgName == "" {
 				return x.Name

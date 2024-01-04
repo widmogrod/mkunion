@@ -219,6 +219,13 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 
 			return FromGoReflect(y, yreflect)
 		},
+		func(x *shape.PointerLike) Schema {
+			if yreflect.Kind() == reflect.Ptr {
+				yreflect = yreflect.Elem()
+			}
+
+			return FromGoReflect(x.Type, yreflect)
+		},
 		func(x *shape.AliasLike) Schema {
 			if yreflect.Kind() == reflect.Ptr {
 				yreflect = yreflect.Elem()
@@ -424,6 +431,9 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 			}
 
 			return ToGoReflect(newShape, ydata, zreflect)
+		},
+		func(x *shape.PointerLike) (reflect.Value, error) {
+			return ToGoReflect(x.Type, ydata, zreflect)
 		},
 		func(x *shape.AliasLike) (reflect.Value, error) {
 			value, err := ToGoReflect(x.Type, ydata, zreflect)

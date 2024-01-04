@@ -48,6 +48,10 @@ func ToTypeScriptOptimisation(x Shape) Shape {
 			}
 			return x
 		},
+		func(x *PointerLike) Shape {
+			x.Type = ToTypeScriptOptimisation(x.Type)
+			return x
+		},
 		func(x *AliasLike) Shape {
 			x.Type = ToTypeScriptOptimisation(x.Type)
 			return x
@@ -126,6 +130,9 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 
 			return fmt.Sprintf("%s%s", prefix, x.Name)
 		},
+		func(x *PointerLike) string {
+			return ToTypeScript(x.Type, option)
+		},
 		func(x *AliasLike) string {
 			return fmt.Sprintf("export type %s = %s\n", x.Name, ToTypeScript(x.Type, option))
 		},
@@ -168,7 +175,11 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 			if len(x.Fields) > 0 {
 				_, _ = fmt.Fprintf(result, "\n")
 				for _, field := range x.Fields {
-					result.WriteString(fmt.Sprintf("\t%s?: %s,\n", field.Name, ToTypeScript(field.Type, option)))
+					if IsPointer(field.Type) || !IsRequired(field.Guard) {
+						_, _ = fmt.Fprintf(result, "\t%s?: %s,\n", field.Name, ToTypeScript(field.Type, option))
+					} else {
+						_, _ = fmt.Fprintf(result, "\t%s: %s,\n", field.Name, ToTypeScript(field.Type, option))
+					}
 				}
 			}
 			result.WriteString("}")
@@ -227,6 +238,9 @@ func (r *TypeScriptRenderer) AddShape(x Shape) {
 			res := ToTypeScript(x, options)
 			contents.WriteString(res)
 			contents.WriteString("\n")
+		},
+		func(x *PointerLike) {
+			r.AddShape(x.Type)
 		},
 		func(x *AliasLike) {
 			contents := r.initContentsFor(x.PkgImportName)
@@ -386,6 +400,9 @@ func toTypeTypeScriptTypeName(variant Shape, option *TypeScriptOptions) string {
 				return fmt.Sprintf("%s%s<%s>", prefix, x.Name, strings.Join(names, ", "))
 			}
 			return prefix + x.Name
+		},
+		func(x *PointerLike) string {
+			return toTypeTypeScriptTypeName(x.Type, option)
 		},
 		func(x *AliasLike) string {
 			//typeName := toTypeTypeScriptTypeName(x.Type, option)

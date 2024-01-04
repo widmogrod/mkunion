@@ -67,17 +67,14 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 
 	case *ast.ArrayType:
 		return &ListLike{
-			Element:          FromAST(y.Elt, fx...),
-			ElementIsPointer: IsStarExpr(y.Elt),
-			ArrayLen:         tryGetArrayLen(y.Len),
+			Element:  FromAST(y.Elt, fx...),
+			ArrayLen: tryGetArrayLen(y.Len),
 		}
 
 	case *ast.MapType:
 		return &MapLike{
-			Key:          FromAST(y.Key, fx...),
-			KeyIsPointer: IsStarExpr(y.Key),
-			Val:          FromAST(y.Value, fx...),
-			ValIsPointer: IsStarExpr(y.Value),
+			Key: FromAST(y.Key, fx...),
+			Val: FromAST(y.Value, fx...),
 		}
 
 	case *ast.SelectorExpr:
@@ -106,12 +103,9 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 
 	case *ast.StarExpr:
 		result := FromAST(y.X, fx...)
-		switch z := result.(type) {
-		case *RefName:
-			z.IsPointer = true
+		return &PointerLike{
+			Type: result,
 		}
-
-		return result
 	}
 
 	return &Any{}

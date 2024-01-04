@@ -10,12 +10,11 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
-		IsPointer     bool
 		Indexed       []Shape
 	}
-	//PointerLike struct {
-	//	Type Shape
-	//}
+	PointerLike struct {
+		Type Shape
+	}
 	AliasLike struct {
 		Name          string
 		PkgName       string
@@ -30,18 +29,15 @@ type (
 	ListLike struct {
 		//Extend *ListLike
 		//Guard  Guard
-		Element          Shape
-		ElementIsPointer bool
+		Element Shape
 		// ArrayLen is a pointer to int, when it's nil, it means it's a slice.
 		ArrayLen *int
 	}
 	MapLike struct {
 		//Extend *MapLike
 		//Guard  Guard
-		Key          Shape
-		Val          Shape
-		KeyIsPointer bool
-		ValIsPointer bool
+		Key Shape
+		Val Shape
 	}
 	StructLike struct {
 		Name          string
@@ -50,8 +46,6 @@ type (
 		TypeParams    []TypeParam
 		Fields        []*FieldLike
 		Tags          map[string]Tag
-		// this refers when struct is instantiated
-		IsPointer bool
 	}
 	UnionLike struct {
 		Name          string
@@ -173,12 +167,11 @@ func NumberKindToGoName(x NumberKind) string {
 }
 
 type FieldLike struct {
-	Name      string
-	Type      Shape
-	Desc      *string
-	Guard     Guard
-	IsPointer bool
-	Tags      map[string]Tag
+	Name  string
+	Type  Shape
+	Desc  *string
+	Guard Guard
+	Tags  map[string]Tag
 }
 
 type Tag struct {
@@ -221,6 +214,11 @@ type (
 	}
 )
 
+func IsRequired(x Guard) bool {
+	_, isRequired := x.(*Required)
+	return isRequired
+}
+
 func ConcatGuard(a, b Guard) Guard {
 	if a == nil {
 		return b
@@ -250,6 +248,9 @@ func Tags(x Shape) map[string]Tag {
 			return nil
 		},
 		func(x *RefName) map[string]Tag {
+			return nil
+		},
+		func(x *PointerLike) map[string]Tag {
 			return nil
 		},
 		func(x *AliasLike) map[string]Tag {
@@ -289,11 +290,9 @@ func Ptr[A any](x A) *A {
 }
 
 func IsPointer(x Shape) bool {
-	switch y := x.(type) {
-	case *RefName:
-		return y.IsPointer
-	case *StructLike:
-		return y.IsPointer
+	switch x.(type) {
+	case *PointerLike:
+		return true
 	}
 
 	return false
@@ -342,6 +341,9 @@ func ExtractRefs(x Shape) []*RefName {
 
 			return append(result, x)
 		},
+		func(x *PointerLike) []*RefName {
+			return ExtractRefs(x.Type)
+		},
 		func(x *AliasLike) []*RefName {
 			var result []*RefName
 			// convert alias as ref also
@@ -388,7 +390,6 @@ func ExtractRefs(x Shape) []*RefName {
 				Name:          x.Name,
 				PkgName:       x.PkgName,
 				PkgImportName: x.PkgImportName,
-				IsPointer:     x.IsPointer,
 			})
 
 			for _, field := range x.Fields {

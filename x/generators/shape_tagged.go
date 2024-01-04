@@ -199,9 +199,9 @@ func ShapeToString(x shape.Shape) string {
 			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
 			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
 
-			if x.IsPointer {
-				fmt.Fprintf(result, "\tIsPointer: %v,\n", x.IsPointer)
-			}
+			//if x.IsPointer {
+			//	fmt.Fprintf(result, "\tIsPointer: %v,\n", x.IsPointer)
+			//}
 
 			if len(x.Indexed) > 0 {
 				fmt.Fprintf(result, "\tIndexed: []shape.Shape{\n")
@@ -211,6 +211,15 @@ func ShapeToString(x shape.Shape) string {
 				fmt.Fprintf(result, "\t},\n")
 			}
 
+			fmt.Fprintf(result, "}")
+
+			return result.String()
+		},
+		func(x *shape.PointerLike) string {
+			result := &bytes.Buffer{}
+
+			fmt.Fprintf(result, "&shape.PointerLike{\n")
+			fmt.Fprintf(result, "\tType: %s,\n", padLeftTabs2(1, ShapeToString(x.Type)))
 			fmt.Fprintf(result, "}")
 
 			return result.String()
@@ -263,9 +272,6 @@ func ShapeToString(x shape.Shape) string {
 
 			fmt.Fprintf(result, "&shape.ListLike{\n")
 			fmt.Fprintf(result, "\tElement: %s,\n", padLeftTabs2(1, ShapeToString(x.Element)))
-			if x.ElementIsPointer {
-				fmt.Fprintf(result, "\tElementIsPointer: %v,\n", x.ElementIsPointer)
-			}
 			if x.ArrayLen != nil {
 				fmt.Fprintf(result, "\tArrayLen: shape.Ptr(%d),\n", *x.ArrayLen)
 			}
@@ -278,14 +284,7 @@ func ShapeToString(x shape.Shape) string {
 
 			fmt.Fprintf(result, "&shape.MapLike{\n")
 			fmt.Fprintf(result, "\tKey: %s,\n", padLeftTabs2(1, ShapeToString(x.Key)))
-			if x.KeyIsPointer {
-				fmt.Fprintf(result, "\tKeyIsPointer: %v,\n", x.KeyIsPointer)
-			}
 			fmt.Fprintf(result, "\tVal: %s,\n", padLeftTabs2(1, ShapeToString(x.Val)))
-			if x.ValIsPointer {
-				fmt.Fprintf(result, "\tValIsPointer: %v,\n", x.ValIsPointer)
-			}
-
 			fmt.Fprintf(result, "}")
 
 			return result.String()
@@ -404,9 +403,6 @@ func FieldLikeToString(x *shape.FieldLike, removeTypeName bool) string {
 	}
 	if x.Guard != nil {
 		fmt.Fprintf(result, "\tGuard: %s,\n", padLeftTabs2(1, GuardToString(x.Guard)))
-	}
-	if x.IsPointer {
-		fmt.Fprintf(result, "\tIsPointer: true,\n")
 	}
 	if len(x.Tags) > 0 {
 		fmt.Fprintf(result, "\tTags: %s,\n", padLeftTabs2(1, TagsToStr(x.Tags)))

@@ -34,6 +34,9 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 				Type: jsonschema.Null,
 			}
 		},
+		func(x *PointerLike) *jsonschema.Definition {
+			return toFunctionParameters(x.Type)
+		},
 		func(x *AliasLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
 				Type: jsonschema.String,
@@ -123,6 +126,9 @@ func toVariantName(x Shape) string {
 		func(x *RefName) string {
 			//panic("not implemented")
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		},
+		func(x *PointerLike) string {
+			return toVariantName(x.Type)
 		},
 		func(x *AliasLike) string {
 			panic("not implemented")

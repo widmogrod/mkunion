@@ -109,6 +109,9 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 			panic("not implemented ref var casting")
 
 		},
+		func(x *shape.PointerLike) (string, error) {
+			panic("not implemented pointer var casting")
+		},
 		func(x *shape.AliasLike) (string, error) {
 			result := &strings.Builder{}
 			result.WriteString("var (\n")
@@ -267,6 +270,25 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 			return methodWrap(body)
 		},
+		func(y *shape.PointerLike) (string, error) {
+			body := &strings.Builder{}
+			body.WriteString(fmt.Sprintf("if x == nil {\n"))
+			body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
+			body.WriteString(fmt.Sprintf("}\n"))
+			body.WriteString(fmt.Sprintf("return r.%s(*x)\n", g.methodNameWithPrefix(y.Type, marshalJSONMethodPrefix)))
+
+			result, err := methodWrap(body)
+			if err != nil {
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: alias wrapping; %w", err)
+			}
+
+			methods, err := g.GenerateMarshalJSONMethods(y.Type)
+			if err != nil {
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: alias methods; %w", err)
+			}
+
+			return result + methods, nil
+		},
 		func(y *shape.AliasLike) (string, error) {
 			aliasTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))
 
@@ -406,32 +428,22 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 		func(y *shape.StructLike) (string, error) {
 			body := &strings.Builder{}
 
-			if y.IsPointer {
-				body.WriteString(fmt.Sprintf("if x == nil {\n"))
-				body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
-				body.WriteString(fmt.Sprintf("}\n"))
-			}
-
 			body.WriteString(fmt.Sprintf("partial := make(map[string]json.RawMessage)\n"))
 			body.WriteString(fmt.Sprintf("var err error\n"))
 			for _, field := range y.Fields {
 				jsonFieldName := shape.TagGetValue(field.Tags, "json", field.Name)
 
-				if field.IsPointer {
-					body.WriteString(fmt.Sprintf("if x.%s != nil {\n", field.Name))
-					body.WriteString(fmt.Sprintf("\tvar field%s []byte\n", field.Name))
-					body.WriteString(fmt.Sprintf("\tfield%s, err = r.%s(x.%s)\n", field.Name, g.methodNameWithPrefix(field.Type, marshalJSONMethodPrefix), field.Name))
-					body.WriteString(fmt.Sprintf("\tif err != nil {\n"))
-					body.WriteString(fmt.Sprintf("\t\treturn nil, fmt.Errorf(\"%s field name %s; %%w\", err)\n", errorContext, field.Name))
-					body.WriteString(fmt.Sprintf("\t}\n"))
+				body.WriteString(fmt.Sprintf("var field%s []byte\n", field.Name))
+				body.WriteString(fmt.Sprintf("field%s, err = r.%s(x.%s)\n", field.Name, g.methodNameWithPrefix(field.Type, marshalJSONMethodPrefix), field.Name))
+				body.WriteString(fmt.Sprintf("if err != nil {\n"))
+				body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s field name %s; %%w\", err)\n", errorContext, field.Name))
+				body.WriteString(fmt.Sprintf("}\n"))
+
+				if shape.IsPointer(field.Type) {
+					body.WriteString(fmt.Sprintf("if field%s != nil {\n", field.Name))
 					body.WriteString(fmt.Sprintf("\tpartial[\"%s\"] = field%s\n", jsonFieldName, field.Name))
 					body.WriteString(fmt.Sprintf("}\n"))
 				} else {
-					body.WriteString(fmt.Sprintf("var field%s []byte\n", field.Name))
-					body.WriteString(fmt.Sprintf("field%s, err = r.%s(x.%s)\n", field.Name, g.methodNameWithPrefix(field.Type, marshalJSONMethodPrefix), field.Name))
-					body.WriteString(fmt.Sprintf("if err != nil {\n"))
-					body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s field name %s; %%w\", err)\n", errorContext, field.Name))
-					body.WriteString(fmt.Sprintf("}\n"))
 					body.WriteString(fmt.Sprintf("partial[\"%s\"] = field%s\n", jsonFieldName, field.Name))
 				}
 			}
@@ -528,6 +540,32 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 			return methodWrap(body)
+		},
+		func(y *shape.PointerLike) (string, error) {
+			body := &strings.Builder{}
+			body.WriteString(fmt.Sprintf("if len(data) == 0 {\n"))
+			body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
+			body.WriteString(fmt.Sprintf("}\n"))
+			body.WriteString(fmt.Sprintf("if string(data[:4]) == \"null\" {\n"))
+			body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
+			body.WriteString(fmt.Sprintf("}\n"))
+			body.WriteString(fmt.Sprintf("result, err := r.%s(data)\n", g.methodNameWithPrefix(y.Type, unmarshalJSONMethodPrefix)))
+			body.WriteString(fmt.Sprintf("if err != nil {\n"))
+			body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s pointer; %%w\", err)\n", errorContext))
+			body.WriteString(fmt.Sprintf("}\n"))
+			body.WriteString(fmt.Sprintf("return &result, nil\n"))
+
+			result, err := methodWrap(body)
+			if err != nil {
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: alias wrapping; %w", err)
+			}
+
+			methods, err := g.GenerateUnmarshalJSONMethods(y.Type)
+			if err != nil {
+				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: alias methods; %w", err)
+			}
+
+			return result + methods, nil
 		},
 		func(y *shape.AliasLike) (string, error) {
 			aliasTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))

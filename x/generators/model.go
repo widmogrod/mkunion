@@ -103,6 +103,9 @@ func TypeNameIfSupports(s shape.Shape) (string, bool) {
 		func(x *shape.RefName) (string, bool) {
 			return "", false
 		},
+		func(x *shape.PointerLike) (string, bool) {
+			return TypeNameIfSupports(x.Type)
+		},
 		func(x *shape.AliasLike) (string, bool) {
 			return x.Name, true
 		},
@@ -132,6 +135,9 @@ func TemplateHelperShapeVariantToName(x shape.Shape) string {
 		},
 		func(x *shape.RefName) string {
 			return x.Name
+		},
+		func(x *shape.PointerLike) string {
+			return TemplateHelperShapeVariantToName(x.Type)
 		},
 		func(x *shape.AliasLike) string {
 			return x.Name

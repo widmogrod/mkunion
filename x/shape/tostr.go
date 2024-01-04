@@ -14,8 +14,15 @@ func ToStr(x Shape) string {
 		func(x *RefName) string {
 			return fmt.Sprintf("%s:%s.%s", x.PkgImportName, x.PkgName, x.Name)
 		},
+		func(x *PointerLike) string {
+			return fmt.Sprintf("*%s", ToStr(x.Type))
+		},
 		func(x *AliasLike) string {
-			panic("not implemented")
+			if x.IsAlias {
+				return fmt.Sprintf("%s:%s.%s = %s", x.PkgImportName, x.PkgName, x.Name, ToStr(x.Type))
+			} else {
+				return fmt.Sprintf("%s:%s.%s{%s}", x.PkgImportName, x.PkgName, x.Name, ToStr(x.Type))
+			}
 		},
 		func(x *PrimitiveLike) string {
 			return MatchPrimitiveKindR1(

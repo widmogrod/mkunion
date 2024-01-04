@@ -73,6 +73,9 @@ func (g *SerdeJSONUnion) JSONVariantName(x shape.Shape) string {
 		func(y *shape.RefName) string {
 			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
+		func(x *shape.PointerLike) string {
+			return g.JSONVariantName(x.Type)
+		},
 		func(y *shape.AliasLike) string {
 			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
