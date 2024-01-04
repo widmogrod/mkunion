@@ -90,7 +90,7 @@ func (r *TypeParam) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("shape: TypeParam._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("shape: TypeParam._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
