@@ -410,7 +410,7 @@ func (r *Branch) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Branch._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Branch._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -520,7 +520,7 @@ func (r *Leaf) _unmarshalJSONint64(data []byte) (int64, error) {
 	var result int64
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Leaf._unmarshalJSONint64: native number unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Leaf._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -582,7 +582,7 @@ func (r *K) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -745,7 +745,7 @@ func (r *Ma) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Ma._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Ma._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -977,7 +977,7 @@ func (r *Ka) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

@@ -78,7 +78,7 @@ func BranchShape() shape.Shape {
 			{
 				Name: "Map",
 				Type: &shape.MapLike{
-					Key: &shape.StringLike{},
+					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 					Val: &shape.RefName{
 						Name: "Tree",
 						PkgName: "testutils",
@@ -143,8 +143,10 @@ func LeafShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Value",
-				Type: &shape.NumberLike{
-					Kind: &shape.Int64{},
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
 				},
 			},
 		},
@@ -156,7 +158,7 @@ func KShape() shape.Shape {
 		Name: "K",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-		Type: &shape.StringLike{},
+		Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 
@@ -184,8 +186,10 @@ func PShape() shape.Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 						IsPointer: true,
 						Indexed: []shape.Shape{
-							&shape.NumberLike{
-								Kind: &shape.Int64{},
+							&shape.PrimitiveLike{
+								Kind: &shape.NumberLike{
+									Kind: &shape.Int64{},
+								},
 							},
 							&shape.RefName{
 								Name: "Duration",
@@ -206,7 +210,7 @@ func MaShape() shape.Shape {
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 		Type: &shape.MapLike{
-				Key: &shape.StringLike{},
+				Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 				Val: &shape.RefName{
 					Name: "Tree",
 					PkgName: "testutils",
@@ -238,7 +242,7 @@ func KaShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 		Type: &shape.ListLike{
 				Element: &shape.MapLike{
-					Key: &shape.StringLike{},
+					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 					Val: &shape.RefName{
 						Name: "Tree",
 						PkgName: "testutils",

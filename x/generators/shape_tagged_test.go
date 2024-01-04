@@ -46,7 +46,7 @@ func ListOf2Shape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
-				Type: &shape.StringLike{},
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 			{
 				Name: "Data",

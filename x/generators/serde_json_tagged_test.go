@@ -259,7 +259,7 @@ func (r *ListOf2[T1,T2]) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: ListOf2[T1,T2]._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: ListOf2[T1,T2]._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -412,7 +412,7 @@ func (r *K) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -552,7 +552,7 @@ func (r *Ka) _unmarshalJSONstring(data []byte) (string, error) {
 	var result string
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native string unwrap; %w", err)
+		return result, fmt.Errorf("testutils: Ka._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

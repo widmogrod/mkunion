@@ -73,16 +73,10 @@ func (g *SerdeJSONUnion) JSONVariantName(x shape.Shape) string {
 		func(y *shape.RefName) string {
 			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
-		func(x *shape.AliasLike) string {
-			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
+		func(y *shape.AliasLike) string {
+			return fmt.Sprintf("%s.%s", y.PkgName, y.Name)
 		},
-		func(y *shape.BooleanLike) string {
-			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
-		},
-		func(y *shape.StringLike) string {
-			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
-		},
-		func(y *shape.NumberLike) string {
+		func(y *shape.PrimitiveLike) string {
 			panic(fmt.Errorf("generators.JSONVariantName: must be named %T", y))
 		},
 		func(y *shape.ListLike) string {

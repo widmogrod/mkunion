@@ -233,23 +233,30 @@ func ShapeToString(x shape.Shape) string {
 
 			return result.String()
 		},
-		func(x *shape.BooleanLike) string {
-			return "&shape.BooleanLike{}"
-		},
-		func(x *shape.StringLike) string {
-			return "&shape.StringLike{}"
-		},
-		func(x *shape.NumberLike) string {
-			result := &bytes.Buffer{}
+		func(x *shape.PrimitiveLike) string {
+			return shape.MatchPrimitiveKindR1(
+				x.Kind,
+				func(x *shape.BooleanLike) string {
+					return "&shape.PrimitiveLike{Kind: &shape.BooleanLike{}}"
+				},
+				func(x *shape.StringLike) string {
+					return "&shape.PrimitiveLike{Kind: &shape.StringLike{}}"
+				},
+				func(x *shape.NumberLike) string {
+					result := &bytes.Buffer{}
 
-			fmt.Fprintf(result, "&shape.NumberLike{")
-			if x.Kind != nil {
-				fmt.Fprintf(result, "\n")
-				fmt.Fprintf(result, "\tKind: &%s,\n", KindToGoName(x.Kind))
-			}
-			fmt.Fprintf(result, "}")
+					fmt.Fprintf(result, "&shape.PrimitiveLike{\n")
+					fmt.Fprintf(result, "\tKind: &shape.NumberLike{")
+					if x.Kind != nil {
+						fmt.Fprintf(result, "\n")
+						fmt.Fprintf(result, "\t\tKind: &%s,\n", KindToGoName(x.Kind))
+					}
+					fmt.Fprintf(result, "\t},\n")
+					fmt.Fprintf(result, "}")
 
-			return result.String()
+					return result.String()
+				},
+			)
 		},
 		func(x *shape.ListLike) string {
 			result := &bytes.Buffer{}

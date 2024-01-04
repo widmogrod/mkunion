@@ -17,6 +17,7 @@ type (
 		Of    *ListOf[Tree] `json:"just_of"`
 		L     *Leaf
 		Kattr [2]*Leaf
+		//IntPtr *int64
 	}
 	Leaf struct{ Value int64 }
 	K    string

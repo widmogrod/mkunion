@@ -129,17 +129,8 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 			return result.String(), nil
 
 		},
-		func(x *shape.BooleanLike) (string, error) {
-			panic("not implemented boolean var casting")
-
-		},
-		func(x *shape.StringLike) (string, error) {
-			panic("not implemented string var casting")
-
-		},
-		func(x *shape.NumberLike) (string, error) {
-			panic("not implemented number var casting")
-
+		func(x *shape.PrimitiveLike) (string, error) {
+			panic("not implemented primitive var casting")
 		},
 		func(x *shape.ListLike) (string, error) {
 			panic("not implemented list var casting")
@@ -309,25 +300,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 
 			return result + methods, nil
 		},
-		func(y *shape.BooleanLike) (string, error) {
-			body := &strings.Builder{}
-			body.WriteString(fmt.Sprintf("result, err := json.Marshal(x)\n"))
-			body.WriteString(fmt.Sprintf("if err != nil {\n"))
-			body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s; %%w\", err)\n", errorContext))
-			body.WriteString(fmt.Sprintf("}\n"))
-			body.WriteString(fmt.Sprintf("return result, nil\n"))
-			return methodWrap(body)
-		},
-		func(y *shape.StringLike) (string, error) {
-			body := &strings.Builder{}
-			body.WriteString(fmt.Sprintf("result, err := json.Marshal(x)\n"))
-			body.WriteString(fmt.Sprintf("if err != nil {\n"))
-			body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s; %%w\", err)\n", errorContext))
-			body.WriteString(fmt.Sprintf("}\n"))
-			body.WriteString(fmt.Sprintf("return result, nil\n"))
-			return methodWrap(body)
-		},
-		func(y *shape.NumberLike) (string, error) {
+		func(x *shape.PrimitiveLike) (string, error) {
 			body := &strings.Builder{}
 			body.WriteString(fmt.Sprintf("result, err := json.Marshal(x)\n"))
 			body.WriteString(fmt.Sprintf("if err != nil {\n"))
@@ -592,32 +565,12 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 
 			return result + methods, nil
 		},
-		func(y *shape.BooleanLike) (string, error) {
+		func(x *shape.PrimitiveLike) (string, error) {
 			body := &strings.Builder{}
 			body.WriteString(fmt.Sprintf("var result %s\n", typeName))
 			body.WriteString(fmt.Sprintf("err := json.Unmarshal(data, &result)\n"))
 			body.WriteString(fmt.Sprintf("if err != nil {\n"))
-			body.WriteString(fmt.Sprintf("\treturn result, fmt.Errorf(\"%s native boolean unwrap; %%w\", err)\n", errorContext))
-			body.WriteString(fmt.Sprintf("}\n"))
-			body.WriteString(fmt.Sprintf("return result, nil\n"))
-			return methodWrap(body)
-		},
-		func(y *shape.StringLike) (string, error) {
-			body := &strings.Builder{}
-			body.WriteString(fmt.Sprintf("var result %s\n", typeName))
-			body.WriteString(fmt.Sprintf("err := json.Unmarshal(data, &result)\n"))
-			body.WriteString(fmt.Sprintf("if err != nil {\n"))
-			body.WriteString(fmt.Sprintf("\treturn result, fmt.Errorf(\"%s native string unwrap; %%w\", err)\n", errorContext))
-			body.WriteString(fmt.Sprintf("}\n"))
-			body.WriteString(fmt.Sprintf("return result, nil\n"))
-			return methodWrap(body)
-		},
-		func(y *shape.NumberLike) (string, error) {
-			body := &strings.Builder{}
-			body.WriteString(fmt.Sprintf("var result %s\n", typeName))
-			body.WriteString(fmt.Sprintf("err := json.Unmarshal(data, &result)\n"))
-			body.WriteString(fmt.Sprintf("if err != nil {\n"))
-			body.WriteString(fmt.Sprintf("\treturn result, fmt.Errorf(\"%s native number unwrap; %%w\", err)\n", errorContext))
+			body.WriteString(fmt.Sprintf("\treturn result, fmt.Errorf(\"%s native primitive unwrap; %%w\", err)\n", errorContext))
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 			return methodWrap(body)

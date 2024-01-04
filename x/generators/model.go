@@ -106,13 +106,7 @@ func TypeNameIfSupports(s shape.Shape) (string, bool) {
 		func(x *shape.AliasLike) (string, bool) {
 			return x.Name, true
 		},
-		func(x *shape.BooleanLike) (string, bool) {
-			return "", false
-		},
-		func(x *shape.StringLike) (string, bool) {
-			return "", false
-		},
-		func(x *shape.NumberLike) (string, bool) {
+		func(x *shape.PrimitiveLike) (string, bool) {
 			return "", false
 		},
 		func(x *shape.ListLike) (string, bool) {
@@ -142,13 +136,7 @@ func TemplateHelperShapeVariantToName(x shape.Shape) string {
 		func(x *shape.AliasLike) string {
 			return x.Name
 		},
-		func(x *shape.BooleanLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.StringLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.NumberLike) string {
+		func(x *shape.PrimitiveLike) string {
 			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
 		},
 		func(x *shape.ListLike) string {
