@@ -48,7 +48,7 @@ func {{ .Union.Name }}ToJSON(x {{ .Union.Name }}) ([]byte, error) {
 	if x == nil {
 		return nil, nil
 	}
-	return MustMatch{{ .Union.Name }}R2(
+	return {{ $self.MatchFuncName .Union 2}}(
 		x,
 		{{- range $index, $variant := .Union.Variant }}
 		func(x *{{ $self.VariantName $variant }}) ([]byte, error) {

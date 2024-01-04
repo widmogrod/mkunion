@@ -83,7 +83,7 @@ func TreeToJSON(x Tree) ([]byte, error) {
 	if x == nil {
 		return nil, nil
 	}
-	return MustMatchTreeR2(
+	return MatchTreeR2(
 		x,
 		func(x *Branch) ([]byte, error) {
 			body, err := BranchToJSON(x)

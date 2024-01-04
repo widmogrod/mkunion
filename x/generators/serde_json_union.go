@@ -139,3 +139,7 @@ func (g *DeSerJSONGenerator) Serde(x shape.Shape) string {
 
 	return result
 }
+
+func (g *DeSerJSONGenerator) MatchFuncName(x *shape.UnionLike, returns int) string {
+	return MatchUnionFuncName(x, returns)
+}
