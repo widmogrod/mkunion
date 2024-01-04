@@ -220,10 +220,6 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			return FromGoReflect(y, yreflect)
 		},
 		func(x *shape.PointerLike) Schema {
-			if yreflect.Kind() == reflect.Ptr {
-				yreflect = yreflect.Elem()
-			}
-
 			return FromGoReflect(x.Type, yreflect)
 		},
 		func(x *shape.AliasLike) Schema {
