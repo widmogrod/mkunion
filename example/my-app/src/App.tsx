@@ -30,6 +30,9 @@ type ListProps<T> = {
         [key: string]: boolean
     }
     limit?: number,
+
+    prevPage?: string,
+    nextPage?: string,
 }
 
 function storageList<T>(input: ListProps<T>): Promise<schemaless.PageResult<schemaless.Record<T>>> {
@@ -45,7 +48,9 @@ function storageList<T>(input: ListProps<T>): Promise<schemaless.PageResult<sche
                     Field: key,
                     Descending: input.sort?.[key],
                 }
-            })
+            }),
+            After: input.nextPage,
+            Before: input.prevPage,
         } as schemaless.FindingRecords<schemaless.Record<T>>),
     })
         .then(res => res.json())
@@ -54,17 +59,15 @@ function storageList<T>(input: ListProps<T>): Promise<schemaless.PageResult<sche
 
 function listStates(input?: ListProps<workflow.State>) {
     return storageList<workflow.State>({
+        ...input,
         path: "states",
-        sort: input?.sort,
-        limit: input?.limit,
     })
 }
 
 function listFlows(input?: ListProps<workflow.Flow>) {
     return storageList<workflow.Flow>({
+        ...input,
         path: "flows",
-        sort: input?.sort,
-        limit: input?.limit,
     })
 }
 
@@ -722,6 +725,8 @@ function App() {
                                     return listFlows({
                                         limit: state.limit,
                                         sort: state.sort,
+                                        prevPage: state.prevPage,
+                                        nextPage: state.nextPage,
                                     })
                                 }}
                                 mapData={(data) => {
@@ -747,6 +752,8 @@ function App() {
                                     return listStates({
                                         limit: state.limit,
                                         sort: state.sort,
+                                        prevPage: state.prevPage,
+                                        nextPage: state.nextPage,
                                     })
                                 }}
                                 actions={[
@@ -1067,10 +1074,15 @@ function SchemaValue(props: { data?: schema.Schema }) {
     return <NativeValue data={props.data}/>
 }
 
+type Cursor = string
+
 type PaginatedTableState<T> = {
     limit: number
     sort: PaginatedTableSort
     selected: { [key: string]: schemaless.Record<T> }
+
+    prevPage?: Cursor
+    nextPage?: Cursor
 }
 
 type PaginatedTableSort = {
@@ -1099,7 +1111,7 @@ type PaginatedTableProps<T> = {
 function PaginatedTable<T>(props: PaginatedTableProps<T>) {
     const [data, setData] = useState({Items: [] as any[]} as schemaless.PageResult<schemaless.Record<T>>)
     const [state, setState] = useState({
-        limit: props.limit || 30,
+        limit: props.limit || 3,
         sort: props.sort || {},
         selected: {},
     } as PaginatedTableState<T>)
@@ -1260,6 +1272,28 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
             </tr>
         )}
         </tbody>
+        <tfoot>
+            <tr>
+                <td colSpan={5} className={"option-row"}>
+                    {data.Next && <button onClick={(e) => {
+                        e.preventDefault()
+                        setState({
+                            ...state,
+                            nextPage: data.Next?.After,
+                            prevPage: undefined,
+                        })
+                    }}>Next page</button>}
+                    {data.Prev && <button onClick={(e) => {
+                        e.preventDefault()
+                        setState({
+                            ...state,
+                            nextPage: undefined,
+                            prevPage: data.Prev?.Before,
+                        })
+                    }}>Prev page</button>}
+                </td>
+            </tr>
+        </tfoot>
     </table>
 }
 
