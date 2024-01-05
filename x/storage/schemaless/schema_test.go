@@ -43,15 +43,15 @@ func TestNewRepository2WithSchema(t *testing.T) {
 		if assert.Len(t, nextResult.Items, 1, "second page should have 1 item") {
 			assert.Equal(t, "Zarlie", nextResult.Items[0].Data.Name, "no-name")
 
-			//// find last before
-			//if assert.True(t, nextResult.HasPrev(), "should have previous page of results") {
-			//	beforeResult, err := repo.FindingRecords(*nextResult.Prev)
-			//	assert.NoError(t, err)
-			//
-			//	if assert.Len(t, beforeResult.Items, 1, "before page should have 1 item") {
-			//		assert.Equal(t, "Jane", schema.As[string](schema.GetSchema(beforeResult.Items[0].Data, "Name"), "no-name"))
-			//	}
-			//}
+			// find last before
+			if assert.True(t, nextResult.HasPrev(), "should have previous page of results") {
+				beforeResult, err := repo.FindingRecords(*nextResult.Prev)
+				assert.NoError(t, err)
+
+				if assert.Len(t, beforeResult.Items, 2, "before page should have 1 item") {
+					assert.Equal(t, "Jane", beforeResult.Items[1].Data.Name, "no-name")
+				}
+			}
 		}
 	}
 }

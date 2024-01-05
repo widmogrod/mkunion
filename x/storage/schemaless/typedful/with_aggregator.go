@@ -124,6 +124,7 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		After:      query.After,
+		Before:     query.Before,
 	})
 	if err != nil {
 		return PageResult[Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords store error %w", err)
@@ -136,10 +137,23 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 
 	if found.HasNext() {
 		result.Next = &FindingRecords[Record[T]]{
-			Where: query.Where,
-			Sort:  query.Sort,
-			Limit: query.Limit,
-			After: found.Next.After,
+			RecordType: query.RecordType,
+			Where:      query.Where,
+			Sort:       query.Sort,
+			Limit:      query.Limit,
+			After:      found.Next.After,
+			Before:     nil,
+		}
+	}
+
+	if found.HasPrev() {
+		result.Prev = &FindingRecords[Record[T]]{
+			RecordType: query.RecordType,
+			Where:      query.Where,
+			Sort:       query.Sort,
+			Limit:      query.Limit,
+			After:      nil,
+			Before:     found.Prev.Before,
 		}
 	}
 

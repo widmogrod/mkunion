@@ -147,11 +147,24 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 		records = sortRecords(records, query.Sort)
 	}
 
+	// Use limit to reduce number of records
+	var next, prev *FindingRecords[Record[A]]
+
+	// given list
+	//	1,2,3,4,5,6,7
+	// find limit=4
+	// 	1,2,3,4					{next: 4, prev: nil}
+	// find limit=4 after=4
+	// 	5,6,7					{next: nil, prev: 4}
+	// find limit=4 before=4
+	// 	1,2,3					{next: 4, prev: nil}
+
 	if query.After != nil {
 		found := false
 		newRecords := make([]Record[A], 0)
+		positionID := *query.After
 		for _, record := range records {
-			if predicate.EvaluateEqual[Record[A]](record, "ID", *query.After) {
+			if record.ID == positionID {
 				found = true
 				continue // we're interested in records after this one
 			}
@@ -160,19 +173,66 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 			}
 		}
 		records = newRecords
-	}
 
-	// Use limit to reduce number of records
-	var next *FindingRecords[Record[A]]
-	if query.Limit > 0 {
-		if len(records) > int(query.Limit) {
-			records = records[:query.Limit]
+		prev = &FindingRecords[Record[A]]{
+			Where:  query.Where,
+			Sort:   query.Sort,
+			Limit:  query.Limit,
+			Before: &positionID,
+		}
 
-			next = &FindingRecords[Record[A]]{
-				Where: query.Where,
-				Sort:  query.Sort,
-				Limit: query.Limit,
-				After: &records[len(records)-1].ID,
+		if query.Limit > 0 {
+			if len(records) > int(query.Limit) {
+				records = records[:query.Limit]
+				next = &FindingRecords[Record[A]]{
+					Where: query.Where,
+					Sort:  query.Sort,
+					Limit: query.Limit,
+					After: &records[len(records)-1].ID,
+				}
+			}
+		}
+
+	} else if query.Before != nil {
+		newRecords := make([]Record[A], 0)
+		positionID := *query.Before
+		for _, record := range records {
+			newRecords = append(newRecords, record)
+			if record.ID == positionID {
+				break
+			}
+		}
+		records = newRecords
+
+		next = &FindingRecords[Record[A]]{
+			Where: query.Where,
+			Sort:  query.Sort,
+			Limit: query.Limit,
+			After: &positionID,
+		}
+
+		if query.Limit > 0 {
+			if len(records) > int(query.Limit) {
+				records = records[len(records)-int(query.Limit):]
+
+				prev = &FindingRecords[Record[A]]{
+					Where:  query.Where,
+					Sort:   query.Sort,
+					Limit:  query.Limit,
+					Before: &records[0].ID,
+				}
+			}
+		}
+	} else {
+		if query.Limit > 0 {
+			if len(records) > int(query.Limit) {
+				records = records[:query.Limit]
+				next = &FindingRecords[Record[A]]{
+					Where: query.Where,
+					Sort:  query.Sort,
+					Limit: query.Limit,
+					After: &records[len(records)-1].ID,
+				}
 			}
 		}
 	}
@@ -180,6 +240,7 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 	result := PageResult[Record[A]]{
 		Items: records,
 		Next:  next,
+		Prev:  prev,
 	}
 
 	return result, nil

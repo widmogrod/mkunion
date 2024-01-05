@@ -36,59 +36,6 @@ type Record[A any] struct {
 	Version uint16
 }
 
-//	func (r *Record[A]) MarshalJSON() ([]byte, error) {
-//		result := make(map[string]json.RawMessage)
-//
-//		field_ID, err := json.Marshal(r.ID)
-//		if err != nil {
-//			return nil, err
-//		}
-//		result["ID"] = field_ID
-//
-//		field_Type, err := json.Marshal(r.Type)
-//		if err != nil {
-//			return nil, err
-//		}
-//		result["Type"] = field_Type
-//
-//		field_Data, err := shared.JSONMarshal[A](r.Data)
-//		if err != nil {
-//			return nil, err
-//		}
-//		result["Data"] = field_Data
-//
-//		field_Version, err := json.Marshal(r.Version)
-//		if err != nil {
-//			return nil, err
-//		}
-//		result["Version"] = field_Version
-//
-//		return json.Marshal(result)
-//	}
-//
-//	func (r *Record[A]) UnmarshalJSON(bytes []byte) error {
-//		return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-//			switch key {
-//			case "ID":
-//				return json.Unmarshal(bytes, &r.ID)
-//			case "Type":
-//				return json.Unmarshal(bytes, &r.Type)
-//			case "Data":
-//				return shared.JSONUnmarshal[A](bytes, &r.Data)
-//			case "Version":
-//				return json.Unmarshal(bytes, &r.Version)
-//			}
-//
-//			return fmt.Errorf("schemaless.Record[A].UnmarshalJSON: unknown key: %s", key)
-//		})
-//	}
-//
-// var (
-//
-//	_ json.Unmarshaler = (*Record[any])(nil)
-//	_ json.Marshaler   = (*Record[any])(nil)
-//
-// )
 type UpdatingPolicy uint
 
 const (
@@ -96,120 +43,45 @@ const (
 	PolicyOverwriteServerChanges
 )
 
-type (
-	UpdateRecords[T any] struct {
-		UpdatingPolicy UpdatingPolicy
-		Saving         map[string]T
-		Deleting       map[string]T
-	}
-	FindingRecords[T any] struct {
-		RecordType string
-		Where      *predicate.WherePredicates
-		Sort       []SortField
-		Limit      uint8
-		After      *Cursor
-		//Before *Cursor
-	}
-)
+type UpdateRecords[T any] struct {
+	UpdatingPolicy UpdatingPolicy
+	Saving         map[string]T
+	Deleting       map[string]T
+}
 
-func (s UpdateRecords[T]) IsEmpty() bool {
+type FindingRecords[T any] struct {
+	RecordType string
+	Where      *predicate.WherePredicates
+	Sort       []SortField
+	Limit      uint8
+	After      *Cursor
+	Before     *Cursor
+}
+
+func (s *UpdateRecords[T]) IsEmpty() bool {
 	return len(s.Saving) == 0 && len(s.Deleting) == 0
 }
 
-type (
-	//go:tag serde:"json"
-	SortField struct {
-		Field      string
-		Descending bool
-	}
+//go:tag serde:"json"
+type SortField struct {
+	Field      string
+	Descending bool
+}
 
-	Cursor = string
+type Cursor = string
 
-	//go:tag serde:"json"
-	PageResult[A any] struct {
-		Items []A
-		Next  *FindingRecords[A]
-	}
-)
+//go:tag serde:"json"
+type PageResult[A any] struct {
+	Items []A
+	Next  *FindingRecords[A]
+	Prev  *FindingRecords[A]
+}
 
-//func (a *PageResult[A]) MarshalJSON() ([]byte, error) {
-//	result := map[string]json.RawMessage{}
-//
-//	var field_Items []json.RawMessage
-//	for _, item := range a.Items {
-//		bytes, err := shared.JSONMarshal[A](item)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		field_Items = append(field_Items, bytes)
-//	}
-//
-//	filed_ItemsS, err := json.Marshal(field_Items)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	result["Items"] = filed_ItemsS
-//
-//	if a.Next != nil {
-//		bytes, err := shared.JSONMarshal[*FindingRecords[A]](a.Next)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		result["Next"] = bytes
-//	}
-//
-//	return json.Marshal(result)
-//}
-//
-//func (a *PageResult[A]) UnmarshalJSON(bytes []byte) error {
-//	return shared.JSONParseObject(bytes, func(key string, bytes []byte) error {
-//		switch key {
-//		case "Items":
-//			var inter []json.RawMessage
-//			err := json.Unmarshal(bytes, &inter)
-//			if err != nil {
-//				return err
-//			}
-//
-//			var items []A
-//			for _, raw := range inter {
-//				var item *A = new(A)
-//				err := shared.JSONUnmarshal[A](raw, item)
-//				if err != nil {
-//					return err
-//				}
-//
-//				items = append(items, *item)
-//			}
-//
-//			a.Items = items
-//			return nil
-//
-//		case "Next":
-//			var next *FindingRecords[A] = new(FindingRecords[A])
-//			err := shared.JSONUnmarshal[*FindingRecords[A]](bytes, next)
-//			if err != nil {
-//				return err
-//			}
-//
-//			a.Next = next
-//			return nil
-//		}
-//
-//		return fmt.Errorf("schemaless.PageResult[A].UnmarshalJSON: unknown key: %s", key)
-//	})
-//}
-//
-//var (
-//	_ json.Unmarshaler = (*PageResult[any])(nil)
-//	_ json.Marshaler   = (*PageResult[any])(nil)
-//)
-
-func (a PageResult[A]) HasNext() bool {
+func (a *PageResult[A]) HasNext() bool {
 	return a.Next != nil
+}
+func (a *PageResult[A]) HasPrev() bool {
+	return a.Prev != nil
 }
 
 type Storage[T any] interface {
