@@ -32,23 +32,26 @@ export type ChatResponses = {
 	Responses?: ChatResult[],
 }
 
-export type RefreshFlows = {}
-
-export type Reshaper = workflow.Reshaper
-
-export type FunctionOutput = workflow.FunctionOutput
-
-export type RefreshStates = {}
-
-export type PageResult = schemaless.PageResult<schemaless.Record<any>>
-
 export type FindRecords = schemaless.FindingRecords<schemaless.Record<any>>
 
-export type Schema = schema.Schema
+export type FunctionOutput = workflow.FunctionOutput
 
 export type UpdateRecords = schemaless.UpdateRecords<schemaless.Record<any>>
 
 export type FunctionInput = workflow.FunctionInput
+
+export type RefreshFlows = {}
+
+export type GenerateImage = {
+	Width?: number,
+	Height?: number,
+}
+
+export type Schema = schema.Schema
+
+export type RefreshStates = {}
+
+export type Service<CMD, State> = {}
 
 export type ListWorkflowsFn = {
 	Count?: number,
@@ -56,29 +59,26 @@ export type ListWorkflowsFn = {
 	EnumTest?: string,
 }
 
-export type GenerateImage = {
-	Width?: number,
-	Height?: number,
-}
+export type Command = workflow.Command
+
+export type Reshaper = workflow.Reshaper
 
 export type Workflow = workflow.Workflow
 
-export type Predicate = workflow.Predicate
-
-export type Command = workflow.Command
+export type State = workflow.State
 
 export type Expr = workflow.Expr
 
-export type State = workflow.State
+export type Predicate = workflow.Predicate
 
-export type Service<CMD, State> = {}
+export type PageResult = schemaless.PageResult<schemaless.Record<any>>
 
 
+//eslint-disable-next-line
+import * as schema from './github_com_widmogrod_mkunion_x_schema'
 //eslint-disable-next-line
 import * as openai from './github_com_sashabaranov_go-openai'
 //eslint-disable-next-line
-import * as workflow from './github_com_widmogrod_mkunion_x_workflow'
-//eslint-disable-next-line
 import * as schemaless from './github_com_widmogrod_mkunion_x_storage_schemaless'
 //eslint-disable-next-line
-import * as schema from './github_com_widmogrod_mkunion_x_schema'
+import * as workflow from './github_com_widmogrod_mkunion_x_workflow'
