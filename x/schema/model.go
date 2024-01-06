@@ -34,7 +34,7 @@ func MkBool(b bool) *Bool {
 	return (*Bool)(&b)
 }
 
-func MkInt(x int) *Number {
+func MkInt(x uint64) *Number {
 	v := float64(x)
 	return (*Number)(&v)
 }

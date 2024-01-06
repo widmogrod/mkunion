@@ -25,34 +25,34 @@ func FromPrimitiveGo(x any) Schema {
 		return MkBool(y)
 
 	case int:
-		return MkInt(y)
+		return MkInt(uint64(y))
 
 	case int8:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case int16:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case int32:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case int64:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case uint:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case uint8:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case uint16:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case uint32:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case uint64:
-		return MkInt(int(y))
+		return MkInt(uint64(y))
 
 	case float32:
 		return MkFloat(float64(y))
@@ -87,8 +87,8 @@ func FromPrimitiveGo(x any) Schema {
 		return MkNone()
 	}
 
-	if x, ok := x.(Schema); ok {
-		return x
+	if y, ok := x.(Schema); ok {
+		return y
 	}
 
 	panic(fmt.Errorf("schema.FromPrimitiveGo: unknown type %T", x))
@@ -262,36 +262,37 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 						return y
 					}
 
-					// this is "int" type
-					if x.Kind == nil {
-						return MkInt(int(yreflect.Int()))
-					}
-
 					return shape.MatchNumberKindR1(
 						x.Kind,
+						func(x *shape.UInt) Schema {
+							return MkInt(uint64(yreflect.Uint()))
+						},
 						func(x *shape.UInt8) Schema {
-							return MkInt(int(yreflect.Uint()))
+							return MkInt(uint64(yreflect.Uint()))
 						},
 						func(x *shape.UInt16) Schema {
-							return MkInt(int(yreflect.Uint()))
+							return MkInt(uint64(yreflect.Uint()))
 						},
 						func(x *shape.UInt32) Schema {
-							return MkInt(int(yreflect.Uint()))
+							return MkInt(uint64(yreflect.Uint()))
 						},
 						func(x *shape.UInt64) Schema {
-							return MkInt(int(yreflect.Uint()))
+							return MkInt(uint64(yreflect.Uint()))
+						},
+						func(x *shape.Int) Schema {
+							return MkInt(uint64(yreflect.Int()))
 						},
 						func(x *shape.Int8) Schema {
-							return MkInt(int(yreflect.Int()))
+							return MkInt(uint64(yreflect.Int()))
 						},
 						func(x *shape.Int16) Schema {
-							return MkInt(int(yreflect.Int()))
+							return MkInt(uint64(yreflect.Int()))
 						},
 						func(x *shape.Int32) Schema {
-							return MkInt(int(yreflect.Int()))
+							return MkInt(uint64(yreflect.Int()))
 						},
 						func(x *shape.Int64) Schema {
-							return MkInt(int(yreflect.Int()))
+							return MkInt(uint64(yreflect.Int()))
 						},
 						func(x *shape.Float32) Schema {
 							return MkFloat(yreflect.Float())
@@ -479,6 +480,9 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 
 					return shape.MatchNumberKindR2(
 						x.Kind,
+						func(x *shape.UInt) (reflect.Value, error) {
+							return reflect.ValueOf(uint(*data)), nil
+						},
 						func(x *shape.UInt8) (reflect.Value, error) {
 							return reflect.ValueOf(uint8(*data)), nil
 						},
@@ -490,6 +494,9 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 						},
 						func(x *shape.UInt64) (reflect.Value, error) {
 							return reflect.ValueOf(uint64(*data)), nil
+						},
+						func(x *shape.Int) (reflect.Value, error) {
+							return reflect.ValueOf(int(*data)), nil
 						},
 						func(x *shape.Int8) (reflect.Value, error) {
 							return reflect.ValueOf(int8(*data)), nil
