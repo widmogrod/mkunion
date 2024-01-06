@@ -347,6 +347,9 @@ func ShapeToString(x shape.Shape) string {
 func KindToGoName(kind shape.NumberKind) string {
 	return shape.MatchNumberKindR1(
 		kind,
+		func(x *shape.UInt) string {
+			return "shape.UInt{}"
+		},
 		func(x *shape.UInt8) string {
 			return "shape.UInt8{}"
 		},
@@ -358,6 +361,9 @@ func KindToGoName(kind shape.NumberKind) string {
 		},
 		func(x *shape.UInt64) string {
 			return "shape.UInt64{}"
+		},
+		func(x *shape.Int) string {
+			return "shape.Int{}"
 		},
 		func(x *shape.Int8) string {
 			return "shape.Int8{}"
