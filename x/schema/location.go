@@ -22,7 +22,8 @@ func LocationToStr(location []Location) string {
 		result += MatchLocationR1(
 			l,
 			func(x *LocationField) string {
-				if strings.Contains(x.Name, ".") {
+				if strings.Contains(x.Name, ".") ||
+					strings.Contains(x.Name, "$") {
 					return fmt.Sprintf(`["%s"]`, x.Name)
 				}
 				return "." + x.Name

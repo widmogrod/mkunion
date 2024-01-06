@@ -637,8 +637,6 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike expected reflect.Interface, got %T", zreflect)
 			}
 
-			//TODO add $type field lookup for faster execution
-
 			for _, variant := range x.Variant {
 				variantName := shape.ToGoTypeName(variant)
 				_, found := (*data)[variantName]
