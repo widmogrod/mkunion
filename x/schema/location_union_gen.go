@@ -144,7 +144,9 @@ func LocationIndexShape() shape.Shape {
 			{
 				Name: "Index",
 				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{},
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int{},
+					},
 				},
 			},
 		},

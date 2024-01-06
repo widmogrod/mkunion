@@ -30,12 +30,13 @@ span.error {
 span.await {
     background-color: #52d2d2;
 }
-input {
+
+input, select {
     padding: 5px;
     margin: 0 5px 0 0;
 }
 
-input, button {
+input, button, select, textarea {
     border: 1px solid #51887a;
     border-radius: 0;
     margin-top: 2px;
@@ -97,6 +98,18 @@ table > thead .option-row button {
     margin-right: 5px;
 }
 
+table > thead .filter-rules {
+    float: right;
+}
+
+.filter-rules {
+
+}
+
+.filter-group, .filter-rule {
+    margin-left: 40px;
+}
+
 table > tbody > tr {
     border-bottom: 1px solid #dddddd;
 }
@@ -108,6 +121,21 @@ table > tbody > tr:nth-of-type(even) {
 tbody tr:last-of-type {
     border-bottom: 2px solid #009879;
 }
+
+tfoot tr {
+    background-color: #ffffff;
+    color: #ffffff;
+    text-align: left;
+    font-size: 1.2em;
+}
+
+button.next-page{
+    float: right;
+}
+button.prev-page{
+    float: left;
+}
+
 
 /* tables inside a table should be smaller */
 table table {

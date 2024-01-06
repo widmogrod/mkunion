@@ -79,10 +79,12 @@ type TypeParam struct {
 
 //go:tag mkunion:"NumberKind"
 type (
+	UInt    struct{}
 	UInt8   struct{}
 	UInt16  struct{}
 	UInt32  struct{}
 	UInt64  struct{}
+	Int     struct{}
 	Int8    struct{}
 	Int16   struct{}
 	Int32   struct{}
@@ -92,10 +94,12 @@ type (
 )
 
 var TypeStringToNumberKindMap = map[string]NumberKind{
+	"uint":    &UInt{},
 	"uint8":   &UInt8{},
 	"uint16":  &UInt16{},
 	"uint32":  &UInt32{},
 	"uint64":  &UInt64{},
+	"int":     &Int{},
 	"int8":    &Int8{},
 	"int16":   &Int16{},
 	"int32":   &Int32{},
@@ -127,12 +131,11 @@ func IsBinary(x Shape) bool {
 }
 
 func NumberKindToGoName(x NumberKind) string {
-	if x == nil {
-		return "int"
-	}
-
 	return MatchNumberKindR1(
 		x,
+		func(x *UInt) string {
+			return "uint"
+		},
 		func(x *UInt8) string {
 			return "uint8"
 		},
@@ -144,6 +147,9 @@ func NumberKindToGoName(x NumberKind) string {
 		},
 		func(x *UInt64) string {
 			return "uint64"
+		},
+		func(x *Int) string {
+			return "int"
 		},
 		func(x *Int8) string {
 			return "int8"

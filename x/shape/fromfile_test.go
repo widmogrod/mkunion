@@ -49,8 +49,10 @@ func TestInferFromFile(t *testing.T) {
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				Fields: []*FieldLike{
 					{
-						Name:  "Age",
-						Type:  &PrimitiveLike{Kind: &NumberLike{}},
+						Name: "Age",
+						Type: &PrimitiveLike{Kind: &NumberLike{
+							Kind: &Int{},
+						}},
 						Desc:  nil,
 						Guard: nil,
 						Tags: map[string]Tag{

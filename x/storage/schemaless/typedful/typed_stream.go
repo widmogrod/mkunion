@@ -8,7 +8,7 @@ import (
 )
 
 func NewTypedAppendLog[T any](log schemaless.AppendLoger[schema.Schema]) *TypedAppendLog[T] {
-	location, err := NewTypedLocation[schemaless.Record[T]]()
+	location, err := schema.NewTypedLocation[schemaless.Record[T]]()
 	if err != nil {
 		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
 	}
@@ -21,7 +21,7 @@ func NewTypedAppendLog[T any](log schemaless.AppendLoger[schema.Schema]) *TypedA
 
 type TypedAppendLog[T any] struct {
 	log schemaless.AppendLoger[schema.Schema]
-	loc *TypedLocation
+	loc *schema.TypedLocation
 }
 
 func (t *TypedAppendLog[T]) Close() {

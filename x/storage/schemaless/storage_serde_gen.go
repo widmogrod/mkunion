@@ -156,6 +156,14 @@ func (r *PageResult[A]) _marshalJSONPageResultLb_A_bL(x PageResult[A]) ([]byte, 
 	if fieldNext != nil {
 		partial["Next"] = fieldNext
 	}
+	var fieldPrev []byte
+	fieldPrev, err = r._marshalJSONPtrFindingRecordsLb_A_bL(x.Prev)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Prev; %w", err)
+	}
+	if fieldPrev != nil {
+		partial["Prev"] = fieldPrev
+	}
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: struct; %w", err)
@@ -222,6 +230,12 @@ func (r *PageResult[A]) _unmarshalJSONPageResultLb_A_bL(data []byte) (PageResult
 		result.Next, err = r._unmarshalJSONPtrFindingRecordsLb_A_bL(fieldNext)
 		if err != nil {
 			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: field Next; %w", err)
+		}
+	}
+	if fieldPrev, ok := partial["Prev"]; ok {
+		result.Prev, err = r._unmarshalJSONPtrFindingRecordsLb_A_bL(fieldPrev)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: PageResult[A]._unmarshalJSONPageResultLb_A_bL: field Prev; %w", err)
 		}
 	}
 	return result, nil
@@ -293,6 +307,23 @@ func PageResultShape() shape.Shape {
 			},
 			{
 				Name: "Next",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "FindingRecords",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+						Indexed: []shape.Shape{
+							&shape.RefName{
+								Name:          "A",
+								PkgName:       "",
+								PkgImportName: "",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "Prev",
 				Type: &shape.PointerLike{
 					Type: &shape.RefName{
 						Name:          "FindingRecords",

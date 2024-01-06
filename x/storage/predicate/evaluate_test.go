@@ -81,6 +81,12 @@ func TestEvaluate(t *testing.T) {
 			result: true,
 		},
 		{
+			value:  `Tree["$type"] == "testutil.Branch"`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
 			value:  `Tree[*].Right[*].Value["schema.Number"] = :leaf0val`,
 			data:   defValue,
 			bind:   defBind,
@@ -109,6 +115,24 @@ func TestEvaluate(t *testing.T) {
 			data:   defValue,
 			bind:   defBind,
 			result: true,
+		},
+		{
+			value:  `Age == 20`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  `Age != 20`,
+			data:   defValue,
+			bind:   defBind,
+			result: false,
+		},
+		{
+			value:  `Age <> 20`,
+			data:   defValue,
+			bind:   defBind,
+			result: false,
 		},
 		{
 			value:  `Visible = true`,

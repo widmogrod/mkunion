@@ -59,7 +59,7 @@ func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind 
 			fieldValue, _ := schema.GetShapeLocation(s, data, x.Location)
 			cmp := schema.Compare(fieldValue, value)
 			switch x.Operation {
-			case "=":
+			case "=", "==":
 				return cmp == 0
 			case "<":
 				return cmp < 0
@@ -69,7 +69,7 @@ func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind 
 				return cmp <= 0
 			case ">=":
 				return cmp >= 0
-			case "<>":
+			case "<>", "!=":
 				return cmp != 0
 			default:
 				return false
@@ -111,7 +111,7 @@ func EvaluateSchema(predicate Predicate, data schema.Schema, bind ParamBinds) bo
 			fieldValue := schema.GetSchema(data, x.Location)
 			cmp := schema.Compare(fieldValue, value)
 			switch x.Operation {
-			case "=":
+			case "=", "==":
 				return cmp == 0
 			case "<":
 				return cmp < 0
@@ -121,7 +121,7 @@ func EvaluateSchema(predicate Predicate, data schema.Schema, bind ParamBinds) bo
 				return cmp <= 0
 			case ">=":
 				return cmp >= 0
-			case "<>":
+			case "<>", "!=":
 				return cmp != 0
 			default:
 				return false

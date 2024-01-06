@@ -2,5 +2,7 @@
 
 ```
 npm start
-go run server.go functions.go 
+export OPENAI_API_KEY=sk-
+go generate ./...
+go run *.go
 ```

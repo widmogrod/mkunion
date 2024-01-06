@@ -12,7 +12,7 @@ func NewTypedRepoWithAggregator[T, C any](
 	store Repository[schema.Schema],
 	aggregator func() Aggregator[T, C],
 ) *TypedRepoWithAggregator[T, C] {
-	location, err := NewTypedLocation[Record[T]]()
+	location, err := schema.NewTypedLocation[Record[T]]()
 	if err != nil {
 		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
 	}
@@ -27,7 +27,7 @@ func NewTypedRepoWithAggregator[T, C any](
 var _ Repository[any] = &TypedRepoWithAggregator[any, any]{}
 
 type TypedRepoWithAggregator[T any, C any] struct {
-	loc        *TypedLocation
+	loc        *schema.TypedLocation
 	store      Repository[schema.Schema]
 	aggregator func() Aggregator[T, C]
 }
@@ -124,6 +124,7 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		After:      query.After,
+		Before:     query.Before,
 	})
 	if err != nil {
 		return PageResult[Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords store error %w", err)
@@ -136,10 +137,23 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 
 	if found.HasNext() {
 		result.Next = &FindingRecords[Record[T]]{
-			Where: query.Where,
-			Sort:  query.Sort,
-			Limit: query.Limit,
-			After: found.Next.After,
+			RecordType: query.RecordType,
+			Where:      query.Where,
+			Sort:       query.Sort,
+			Limit:      query.Limit,
+			After:      found.Next.After,
+			Before:     nil,
+		}
+	}
+
+	if found.HasPrev() {
+		result.Prev = &FindingRecords[Record[T]]{
+			RecordType: query.RecordType,
+			Where:      query.Where,
+			Sort:       query.Sort,
+			Limit:      query.Limit,
+			After:      nil,
+			Before:     found.Prev.Before,
 		}
 	}
 

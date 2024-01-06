@@ -37,3 +37,16 @@ func TestParseLocation2(t *testing.T) {
 	}, result)
 	assert.Equal(t, input, LocationToStr(result))
 }
+
+func TestParseLocationSpecialCases(t *testing.T) {
+	input := `Tree["$type"].Value[*]`
+	result, err := ParseLocation(input)
+	assert.NoError(t, err)
+	assert.Equal(t, []Location{
+		&LocationField{Name: "Tree"},
+		&LocationField{Name: "$type"},
+		&LocationField{Name: "Value"},
+		&LocationAnything{},
+	}, result)
+	assert.Equal(t, input, LocationToStr(result))
+}

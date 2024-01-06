@@ -23,10 +23,12 @@ func init() {
 	Register(StringLikeShape())
 	Register(NumberLikeShape())
 	Register(NumberKindShape())
+	Register(UIntShape())
 	Register(UInt8Shape())
 	Register(UInt16Shape())
 	Register(UInt32Shape())
 	Register(UInt64Shape())
+	Register(IntShape())
 	Register(Int8Shape())
 	Register(Int16Shape())
 	Register(Int32Shape())
@@ -2428,10 +2430,12 @@ func (r *NumberLike) _unmarshalJSONNumberKind(data []byte) (NumberKind, error) {
 }
 
 type NumberKindVisitor interface {
+	VisitUInt(v *UInt) any
 	VisitUInt8(v *UInt8) any
 	VisitUInt16(v *UInt16) any
 	VisitUInt32(v *UInt32) any
 	VisitUInt64(v *UInt64) any
+	VisitInt(v *Int) any
 	VisitInt8(v *Int8) any
 	VisitInt16(v *Int16) any
 	VisitInt32(v *Int32) any
@@ -2445,10 +2449,12 @@ type NumberKind interface {
 }
 
 var (
+	_ NumberKind = (*UInt)(nil)
 	_ NumberKind = (*UInt8)(nil)
 	_ NumberKind = (*UInt16)(nil)
 	_ NumberKind = (*UInt32)(nil)
 	_ NumberKind = (*UInt64)(nil)
+	_ NumberKind = (*Int)(nil)
 	_ NumberKind = (*Int8)(nil)
 	_ NumberKind = (*Int16)(nil)
 	_ NumberKind = (*Int32)(nil)
@@ -2457,10 +2463,12 @@ var (
 	_ NumberKind = (*Float64)(nil)
 )
 
+func (r *UInt) AcceptNumberKind(v NumberKindVisitor) any    { return v.VisitUInt(r) }
 func (r *UInt8) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitUInt8(r) }
 func (r *UInt16) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt16(r) }
 func (r *UInt32) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt32(r) }
 func (r *UInt64) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt64(r) }
+func (r *Int) AcceptNumberKind(v NumberKindVisitor) any     { return v.VisitInt(r) }
 func (r *Int8) AcceptNumberKind(v NumberKindVisitor) any    { return v.VisitInt8(r) }
 func (r *Int16) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt16(r) }
 func (r *Int32) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt32(r) }
@@ -2470,38 +2478,44 @@ func (r *Float64) AcceptNumberKind(v NumberKindVisitor) any { return v.VisitFloa
 
 func MatchNumberKindR3[T0, T1, T2 any](
 	x NumberKind,
-	f1 func(x *UInt8) (T0, T1, T2),
-	f2 func(x *UInt16) (T0, T1, T2),
-	f3 func(x *UInt32) (T0, T1, T2),
-	f4 func(x *UInt64) (T0, T1, T2),
-	f5 func(x *Int8) (T0, T1, T2),
-	f6 func(x *Int16) (T0, T1, T2),
-	f7 func(x *Int32) (T0, T1, T2),
-	f8 func(x *Int64) (T0, T1, T2),
-	f9 func(x *Float32) (T0, T1, T2),
-	f10 func(x *Float64) (T0, T1, T2),
+	f1 func(x *UInt) (T0, T1, T2),
+	f2 func(x *UInt8) (T0, T1, T2),
+	f3 func(x *UInt16) (T0, T1, T2),
+	f4 func(x *UInt32) (T0, T1, T2),
+	f5 func(x *UInt64) (T0, T1, T2),
+	f6 func(x *Int) (T0, T1, T2),
+	f7 func(x *Int8) (T0, T1, T2),
+	f8 func(x *Int16) (T0, T1, T2),
+	f9 func(x *Int32) (T0, T1, T2),
+	f10 func(x *Int64) (T0, T1, T2),
+	f11 func(x *Float32) (T0, T1, T2),
+	f12 func(x *Float64) (T0, T1, T2),
 ) (T0, T1, T2) {
 	switch v := x.(type) {
-	case *UInt8:
+	case *UInt:
 		return f1(v)
-	case *UInt16:
+	case *UInt8:
 		return f2(v)
-	case *UInt32:
+	case *UInt16:
 		return f3(v)
-	case *UInt64:
+	case *UInt32:
 		return f4(v)
-	case *Int8:
+	case *UInt64:
 		return f5(v)
-	case *Int16:
+	case *Int:
 		return f6(v)
-	case *Int32:
+	case *Int8:
 		return f7(v)
-	case *Int64:
+	case *Int16:
 		return f8(v)
-	case *Float32:
+	case *Int32:
 		return f9(v)
-	case *Float64:
+	case *Int64:
 		return f10(v)
+	case *Float32:
+		return f11(v)
+	case *Float64:
+		return f12(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -2511,38 +2525,44 @@ func MatchNumberKindR3[T0, T1, T2 any](
 
 func MatchNumberKindR2[T0, T1 any](
 	x NumberKind,
-	f1 func(x *UInt8) (T0, T1),
-	f2 func(x *UInt16) (T0, T1),
-	f3 func(x *UInt32) (T0, T1),
-	f4 func(x *UInt64) (T0, T1),
-	f5 func(x *Int8) (T0, T1),
-	f6 func(x *Int16) (T0, T1),
-	f7 func(x *Int32) (T0, T1),
-	f8 func(x *Int64) (T0, T1),
-	f9 func(x *Float32) (T0, T1),
-	f10 func(x *Float64) (T0, T1),
+	f1 func(x *UInt) (T0, T1),
+	f2 func(x *UInt8) (T0, T1),
+	f3 func(x *UInt16) (T0, T1),
+	f4 func(x *UInt32) (T0, T1),
+	f5 func(x *UInt64) (T0, T1),
+	f6 func(x *Int) (T0, T1),
+	f7 func(x *Int8) (T0, T1),
+	f8 func(x *Int16) (T0, T1),
+	f9 func(x *Int32) (T0, T1),
+	f10 func(x *Int64) (T0, T1),
+	f11 func(x *Float32) (T0, T1),
+	f12 func(x *Float64) (T0, T1),
 ) (T0, T1) {
 	switch v := x.(type) {
-	case *UInt8:
+	case *UInt:
 		return f1(v)
-	case *UInt16:
+	case *UInt8:
 		return f2(v)
-	case *UInt32:
+	case *UInt16:
 		return f3(v)
-	case *UInt64:
+	case *UInt32:
 		return f4(v)
-	case *Int8:
+	case *UInt64:
 		return f5(v)
-	case *Int16:
+	case *Int:
 		return f6(v)
-	case *Int32:
+	case *Int8:
 		return f7(v)
-	case *Int64:
+	case *Int16:
 		return f8(v)
-	case *Float32:
+	case *Int32:
 		return f9(v)
-	case *Float64:
+	case *Int64:
 		return f10(v)
+	case *Float32:
+		return f11(v)
+	case *Float64:
+		return f12(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -2551,38 +2571,44 @@ func MatchNumberKindR2[T0, T1 any](
 
 func MatchNumberKindR1[T0 any](
 	x NumberKind,
-	f1 func(x *UInt8) T0,
-	f2 func(x *UInt16) T0,
-	f3 func(x *UInt32) T0,
-	f4 func(x *UInt64) T0,
-	f5 func(x *Int8) T0,
-	f6 func(x *Int16) T0,
-	f7 func(x *Int32) T0,
-	f8 func(x *Int64) T0,
-	f9 func(x *Float32) T0,
-	f10 func(x *Float64) T0,
+	f1 func(x *UInt) T0,
+	f2 func(x *UInt8) T0,
+	f3 func(x *UInt16) T0,
+	f4 func(x *UInt32) T0,
+	f5 func(x *UInt64) T0,
+	f6 func(x *Int) T0,
+	f7 func(x *Int8) T0,
+	f8 func(x *Int16) T0,
+	f9 func(x *Int32) T0,
+	f10 func(x *Int64) T0,
+	f11 func(x *Float32) T0,
+	f12 func(x *Float64) T0,
 ) T0 {
 	switch v := x.(type) {
-	case *UInt8:
+	case *UInt:
 		return f1(v)
-	case *UInt16:
+	case *UInt8:
 		return f2(v)
-	case *UInt32:
+	case *UInt16:
 		return f3(v)
-	case *UInt64:
+	case *UInt32:
 		return f4(v)
-	case *Int8:
+	case *UInt64:
 		return f5(v)
-	case *Int16:
+	case *Int:
 		return f6(v)
-	case *Int32:
+	case *Int8:
 		return f7(v)
-	case *Int64:
+	case *Int16:
 		return f8(v)
-	case *Float32:
+	case *Int32:
 		return f9(v)
-	case *Float64:
+	case *Int64:
 		return f10(v)
+	case *Float32:
+		return f11(v)
+	case *Float64:
+		return f12(v)
 	}
 	var result1 T0
 	return result1
@@ -2590,38 +2616,44 @@ func MatchNumberKindR1[T0 any](
 
 func MatchNumberKindR0(
 	x NumberKind,
-	f1 func(x *UInt8),
-	f2 func(x *UInt16),
-	f3 func(x *UInt32),
-	f4 func(x *UInt64),
-	f5 func(x *Int8),
-	f6 func(x *Int16),
-	f7 func(x *Int32),
-	f8 func(x *Int64),
-	f9 func(x *Float32),
-	f10 func(x *Float64),
+	f1 func(x *UInt),
+	f2 func(x *UInt8),
+	f3 func(x *UInt16),
+	f4 func(x *UInt32),
+	f5 func(x *UInt64),
+	f6 func(x *Int),
+	f7 func(x *Int8),
+	f8 func(x *Int16),
+	f9 func(x *Int32),
+	f10 func(x *Int64),
+	f11 func(x *Float32),
+	f12 func(x *Float64),
 ) {
 	switch v := x.(type) {
-	case *UInt8:
+	case *UInt:
 		f1(v)
-	case *UInt16:
+	case *UInt8:
 		f2(v)
-	case *UInt32:
+	case *UInt16:
 		f3(v)
-	case *UInt64:
+	case *UInt32:
 		f4(v)
-	case *Int8:
+	case *UInt64:
 		f5(v)
-	case *Int16:
+	case *Int:
 		f6(v)
-	case *Int32:
+	case *Int8:
 		f7(v)
-	case *Int64:
+	case *Int16:
 		f8(v)
-	case *Float32:
+	case *Int32:
 		f9(v)
-	case *Float64:
+	case *Int64:
 		f10(v)
+	case *Float32:
+		f11(v)
+	case *Float64:
+		f12(v)
 	}
 }
 
@@ -2631,10 +2663,12 @@ func NumberKindShape() Shape {
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 		Variant: []Shape{
+			UIntShape(),
 			UInt8Shape(),
 			UInt16Shape(),
 			UInt32Shape(),
 			UInt64Shape(),
+			IntShape(),
 			Int8Shape(),
 			Int16Shape(),
 			Int32Shape(),
@@ -2642,6 +2676,14 @@ func NumberKindShape() Shape {
 			Float32Shape(),
 			Float64Shape(),
 		},
+	}
+}
+
+func UIntShape() Shape {
+	return &StructLike{
+		Name:          "UInt",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 	}
 }
 
@@ -2672,6 +2714,14 @@ func UInt32Shape() Shape {
 func UInt64Shape() Shape {
 	return &StructLike{
 		Name:          "UInt64",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+	}
+}
+
+func IntShape() Shape {
+	return &StructLike{
+		Name:          "Int",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 	}
@@ -2726,10 +2776,12 @@ func Float64Shape() Shape {
 }
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberKind", NumberKindFromJSON, NumberKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt", UIntFromJSON, UIntToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt8", UInt8FromJSON, UInt8ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt16", UInt16FromJSON, UInt16ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt32", UInt32FromJSON, UInt32ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt64", UInt64FromJSON, UInt64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int", IntFromJSON, IntToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int8", Int8FromJSON, Int8ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int16", Int16FromJSON, Int16ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int32", Int32FromJSON, Int32ToJSON)
@@ -2740,10 +2792,12 @@ func init() {
 
 type NumberKindUnionJSON struct {
 	Type    string          `json:"$type,omitempty"`
+	UInt    json.RawMessage `json:"shape.UInt,omitempty"`
 	UInt8   json.RawMessage `json:"shape.UInt8,omitempty"`
 	UInt16  json.RawMessage `json:"shape.UInt16,omitempty"`
 	UInt32  json.RawMessage `json:"shape.UInt32,omitempty"`
 	UInt64  json.RawMessage `json:"shape.UInt64,omitempty"`
+	Int     json.RawMessage `json:"shape.Int,omitempty"`
 	Int8    json.RawMessage `json:"shape.Int8,omitempty"`
 	Int16   json.RawMessage `json:"shape.Int16,omitempty"`
 	Int32   json.RawMessage `json:"shape.Int32,omitempty"`
@@ -2767,6 +2821,8 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 	}
 
 	switch data.Type {
+	case "shape.UInt":
+		return UIntFromJSON(data.UInt)
 	case "shape.UInt8":
 		return UInt8FromJSON(data.UInt8)
 	case "shape.UInt16":
@@ -2775,6 +2831,8 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 		return UInt32FromJSON(data.UInt32)
 	case "shape.UInt64":
 		return UInt64FromJSON(data.UInt64)
+	case "shape.Int":
+		return IntFromJSON(data.Int)
 	case "shape.Int8":
 		return Int8FromJSON(data.Int8)
 	case "shape.Int16":
@@ -2789,7 +2847,9 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 		return Float64FromJSON(data.Float64)
 	}
 
-	if data.UInt8 != nil {
+	if data.UInt != nil {
+		return UIntFromJSON(data.UInt)
+	} else if data.UInt8 != nil {
 		return UInt8FromJSON(data.UInt8)
 	} else if data.UInt16 != nil {
 		return UInt16FromJSON(data.UInt16)
@@ -2797,6 +2857,8 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 		return UInt32FromJSON(data.UInt32)
 	} else if data.UInt64 != nil {
 		return UInt64FromJSON(data.UInt64)
+	} else if data.Int != nil {
+		return IntFromJSON(data.Int)
 	} else if data.Int8 != nil {
 		return Int8FromJSON(data.Int8)
 	} else if data.Int16 != nil {
@@ -2820,6 +2882,17 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 	}
 	return MatchNumberKindR2(
 		x,
+		func(x *UInt) ([]byte, error) {
+			body, err := UIntToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type: "shape.UInt",
+				UInt: body,
+			})
+		},
 		func(x *UInt8) ([]byte, error) {
 			body, err := UInt8ToJSON(x)
 			if err != nil {
@@ -2862,6 +2935,17 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			return json.Marshal(NumberKindUnionJSON{
 				Type:   "shape.UInt64",
 				UInt64: body,
+			})
+		},
+		func(x *Int) ([]byte, error) {
+			body, err := IntToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type: "shape.Int",
+				Int:  body,
 			})
 		},
 		func(x *Int8) ([]byte, error) {
@@ -2931,6 +3015,58 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 	)
+}
+
+func UIntFromJSON(x []byte) (*UInt, error) {
+	result := new(UInt)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func UIntToJSON(x *UInt) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*UInt)(nil)
+	_ json.Marshaler   = (*UInt)(nil)
+)
+
+func (r *UInt) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONUInt(*r)
+}
+func (r *UInt) _marshalJSONUInt(x UInt) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UInt._marshalJSONUInt: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *UInt) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONUInt(data)
+	if err != nil {
+		return fmt.Errorf("shape: UInt.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *UInt) _unmarshalJSONUInt(data []byte) (UInt, error) {
+	result := UInt{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: UInt._unmarshalJSONUInt: native struct unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func UInt8FromJSON(x []byte) (*UInt8, error) {
@@ -3137,6 +3273,58 @@ func (r *UInt64) _unmarshalJSONUInt64(data []byte) (UInt64, error) {
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
 		return result, fmt.Errorf("shape: UInt64._unmarshalJSONUInt64: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func IntFromJSON(x []byte) (*Int, error) {
+	result := new(Int)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func IntToJSON(x *Int) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Int)(nil)
+	_ json.Marshaler   = (*Int)(nil)
+)
+
+func (r *Int) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONInt(*r)
+}
+func (r *Int) _marshalJSONInt(x Int) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Int._marshalJSONInt: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Int) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONInt(data)
+	if err != nil {
+		return fmt.Errorf("shape: Int.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Int) _unmarshalJSONInt(data []byte) (Int, error) {
+	result := Int{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Int._unmarshalJSONInt: native struct unwrap; %w", err)
 	}
 	return result, nil
 }
