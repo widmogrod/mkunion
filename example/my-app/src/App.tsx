@@ -1,10 +1,12 @@
-import React, {useEffect, useReducer, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import './App.css';
 import * as openai from './workflow/github_com_sashabaranov_go-openai'
 import * as schemaless from './workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import * as workflow from './workflow/github_com_widmogrod_mkunion_x_workflow'
+import * as predicate from "./workflow/github_com_widmogrod_mkunion_x_storage_predicate";
 import * as schema from "./workflow/github_com_widmogrod_mkunion_x_schema";
 import {Chat} from "./Chat";
+import {PaginatedTable} from "./component/PaginatedTable";
 
 function flowCreate(flow: workflow.Flow) {
     return fetch('http://localhost:8080/flow', {
@@ -30,6 +32,7 @@ type ListProps<T> = {
         [key: string]: boolean
     }
     limit?: number,
+    where?: predicate.WherePredicates
 
     prevPage?: string,
     nextPage?: string,
@@ -49,6 +52,7 @@ function storageList<T>(input: ListProps<T>): Promise<schemaless.PageResult<sche
                     Descending: input.sort?.[key],
                 }
             }),
+            Where: input.where,
             After: input.nextPage,
             Before: input.prevPage,
         } as schemaless.FindingRecords<schemaless.Record<T>>),
@@ -723,10 +727,7 @@ function App() {
                             <PaginatedTable<workflow.Flow>
                                 load={(state) => {
                                     return listFlows({
-                                        limit: state.limit,
-                                        sort: state.sort,
-                                        prevPage: state.prevPage,
-                                        nextPage: state.nextPage,
+                                        ...state,
                                     })
                                 }}
                                 mapData={(data) => {
@@ -750,10 +751,7 @@ function App() {
                             <PaginatedTable<workflow.State>
                                 load={(state) => {
                                     return listStates({
-                                        limit: state.limit,
-                                        sort: state.sort,
-                                        prevPage: state.prevPage,
-                                        nextPage: state.nextPage,
+                                        ...state,
                                     })
                                 }}
                                 actions={[
@@ -786,7 +784,7 @@ function App() {
                                         }
                                     }
                                 ]}
-                                mapData={(input) => {
+                                mapData={(input, ctx) => {
                                     if (!input.Data) {
                                         return <div>nothing</div>
                                     }
@@ -811,6 +809,46 @@ function App() {
                                                 case "schema.String":
                                                     return <>
                                                         <span className="done">workflow.Done</span>
+                                                        <button onClick={() => ctx.filter({
+                                                            Predicate: {
+                                                                "$type": "predicate.Compare",
+                                                                "predicate.Compare": {
+                                                                    Location: `Data["$type"]`,
+                                                                    Operation: "==",
+                                                                    BindValue: {
+                                                                        "$type": "predicate.Literal",
+                                                                        "predicate.Literal": {
+                                                                            Value: {
+                                                                                "$type": "schema.String",
+                                                                                "schema.String": "workflow.Done"
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                }
+                                                            }
+                                                        })}
+                                                                className={"filter filter-in"}>only
+                                                        </button>
+                                                        <button onClick={() => ctx.filter({
+                                                            Predicate: {
+                                                                "$type": "predicate.Compare",
+                                                                "predicate.Compare": {
+                                                                    Location: `Data["$type"]`,
+                                                                    Operation: "!=",
+                                                                    BindValue: {
+                                                                        "$type": "predicate.Literal",
+                                                                        "predicate.Literal": {
+                                                                            Value: {
+                                                                                "$type": "schema.String",
+                                                                                "schema.String": "workflow.Done"
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                }
+                                                            }
+                                                        })}
+                                                                className={"filter filter-out"}>exclude
+                                                        </button>
                                                         {done.Result["schema.String"]}
                                                         <WorkflowToString flow={done.BaseState?.Flow}/>
                                                         <ListVariables data={done.BaseState}/>
@@ -842,8 +880,29 @@ function App() {
                                             return (
                                                 <>
                                                     <span className="await">workflow.Await</span>
+                                                    <button onClick={() => ctx.filter({
+                                                        Predicate: {
+                                                            "$type": "predicate.Compare",
+                                                            "predicate.Compare": {
+                                                                Location: `Data["$type"]`,
+                                                                Operation: "==",
+                                                                BindValue: {
+                                                                    "$type": "predicate.Literal",
+                                                                    "predicate.Literal": {
+                                                                        Value: {
+                                                                            "$type": "schema.String",
+                                                                            "schema.String": "workflow.Await"
+                                                                        }
+                                                                    }
+                                                                },
+                                                            }
+                                                        }
+                                                    })}
+                                                            className={"filter filter-in"}>only
+                                                    </button>
                                                     <WorkflowToString flow={await_.BaseState?.Flow}/>
                                                     <ListVariables data={await_.BaseState}/>
+
                                                     <input type={"text"}
                                                            id="callbackValue"
                                                            placeholder={"callback result"}/>
@@ -1072,233 +1131,6 @@ function SchemaValue(props: { data?: schema.Schema }) {
     }
 
     return <NativeValue data={props.data}/>
-}
-
-type Cursor = string
-
-type PaginatedTableState<T> = {
-    limit: number
-    sort: PaginatedTableSort
-    selected: { [key: string]: schemaless.Record<T> }
-
-    prevPage?: Cursor
-    nextPage?: Cursor
-}
-
-type PaginatedTableSort = {
-    [key: string]: boolean
-}
-
-type PaginatedTableAction<T> = {
-    name: string
-    action: (state: PaginatedTableState<T>, ctx: PaginatedTableContext<T>) => void
-}
-
-type PaginatedTableContext<T> = {
-    refresh: () => void
-    clearSelection: () => void
-}
-
-
-type PaginatedTableProps<T> = {
-    limit?: number
-    sort?: PaginatedTableSort
-    load: (input: PaginatedTableState<T>) => Promise<schemaless.PageResult<schemaless.Record<T>>>
-    mapData?: (data: schemaless.Record<T>) => JSX.Element
-    actions?: PaginatedTableAction<T>[]
-}
-
-function PaginatedTable<T>(props: PaginatedTableProps<T>) {
-    const [data, setData] = useState({Items: [] as any[]} as schemaless.PageResult<schemaless.Record<T>>)
-    const [state, setState] = useState({
-        limit: props.limit || 3,
-        sort: props.sort || {},
-        selected: {},
-    } as PaginatedTableState<T>)
-
-    useEffect(() => {
-        props.load(state).then(setData)
-    }, [state])
-
-    const ctx = {
-        refresh: () => {
-            props.load(state).then(setData)
-        },
-        clearSelection: () => {
-            setState({
-                ...state,
-                selected: {},
-            })
-        }
-    } as PaginatedTableContext<T>
-
-    const changeSort = (key: string) => (e: React.MouseEvent) => {
-        e.preventDefault()
-
-        let newSort = {...state.sort}
-        if (newSort[key] === undefined) {
-            newSort[key] = true
-        } else if (newSort[key]) {
-            newSort[key] = false
-        } else {
-            delete newSort[key]
-        }
-
-        setState({
-            ...state,
-            sort: newSort,
-        })
-    }
-
-    const sortState = (key: string) => {
-        if (state.sort[key] === undefined) {
-            return "sort-none"
-        } else if (state.sort[key]) {
-            return "sort-asc"
-        } else {
-            return "sort-desc"
-        }
-    }
-
-
-    const selectRowToggle = (item: schemaless.Record<T>) => () => {
-        if (!item.ID) {
-            return
-        }
-
-        let selected = {...state.selected}
-        if (selected[item.ID]) {
-            delete selected[item.ID]
-        } else {
-            selected[item.ID] = item
-        }
-
-        setState({
-            ...state,
-            selected: selected,
-        })
-    }
-
-    const isSelected = (item: schemaless.Record<T>) => {
-        if (!item.ID) {
-            return false
-        }
-
-        return state.selected[item.ID] !== undefined
-    }
-
-    const batchSelection = (e: React.MouseEvent) => {
-        e.preventDefault()
-
-        let selectionLength = Object.keys(state.selected).length
-        if (selectionLength > 0) {
-            setState({
-                ...state,
-                selected: {},
-            })
-        } else {
-            let selected = {} as { [key: string]: schemaless.Record<T> }
-            data.Items?.forEach((item) => {
-                if (!item.ID) {
-                    return
-                }
-
-                selected[item.ID] = item
-            })
-
-            setState({
-                ...state,
-                selected: selected
-            } as PaginatedTableState<T>)
-        }
-    }
-
-    const batchSelectionState = () => {
-        let selectionLength = Object.keys(state.selected).length
-        if (selectionLength === 0) {
-            return "selected-none"
-        }
-        if (selectionLength === data.Items?.length) {
-            return "selected-all"
-        }
-
-        return "selected-some"
-    }
-
-    const applyAction = (action: PaginatedTableAction<T>) => (e: React.MouseEvent) => {
-        e.preventDefault()
-        action.action(state, ctx)
-    }
-
-    const nextPage = (e: React.MouseEvent) => {
-        e.preventDefault()
-        setState({
-            ...state,
-            nextPage: data.Next?.After,
-            prevPage: undefined,
-        })
-    }
-
-    const prevPage = (e: React.MouseEvent) => {
-        e.preventDefault()
-        setState({
-            ...state,
-            nextPage: undefined,
-            prevPage: data.Prev?.Before,
-        })
-    }
-
-    return <table>
-        <thead>
-        <tr>
-            <th colSpan={5} className={"option-row"}>
-                <button className={"refresh"} onClick={() => ctx.refresh()}>Refresh</button>
-
-                {props.actions && props.actions.map((action) => {
-                    return <button
-                        key={action.name}
-                        className={"action "}
-                        disabled={Object.keys(state.selected).length === 0}
-                        onClick={applyAction(action)}>{action.name}</button>
-                })}
-            </th>
-        </tr>
-        <tr>
-            <th onClick={batchSelection} className={batchSelectionState()}>
-                <button>select</button>
-            </th>
-            <th onClick={changeSort("ID")} className={sortState("ID")}>ID</th>
-            <th onClick={changeSort("Type")} className={sortState("Type")}>Type</th>
-            <th onClick={changeSort("Version")} className={sortState("Version")}>Version</th>
-            <th>Data</th>
-        </tr>
-        </thead>
-        <tbody>
-        {data.Items && data.Items.length > 0 ? data.Items.map((item) => {
-            return (
-                <tr key={item.ID}>
-                    <td><input type={"checkbox"} onChange={selectRowToggle(item)} checked={isSelected(item)}/></td>
-                    <td>{item.ID}</td>
-                    <td>{item.Type}</td>
-                    <td>{item.Version}</td>
-                    <td>{props.mapData && props.mapData(item)}</td>
-                </tr>
-            );
-        }) : (
-            <tr>
-                <td colSpan={5}>No data</td>
-            </tr>
-        )}
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colSpan={5} className={"option-row"}>
-                    {data.Next && <button onClick={nextPage} className={"next-page"}>Next page</button>}
-                    {data.Prev && <button onClick={prevPage} className={"prev-page"}>Prev page</button>}
-                </td>
-            </tr>
-        </tfoot>
-    </table>
 }
 
 
