@@ -12,7 +12,7 @@ func NewTypedRepoWithAggregator[T, C any](
 	store Repository[schema.Schema],
 	aggregator func() Aggregator[T, C],
 ) *TypedRepoWithAggregator[T, C] {
-	location, err := NewTypedLocation[Record[T]]()
+	location, err := schema.NewTypedLocation[Record[T]]()
 	if err != nil {
 		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
 	}
@@ -27,7 +27,7 @@ func NewTypedRepoWithAggregator[T, C any](
 var _ Repository[any] = &TypedRepoWithAggregator[any, any]{}
 
 type TypedRepoWithAggregator[T any, C any] struct {
-	loc        *TypedLocation
+	loc        *schema.TypedLocation
 	store      Repository[schema.Schema]
 	aggregator func() Aggregator[T, C]
 }
