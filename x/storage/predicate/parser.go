@@ -11,9 +11,9 @@ var (
 	predicateLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{"Whitespace", `\s+`},
 		{"Keyword", `AND|OR|NOT`},
-		{"Operator", `(<>|<=|>=|=|<|>|!=|#=)`},
+		{"Operator", `[\<\>\!\=]+`},
 		{"Bind", `:[a-zA-Z][a-zA-Z0-9]*`},
-		{"Location", `[a-zA-Z][a-zA-Z0-9\#\.\[\]'"\*]*`},
+		{"Location", `[a-zA-Z][a-zA-Z0-9\$\.\[\]'"\*]*`},
 		{"Number", `[-+]?[0-9]*\.?[0-9]+`},
 		{"String", `"[^"]+"`},
 	})
@@ -38,7 +38,7 @@ func Parse(input string) (Predicate, error) {
 
 type Comparable struct {
 	Location string `( @Location`
-	Operator string `  @( "<>" | "<=" | ">=" | "=" | "<" | ">" | "!=" )`
+	Operator string `  @Operator`
 	BindName Value  `  @@)`
 }
 

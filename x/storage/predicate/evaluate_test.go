@@ -111,6 +111,24 @@ func TestEvaluate(t *testing.T) {
 			result: true,
 		},
 		{
+			value:  `Age == 20`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
+			value:  `Age != 20`,
+			data:   defValue,
+			bind:   defBind,
+			result: false,
+		},
+		{
+			value:  `Age <> 20`,
+			data:   defValue,
+			bind:   defBind,
+			result: false,
+		},
+		{
 			value:  `Visible = true`,
 			data:   defValue,
 			bind:   defBind,
