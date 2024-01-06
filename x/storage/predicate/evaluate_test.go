@@ -81,6 +81,12 @@ func TestEvaluate(t *testing.T) {
 			result: true,
 		},
 		{
+			value:  `Tree["$type"] == "testutil.Branch"`,
+			data:   defValue,
+			bind:   defBind,
+			result: true,
+		},
+		{
 			value:  `Tree[*].Right[*].Value["schema.Number"] = :leaf0val`,
 			data:   defValue,
 			bind:   defBind,

@@ -90,6 +90,12 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []schema.Location, s s
 					panic(fmt.Errorf("wrapLocationShapeAware: field %s not found in struct %s", x.Name, y.Name))
 				},
 				func(y *shape.UnionLike) []schema.Location {
+					if x.Name == "$type" {
+						return append([]schema.Location{x}, location.shapeToSchemaName(&shape.PrimitiveLike{
+							Kind: &shape.StringLike{},
+						})...)
+					}
+
 					for _, variant := range y.Variant {
 						if shape.ToGoTypeName(variant) == x.Name {
 							result := location.wrapLocationShapeAware(loc[1:], variant)

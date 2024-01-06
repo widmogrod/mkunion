@@ -315,9 +315,19 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						return nil
 					}
 
-					_, ok = (*mapData)[x.Name]
+					value, ok := (*mapData)[x.Name]
 					if !ok {
 						return nil
+					}
+
+					if x.Name == "$type" {
+						return &locres{
+							data: value,
+							loc:  locations,
+							shape: &shape.PrimitiveLike{
+								Kind: &shape.StringLike{},
+							},
+						}
 					}
 
 					for _, variant := range y.Variant {
