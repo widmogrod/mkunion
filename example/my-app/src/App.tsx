@@ -1230,6 +1230,24 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         action.action(state, ctx)
     }
 
+    const nextPage = (e: React.MouseEvent) => {
+        e.preventDefault()
+        setState({
+            ...state,
+            nextPage: data.Next?.After,
+            prevPage: undefined,
+        })
+    }
+
+    const prevPage = (e: React.MouseEvent) => {
+        e.preventDefault()
+        setState({
+            ...state,
+            nextPage: undefined,
+            prevPage: data.Prev?.Before,
+        })
+    }
+
     return <table>
         <thead>
         <tr>
@@ -1275,22 +1293,8 @@ function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         <tfoot>
             <tr>
                 <td colSpan={5} className={"option-row"}>
-                    {data.Next && <button onClick={(e) => {
-                        e.preventDefault()
-                        setState({
-                            ...state,
-                            nextPage: data.Next?.After,
-                            prevPage: undefined,
-                        })
-                    }}>Next page</button>}
-                    {data.Prev && <button onClick={(e) => {
-                        e.preventDefault()
-                        setState({
-                            ...state,
-                            nextPage: undefined,
-                            prevPage: data.Prev?.Before,
-                        })
-                    }}>Prev page</button>}
+                    {data.Next && <button onClick={nextPage} className={"next-page"}>Next page</button>}
+                    {data.Prev && <button onClick={prevPage} className={"prev-page"}>Prev page</button>}
                 </td>
             </tr>
         </tfoot>

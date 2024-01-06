@@ -109,6 +109,24 @@ tbody tr:last-of-type {
     border-bottom: 2px solid #009879;
 }
 
+tfoot tr {
+    background-color: #ffffff;
+    color: #ffffff;
+    text-align: left;
+    font-size: 1.2em;
+}
+
+button.next-page{
+    float: right;
+}
+button.prev-page{
+    float: left;
+    /* icon */
+
+
+}
+
+
 /* tables inside a table should be smaller */
 table table {
     font-size: 0.8em;
