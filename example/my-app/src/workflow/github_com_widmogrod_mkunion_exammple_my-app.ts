@@ -32,53 +32,53 @@ export type ChatResponses = {
 	Responses?: ChatResult[],
 }
 
-export type ListWorkflowsFn = {
-	Count?: number,
-	Words?: string[],
-	EnumTest?: string,
-}
+export type Command = workflow.Command
 
-export type RefreshStates = {}
-
-export type Reshaper = workflow.Reshaper
+export type Expr = workflow.Expr
 
 export type FindRecords = schemaless.FindingRecords<schemaless.Record<any>>
 
 export type FunctionInput = workflow.FunctionInput
+
+export type FunctionOutput = workflow.FunctionOutput
 
 export type GenerateImage = {
 	Width?: number,
 	Height?: number,
 }
 
+export type ListWorkflowsFn = {
+	Count?: number,
+	Words?: string[],
+	EnumTest?: string,
+}
+
+export type PageResult = schemaless.PageResult<schemaless.Record<any>>
+
+export type Predicate = workflow.Predicate
+
+export type RefreshFlows = {}
+
+export type RefreshStates = {}
+
+export type Reshaper = workflow.Reshaper
+
+export type Schema = schema.Schema
+
 export type Service<CMD, State> = {}
 
 export type State = workflow.State
 
-export type Command = workflow.Command
-
-export type Expr = workflow.Expr
-
-export type Predicate = workflow.Predicate
-
-export type Schema = schema.Schema
-
-export type PageResult = schemaless.PageResult<schemaless.Record<any>>
-
-export type Workflow = workflow.Workflow
-
 export type UpdateRecords = schemaless.UpdateRecords<schemaless.Record<any>>
 
-export type FunctionOutput = workflow.FunctionOutput
-
-export type RefreshFlows = {}
+export type Workflow = workflow.Workflow
 
 
 //eslint-disable-next-line
 import * as openai from './github_com_sashabaranov_go-openai'
 //eslint-disable-next-line
-import * as workflow from './github_com_widmogrod_mkunion_x_workflow'
+import * as schema from './github_com_widmogrod_mkunion_x_schema'
 //eslint-disable-next-line
 import * as schemaless from './github_com_widmogrod_mkunion_x_storage_schemaless'
 //eslint-disable-next-line
-import * as schema from './github_com_widmogrod_mkunion_x_schema'
+import * as workflow from './github_com_widmogrod_mkunion_x_workflow'
