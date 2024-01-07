@@ -1,8 +1,8 @@
 package schema
 
-//go:generate go run ../../cmd/mkunion/main.go serde
+//go:generate go run ../../cmd/mkunion/main.go
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Schema
+//go:tag mkunion:"Schema"
 type (
 	None   struct{}
 	Bool   bool

@@ -6,7 +6,7 @@ import (
 
 type Function func(args *FunctionInput) (*FunctionOutput, error)
 
-//go:generate go run ../../cmd/mkunion/main.go serde
+//go:generate go run ../../cmd/mkunion/main.go
 
 type (
 	//go:tag serde:"json"

@@ -6,7 +6,6 @@ import (
 )
 
 //go:generate go run ../../../cmd/mkunion/main.go
-//go:generate go run ../../../cmd/mkunion/main.go serde
 
 //go:tag mkunion:"Tree"
 type (

@@ -2,7 +2,7 @@ package testutil
 
 import "github.com/widmogrod/mkunion/x/schema"
 
-//go:generate go run ../../../../cmd/mkunion/main.go serde
+//go:generate go run ../../../../cmd/mkunion/main.go
 
 //go:tag serde:"json"
 type SampleStruct struct {
@@ -13,7 +13,7 @@ type SampleStruct struct {
 	Visible bool
 }
 
-//go:generate go run ../../../../cmd/mkunion/main.go -name=Treeish
+//go:tag mkunion:"Treeish"
 type (
 	Branch struct {
 		Name        string

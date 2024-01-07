@@ -5,7 +5,6 @@ import (
 )
 
 //go:generate go run ../../cmd/mkunion/main.go
-//go:generate go run ../../cmd/mkunion/main.go serde
 
 type Execution struct {
 	FlowID    string

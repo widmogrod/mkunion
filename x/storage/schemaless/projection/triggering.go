@@ -10,7 +10,6 @@ import (
 )
 
 //go:generate go run ../../../../cmd/mkunion/main.go
-//go:generate go run ../../../../cmd/mkunion/main.go serde
 
 // go:generate mkunion -name=TriggerType -variants=AtPeriod,AtWindowItemSize,AtWatermark
 //

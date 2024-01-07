@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go serde
+//go:generate go run ../../../cmd/mkunion/main.go
 
 func NewOpenSearchRepository[A any](client *opensearch.Client, index string) *OpenSearchRepository[A] {
 	return &OpenSearchRepository[A]{

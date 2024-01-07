@@ -9,8 +9,7 @@ import (
 
 var ErrNotFound = errors.New("node not found")
 
-//go:generate go run ../../../../cmd/mkunion/main.go
-//go:generate go run ../../../../cmd/mkunion/main.go serde
+//go:generate go run ../../../../cmd/mkunion/main.go -v
 
 //go:tag mkunion:"Node"
 type (
@@ -54,21 +53,14 @@ func NodeToString(node Node) string {
 	)
 }
 
-//go:tag serde:"json"
 type EventTime = int64
 
-//go:tag serde:"json"
 type Window struct {
 	Start int64
 	End   int64
 }
 
-//go:tag serde:"json"
 type ItemType uint8
-
-//func (i ItemType) MarshalSchema() (*schema.Map, error) {
-//	return schema.MkMap(schema.MkField("itemType", schema.MkInt(uint64(i)))), nil
-//}
 
 const (
 	ItemAggregation ItemType = iota
@@ -217,7 +209,6 @@ func (c *DefaultContext) Name() string {
 	return c.name
 }
 
-//go:tag serde:"json"
 type Message struct {
 	Offset int
 	// at some point of time i may need to pass type reference
@@ -228,5 +219,4 @@ type Message struct {
 	finished bool
 }
 
-//go:tag serde:"json"
 type Stats = map[string]int
