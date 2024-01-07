@@ -108,6 +108,8 @@ func MatchLocationR0(
 	}
 }
 
+//shape:shape
+
 func LocationShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Location",

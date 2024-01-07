@@ -77,6 +77,8 @@ func (r *OpenSearchSearchResult[A]) _unmarshalJSONOpenSearchSearchResultHitsLb_A
 	}
 	return result, nil
 }
+
+//shape:shape
 func OpenSearchSearchResultShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "OpenSearchSearchResult",
@@ -100,6 +102,50 @@ func OpenSearchSearchResultShape() shape.Shape {
 							Name:          "A",
 							PkgName:       "",
 							PkgImportName: "",
+						},
+					},
+				},
+				Tags: map[string]shape.Tag{
+					"json": {
+						Value: "hits",
+					},
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
+}
+
+//shape:shape
+func OpenSearchSearchResultHitsShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "OpenSearchSearchResultHits",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Hits",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name:          "OpenSearchSearchResultHit",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+						Indexed: []shape.Shape{
+							&shape.RefName{
+								Name:          "A",
+								PkgName:       "",
+								PkgImportName: "",
+							},
 						},
 					},
 				},
@@ -212,9 +258,11 @@ func (r *OpenSearchSearchResultHits[A]) _unmarshalJSONOpenSearchSearchResultHitL
 	}
 	return result, nil
 }
-func OpenSearchSearchResultHitsShape() shape.Shape {
+
+//shape:shape
+func OpenSearchSearchResultHitShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "OpenSearchSearchResultHits",
+		Name:          "OpenSearchSearchResultHit",
 		PkgName:       "schemaless",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
 		TypeParams: []shape.TypeParam{
@@ -225,24 +273,26 @@ func OpenSearchSearchResultHitsShape() shape.Shape {
 		},
 		Fields: []*shape.FieldLike{
 			{
-				Name: "Hits",
-				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name:          "OpenSearchSearchResultHit",
-						PkgName:       "schemaless",
-						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-						Indexed: []shape.Shape{
-							&shape.RefName{
-								Name:          "A",
-								PkgName:       "",
-								PkgImportName: "",
-							},
-						},
-					},
+				Name: "Item",
+				Type: &shape.RefName{
+					Name:          "A",
+					PkgName:       "",
+					PkgImportName: "",
 				},
 				Tags: map[string]shape.Tag{
 					"json": {
-						Value: "hits",
+						Value: "_source",
+					},
+				},
+			},
+			{
+				Name: "Sort",
+				Type: &shape.ListLike{
+					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				},
+				Tags: map[string]shape.Tag{
+					"json": {
+						Value: "sort",
 					},
 				},
 			},
@@ -375,48 +425,4 @@ func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONstring(data []byte) (string
 		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
-}
-func OpenSearchSearchResultHitShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "OpenSearchSearchResultHit",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Item",
-				Type: &shape.RefName{
-					Name:          "A",
-					PkgName:       "",
-					PkgImportName: "",
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "_source",
-					},
-				},
-			},
-			{
-				Name: "Sort",
-				Type: &shape.ListLike{
-					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "sort",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }

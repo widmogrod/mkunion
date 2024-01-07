@@ -19,6 +19,7 @@ func init() {
 	shape.Register(BindValueShape())
 	shape.Register(LiteralShape())
 	shape.Register(LocatableShape())
+	shape.Register(BindNameShape())
 }
 
 type PredicateVisitor interface {
@@ -129,6 +130,8 @@ func MatchPredicateR0(
 	}
 }
 
+//shape:shape
+
 func PredicateShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Predicate",
@@ -222,6 +225,71 @@ func CompareShape() shape.Shape {
 					PkgName:       "predicate",
 					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
 				},
+			},
+		},
+	}
+}
+
+//shape:shape
+
+func BindableShape() shape.Shape {
+	return &shape.UnionLike{
+		Name:          "Bindable",
+		PkgName:       "predicate",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+		Variant: []shape.Shape{
+			BindValueShape(),
+			LiteralShape(),
+			LocatableShape(),
+		},
+	}
+}
+
+func BindValueShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "BindValue",
+		PkgName:       "predicate",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "BindName",
+				Type: &shape.RefName{
+					Name:          "BindName",
+					PkgName:       "predicate",
+					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+				},
+			},
+		},
+	}
+}
+
+func LiteralShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Literal",
+		PkgName:       "predicate",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Value",
+				Type: &shape.RefName{
+					Name:          "Schema",
+					PkgName:       "schema",
+					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+				},
+			},
+		},
+	}
+}
+
+func LocatableShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Locatable",
+		PkgName:       "predicate",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Location",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
 	}
@@ -839,66 +907,14 @@ func MatchBindableR0(
 	}
 }
 
-func BindableShape() shape.Shape {
-	return &shape.UnionLike{
-		Name:          "Bindable",
+//shape:shape
+func BindNameShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "BindName",
 		PkgName:       "predicate",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-		Variant: []shape.Shape{
-			BindValueShape(),
-			LiteralShape(),
-			LocatableShape(),
-		},
-	}
-}
-
-func BindValueShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "BindValue",
-		PkgName:       "predicate",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "BindName",
-				Type: &shape.RefName{
-					Name:          "BindName",
-					PkgName:       "predicate",
-					PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-				},
-			},
-		},
-	}
-}
-
-func LiteralShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Literal",
-		PkgName:       "predicate",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Value",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				},
-			},
-		},
-	}
-}
-
-func LocatableShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Locatable",
-		PkgName:       "predicate",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Location",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-		},
+		IsAlias:       true,
+		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 func init() {

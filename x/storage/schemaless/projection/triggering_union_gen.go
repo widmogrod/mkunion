@@ -121,6 +121,8 @@ func MatchTriggerTypeR0(
 	}
 }
 
+//shape:shape
+
 func TriggerTypeShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "TriggerType",
@@ -450,6 +452,8 @@ func MatchTriggerDescriptionR0(
 		f5(v)
 	}
 }
+
+//shape:shape
 
 func TriggerDescriptionShape() shape.Shape {
 	return &shape.UnionLike{
@@ -1231,6 +1235,8 @@ func MatchWindowFlushModeR0(
 		f3(v)
 	}
 }
+
+//shape:shape
 
 func WindowFlushModeShape() shape.Shape {
 	return &shape.UnionLike{

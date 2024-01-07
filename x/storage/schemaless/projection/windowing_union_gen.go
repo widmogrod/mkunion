@@ -115,6 +115,8 @@ func MatchWindowDescriptionR0(
 	}
 }
 
+//shape:shape
+
 func WindowDescriptionShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "WindowDescription",

@@ -158,6 +158,8 @@ func (r *Game) _unmarshalJSONbool(data []byte) (bool, error) {
 	}
 	return result, nil
 }
+
+//shape:shape
 func GameShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Game",
@@ -279,6 +281,8 @@ func (r *SessionsStats) _unmarshalJSONint(data []byte) (int, error) {
 	}
 	return result, nil
 }
+
+//shape:shape
 func SessionsStatsShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "SessionsStats",

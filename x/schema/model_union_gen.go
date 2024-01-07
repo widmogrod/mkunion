@@ -172,6 +172,8 @@ func MatchSchemaR0(
 	}
 }
 
+//shape:shape
+
 func SchemaShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "Schema",

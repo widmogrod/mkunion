@@ -102,6 +102,8 @@ func (r *Field) _unmarshalJSONSchema(data []byte) (Schema, error) {
 	}
 	return result, nil
 }
+
+//shape:shape
 func FieldShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Field",

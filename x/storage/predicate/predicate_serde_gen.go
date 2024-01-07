@@ -126,6 +126,8 @@ func (r *ParamBinds) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, er
 	}
 	return result, nil
 }
+
+//shape:shape
 func ParamBindsShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "ParamBinds",

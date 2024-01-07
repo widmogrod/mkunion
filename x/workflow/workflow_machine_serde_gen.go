@@ -10,9 +10,96 @@ import (
 )
 
 func init() {
-	shape.Register(ApplyAwaitOptionsShape())
-	shape.Register(BaseStateShape())
 	shape.Register(ResumeOptionsShape())
+}
+
+var (
+	_ json.Unmarshaler = (*ResumeOptions)(nil)
+	_ json.Marshaler   = (*ResumeOptions)(nil)
+)
+
+func (r *ResumeOptions) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONResumeOptions(*r)
+}
+func (r *ResumeOptions) _marshalJSONResumeOptions(x ResumeOptions) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldTimeout []byte
+	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: field name Timeout; %w", err)
+	}
+	partial["Timeout"] = fieldTimeout
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *ResumeOptions) _marshalJSONint64(x int64) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONint64:; %w", err)
+	}
+	return result, nil
+}
+func (r *ResumeOptions) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONResumeOptions(data)
+	if err != nil {
+		return fmt.Errorf("workflow: ResumeOptions.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *ResumeOptions) _unmarshalJSONResumeOptions(data []byte) (ResumeOptions, error) {
+	result := ResumeOptions{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: native struct unwrap; %w", err)
+	}
+	if fieldTimeout, ok := partial["Timeout"]; ok {
+		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
+		if err != nil {
+			return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: field Timeout; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *ResumeOptions) _unmarshalJSONint64(data []byte) (int64, error) {
+	var result int64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+
+//shape:shape
+func ResumeOptionsShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ResumeOptions",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Timeout",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
 }
 
 var (
@@ -78,28 +165,6 @@ func (r *ApplyAwaitOptions) _unmarshalJSONint64(data []byte) (int64, error) {
 		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
-}
-func ApplyAwaitOptionsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ApplyAwaitOptions",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timeout",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }
 
 var (
@@ -327,159 +392,4 @@ func (r *BaseState) _unmarshalJSONRunOption(data []byte) (RunOption, error) {
 		return result, fmt.Errorf("workflow: BaseState._unmarshalJSONRunOption: native ref unwrap; %w", err)
 	}
 	return result, nil
-}
-func BaseStateShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "BaseState",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Flow",
-				Type: &shape.RefName{
-					Name:          "Workflow",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-			{
-				Name: "RunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "StepID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Variables",
-				Type: &shape.MapLike{
-					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-					Val: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-			{
-				Name: "ExprResult",
-				Type: &shape.MapLike{
-					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-					Val: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-			{
-				Name: "DefaultMaxRetries",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-			{
-				Name: "RunOption",
-				Type: &shape.RefName{
-					Name:          "RunOption",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
-var (
-	_ json.Unmarshaler = (*ResumeOptions)(nil)
-	_ json.Marshaler   = (*ResumeOptions)(nil)
-)
-
-func (r *ResumeOptions) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONResumeOptions(*r)
-}
-func (r *ResumeOptions) _marshalJSONResumeOptions(x ResumeOptions) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldTimeout []byte
-	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: field name Timeout; %w", err)
-	}
-	partial["Timeout"] = fieldTimeout
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *ResumeOptions) _marshalJSONint64(x int64) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONint64:; %w", err)
-	}
-	return result, nil
-}
-func (r *ResumeOptions) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONResumeOptions(data)
-	if err != nil {
-		return fmt.Errorf("workflow: ResumeOptions.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *ResumeOptions) _unmarshalJSONResumeOptions(data []byte) (ResumeOptions, error) {
-	result := ResumeOptions{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: native struct unwrap; %w", err)
-	}
-	if fieldTimeout, ok := partial["Timeout"]; ok {
-		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
-		if err != nil {
-			return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: field Timeout; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *ResumeOptions) _unmarshalJSONint64(data []byte) (int64, error) {
-	var result int64
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func ResumeOptionsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ResumeOptions",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timeout",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }

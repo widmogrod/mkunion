@@ -101,6 +101,8 @@ func (r *WherePredicates) _unmarshalJSONParamBinds(data []byte) (ParamBinds, err
 	}
 	return result, nil
 }
+
+//shape:shape
 func WherePredicatesShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "WherePredicates",

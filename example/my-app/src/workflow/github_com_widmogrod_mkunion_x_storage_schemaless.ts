@@ -22,6 +22,12 @@ export type Record<A> = {
 	Version?: number,
 }
 
+export type PageResult<A> = {
+	Items?: A[],
+	Next?: FindingRecords<A>,
+	Prev?: FindingRecords<A>,
+}
+
 export type UpdateRecords<T> = {
 	UpdatingPolicy?: UpdatingPolicy,
 	Saving?: {[key: string]: T},
@@ -29,12 +35,6 @@ export type UpdateRecords<T> = {
 }
 
 export type UpdatingPolicy = number
-
-export type PageResult<A> = {
-	Items?: A[],
-	Next?: FindingRecords<A>,
-	Prev?: FindingRecords<A>,
-}
 
 
 //eslint-disable-next-line

@@ -11,6 +11,7 @@ import (
 func init() {
 	shape.Register(SortFieldShape())
 	shape.Register(PageResultShape())
+	shape.Register(FindingRecordsShape())
 	shape.Register(RecordShape())
 }
 
@@ -105,6 +106,8 @@ func (r *SortField) _unmarshalJSONbool(data []byte) (bool, error) {
 	}
 	return result, nil
 }
+
+//shape:shape
 func SortFieldShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "SortField",
@@ -283,6 +286,8 @@ func (r *PageResult[A]) _unmarshalJSONFindingRecordsLb_A_bL(data []byte) (Findin
 	}
 	return result, nil
 }
+
+//shape:shape
 func PageResultShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "PageResult",
@@ -343,6 +348,75 @@ func PageResultShape() shape.Shape {
 		Tags: map[string]shape.Tag{
 			"serde": {
 				Value: "json",
+			},
+		},
+	}
+}
+
+//shape:shape
+func FindingRecordsShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "FindingRecords",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "T",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "RecordType",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Where",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "WherePredicates",
+						PkgName:       "predicate",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/predicate",
+					},
+				},
+			},
+			{
+				Name: "Sort",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name:          "SortField",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+					},
+				},
+			},
+			{
+				Name: "Limit",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.UInt8{},
+					},
+				},
+			},
+			{
+				Name: "After",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "Cursor",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+					},
+				},
+			},
+			{
+				Name: "Before",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "Cursor",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+					},
+				},
 			},
 		},
 	}
@@ -477,6 +551,8 @@ func (r *Record[A]) _unmarshalJSONuint16(data []byte) (uint16, error) {
 	}
 	return result, nil
 }
+
+//shape:shape
 func RecordShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Record",
