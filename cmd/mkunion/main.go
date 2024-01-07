@@ -171,65 +171,6 @@ func main() {
 				},
 			},
 			{
-				Name: "serde",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:        "type",
-						DefaultText: "json",
-					},
-					&cli.StringSliceFlag{
-						Name:      "input-go-file",
-						Aliases:   []string{"i", "input"},
-						Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:generate mkunion -name=MyUnionType`,
-						TakesFile: true,
-					},
-					&cli.BoolFlag{
-						Name:     "verbose",
-						Aliases:  []string{"v"},
-						Required: false,
-						Value:    false,
-					},
-				},
-				Action: func(c *cli.Context) error {
-					if c.Bool("verbose") {
-						log.SetLevel(log.DebugLevel)
-					}
-
-					sourcePaths := c.StringSlice("input-go-file")
-					if len(sourcePaths) == 0 && os.Getenv("GOFILE") != "" {
-						cwd, _ := syscall.Getwd()
-						sourceName := path.Base(os.Getenv("GOFILE"))
-						sourcePaths = []string{
-							path.Join(cwd, sourceName),
-						}
-					}
-
-					if len(sourcePaths) == 0 {
-						// show usage
-						cli.ShowAppHelpAndExit(c, 1)
-					}
-
-					for _, sourcePath := range sourcePaths {
-						inferred, err := shape.InferFromFile(sourcePath)
-						if err != nil {
-							return fmt.Errorf("failed inferring shape in %s; %w", sourcePath, err)
-						}
-
-						contents, err := GenerateSerde(inferred)
-						if err != nil {
-							return fmt.Errorf("failed generating serde in %s; %w", sourcePath, err)
-						}
-
-						err = SaveFile(contents, sourcePath, "serde_gen")
-						if err != nil {
-							return fmt.Errorf("failed saving serde in %s; %w", sourcePath, err)
-						}
-					}
-
-					return nil
-				},
-			},
-			{
 				Name: "shape-export",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
