@@ -16,16 +16,6 @@ import (
 	"syscall"
 )
 
-type extractImports interface {
-	ExtractImports(x shape.Shape) generators.PkgMap
-	SkipImportsAndPackage(x bool)
-}
-
-type extractInitFuncs interface {
-	ExtractImportFuncs(s shape.Shape) []string
-	SkipInitFunc(flag bool)
-}
-
 func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
@@ -269,7 +259,7 @@ func GenerateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		}
 		shapesContents.Write(contents)
 
-		shapeGenContents, err := GenerateShapeFollow(union, &pkgMap, &initFunc)
+		shapeGenContents, err := GenerateShapeFollow(union, &pkgMap, &initFunc, inferred)
 		if err != nil {
 			return shapesContents, fmt.Errorf("failed to generate shape for %s: %w", shape.ToGoTypeName(union), err)
 		}
@@ -332,7 +322,7 @@ func GenerateSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		}
 		shapesContents.WriteString(contents)
 
-		genShapeContents, err := GenerateShapeFollow(x, &pkgMap, &initFunc)
+		genShapeContents, err := GenerateShapeFollow(x, &pkgMap, &initFunc, inferred)
 		if err != nil {
 			return shapesContents, fmt.Errorf("mkunion.GenerateSerde: failed to generate shape for %s: %w", shape.ToGoTypeName(x), err)
 		}
@@ -362,7 +352,7 @@ func GenerateSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 	return contents, nil
 }
 
-func GenerateShapeFollow(x shape.Shape, pkgMap *generators.PkgMap, initFunc *[]string) (*bytes.Buffer, error) {
+func GenerateShapeFollow(x shape.Shape, pkgMap *generators.PkgMap, initFunc *[]string, inferred *shape.InferredInfo) (*bytes.Buffer, error) {
 	var result *bytes.Buffer
 	for _, y := range shape.ExtractRefs(x) {
 		// filter types that are not from the same package
@@ -371,7 +361,7 @@ func GenerateShapeFollow(x shape.Shape, pkgMap *generators.PkgMap, initFunc *[]s
 			continue
 		}
 
-		contents, err := GenerateShape(y, pkgMap, initFunc)
+		contents, err := GenerateShape(y, pkgMap, initFunc, inferred)
 		if err != nil {
 			return nil, fmt.Errorf("mkunion.GenerateShapeFollow: failed to generate shape for %s: %w", shape.ToGoTypeName(y), err)
 		}
@@ -395,52 +385,56 @@ func GenerateShapeFollow(x shape.Shape, pkgMap *generators.PkgMap, initFunc *[]s
 
 var _generatedShape = map[string]bool{}
 
-func GenerateShape(x shape.Shape, pkgMap *generators.PkgMap, initFunc *[]string) (*bytes.Buffer, error) {
-	if _, ok := x.(*shape.RefName); !ok {
-		key := shape.ToGoTypeName(x)
-		if _generatedShape[key] {
-			log.Debugf("mkunion.GenerateShape: shape %s already generated", key)
-			return nil, nil
-		}
-		_generatedShape[key] = true
+func GenerateShape(x shape.Shape, pkgMap *generators.PkgMap, initFunc *[]string, inferred *shape.InferredInfo) (*bytes.Buffer, error) {
+	key := shape.ToGoTypeName(x, shape.WithPkgImportName())
+	if _generatedShape[key] {
+		log.Debugf("mkunion.GenerateShape: shape %s already generated", key)
+		return nil, nil
 	}
 
 	result := bytes.Buffer{}
 
 	switch x := x.(type) {
 	case *shape.RefName:
-		y, found := shape.LookupShapeOnDisk(x)
-		if !found {
-			log.Warnf("mkunion.GenerateShape: failed to lookup shape %s", shape.ToGoTypeName(x))
+		y := inferred.RetrieveShapeFromRef(x)
+		if y == nil {
+			log.Warnf("mkunion.GenerateShape: failed to lookup shape %s", shape.ToGoTypeName(x, shape.WithPkgImportName()))
 			return nil, nil
 		}
 
-		return GenerateShape(y, pkgMap, initFunc)
+		switch y := y.(type) {
+		case *shape.RefName:
+			log.Warnf("mkunion.GenerateShape: lookup RefName %s", shape.ToGoTypeName(y, shape.WithPkgImportName()))
+			return nil, nil
+		}
+
+		return GenerateShape(y, pkgMap, initFunc, inferred)
 
 	case *shape.UnionLike:
 		for _, v := range x.Variant {
-			key := shape.ToGoTypeName(v)
+			key := shape.ToGoTypeName(v, shape.WithPkgImportName())
 			_generatedShape[key] = true
 		}
-
-	default:
-		gen := generators.NewShapeTagged(x)
-		gen.SkipImportsAndPackage(true)
-		gen.SkipInitFunc(true)
-
-		result.WriteString("//shape:shape\n")
-		contents, err := gen.Generate()
-		if err != nil {
-			return nil, fmt.Errorf("mkunion.GenerateShape: failed to generate tagged shape for %s: %w", shape.ToGoTypeName(x), err)
-		}
-		result.WriteString(contents)
-
-		*pkgMap = generators.MergePkgMaps(*pkgMap,
-			gen.ExtractImports(x),
-		)
-
-		*initFunc = append(*initFunc, gen.ExtractImportFuncs(x)...)
 	}
+
+	_generatedShape[key] = true
+
+	gen := generators.NewShapeTagged(x)
+	gen.SkipImportsAndPackage(true)
+	gen.SkipInitFunc(true)
+
+	result.WriteString("//shape:shape\n")
+	contents, err := gen.Generate()
+	if err != nil {
+		return nil, fmt.Errorf("mkunion.GenerateShape: failed to generate tagged shape for %s: %w", shape.ToGoTypeName(x, shape.WithPkgImportName()), err)
+	}
+	result.WriteString(contents)
+
+	*pkgMap = generators.MergePkgMaps(*pkgMap,
+		gen.ExtractImports(x),
+	)
+
+	*initFunc = append(*initFunc, gen.ExtractImportFuncs(x)...)
 
 	return &result, nil
 }
