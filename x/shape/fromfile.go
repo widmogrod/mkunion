@@ -225,8 +225,10 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 
 func (f *InferredInfo) RetrieveShapes() []Shape {
 	shapes := make(map[string]Shape)
+	ordered := make([]string, 0)
 	for name, shape := range f.shapes {
 		shapes[name] = shape
+		ordered = append(ordered, name)
 	}
 
 	var result = make([]Shape, 0)
@@ -244,8 +246,11 @@ func (f *InferredInfo) RetrieveShapes() []Shape {
 		}
 	}
 
-	for _, shape := range shapes {
-		result = append(result, shape)
+	for _, name := range ordered {
+		if _, ok := shapes[name]; !ok {
+			continue
+		}
+		result = append(result, shapes[name])
 	}
 
 	return result
