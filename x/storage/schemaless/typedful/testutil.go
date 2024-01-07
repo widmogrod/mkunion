@@ -4,13 +4,11 @@ import "github.com/widmogrod/mkunion/x/storage/schemaless"
 
 //go:generate go run ../../../../cmd/mkunion/main.go
 
-//go:tag serde:"json"
 type User struct {
 	Name string
 	Age  int
 }
 
-//go:tag serde:"json"
 type UsersCountByAge struct {
 	Count int
 }
@@ -27,29 +25,33 @@ func AgeRangeKey(age int) string {
 	}
 }
 
-var exampleUserRecords = schemaless.Save(
-	schemaless.Record[User]{
-		ID:   "1",
-		Type: "user",
-		Data: User{
-			Name: "John",
-			Age:  20,
+var exampleUserRecords schemaless.UpdateRecords[schemaless.Record[User]]
+
+func init() {
+	exampleUserRecords = schemaless.Save(
+		schemaless.Record[User]{
+			ID:   "1",
+			Type: "user",
+			Data: User{
+				Name: "John",
+				Age:  20,
+			},
 		},
-	},
-	schemaless.Record[User]{
-		ID:   "2",
-		Type: "user",
-		Data: User{
-			Name: "Jane",
-			Age:  30,
+		schemaless.Record[User]{
+			ID:   "2",
+			Type: "user",
+			Data: User{
+				Name: "Jane",
+				Age:  30,
+			},
 		},
-	},
-	schemaless.Record[User]{
-		ID:   "3",
-		Type: "user",
-		Data: User{
-			Name: "Alice",
-			Age:  39,
+		schemaless.Record[User]{
+			ID:   "3",
+			Type: "user",
+			Data: User{
+				Name: "Alice",
+				Age:  39,
+			},
 		},
-	},
-)
+	)
+}
