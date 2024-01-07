@@ -341,4 +341,44 @@ func TestInferFromFile(t *testing.T) {
 	if diff := cmp.Diff(expected2, strut); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
+
+	alias := inferred.RetrieveUnion("AliasExample")
+	expected3 := &UnionLike{
+		Name:          "AliasExample",
+		PkgName:       "testasset",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+		Variant: []Shape{
+			&AliasLike{
+				Name:          "A2",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       true,
+				Type: &RefName{
+					Name:          "A",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+			&AliasLike{
+				Name:          "B2",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				IsAlias:       true,
+				Type: &RefName{
+					Name:          "B",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "AliasExample",
+			},
+		},
+	}
+
+	if diff := cmp.Diff(expected3, alias); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
 }
