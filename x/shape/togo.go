@@ -419,3 +419,69 @@ func joinMaps(x map[string]string, maps ...map[string]string) map[string]string 
 	}
 	return x
 }
+
+func IsNamedShape(x Shape) bool {
+	return MatchShapeR1(
+		x,
+		func(x *Any) bool {
+			return false
+		},
+		func(x *RefName) bool {
+			return true
+		},
+		func(x *PointerLike) bool {
+			return IsNamedShape(x.Type)
+		},
+		func(x *AliasLike) bool {
+			return true
+		},
+		func(x *PrimitiveLike) bool {
+			return false
+		},
+		func(x *ListLike) bool {
+			return false
+		},
+		func(x *MapLike) bool {
+			return false
+		},
+		func(x *StructLike) bool {
+			return true
+		},
+		func(x *UnionLike) bool {
+			return true
+		},
+	)
+}
+
+func Name(x Shape) string {
+	return MatchShapeR1(
+		x,
+		func(x *Any) string {
+			return ""
+		},
+		func(x *RefName) string {
+			return x.Name
+		},
+		func(x *PointerLike) string {
+			return Name(x.Type)
+		},
+		func(x *AliasLike) string {
+			return x.Name
+		},
+		func(x *PrimitiveLike) string {
+			return ""
+		},
+		func(x *ListLike) string {
+			return ""
+		},
+		func(x *MapLike) string {
+			return ""
+		},
+		func(x *StructLike) string {
+			return x.Name
+		},
+		func(x *UnionLike) string {
+			return x.Name
+		},
+	)
+}
