@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -225,23 +226,25 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 
 func (f *InferredInfo) RetrieveShapes() []Shape {
 	shapes := make(map[string]Shape)
+
 	ordered := make([]string, 0)
 	for name, shape := range f.shapes {
 		shapes[name] = shape
 		ordered = append(ordered, name)
 	}
+	sort.Strings(ordered)
 
-	var result = make([]Shape, 0)
-	for unionName, variantsNames := range f.possibleVariantTypes {
+	var result []Shape
+	unionNames := f.sortedPossibleUnionNames()
+	for _, unionName := range unionNames {
 		union := f.RetrieveUnion(unionName)
 		if union == nil {
 			continue
 		}
 
 		result = append(result, union)
-
 		delete(shapes, unionName)
-		for _, variantName := range variantsNames {
+		for _, variantName := range f.possibleVariantTypes[unionName] {
 			delete(shapes, variantName)
 		}
 	}
@@ -254,6 +257,15 @@ func (f *InferredInfo) RetrieveShapes() []Shape {
 	}
 
 	return result
+}
+
+func (f *InferredInfo) sortedPossibleUnionNames() []string {
+	unionNames := make([]string, len(f.possibleVariantTypes))
+	for unionName := range f.possibleVariantTypes {
+		unionNames = append(unionNames, unionName)
+	}
+	sort.Strings(unionNames)
+	return unionNames
 }
 
 func (f *InferredInfo) RetrieveStructs() []*StructLike {
