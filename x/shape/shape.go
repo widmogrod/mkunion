@@ -1,7 +1,6 @@
 package shape
 
 // go:generate ../../cmd/mkunion/mkunion
-// go:generate ../../cmd/mkunion/mkunion serde
 
 //go:tag mkunion:"Shape"
 type (
