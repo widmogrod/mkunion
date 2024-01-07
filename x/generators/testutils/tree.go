@@ -27,6 +27,14 @@ type (
 	Ka   []map[string]Tree
 )
 
+//go:tag mkunion:"Forest"
+type (
+	Tree2 = Branch
+	Leaf2 = Leaf
+)
+
+type ListOfAliasAny = ListOf[any]
+
 //go:tag serde:"json"
 type ListOf[T any] struct {
 	Data T

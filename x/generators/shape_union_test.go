@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestShapeGenerator(t *testing.T) {
+func TestShapeUnion_Generate_Tree(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
@@ -261,6 +261,69 @@ func KaShape() shape.Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 					},
 				},
+			},
+	}
+}
+`, string(result))
+}
+func TestShapeUnion_Generate_Forest(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
+	inferred, err := shape.InferFromFile("testutils/tree.go")
+	assert.NoError(t, err)
+
+	g := NewShapeUnion(inferred.RetrieveUnion("Forest"))
+
+	result, err := g.Generate()
+	assert.NoError(t, err)
+	assert.Equal(t, `package testutils
+
+import (
+	"github.com/widmogrod/mkunion/x/shape"
+)
+
+func init() {
+	shape.Register(ForestShape())
+	shape.Register(Tree2Shape())
+	shape.Register(Leaf2Shape())
+}
+
+
+func ForestShape() shape.Shape {
+	return &shape.UnionLike{
+		Name: "Forest",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		Variant: []shape.Shape{
+			Tree2Shape(),
+			Leaf2Shape(),
+		},
+	}
+}
+
+func Tree2Shape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "Tree2",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias: true,
+		Type: &shape.RefName{
+				Name: "Branch",
+				PkgName: "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+			},
+	}
+}
+
+func Leaf2Shape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "Leaf2",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias: true,
+		Type: &shape.RefName{
+				Name: "Leaf",
+				PkgName: "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 			},
 	}
 }

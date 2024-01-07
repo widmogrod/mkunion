@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestShapeTagged_Struct(t *testing.T) {
+func TestShapeTagged_ListOf2(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	if err != nil {
 		t.Fatal(err)
@@ -140,6 +140,46 @@ func ListOf2Shape() shape.Shape {
 				Value: "json",
 			},
 		},
+	}
+}
+`, result)
+}
+func TestShapeTagged_ListOfAliasAny(t *testing.T) {
+	inferred, err := shape.InferFromFile("testutils/tree.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	generator := NewShapeTagged(
+		inferred.RetrieveShapeNamedAs("ListOfAliasAny"),
+	)
+
+	result, err := generator.Generate()
+	assert.NoError(t, err)
+	assert.Equal(t, `package testutils
+
+import (
+	"github.com/widmogrod/mkunion/x/shape"
+)
+
+func init() {
+	shape.Register(ListOfAliasAnyShape())
+}
+
+func ListOfAliasAnyShape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "ListOfAliasAny",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		IsAlias: true,
+		Type: &shape.RefName{
+				Name: "ListOf",
+				PkgName: "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				Indexed: []shape.Shape{
+					&shape.Any{},
+				},
+			},
 	}
 }
 `, result)
