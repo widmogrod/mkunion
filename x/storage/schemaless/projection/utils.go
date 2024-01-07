@@ -53,7 +53,7 @@ func GenerateItemsEvery(start int64, size int, every time.Duration) chan Item {
 			ch <- Item{
 				//Key:       "key-" + strconv.Itoa(i),
 				Key:       "key",
-				Data:      schema.MkInt(uint64(i)),
+				Data:      schema.MkInt(int64(i)),
 				EventTime: t.UnixNano(),
 			}
 			t = t.Add(every)

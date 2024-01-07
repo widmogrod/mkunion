@@ -9,7 +9,7 @@ type CountHandler struct {
 func (h *CountHandler) Process(msg Item, returning func(Item)) error {
 	h.value += schema.AsDefault[int](msg.Data, 0)
 	returning(Item{
-		Data: schema.MkInt(uint64(h.value)),
+		Data: schema.MkInt(int64(h.value)),
 	})
 	return nil
 }

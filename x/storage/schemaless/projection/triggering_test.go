@@ -301,17 +301,17 @@ func TestAggregate(t *testing.T) {
 					P: func(item Item, returning func(Item)) error {
 						returning(Item{
 							Key: item.Key,
-							Data: schema.MkInt(uint64(schema.Reduce(
+							Data: schema.MkInt(schema.Reduce[int64](
 								item.Data,
 								0,
-								func(s schema.Schema, i int) int {
+								func(s schema.Schema, i int64) int64 {
 									x, err := schema.ToGoG[float64](s)
 									if err != nil {
 										panic(err)
 									}
-									return int(x) + i
+									return int64(x) + i
 								},
-							))),
+							)),
 							EventTime: item.EventTime,
 							Window:    item.Window,
 						})
