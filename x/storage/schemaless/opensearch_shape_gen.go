@@ -7,9 +7,9 @@ import (
 
 func init() {
 	shape.Register(OpenSearchRepositoryShape())
-	shape.Register(OpenSearchSearchResultShape())
-	shape.Register(OpenSearchSearchResultHitsShape())
 	shape.Register(OpenSearchSearchResultHitShape())
+	shape.Register(OpenSearchSearchResultHitsShape())
+	shape.Register(OpenSearchSearchResultShape())
 }
 
 //shape:shape

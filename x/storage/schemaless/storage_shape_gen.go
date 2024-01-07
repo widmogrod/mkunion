@@ -7,13 +7,13 @@ import (
 
 func init() {
 	shape.Register(CursorShape())
-	shape.Register(PageResultShape())
 	shape.Register(FindingRecordsShape())
-	shape.Register(RecordTypeShape())
+	shape.Register(PageResultShape())
 	shape.Register(RecordShape())
-	shape.Register(UpdatingPolicyShape())
-	shape.Register(UpdateRecordsShape())
+	shape.Register(RecordTypeShape())
 	shape.Register(SortFieldShape())
+	shape.Register(UpdateRecordsShape())
+	shape.Register(UpdatingPolicyShape())
 }
 
 //shape:shape
@@ -24,72 +24,6 @@ func CursorShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
 		IsAlias:       true,
 		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-	}
-}
-
-//shape:shape
-func PageResultShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "PageResult",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Items",
-				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name:          "A",
-						PkgName:       "",
-						PkgImportName: "",
-					},
-				},
-			},
-			{
-				Name: "Next",
-				Type: &shape.PointerLike{
-					Type: &shape.RefName{
-						Name:          "FindingRecords",
-						PkgName:       "schemaless",
-						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-						Indexed: []shape.Shape{
-							&shape.RefName{
-								Name:          "A",
-								PkgName:       "",
-								PkgImportName: "",
-							},
-						},
-					},
-				},
-			},
-			{
-				Name: "Prev",
-				Type: &shape.PointerLike{
-					Type: &shape.RefName{
-						Name:          "FindingRecords",
-						PkgName:       "schemaless",
-						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-						Indexed: []shape.Shape{
-							&shape.RefName{
-								Name:          "A",
-								PkgName:       "",
-								PkgImportName: "",
-							},
-						},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
 	}
 }
 
@@ -163,13 +97,92 @@ func FindingRecordsShape() shape.Shape {
 }
 
 //shape:shape
-func RecordTypeShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "RecordType",
+func SortFieldShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "SortField",
 		PkgName:       "schemaless",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		IsAlias:       true,
-		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Field",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Descending",
+				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
+}
+
+//shape:shape
+func PageResultShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "PageResult",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Items",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name:          "A",
+						PkgName:       "",
+						PkgImportName: "",
+					},
+				},
+			},
+			{
+				Name: "Next",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "FindingRecords",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+						Indexed: []shape.Shape{
+							&shape.RefName{
+								Name:          "A",
+								PkgName:       "",
+								PkgImportName: "",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "Prev",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "FindingRecords",
+						PkgName:       "schemaless",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+						Indexed: []shape.Shape{
+							&shape.RefName{
+								Name:          "A",
+								PkgName:       "",
+								PkgImportName: "",
+							},
+						},
+					},
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
 	}
 }
 
@@ -220,16 +233,13 @@ func RecordShape() shape.Shape {
 }
 
 //shape:shape
-func UpdatingPolicyShape() shape.Shape {
+func RecordTypeShape() shape.Shape {
 	return &shape.AliasLike{
-		Name:          "UpdatingPolicy",
+		Name:          "RecordType",
 		PkgName:       "schemaless",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		Type: &shape.PrimitiveLike{
-			Kind: &shape.NumberLike{
-				Kind: &shape.UInt{},
-			},
-		},
+		IsAlias:       true,
+		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 
@@ -281,24 +291,14 @@ func UpdateRecordsShape() shape.Shape {
 }
 
 //shape:shape
-func SortFieldShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "SortField",
+func UpdatingPolicyShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "UpdatingPolicy",
 		PkgName:       "schemaless",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Field",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Descending",
-				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
+		Type: &shape.PrimitiveLike{
+			Kind: &shape.NumberLike{
+				Kind: &shape.UInt{},
 			},
 		},
 	}

@@ -6,14 +6,14 @@ import (
 )
 
 func init() {
-	shape.Register(WindowDescriptionShape())
-	shape.Register(SessionWindowShape())
-	shape.Register(SlidingWindowShape())
 	shape.Register(FixedWindowShape())
 	shape.Register(KeyedWindowShape())
-	shape.Register(WindowBufferShape())
-	shape.Register(WindowTriggerShape())
+	shape.Register(SessionWindowShape())
+	shape.Register(SlidingWindowShape())
 	shape.Register(TriggerStateShape())
+	shape.Register(WindowBufferShape())
+	shape.Register(WindowDescriptionShape())
+	shape.Register(WindowTriggerShape())
 }
 
 //shape:shape
@@ -119,6 +119,15 @@ func KeyedWindowShape() shape.Shape {
 }
 
 //shape:shape
+func TriggerStateShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "TriggerState",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+	}
+}
+
+//shape:shape
 func WindowBufferShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "WindowBuffer",
@@ -131,15 +140,6 @@ func WindowBufferShape() shape.Shape {
 func WindowTriggerShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "WindowTrigger",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-	}
-}
-
-//shape:shape
-func TriggerStateShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "TriggerState",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 	}

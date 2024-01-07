@@ -6,20 +6,20 @@ import (
 )
 
 func init() {
-	shape.Register(NodeShape())
-	shape.Register(DoWindowShape())
-	shape.Register(DoMapShape())
-	shape.Register(DoLoadShape())
-	shape.Register(DoJoinShape())
 	shape.Register(DefaultContextShape())
-	shape.Register(ItemGroupedByWindowShape())
-	shape.Register(WindowShape())
+	shape.Register(DoJoinShape())
+	shape.Register(DoLoadShape())
+	shape.Register(DoMapShape())
+	shape.Register(DoWindowShape())
 	shape.Register(EventTimeShape())
-	shape.Register(ItemTypeShape())
-	shape.Register(ItemShape())
-	shape.Register(MessageShape())
-	shape.Register(StatsShape())
 	shape.Register(ItemGroupedByKeyShape())
+	shape.Register(ItemGroupedByWindowShape())
+	shape.Register(ItemShape())
+	shape.Register(ItemTypeShape())
+	shape.Register(MessageShape())
+	shape.Register(NodeShape())
+	shape.Register(StatsShape())
+	shape.Register(WindowShape())
 }
 
 //shape:shape
@@ -170,73 +170,6 @@ func DefaultContextShape() shape.Shape {
 }
 
 //shape:shape
-func ItemGroupedByWindowShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ItemGroupedByWindow",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Key",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Data",
-				Type: &shape.PointerLike{
-					Type: &shape.RefName{
-						Name:          "List",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-			{
-				Name: "Window",
-				Type: &shape.PointerLike{
-					Type: &shape.RefName{
-						Name:          "Window",
-						PkgName:       "projection",
-						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
-//shape:shape
-func WindowShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Window",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Start",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-			{
-				Name: "End",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-		},
-	}
-}
-
-//shape:shape
 func EventTimeShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "EventTime",
@@ -246,20 +179,6 @@ func EventTimeShape() shape.Shape {
 		Type: &shape.PrimitiveLike{
 			Kind: &shape.NumberLike{
 				Kind: &shape.Int64{},
-			},
-		},
-	}
-}
-
-//shape:shape
-func ItemTypeShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "ItemType",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Type: &shape.PrimitiveLike{
-			Kind: &shape.NumberLike{
-				Kind: &shape.UInt8{},
 			},
 		},
 	}
@@ -308,6 +227,117 @@ func ItemShape() shape.Shape {
 					Name:          "ItemType",
 					PkgName:       "projection",
 					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
+}
+
+//shape:shape
+func WindowShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Window",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Start",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
+				},
+			},
+			{
+				Name: "End",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
+				},
+			},
+		},
+	}
+}
+
+//shape:shape
+func ItemTypeShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "ItemType",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		Type: &shape.PrimitiveLike{
+			Kind: &shape.NumberLike{
+				Kind: &shape.UInt8{},
+			},
+		},
+	}
+}
+
+//shape:shape
+func ItemGroupedByKeyShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ItemGroupedByKey",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Key",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Data",
+				Type: &shape.ListLike{
+					Element: &shape.RefName{
+						Name:          "Item",
+						PkgName:       "projection",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+					},
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
+			},
+		},
+	}
+}
+
+//shape:shape
+func ItemGroupedByWindowShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ItemGroupedByWindow",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Key",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Data",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "List",
+						PkgName:       "schema",
+						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+					},
+				},
+			},
+			{
+				Name: "Window",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "Window",
+						PkgName:       "projection",
+						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+					},
 				},
 			},
 		},
@@ -375,36 +405,6 @@ func StatsShape() shape.Shape {
 				Kind: &shape.NumberLike{
 					Kind: &shape.Int{},
 				},
-			},
-		},
-	}
-}
-
-//shape:shape
-func ItemGroupedByKeyShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ItemGroupedByKey",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Key",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Data",
-				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name:          "Item",
-						PkgName:       "projection",
-						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
 			},
 		},
 	}

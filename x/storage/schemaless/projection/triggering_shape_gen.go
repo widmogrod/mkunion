@@ -6,82 +6,25 @@ import (
 )
 
 func init() {
-	shape.Register(TriggerTypeShape())
-	shape.Register(AtPeriod1Shape())
-	shape.Register(AtWindowItemSize1Shape())
-	shape.Register(AtWatermark1Shape())
-	shape.Register(TriggerDescriptionShape())
-	shape.Register(AtPeriodShape())
-	shape.Register(AtWindowItemSizeShape())
-	shape.Register(AtWatermarkShape())
-	shape.Register(AnyOfShape())
-	shape.Register(AllOfShape())
-	shape.Register(WindowFlushModeShape())
-	shape.Register(AccumulateShape())
-	shape.Register(DiscardShape())
-	shape.Register(AccumulatingAndRetractingShape())
-	shape.Register(TickersShape())
-	shape.Register(InMemoryBagOfShape())
-	shape.Register(TriggerManagerShape())
-	shape.Register(TriggerHandlerShape())
 	shape.Register(AccumulateDiscardRetractHandlerShape())
-}
-
-//shape:shape
-
-func TriggerTypeShape() shape.Shape {
-	return &shape.UnionLike{
-		Name:          "TriggerType",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Variant: []shape.Shape{
-			AtPeriod1Shape(),
-			AtWindowItemSize1Shape(),
-			AtWatermark1Shape(),
-		},
-	}
-}
-
-func AtPeriod1Shape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "AtPeriod1",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "AtPeriod",
-			PkgName:       "projection",
-			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		},
-	}
-}
-
-func AtWindowItemSize1Shape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "AtWindowItemSize1",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "AtWindowItemSize",
-			PkgName:       "projection",
-			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		},
-	}
-}
-
-func AtWatermark1Shape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "AtWatermark1",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "AtWatermark",
-			PkgName:       "projection",
-			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		},
-	}
+	shape.Register(AccumulateShape())
+	shape.Register(AccumulatingAndRetractingShape())
+	shape.Register(AllOfShape())
+	shape.Register(AnyOfShape())
+	shape.Register(AtPeriod1Shape())
+	shape.Register(AtPeriodShape())
+	shape.Register(AtWatermark1Shape())
+	shape.Register(AtWatermarkShape())
+	shape.Register(AtWindowItemSize1Shape())
+	shape.Register(AtWindowItemSizeShape())
+	shape.Register(DiscardShape())
+	shape.Register(InMemoryBagOfShape())
+	shape.Register(TickersShape())
+	shape.Register(TriggerDescriptionShape())
+	shape.Register(TriggerHandlerShape())
+	shape.Register(TriggerManagerShape())
+	shape.Register(TriggerTypeShape())
+	shape.Register(WindowFlushModeShape())
 }
 
 //shape:shape
@@ -197,6 +140,63 @@ func AllOfShape() shape.Shape {
 
 //shape:shape
 
+func TriggerTypeShape() shape.Shape {
+	return &shape.UnionLike{
+		Name:          "TriggerType",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		Variant: []shape.Shape{
+			AtPeriod1Shape(),
+			AtWindowItemSize1Shape(),
+			AtWatermark1Shape(),
+		},
+	}
+}
+
+func AtPeriod1Shape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "AtPeriod1",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		IsAlias:       true,
+		Type: &shape.RefName{
+			Name:          "AtPeriod",
+			PkgName:       "projection",
+			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		},
+	}
+}
+
+func AtWindowItemSize1Shape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "AtWindowItemSize1",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		IsAlias:       true,
+		Type: &shape.RefName{
+			Name:          "AtWindowItemSize",
+			PkgName:       "projection",
+			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		},
+	}
+}
+
+func AtWatermark1Shape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "AtWatermark1",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		IsAlias:       true,
+		Type: &shape.RefName{
+			Name:          "AtWatermark",
+			PkgName:       "projection",
+			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		},
+	}
+}
+
+//shape:shape
+
 func WindowFlushModeShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "WindowFlushMode",
@@ -255,9 +255,9 @@ func AccumulatingAndRetractingShape() shape.Shape {
 }
 
 //shape:shape
-func TickersShape() shape.Shape {
+func AccumulateDiscardRetractHandlerShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "Tickers",
+		Name:          "AccumulateDiscardRetractHandler",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 	}
@@ -279,9 +279,9 @@ func InMemoryBagOfShape() shape.Shape {
 }
 
 //shape:shape
-func TriggerManagerShape() shape.Shape {
+func TickersShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "TriggerManager",
+		Name:          "Tickers",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 	}
@@ -297,9 +297,9 @@ func TriggerHandlerShape() shape.Shape {
 }
 
 //shape:shape
-func AccumulateDiscardRetractHandlerShape() shape.Shape {
+func TriggerManagerShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "AccumulateDiscardRetractHandler",
+		Name:          "TriggerManager",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 	}

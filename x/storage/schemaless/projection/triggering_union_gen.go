@@ -714,6 +714,247 @@ func (r *AllOf) _unmarshalJSONTriggerDescription(data []byte) (TriggerDescriptio
 	return result, nil
 }
 
+type TriggerTypeVisitor interface {
+	VisitAtPeriod1(v *AtPeriod1) any
+	VisitAtWindowItemSize1(v *AtWindowItemSize1) any
+	VisitAtWatermark1(v *AtWatermark1) any
+}
+
+type TriggerType interface {
+	AcceptTriggerType(g TriggerTypeVisitor) any
+}
+
+var (
+	_ TriggerType = (*AtPeriod1)(nil)
+	_ TriggerType = (*AtWindowItemSize1)(nil)
+	_ TriggerType = (*AtWatermark1)(nil)
+)
+
+func (r *AtPeriod1) AcceptTriggerType(v TriggerTypeVisitor) any { return v.VisitAtPeriod1(r) }
+func (r *AtWindowItemSize1) AcceptTriggerType(v TriggerTypeVisitor) any {
+	return v.VisitAtWindowItemSize1(r)
+}
+func (r *AtWatermark1) AcceptTriggerType(v TriggerTypeVisitor) any { return v.VisitAtWatermark1(r) }
+
+func MatchTriggerTypeR3[T0, T1, T2 any](
+	x TriggerType,
+	f1 func(x *AtPeriod1) (T0, T1, T2),
+	f2 func(x *AtWindowItemSize1) (T0, T1, T2),
+	f3 func(x *AtWatermark1) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *AtPeriod1:
+		return f1(v)
+	case *AtWindowItemSize1:
+		return f2(v)
+	case *AtWatermark1:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchTriggerTypeR2[T0, T1 any](
+	x TriggerType,
+	f1 func(x *AtPeriod1) (T0, T1),
+	f2 func(x *AtWindowItemSize1) (T0, T1),
+	f3 func(x *AtWatermark1) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *AtPeriod1:
+		return f1(v)
+	case *AtWindowItemSize1:
+		return f2(v)
+	case *AtWatermark1:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchTriggerTypeR1[T0 any](
+	x TriggerType,
+	f1 func(x *AtPeriod1) T0,
+	f2 func(x *AtWindowItemSize1) T0,
+	f3 func(x *AtWatermark1) T0,
+) T0 {
+	switch v := x.(type) {
+	case *AtPeriod1:
+		return f1(v)
+	case *AtWindowItemSize1:
+		return f2(v)
+	case *AtWatermark1:
+		return f3(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchTriggerTypeR0(
+	x TriggerType,
+	f1 func(x *AtPeriod1),
+	f2 func(x *AtWindowItemSize1),
+	f3 func(x *AtWatermark1),
+) {
+	switch v := x.(type) {
+	case *AtPeriod1:
+		f1(v)
+	case *AtWindowItemSize1:
+		f2(v)
+	case *AtWatermark1:
+		f3(v)
+	}
+}
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.TriggerType", TriggerTypeFromJSON, TriggerTypeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtPeriod1", AtPeriod1FromJSON, AtPeriod1ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWindowItemSize1", AtWindowItemSize1FromJSON, AtWindowItemSize1ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWatermark1", AtWatermark1FromJSON, AtWatermark1ToJSON)
+}
+
+type TriggerTypeUnionJSON struct {
+	Type              string          `json:"$type,omitempty"`
+	AtPeriod1         json.RawMessage `json:"projection.AtPeriod1,omitempty"`
+	AtWindowItemSize1 json.RawMessage `json:"projection.AtWindowItemSize1,omitempty"`
+	AtWatermark1      json.RawMessage `json:"projection.AtWatermark1,omitempty"`
+}
+
+func TriggerTypeFromJSON(x []byte) (TriggerType, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data TriggerTypeUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "projection.AtPeriod1":
+		return AtPeriod1FromJSON(data.AtPeriod1)
+	case "projection.AtWindowItemSize1":
+		return AtWindowItemSize1FromJSON(data.AtWindowItemSize1)
+	case "projection.AtWatermark1":
+		return AtWatermark1FromJSON(data.AtWatermark1)
+	}
+
+	if data.AtPeriod1 != nil {
+		return AtPeriod1FromJSON(data.AtPeriod1)
+	} else if data.AtWindowItemSize1 != nil {
+		return AtWindowItemSize1FromJSON(data.AtWindowItemSize1)
+	} else if data.AtWatermark1 != nil {
+		return AtWatermark1FromJSON(data.AtWatermark1)
+	}
+
+	return nil, fmt.Errorf("projection.TriggerType: unknown type %s", data.Type)
+}
+
+func TriggerTypeToJSON(x TriggerType) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchTriggerTypeR2(
+		x,
+		func(x *AtPeriod1) ([]byte, error) {
+			body, err := AtPeriod1ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(TriggerTypeUnionJSON{
+				Type:      "projection.AtPeriod1",
+				AtPeriod1: body,
+			})
+		},
+		func(x *AtWindowItemSize1) ([]byte, error) {
+			body, err := AtWindowItemSize1ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(TriggerTypeUnionJSON{
+				Type:              "projection.AtWindowItemSize1",
+				AtWindowItemSize1: body,
+			})
+		},
+		func(x *AtWatermark1) ([]byte, error) {
+			body, err := AtWatermark1ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(TriggerTypeUnionJSON{
+				Type:         "projection.AtWatermark1",
+				AtWatermark1: body,
+			})
+		},
+	)
+}
+
+func AtPeriod1FromJSON(x []byte) (*AtPeriod1, error) {
+	result := new(AtPeriod1)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func AtPeriod1ToJSON(x *AtPeriod1) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*AtPeriod1)(nil)
+	_ json.Marshaler   = (*AtPeriod1)(nil)
+)
+
+func AtWindowItemSize1FromJSON(x []byte) (*AtWindowItemSize1, error) {
+	result := new(AtWindowItemSize1)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func AtWindowItemSize1ToJSON(x *AtWindowItemSize1) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*AtWindowItemSize1)(nil)
+	_ json.Marshaler   = (*AtWindowItemSize1)(nil)
+)
+
+func AtWatermark1FromJSON(x []byte) (*AtWatermark1, error) {
+	result := new(AtWatermark1)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func AtWatermark1ToJSON(x *AtWatermark1) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*AtWatermark1)(nil)
+	_ json.Marshaler   = (*AtWatermark1)(nil)
+)
+
 type WindowFlushModeVisitor interface {
 	VisitAccumulate(v *Accumulate) any
 	VisitDiscard(v *Discard) any
@@ -1105,244 +1346,3 @@ func (r *AccumulatingAndRetracting) _unmarshalJSONtime_Duration(data []byte) (ti
 	}
 	return result, nil
 }
-
-type TriggerTypeVisitor interface {
-	VisitAtPeriod1(v *AtPeriod1) any
-	VisitAtWindowItemSize1(v *AtWindowItemSize1) any
-	VisitAtWatermark1(v *AtWatermark1) any
-}
-
-type TriggerType interface {
-	AcceptTriggerType(g TriggerTypeVisitor) any
-}
-
-var (
-	_ TriggerType = (*AtPeriod1)(nil)
-	_ TriggerType = (*AtWindowItemSize1)(nil)
-	_ TriggerType = (*AtWatermark1)(nil)
-)
-
-func (r *AtPeriod1) AcceptTriggerType(v TriggerTypeVisitor) any { return v.VisitAtPeriod1(r) }
-func (r *AtWindowItemSize1) AcceptTriggerType(v TriggerTypeVisitor) any {
-	return v.VisitAtWindowItemSize1(r)
-}
-func (r *AtWatermark1) AcceptTriggerType(v TriggerTypeVisitor) any { return v.VisitAtWatermark1(r) }
-
-func MatchTriggerTypeR3[T0, T1, T2 any](
-	x TriggerType,
-	f1 func(x *AtPeriod1) (T0, T1, T2),
-	f2 func(x *AtWindowItemSize1) (T0, T1, T2),
-	f3 func(x *AtWatermark1) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *AtPeriod1:
-		return f1(v)
-	case *AtWindowItemSize1:
-		return f2(v)
-	case *AtWatermark1:
-		return f3(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchTriggerTypeR2[T0, T1 any](
-	x TriggerType,
-	f1 func(x *AtPeriod1) (T0, T1),
-	f2 func(x *AtWindowItemSize1) (T0, T1),
-	f3 func(x *AtWatermark1) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *AtPeriod1:
-		return f1(v)
-	case *AtWindowItemSize1:
-		return f2(v)
-	case *AtWatermark1:
-		return f3(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchTriggerTypeR1[T0 any](
-	x TriggerType,
-	f1 func(x *AtPeriod1) T0,
-	f2 func(x *AtWindowItemSize1) T0,
-	f3 func(x *AtWatermark1) T0,
-) T0 {
-	switch v := x.(type) {
-	case *AtPeriod1:
-		return f1(v)
-	case *AtWindowItemSize1:
-		return f2(v)
-	case *AtWatermark1:
-		return f3(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchTriggerTypeR0(
-	x TriggerType,
-	f1 func(x *AtPeriod1),
-	f2 func(x *AtWindowItemSize1),
-	f3 func(x *AtWatermark1),
-) {
-	switch v := x.(type) {
-	case *AtPeriod1:
-		f1(v)
-	case *AtWindowItemSize1:
-		f2(v)
-	case *AtWatermark1:
-		f3(v)
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.TriggerType", TriggerTypeFromJSON, TriggerTypeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtPeriod1", AtPeriod1FromJSON, AtPeriod1ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWindowItemSize1", AtWindowItemSize1FromJSON, AtWindowItemSize1ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWatermark1", AtWatermark1FromJSON, AtWatermark1ToJSON)
-}
-
-type TriggerTypeUnionJSON struct {
-	Type              string          `json:"$type,omitempty"`
-	AtPeriod1         json.RawMessage `json:"projection.AtPeriod1,omitempty"`
-	AtWindowItemSize1 json.RawMessage `json:"projection.AtWindowItemSize1,omitempty"`
-	AtWatermark1      json.RawMessage `json:"projection.AtWatermark1,omitempty"`
-}
-
-func TriggerTypeFromJSON(x []byte) (TriggerType, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data TriggerTypeUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "projection.AtPeriod1":
-		return AtPeriod1FromJSON(data.AtPeriod1)
-	case "projection.AtWindowItemSize1":
-		return AtWindowItemSize1FromJSON(data.AtWindowItemSize1)
-	case "projection.AtWatermark1":
-		return AtWatermark1FromJSON(data.AtWatermark1)
-	}
-
-	if data.AtPeriod1 != nil {
-		return AtPeriod1FromJSON(data.AtPeriod1)
-	} else if data.AtWindowItemSize1 != nil {
-		return AtWindowItemSize1FromJSON(data.AtWindowItemSize1)
-	} else if data.AtWatermark1 != nil {
-		return AtWatermark1FromJSON(data.AtWatermark1)
-	}
-
-	return nil, fmt.Errorf("projection.TriggerType: unknown type %s", data.Type)
-}
-
-func TriggerTypeToJSON(x TriggerType) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchTriggerTypeR2(
-		x,
-		func(x *AtPeriod1) ([]byte, error) {
-			body, err := AtPeriod1ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(TriggerTypeUnionJSON{
-				Type:      "projection.AtPeriod1",
-				AtPeriod1: body,
-			})
-		},
-		func(x *AtWindowItemSize1) ([]byte, error) {
-			body, err := AtWindowItemSize1ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(TriggerTypeUnionJSON{
-				Type:              "projection.AtWindowItemSize1",
-				AtWindowItemSize1: body,
-			})
-		},
-		func(x *AtWatermark1) ([]byte, error) {
-			body, err := AtWatermark1ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(TriggerTypeUnionJSON{
-				Type:         "projection.AtWatermark1",
-				AtWatermark1: body,
-			})
-		},
-	)
-}
-
-func AtPeriod1FromJSON(x []byte) (*AtPeriod1, error) {
-	result := new(AtPeriod1)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func AtPeriod1ToJSON(x *AtPeriod1) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*AtPeriod1)(nil)
-	_ json.Marshaler   = (*AtPeriod1)(nil)
-)
-
-func AtWindowItemSize1FromJSON(x []byte) (*AtWindowItemSize1, error) {
-	result := new(AtWindowItemSize1)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func AtWindowItemSize1ToJSON(x *AtWindowItemSize1) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*AtWindowItemSize1)(nil)
-	_ json.Marshaler   = (*AtWindowItemSize1)(nil)
-)
-
-func AtWatermark1FromJSON(x []byte) (*AtWatermark1, error) {
-	result := new(AtWatermark1)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func AtWatermark1ToJSON(x *AtWatermark1) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*AtWatermark1)(nil)
-	_ json.Marshaler   = (*AtWatermark1)(nil)
-)

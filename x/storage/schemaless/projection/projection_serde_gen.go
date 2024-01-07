@@ -9,6 +9,196 @@ import (
 )
 
 var (
+	_ json.Unmarshaler = (*Item)(nil)
+	_ json.Marshaler   = (*Item)(nil)
+)
+
+func (r *Item) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONItem(*r)
+}
+func (r *Item) _marshalJSONItem(x Item) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldKey []byte
+	fieldKey, err = r._marshalJSONstring(x.Key)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Key; %w", err)
+	}
+	partial["Key"] = fieldKey
+	var fieldData []byte
+	fieldData, err = r._marshalJSONschema_Schema(x.Data)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Data; %w", err)
+	}
+	partial["Data"] = fieldData
+	var fieldEventTime []byte
+	fieldEventTime, err = r._marshalJSONEventTime(x.EventTime)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name EventTime; %w", err)
+	}
+	partial["EventTime"] = fieldEventTime
+	var fieldWindow []byte
+	fieldWindow, err = r._marshalJSONPtrWindow(x.Window)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Window; %w", err)
+	}
+	if fieldWindow != nil {
+		partial["Window"] = fieldWindow
+	}
+	var fieldType []byte
+	fieldType, err = r._marshalJSONItemType(x.Type)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Type; %w", err)
+	}
+	partial["Type"] = fieldType
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONItem: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[schema.Schema](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _marshalJSONEventTime(x EventTime) ([]byte, error) {
+	result, err := shared.JSONMarshal[EventTime](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONEventTime:; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _marshalJSONPtrWindow(x *Window) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONWindow(*x)
+}
+func (r *Item) _marshalJSONWindow(x Window) ([]byte, error) {
+	result, err := shared.JSONMarshal[Window](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONWindow:; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _marshalJSONItemType(x ItemType) ([]byte, error) {
+	result, err := shared.JSONMarshal[ItemType](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._marshalJSONItemType:; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONItem(data)
+	if err != nil {
+		return fmt.Errorf("projection: Item.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Item) _unmarshalJSONItem(data []byte) (Item, error) {
+	result := Item{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("projection: Item._unmarshalJSONItem: native struct unwrap; %w", err)
+	}
+	if fieldKey, ok := partial["Key"]; ok {
+		result.Key, err = r._unmarshalJSONstring(fieldKey)
+		if err != nil {
+			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Key; %w", err)
+		}
+	}
+	if fieldData, ok := partial["Data"]; ok {
+		result.Data, err = r._unmarshalJSONschema_Schema(fieldData)
+		if err != nil {
+			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Data; %w", err)
+		}
+	}
+	if fieldEventTime, ok := partial["EventTime"]; ok {
+		result.EventTime, err = r._unmarshalJSONEventTime(fieldEventTime)
+		if err != nil {
+			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field EventTime; %w", err)
+		}
+	}
+	if fieldWindow, ok := partial["Window"]; ok {
+		result.Window, err = r._unmarshalJSONPtrWindow(fieldWindow)
+		if err != nil {
+			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Window; %w", err)
+		}
+	}
+	if fieldType, ok := partial["Type"]; ok {
+		result.Type, err = r._unmarshalJSONItemType(fieldType)
+		if err != nil {
+			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Type; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Item) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("projection: Item._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
+	result, err := shared.JSONUnmarshal[schema.Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: Item._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _unmarshalJSONEventTime(data []byte) (EventTime, error) {
+	result, err := shared.JSONUnmarshal[EventTime](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: Item._unmarshalJSONEventTime: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _unmarshalJSONPtrWindow(data []byte) (*Window, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONWindow(data)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Item._unmarshalJSONPtrWindow: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *Item) _unmarshalJSONWindow(data []byte) (Window, error) {
+	result, err := shared.JSONUnmarshal[Window](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: Item._unmarshalJSONWindow: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Item) _unmarshalJSONItemType(data []byte) (ItemType, error) {
+	result, err := shared.JSONUnmarshal[ItemType](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: Item._unmarshalJSONItemType: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+var (
 	_ json.Unmarshaler = (*ItemGroupedByKey)(nil)
 	_ json.Marshaler   = (*ItemGroupedByKey)(nil)
 )
@@ -285,196 +475,6 @@ func (r *ItemGroupedByWindow) _unmarshalJSONWindow(data []byte) (Window, error) 
 	result, err := shared.JSONUnmarshal[Window](data)
 	if err != nil {
 		return result, fmt.Errorf("projection: ItemGroupedByWindow._unmarshalJSONWindow: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-var (
-	_ json.Unmarshaler = (*Item)(nil)
-	_ json.Marshaler   = (*Item)(nil)
-)
-
-func (r *Item) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONItem(*r)
-}
-func (r *Item) _marshalJSONItem(x Item) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldKey []byte
-	fieldKey, err = r._marshalJSONstring(x.Key)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Key; %w", err)
-	}
-	partial["Key"] = fieldKey
-	var fieldData []byte
-	fieldData, err = r._marshalJSONschema_Schema(x.Data)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Data; %w", err)
-	}
-	partial["Data"] = fieldData
-	var fieldEventTime []byte
-	fieldEventTime, err = r._marshalJSONEventTime(x.EventTime)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name EventTime; %w", err)
-	}
-	partial["EventTime"] = fieldEventTime
-	var fieldWindow []byte
-	fieldWindow, err = r._marshalJSONPtrWindow(x.Window)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Window; %w", err)
-	}
-	if fieldWindow != nil {
-		partial["Window"] = fieldWindow
-	}
-	var fieldType []byte
-	fieldType, err = r._marshalJSONItemType(x.Type)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Type; %w", err)
-	}
-	partial["Type"] = fieldType
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItem: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
-	result, err := shared.JSONMarshal[schema.Schema](x)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONschema_Schema:; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _marshalJSONEventTime(x EventTime) ([]byte, error) {
-	result, err := shared.JSONMarshal[EventTime](x)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONEventTime:; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _marshalJSONPtrWindow(x *Window) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return r._marshalJSONWindow(*x)
-}
-func (r *Item) _marshalJSONWindow(x Window) ([]byte, error) {
-	result, err := shared.JSONMarshal[Window](x)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONWindow:; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _marshalJSONItemType(x ItemType) ([]byte, error) {
-	result, err := shared.JSONMarshal[ItemType](x)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItemType:; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONItem(data)
-	if err != nil {
-		return fmt.Errorf("projection: Item.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Item) _unmarshalJSONItem(data []byte) (Item, error) {
-	result := Item{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("projection: Item._unmarshalJSONItem: native struct unwrap; %w", err)
-	}
-	if fieldKey, ok := partial["Key"]; ok {
-		result.Key, err = r._unmarshalJSONstring(fieldKey)
-		if err != nil {
-			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Key; %w", err)
-		}
-	}
-	if fieldData, ok := partial["Data"]; ok {
-		result.Data, err = r._unmarshalJSONschema_Schema(fieldData)
-		if err != nil {
-			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Data; %w", err)
-		}
-	}
-	if fieldEventTime, ok := partial["EventTime"]; ok {
-		result.EventTime, err = r._unmarshalJSONEventTime(fieldEventTime)
-		if err != nil {
-			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field EventTime; %w", err)
-		}
-	}
-	if fieldWindow, ok := partial["Window"]; ok {
-		result.Window, err = r._unmarshalJSONPtrWindow(fieldWindow)
-		if err != nil {
-			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Window; %w", err)
-		}
-	}
-	if fieldType, ok := partial["Type"]; ok {
-		result.Type, err = r._unmarshalJSONItemType(fieldType)
-		if err != nil {
-			return result, fmt.Errorf("projection: Item._unmarshalJSONItem: field Type; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Item) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("projection: Item._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
-	result, err := shared.JSONUnmarshal[schema.Schema](data)
-	if err != nil {
-		return result, fmt.Errorf("projection: Item._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _unmarshalJSONEventTime(data []byte) (EventTime, error) {
-	result, err := shared.JSONUnmarshal[EventTime](data)
-	if err != nil {
-		return result, fmt.Errorf("projection: Item._unmarshalJSONEventTime: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _unmarshalJSONPtrWindow(data []byte) (*Window, error) {
-	if len(data) == 0 {
-		return nil, nil
-	}
-	if string(data[:4]) == "null" {
-		return nil, nil
-	}
-	result, err := r._unmarshalJSONWindow(data)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._unmarshalJSONPtrWindow: pointer; %w", err)
-	}
-	return &result, nil
-}
-func (r *Item) _unmarshalJSONWindow(data []byte) (Window, error) {
-	result, err := shared.JSONUnmarshal[Window](data)
-	if err != nil {
-		return result, fmt.Errorf("projection: Item._unmarshalJSONWindow: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Item) _unmarshalJSONItemType(data []byte) (ItemType, error) {
-	result, err := shared.JSONUnmarshal[ItemType](data)
-	if err != nil {
-		return result, fmt.Errorf("projection: Item._unmarshalJSONItemType: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

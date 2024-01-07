@@ -6,15 +6,15 @@ import (
 )
 
 func init() {
-	shape.Register(SchemaShape())
-	shape.Register(NoneShape())
-	shape.Register(BoolShape())
-	shape.Register(NumberShape())
-	shape.Register(StringShape())
 	shape.Register(BinaryShape())
+	shape.Register(BoolShape())
+	shape.Register(FieldShape())
 	shape.Register(ListShape())
 	shape.Register(MapShape())
-	shape.Register(FieldShape())
+	shape.Register(NoneShape())
+	shape.Register(NumberShape())
+	shape.Register(SchemaShape())
+	shape.Register(StringShape())
 }
 
 //shape:shape

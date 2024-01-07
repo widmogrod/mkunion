@@ -6,10 +6,10 @@ import (
 )
 
 func init() {
-	shape.Register(LocationShape())
+	shape.Register(LocationAnythingShape())
 	shape.Register(LocationFieldShape())
 	shape.Register(LocationIndexShape())
-	shape.Register(LocationAnythingShape())
+	shape.Register(LocationShape())
 }
 
 //shape:shape

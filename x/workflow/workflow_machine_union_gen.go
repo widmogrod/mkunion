@@ -8,953 +8,6 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
-type PredicateVisitor interface {
-	VisitAnd(v *And) any
-	VisitOr(v *Or) any
-	VisitNot(v *Not) any
-	VisitCompare(v *Compare) any
-}
-
-type Predicate interface {
-	AcceptPredicate(g PredicateVisitor) any
-}
-
-var (
-	_ Predicate = (*And)(nil)
-	_ Predicate = (*Or)(nil)
-	_ Predicate = (*Not)(nil)
-	_ Predicate = (*Compare)(nil)
-)
-
-func (r *And) AcceptPredicate(v PredicateVisitor) any     { return v.VisitAnd(r) }
-func (r *Or) AcceptPredicate(v PredicateVisitor) any      { return v.VisitOr(r) }
-func (r *Not) AcceptPredicate(v PredicateVisitor) any     { return v.VisitNot(r) }
-func (r *Compare) AcceptPredicate(v PredicateVisitor) any { return v.VisitCompare(r) }
-
-func MatchPredicateR3[T0, T1, T2 any](
-	x Predicate,
-	f1 func(x *And) (T0, T1, T2),
-	f2 func(x *Or) (T0, T1, T2),
-	f3 func(x *Not) (T0, T1, T2),
-	f4 func(x *Compare) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *And:
-		return f1(v)
-	case *Or:
-		return f2(v)
-	case *Not:
-		return f3(v)
-	case *Compare:
-		return f4(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchPredicateR2[T0, T1 any](
-	x Predicate,
-	f1 func(x *And) (T0, T1),
-	f2 func(x *Or) (T0, T1),
-	f3 func(x *Not) (T0, T1),
-	f4 func(x *Compare) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *And:
-		return f1(v)
-	case *Or:
-		return f2(v)
-	case *Not:
-		return f3(v)
-	case *Compare:
-		return f4(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchPredicateR1[T0 any](
-	x Predicate,
-	f1 func(x *And) T0,
-	f2 func(x *Or) T0,
-	f3 func(x *Not) T0,
-	f4 func(x *Compare) T0,
-) T0 {
-	switch v := x.(type) {
-	case *And:
-		return f1(v)
-	case *Or:
-		return f2(v)
-	case *Not:
-		return f3(v)
-	case *Compare:
-		return f4(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchPredicateR0(
-	x Predicate,
-	f1 func(x *And),
-	f2 func(x *Or),
-	f3 func(x *Not),
-	f4 func(x *Compare),
-) {
-	switch v := x.(type) {
-	case *And:
-		f1(v)
-	case *Or:
-		f2(v)
-	case *Not:
-		f3(v)
-	case *Compare:
-		f4(v)
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Predicate", PredicateFromJSON, PredicateToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.And", AndFromJSON, AndToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Or", OrFromJSON, OrToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Not", NotFromJSON, NotToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Compare", CompareFromJSON, CompareToJSON)
-}
-
-type PredicateUnionJSON struct {
-	Type    string          `json:"$type,omitempty"`
-	And     json.RawMessage `json:"workflow.And,omitempty"`
-	Or      json.RawMessage `json:"workflow.Or,omitempty"`
-	Not     json.RawMessage `json:"workflow.Not,omitempty"`
-	Compare json.RawMessage `json:"workflow.Compare,omitempty"`
-}
-
-func PredicateFromJSON(x []byte) (Predicate, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data PredicateUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "workflow.And":
-		return AndFromJSON(data.And)
-	case "workflow.Or":
-		return OrFromJSON(data.Or)
-	case "workflow.Not":
-		return NotFromJSON(data.Not)
-	case "workflow.Compare":
-		return CompareFromJSON(data.Compare)
-	}
-
-	if data.And != nil {
-		return AndFromJSON(data.And)
-	} else if data.Or != nil {
-		return OrFromJSON(data.Or)
-	} else if data.Not != nil {
-		return NotFromJSON(data.Not)
-	} else if data.Compare != nil {
-		return CompareFromJSON(data.Compare)
-	}
-
-	return nil, fmt.Errorf("workflow.Predicate: unknown type %s", data.Type)
-}
-
-func PredicateToJSON(x Predicate) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchPredicateR2(
-		x,
-		func(x *And) ([]byte, error) {
-			body, err := AndToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(PredicateUnionJSON{
-				Type: "workflow.And",
-				And:  body,
-			})
-		},
-		func(x *Or) ([]byte, error) {
-			body, err := OrToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(PredicateUnionJSON{
-				Type: "workflow.Or",
-				Or:   body,
-			})
-		},
-		func(x *Not) ([]byte, error) {
-			body, err := NotToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(PredicateUnionJSON{
-				Type: "workflow.Not",
-				Not:  body,
-			})
-		},
-		func(x *Compare) ([]byte, error) {
-			body, err := CompareToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(PredicateUnionJSON{
-				Type:    "workflow.Compare",
-				Compare: body,
-			})
-		},
-	)
-}
-
-func AndFromJSON(x []byte) (*And, error) {
-	result := new(And)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func AndToJSON(x *And) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*And)(nil)
-	_ json.Marshaler   = (*And)(nil)
-)
-
-func (r *And) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONAnd(*r)
-}
-func (r *And) _marshalJSONAnd(x And) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldL []byte
-	fieldL, err = r._marshalJSONSlicePredicate(x.L)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: And._marshalJSONAnd: field name L; %w", err)
-	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: And._marshalJSONAnd: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *And) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONPredicate(v)
-		if err != nil {
-			return nil, fmt.Errorf("workflow: And._marshalJSONSlicePredicate: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: And._marshalJSONSlicePredicate:; %w", err)
-	}
-	return result, nil
-}
-func (r *And) _marshalJSONPredicate(x Predicate) ([]byte, error) {
-	result, err := shared.JSONMarshal[Predicate](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: And._marshalJSONPredicate:; %w", err)
-	}
-	return result, nil
-}
-func (r *And) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONAnd(data)
-	if err != nil {
-		return fmt.Errorf("workflow: And.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *And) _unmarshalJSONAnd(data []byte) (And, error) {
-	result := And{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: And._unmarshalJSONAnd: native struct unwrap; %w", err)
-	}
-	if fieldL, ok := partial["L"]; ok {
-		result.L, err = r._unmarshalJSONSlicePredicate(fieldL)
-		if err != nil {
-			return result, fmt.Errorf("workflow: And._unmarshalJSONAnd: field L; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *And) _unmarshalJSONSlicePredicate(data []byte) ([]Predicate, error) {
-	result := make([]Predicate, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: And._unmarshalJSONSlicePredicate: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONPredicate(v)
-		if err != nil {
-			return result, fmt.Errorf("workflow: And._unmarshalJSONSlicePredicate: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *And) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
-	result, err := shared.JSONUnmarshal[Predicate](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: And._unmarshalJSONPredicate: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func OrFromJSON(x []byte) (*Or, error) {
-	result := new(Or)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func OrToJSON(x *Or) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Or)(nil)
-	_ json.Marshaler   = (*Or)(nil)
-)
-
-func (r *Or) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONOr(*r)
-}
-func (r *Or) _marshalJSONOr(x Or) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldL []byte
-	fieldL, err = r._marshalJSONSlicePredicate(x.L)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Or._marshalJSONOr: field name L; %w", err)
-	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Or._marshalJSONOr: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Or) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONPredicate(v)
-		if err != nil {
-			return nil, fmt.Errorf("workflow: Or._marshalJSONSlicePredicate: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Or._marshalJSONSlicePredicate:; %w", err)
-	}
-	return result, nil
-}
-func (r *Or) _marshalJSONPredicate(x Predicate) ([]byte, error) {
-	result, err := shared.JSONMarshal[Predicate](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Or._marshalJSONPredicate:; %w", err)
-	}
-	return result, nil
-}
-func (r *Or) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONOr(data)
-	if err != nil {
-		return fmt.Errorf("workflow: Or.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Or) _unmarshalJSONOr(data []byte) (Or, error) {
-	result := Or{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Or._unmarshalJSONOr: native struct unwrap; %w", err)
-	}
-	if fieldL, ok := partial["L"]; ok {
-		result.L, err = r._unmarshalJSONSlicePredicate(fieldL)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Or._unmarshalJSONOr: field L; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Or) _unmarshalJSONSlicePredicate(data []byte) ([]Predicate, error) {
-	result := make([]Predicate, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Or._unmarshalJSONSlicePredicate: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONPredicate(v)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Or._unmarshalJSONSlicePredicate: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *Or) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
-	result, err := shared.JSONUnmarshal[Predicate](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Or._unmarshalJSONPredicate: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func NotFromJSON(x []byte) (*Not, error) {
-	result := new(Not)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func NotToJSON(x *Not) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Not)(nil)
-	_ json.Marshaler   = (*Not)(nil)
-)
-
-func (r *Not) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONNot(*r)
-}
-func (r *Not) _marshalJSONNot(x Not) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldP []byte
-	fieldP, err = r._marshalJSONPredicate(x.P)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Not._marshalJSONNot: field name P; %w", err)
-	}
-	partial["P"] = fieldP
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Not._marshalJSONNot: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Not) _marshalJSONPredicate(x Predicate) ([]byte, error) {
-	result, err := shared.JSONMarshal[Predicate](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Not._marshalJSONPredicate:; %w", err)
-	}
-	return result, nil
-}
-func (r *Not) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONNot(data)
-	if err != nil {
-		return fmt.Errorf("workflow: Not.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Not) _unmarshalJSONNot(data []byte) (Not, error) {
-	result := Not{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Not._unmarshalJSONNot: native struct unwrap; %w", err)
-	}
-	if fieldP, ok := partial["P"]; ok {
-		result.P, err = r._unmarshalJSONPredicate(fieldP)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Not._unmarshalJSONNot: field P; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Not) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
-	result, err := shared.JSONUnmarshal[Predicate](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Not._unmarshalJSONPredicate: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func CompareFromJSON(x []byte) (*Compare, error) {
-	result := new(Compare)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func CompareToJSON(x *Compare) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Compare)(nil)
-	_ json.Marshaler   = (*Compare)(nil)
-)
-
-func (r *Compare) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONCompare(*r)
-}
-func (r *Compare) _marshalJSONCompare(x Compare) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldOperation []byte
-	fieldOperation, err = r._marshalJSONstring(x.Operation)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Operation; %w", err)
-	}
-	partial["Operation"] = fieldOperation
-	var fieldLeft []byte
-	fieldLeft, err = r._marshalJSONReshaper(x.Left)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Left; %w", err)
-	}
-	partial["Left"] = fieldLeft
-	var fieldRight []byte
-	fieldRight, err = r._marshalJSONReshaper(x.Right)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Right; %w", err)
-	}
-	partial["Right"] = fieldRight
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Compare) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Compare._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Compare) _marshalJSONReshaper(x Reshaper) ([]byte, error) {
-	result, err := shared.JSONMarshal[Reshaper](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Compare._marshalJSONReshaper:; %w", err)
-	}
-	return result, nil
-}
-func (r *Compare) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONCompare(data)
-	if err != nil {
-		return fmt.Errorf("workflow: Compare.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Compare) _unmarshalJSONCompare(data []byte) (Compare, error) {
-	result := Compare{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: native struct unwrap; %w", err)
-	}
-	if fieldOperation, ok := partial["Operation"]; ok {
-		result.Operation, err = r._unmarshalJSONstring(fieldOperation)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: field Operation; %w", err)
-		}
-	}
-	if fieldLeft, ok := partial["Left"]; ok {
-		result.Left, err = r._unmarshalJSONReshaper(fieldLeft)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: field Left; %w", err)
-		}
-	}
-	if fieldRight, ok := partial["Right"]; ok {
-		result.Right, err = r._unmarshalJSONReshaper(fieldRight)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: field Right; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Compare) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Compare._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Compare) _unmarshalJSONReshaper(data []byte) (Reshaper, error) {
-	result, err := shared.JSONUnmarshal[Reshaper](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Compare._unmarshalJSONReshaper: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-type RunOptionVisitor interface {
-	VisitScheduleRun(v *ScheduleRun) any
-	VisitDelayRun(v *DelayRun) any
-}
-
-type RunOption interface {
-	AcceptRunOption(g RunOptionVisitor) any
-}
-
-var (
-	_ RunOption = (*ScheduleRun)(nil)
-	_ RunOption = (*DelayRun)(nil)
-)
-
-func (r *ScheduleRun) AcceptRunOption(v RunOptionVisitor) any { return v.VisitScheduleRun(r) }
-func (r *DelayRun) AcceptRunOption(v RunOptionVisitor) any    { return v.VisitDelayRun(r) }
-
-func MatchRunOptionR3[T0, T1, T2 any](
-	x RunOption,
-	f1 func(x *ScheduleRun) (T0, T1, T2),
-	f2 func(x *DelayRun) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *ScheduleRun:
-		return f1(v)
-	case *DelayRun:
-		return f2(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchRunOptionR2[T0, T1 any](
-	x RunOption,
-	f1 func(x *ScheduleRun) (T0, T1),
-	f2 func(x *DelayRun) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *ScheduleRun:
-		return f1(v)
-	case *DelayRun:
-		return f2(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchRunOptionR1[T0 any](
-	x RunOption,
-	f1 func(x *ScheduleRun) T0,
-	f2 func(x *DelayRun) T0,
-) T0 {
-	switch v := x.(type) {
-	case *ScheduleRun:
-		return f1(v)
-	case *DelayRun:
-		return f2(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchRunOptionR0(
-	x RunOption,
-	f1 func(x *ScheduleRun),
-	f2 func(x *DelayRun),
-) {
-	switch v := x.(type) {
-	case *ScheduleRun:
-		f1(v)
-	case *DelayRun:
-		f2(v)
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.RunOption", RunOptionFromJSON, RunOptionToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.ScheduleRun", ScheduleRunFromJSON, ScheduleRunToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.DelayRun", DelayRunFromJSON, DelayRunToJSON)
-}
-
-type RunOptionUnionJSON struct {
-	Type        string          `json:"$type,omitempty"`
-	ScheduleRun json.RawMessage `json:"workflow.ScheduleRun,omitempty"`
-	DelayRun    json.RawMessage `json:"workflow.DelayRun,omitempty"`
-}
-
-func RunOptionFromJSON(x []byte) (RunOption, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data RunOptionUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "workflow.ScheduleRun":
-		return ScheduleRunFromJSON(data.ScheduleRun)
-	case "workflow.DelayRun":
-		return DelayRunFromJSON(data.DelayRun)
-	}
-
-	if data.ScheduleRun != nil {
-		return ScheduleRunFromJSON(data.ScheduleRun)
-	} else if data.DelayRun != nil {
-		return DelayRunFromJSON(data.DelayRun)
-	}
-
-	return nil, fmt.Errorf("workflow.RunOption: unknown type %s", data.Type)
-}
-
-func RunOptionToJSON(x RunOption) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchRunOptionR2(
-		x,
-		func(x *ScheduleRun) ([]byte, error) {
-			body, err := ScheduleRunToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(RunOptionUnionJSON{
-				Type:        "workflow.ScheduleRun",
-				ScheduleRun: body,
-			})
-		},
-		func(x *DelayRun) ([]byte, error) {
-			body, err := DelayRunToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(RunOptionUnionJSON{
-				Type:     "workflow.DelayRun",
-				DelayRun: body,
-			})
-		},
-	)
-}
-
-func ScheduleRunFromJSON(x []byte) (*ScheduleRun, error) {
-	result := new(ScheduleRun)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func ScheduleRunToJSON(x *ScheduleRun) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*ScheduleRun)(nil)
-	_ json.Marshaler   = (*ScheduleRun)(nil)
-)
-
-func (r *ScheduleRun) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONScheduleRun(*r)
-}
-func (r *ScheduleRun) _marshalJSONScheduleRun(x ScheduleRun) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldInterval []byte
-	fieldInterval, err = r._marshalJSONstring(x.Interval)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: field name Interval; %w", err)
-	}
-	partial["Interval"] = fieldInterval
-	var fieldParentRunID []byte
-	fieldParentRunID, err = r._marshalJSONstring(x.ParentRunID)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: field name ParentRunID; %w", err)
-	}
-	partial["ParentRunID"] = fieldParentRunID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *ScheduleRun) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *ScheduleRun) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONScheduleRun(data)
-	if err != nil {
-		return fmt.Errorf("workflow: ScheduleRun.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *ScheduleRun) _unmarshalJSONScheduleRun(data []byte) (ScheduleRun, error) {
-	result := ScheduleRun{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONScheduleRun: native struct unwrap; %w", err)
-	}
-	if fieldInterval, ok := partial["Interval"]; ok {
-		result.Interval, err = r._unmarshalJSONstring(fieldInterval)
-		if err != nil {
-			return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONScheduleRun: field Interval; %w", err)
-		}
-	}
-	if fieldParentRunID, ok := partial["ParentRunID"]; ok {
-		result.ParentRunID, err = r._unmarshalJSONstring(fieldParentRunID)
-		if err != nil {
-			return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONScheduleRun: field ParentRunID; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *ScheduleRun) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func DelayRunFromJSON(x []byte) (*DelayRun, error) {
-	result := new(DelayRun)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func DelayRunToJSON(x *DelayRun) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*DelayRun)(nil)
-	_ json.Marshaler   = (*DelayRun)(nil)
-)
-
-func (r *DelayRun) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONDelayRun(*r)
-}
-func (r *DelayRun) _marshalJSONDelayRun(x DelayRun) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldDelayBySeconds []byte
-	fieldDelayBySeconds, err = r._marshalJSONint64(x.DelayBySeconds)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONDelayRun: field name DelayBySeconds; %w", err)
-	}
-	partial["DelayBySeconds"] = fieldDelayBySeconds
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONDelayRun: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *DelayRun) _marshalJSONint64(x int64) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONint64:; %w", err)
-	}
-	return result, nil
-}
-func (r *DelayRun) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONDelayRun(data)
-	if err != nil {
-		return fmt.Errorf("workflow: DelayRun.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *DelayRun) _unmarshalJSONDelayRun(data []byte) (DelayRun, error) {
-	result := DelayRun{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: DelayRun._unmarshalJSONDelayRun: native struct unwrap; %w", err)
-	}
-	if fieldDelayBySeconds, ok := partial["DelayBySeconds"]; ok {
-		result.DelayBySeconds, err = r._unmarshalJSONint64(fieldDelayBySeconds)
-		if err != nil {
-			return result, fmt.Errorf("workflow: DelayRun._unmarshalJSONDelayRun: field DelayBySeconds; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *DelayRun) _unmarshalJSONint64(data []byte) (int64, error) {
-	var result int64
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: DelayRun._unmarshalJSONint64: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-
 type CommandVisitor interface {
 	VisitRun(v *Run) any
 	VisitCallback(v *Callback) any
@@ -1669,6 +722,2077 @@ func (r *ResumeSchedule) _unmarshalJSONstring(data []byte) (string, error) {
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return result, fmt.Errorf("workflow: ResumeSchedule._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+
+type ExprVisitor interface {
+	VisitEnd(v *End) any
+	VisitAssign(v *Assign) any
+	VisitApply(v *Apply) any
+	VisitChoose(v *Choose) any
+}
+
+type Expr interface {
+	AcceptExpr(g ExprVisitor) any
+}
+
+var (
+	_ Expr = (*End)(nil)
+	_ Expr = (*Assign)(nil)
+	_ Expr = (*Apply)(nil)
+	_ Expr = (*Choose)(nil)
+)
+
+func (r *End) AcceptExpr(v ExprVisitor) any    { return v.VisitEnd(r) }
+func (r *Assign) AcceptExpr(v ExprVisitor) any { return v.VisitAssign(r) }
+func (r *Apply) AcceptExpr(v ExprVisitor) any  { return v.VisitApply(r) }
+func (r *Choose) AcceptExpr(v ExprVisitor) any { return v.VisitChoose(r) }
+
+func MatchExprR3[T0, T1, T2 any](
+	x Expr,
+	f1 func(x *End) (T0, T1, T2),
+	f2 func(x *Assign) (T0, T1, T2),
+	f3 func(x *Apply) (T0, T1, T2),
+	f4 func(x *Choose) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *End:
+		return f1(v)
+	case *Assign:
+		return f2(v)
+	case *Apply:
+		return f3(v)
+	case *Choose:
+		return f4(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchExprR2[T0, T1 any](
+	x Expr,
+	f1 func(x *End) (T0, T1),
+	f2 func(x *Assign) (T0, T1),
+	f3 func(x *Apply) (T0, T1),
+	f4 func(x *Choose) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *End:
+		return f1(v)
+	case *Assign:
+		return f2(v)
+	case *Apply:
+		return f3(v)
+	case *Choose:
+		return f4(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchExprR1[T0 any](
+	x Expr,
+	f1 func(x *End) T0,
+	f2 func(x *Assign) T0,
+	f3 func(x *Apply) T0,
+	f4 func(x *Choose) T0,
+) T0 {
+	switch v := x.(type) {
+	case *End:
+		return f1(v)
+	case *Assign:
+		return f2(v)
+	case *Apply:
+		return f3(v)
+	case *Choose:
+		return f4(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchExprR0(
+	x Expr,
+	f1 func(x *End),
+	f2 func(x *Assign),
+	f3 func(x *Apply),
+	f4 func(x *Choose),
+) {
+	switch v := x.(type) {
+	case *End:
+		f1(v)
+	case *Assign:
+		f2(v)
+	case *Apply:
+		f3(v)
+	case *Choose:
+		f4(v)
+	}
+}
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Expr", ExprFromJSON, ExprToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.End", EndFromJSON, EndToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Assign", AssignFromJSON, AssignToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Apply", ApplyFromJSON, ApplyToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Choose", ChooseFromJSON, ChooseToJSON)
+}
+
+type ExprUnionJSON struct {
+	Type   string          `json:"$type,omitempty"`
+	End    json.RawMessage `json:"workflow.End,omitempty"`
+	Assign json.RawMessage `json:"workflow.Assign,omitempty"`
+	Apply  json.RawMessage `json:"workflow.Apply,omitempty"`
+	Choose json.RawMessage `json:"workflow.Choose,omitempty"`
+}
+
+func ExprFromJSON(x []byte) (Expr, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data ExprUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "workflow.End":
+		return EndFromJSON(data.End)
+	case "workflow.Assign":
+		return AssignFromJSON(data.Assign)
+	case "workflow.Apply":
+		return ApplyFromJSON(data.Apply)
+	case "workflow.Choose":
+		return ChooseFromJSON(data.Choose)
+	}
+
+	if data.End != nil {
+		return EndFromJSON(data.End)
+	} else if data.Assign != nil {
+		return AssignFromJSON(data.Assign)
+	} else if data.Apply != nil {
+		return ApplyFromJSON(data.Apply)
+	} else if data.Choose != nil {
+		return ChooseFromJSON(data.Choose)
+	}
+
+	return nil, fmt.Errorf("workflow.Expr: unknown type %s", data.Type)
+}
+
+func ExprToJSON(x Expr) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchExprR2(
+		x,
+		func(x *End) ([]byte, error) {
+			body, err := EndToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ExprUnionJSON{
+				Type: "workflow.End",
+				End:  body,
+			})
+		},
+		func(x *Assign) ([]byte, error) {
+			body, err := AssignToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ExprUnionJSON{
+				Type:   "workflow.Assign",
+				Assign: body,
+			})
+		},
+		func(x *Apply) ([]byte, error) {
+			body, err := ApplyToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ExprUnionJSON{
+				Type:  "workflow.Apply",
+				Apply: body,
+			})
+		},
+		func(x *Choose) ([]byte, error) {
+			body, err := ChooseToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ExprUnionJSON{
+				Type:   "workflow.Choose",
+				Choose: body,
+			})
+		},
+	)
+}
+
+func EndFromJSON(x []byte) (*End, error) {
+	result := new(End)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func EndToJSON(x *End) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*End)(nil)
+	_ json.Marshaler   = (*End)(nil)
+)
+
+func (r *End) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONEnd(*r)
+}
+func (r *End) _marshalJSONEnd(x End) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldID []byte
+	fieldID, err = r._marshalJSONstring(x.ID)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: field name ID; %w", err)
+	}
+	partial["ID"] = fieldID
+	var fieldResult []byte
+	fieldResult, err = r._marshalJSONReshaper(x.Result)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: field name Result; %w", err)
+	}
+	partial["Result"] = fieldResult
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *End) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: End._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *End) _marshalJSONReshaper(x Reshaper) ([]byte, error) {
+	result, err := shared.JSONMarshal[Reshaper](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: End._marshalJSONReshaper:; %w", err)
+	}
+	return result, nil
+}
+func (r *End) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONEnd(data)
+	if err != nil {
+		return fmt.Errorf("workflow: End.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *End) _unmarshalJSONEnd(data []byte) (End, error) {
+	result := End{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: native struct unwrap; %w", err)
+	}
+	if fieldID, ok := partial["ID"]; ok {
+		result.ID, err = r._unmarshalJSONstring(fieldID)
+		if err != nil {
+			return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: field ID; %w", err)
+		}
+	}
+	if fieldResult, ok := partial["Result"]; ok {
+		result.Result, err = r._unmarshalJSONReshaper(fieldResult)
+		if err != nil {
+			return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: field Result; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *End) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: End._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *End) _unmarshalJSONReshaper(data []byte) (Reshaper, error) {
+	result, err := shared.JSONUnmarshal[Reshaper](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: End._unmarshalJSONReshaper: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func AssignFromJSON(x []byte) (*Assign, error) {
+	result := new(Assign)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func AssignToJSON(x *Assign) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Assign)(nil)
+	_ json.Marshaler   = (*Assign)(nil)
+)
+
+func (r *Assign) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONAssign(*r)
+}
+func (r *Assign) _marshalJSONAssign(x Assign) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldID []byte
+	fieldID, err = r._marshalJSONstring(x.ID)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name ID; %w", err)
+	}
+	partial["ID"] = fieldID
+	var fieldVarOk []byte
+	fieldVarOk, err = r._marshalJSONstring(x.VarOk)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name VarOk; %w", err)
+	}
+	partial["VarOk"] = fieldVarOk
+	var fieldVarErr []byte
+	fieldVarErr, err = r._marshalJSONstring(x.VarErr)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name VarErr; %w", err)
+	}
+	partial["VarErr"] = fieldVarErr
+	var fieldVal []byte
+	fieldVal, err = r._marshalJSONExpr(x.Val)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name Val; %w", err)
+	}
+	partial["Val"] = fieldVal
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Assign) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Assign) _marshalJSONExpr(x Expr) ([]byte, error) {
+	result, err := shared.JSONMarshal[Expr](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONExpr:; %w", err)
+	}
+	return result, nil
+}
+func (r *Assign) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONAssign(data)
+	if err != nil {
+		return fmt.Errorf("workflow: Assign.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Assign) _unmarshalJSONAssign(data []byte) (Assign, error) {
+	result := Assign{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: native struct unwrap; %w", err)
+	}
+	if fieldID, ok := partial["ID"]; ok {
+		result.ID, err = r._unmarshalJSONstring(fieldID)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field ID; %w", err)
+		}
+	}
+	if fieldVarOk, ok := partial["VarOk"]; ok {
+		result.VarOk, err = r._unmarshalJSONstring(fieldVarOk)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field VarOk; %w", err)
+		}
+	}
+	if fieldVarErr, ok := partial["VarErr"]; ok {
+		result.VarErr, err = r._unmarshalJSONstring(fieldVarErr)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field VarErr; %w", err)
+		}
+	}
+	if fieldVal, ok := partial["Val"]; ok {
+		result.Val, err = r._unmarshalJSONExpr(fieldVal)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field Val; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Assign) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Assign._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Assign) _unmarshalJSONExpr(data []byte) (Expr, error) {
+	result, err := shared.JSONUnmarshal[Expr](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Assign._unmarshalJSONExpr: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func ApplyFromJSON(x []byte) (*Apply, error) {
+	result := new(Apply)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func ApplyToJSON(x *Apply) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Apply)(nil)
+	_ json.Marshaler   = (*Apply)(nil)
+)
+
+func (r *Apply) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONApply(*r)
+}
+func (r *Apply) _marshalJSONApply(x Apply) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldID []byte
+	fieldID, err = r._marshalJSONstring(x.ID)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name ID; %w", err)
+	}
+	partial["ID"] = fieldID
+	var fieldName []byte
+	fieldName, err = r._marshalJSONstring(x.Name)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Name; %w", err)
+	}
+	partial["Name"] = fieldName
+	var fieldArgs []byte
+	fieldArgs, err = r._marshalJSONSliceReshaper(x.Args)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Args; %w", err)
+	}
+	partial["Args"] = fieldArgs
+	var fieldAwait []byte
+	fieldAwait, err = r._marshalJSONPtrApplyAwaitOptions(x.Await)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Await; %w", err)
+	}
+	if fieldAwait != nil {
+		partial["Await"] = fieldAwait
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) _marshalJSONSliceReshaper(x []Reshaper) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONReshaper(v)
+		if err != nil {
+			return nil, fmt.Errorf("workflow: Apply._marshalJSONSliceReshaper: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONSliceReshaper:; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) _marshalJSONReshaper(x Reshaper) ([]byte, error) {
+	result, err := shared.JSONMarshal[Reshaper](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONReshaper:; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) _marshalJSONPtrApplyAwaitOptions(x *ApplyAwaitOptions) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONApplyAwaitOptions(*x)
+}
+func (r *Apply) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
+	result, err := shared.JSONMarshal[ApplyAwaitOptions](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONApplyAwaitOptions:; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONApply(data)
+	if err != nil {
+		return fmt.Errorf("workflow: Apply.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Apply) _unmarshalJSONApply(data []byte) (Apply, error) {
+	result := Apply{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: native struct unwrap; %w", err)
+	}
+	if fieldID, ok := partial["ID"]; ok {
+		result.ID, err = r._unmarshalJSONstring(fieldID)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field ID; %w", err)
+		}
+	}
+	if fieldName, ok := partial["Name"]; ok {
+		result.Name, err = r._unmarshalJSONstring(fieldName)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field Name; %w", err)
+		}
+	}
+	if fieldArgs, ok := partial["Args"]; ok {
+		result.Args, err = r._unmarshalJSONSliceReshaper(fieldArgs)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field Args; %w", err)
+		}
+	}
+	if fieldAwait, ok := partial["Await"]; ok {
+		result.Await, err = r._unmarshalJSONPtrApplyAwaitOptions(fieldAwait)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field Await; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Apply) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Apply._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) _unmarshalJSONSliceReshaper(data []byte) ([]Reshaper, error) {
+	result := make([]Reshaper, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Apply._unmarshalJSONSliceReshaper: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONReshaper(v)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Apply._unmarshalJSONSliceReshaper: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *Apply) _unmarshalJSONReshaper(data []byte) (Reshaper, error) {
+	result, err := shared.JSONUnmarshal[Reshaper](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Apply._unmarshalJSONReshaper: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) _unmarshalJSONPtrApplyAwaitOptions(data []byte) (*ApplyAwaitOptions, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONApplyAwaitOptions(data)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._unmarshalJSONPtrApplyAwaitOptions: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *Apply) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyAwaitOptions, error) {
+	result, err := shared.JSONUnmarshal[ApplyAwaitOptions](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Apply._unmarshalJSONApplyAwaitOptions: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func ChooseFromJSON(x []byte) (*Choose, error) {
+	result := new(Choose)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func ChooseToJSON(x *Choose) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Choose)(nil)
+	_ json.Marshaler   = (*Choose)(nil)
+)
+
+func (r *Choose) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONChoose(*r)
+}
+func (r *Choose) _marshalJSONChoose(x Choose) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldID []byte
+	fieldID, err = r._marshalJSONstring(x.ID)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name ID; %w", err)
+	}
+	partial["ID"] = fieldID
+	var fieldIf []byte
+	fieldIf, err = r._marshalJSONPredicate(x.If)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name If; %w", err)
+	}
+	partial["If"] = fieldIf
+	var fieldThen []byte
+	fieldThen, err = r._marshalJSONSliceExpr(x.Then)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name Then; %w", err)
+	}
+	partial["Then"] = fieldThen
+	var fieldElse []byte
+	fieldElse, err = r._marshalJSONSliceExpr(x.Else)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name Else; %w", err)
+	}
+	partial["Else"] = fieldElse
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Choose) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Choose) _marshalJSONPredicate(x Predicate) ([]byte, error) {
+	result, err := shared.JSONMarshal[Predicate](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONPredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *Choose) _marshalJSONSliceExpr(x []Expr) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONExpr(v)
+		if err != nil {
+			return nil, fmt.Errorf("workflow: Choose._marshalJSONSliceExpr: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONSliceExpr:; %w", err)
+	}
+	return result, nil
+}
+func (r *Choose) _marshalJSONExpr(x Expr) ([]byte, error) {
+	result, err := shared.JSONMarshal[Expr](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONExpr:; %w", err)
+	}
+	return result, nil
+}
+func (r *Choose) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONChoose(data)
+	if err != nil {
+		return fmt.Errorf("workflow: Choose.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Choose) _unmarshalJSONChoose(data []byte) (Choose, error) {
+	result := Choose{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: native struct unwrap; %w", err)
+	}
+	if fieldID, ok := partial["ID"]; ok {
+		result.ID, err = r._unmarshalJSONstring(fieldID)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field ID; %w", err)
+		}
+	}
+	if fieldIf, ok := partial["If"]; ok {
+		result.If, err = r._unmarshalJSONPredicate(fieldIf)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field If; %w", err)
+		}
+	}
+	if fieldThen, ok := partial["Then"]; ok {
+		result.Then, err = r._unmarshalJSONSliceExpr(fieldThen)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field Then; %w", err)
+		}
+	}
+	if fieldElse, ok := partial["Else"]; ok {
+		result.Else, err = r._unmarshalJSONSliceExpr(fieldElse)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field Else; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Choose) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Choose._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Choose) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
+	result, err := shared.JSONUnmarshal[Predicate](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Choose._unmarshalJSONPredicate: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Choose) _unmarshalJSONSliceExpr(data []byte) ([]Expr, error) {
+	result := make([]Expr, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Choose._unmarshalJSONSliceExpr: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONExpr(v)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Choose._unmarshalJSONSliceExpr: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *Choose) _unmarshalJSONExpr(data []byte) (Expr, error) {
+	result, err := shared.JSONUnmarshal[Expr](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Choose._unmarshalJSONExpr: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+type PredicateVisitor interface {
+	VisitAnd(v *And) any
+	VisitOr(v *Or) any
+	VisitNot(v *Not) any
+	VisitCompare(v *Compare) any
+}
+
+type Predicate interface {
+	AcceptPredicate(g PredicateVisitor) any
+}
+
+var (
+	_ Predicate = (*And)(nil)
+	_ Predicate = (*Or)(nil)
+	_ Predicate = (*Not)(nil)
+	_ Predicate = (*Compare)(nil)
+)
+
+func (r *And) AcceptPredicate(v PredicateVisitor) any     { return v.VisitAnd(r) }
+func (r *Or) AcceptPredicate(v PredicateVisitor) any      { return v.VisitOr(r) }
+func (r *Not) AcceptPredicate(v PredicateVisitor) any     { return v.VisitNot(r) }
+func (r *Compare) AcceptPredicate(v PredicateVisitor) any { return v.VisitCompare(r) }
+
+func MatchPredicateR3[T0, T1, T2 any](
+	x Predicate,
+	f1 func(x *And) (T0, T1, T2),
+	f2 func(x *Or) (T0, T1, T2),
+	f3 func(x *Not) (T0, T1, T2),
+	f4 func(x *Compare) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *And:
+		return f1(v)
+	case *Or:
+		return f2(v)
+	case *Not:
+		return f3(v)
+	case *Compare:
+		return f4(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchPredicateR2[T0, T1 any](
+	x Predicate,
+	f1 func(x *And) (T0, T1),
+	f2 func(x *Or) (T0, T1),
+	f3 func(x *Not) (T0, T1),
+	f4 func(x *Compare) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *And:
+		return f1(v)
+	case *Or:
+		return f2(v)
+	case *Not:
+		return f3(v)
+	case *Compare:
+		return f4(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchPredicateR1[T0 any](
+	x Predicate,
+	f1 func(x *And) T0,
+	f2 func(x *Or) T0,
+	f3 func(x *Not) T0,
+	f4 func(x *Compare) T0,
+) T0 {
+	switch v := x.(type) {
+	case *And:
+		return f1(v)
+	case *Or:
+		return f2(v)
+	case *Not:
+		return f3(v)
+	case *Compare:
+		return f4(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchPredicateR0(
+	x Predicate,
+	f1 func(x *And),
+	f2 func(x *Or),
+	f3 func(x *Not),
+	f4 func(x *Compare),
+) {
+	switch v := x.(type) {
+	case *And:
+		f1(v)
+	case *Or:
+		f2(v)
+	case *Not:
+		f3(v)
+	case *Compare:
+		f4(v)
+	}
+}
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Predicate", PredicateFromJSON, PredicateToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.And", AndFromJSON, AndToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Or", OrFromJSON, OrToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Not", NotFromJSON, NotToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Compare", CompareFromJSON, CompareToJSON)
+}
+
+type PredicateUnionJSON struct {
+	Type    string          `json:"$type,omitempty"`
+	And     json.RawMessage `json:"workflow.And,omitempty"`
+	Or      json.RawMessage `json:"workflow.Or,omitempty"`
+	Not     json.RawMessage `json:"workflow.Not,omitempty"`
+	Compare json.RawMessage `json:"workflow.Compare,omitempty"`
+}
+
+func PredicateFromJSON(x []byte) (Predicate, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data PredicateUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "workflow.And":
+		return AndFromJSON(data.And)
+	case "workflow.Or":
+		return OrFromJSON(data.Or)
+	case "workflow.Not":
+		return NotFromJSON(data.Not)
+	case "workflow.Compare":
+		return CompareFromJSON(data.Compare)
+	}
+
+	if data.And != nil {
+		return AndFromJSON(data.And)
+	} else if data.Or != nil {
+		return OrFromJSON(data.Or)
+	} else if data.Not != nil {
+		return NotFromJSON(data.Not)
+	} else if data.Compare != nil {
+		return CompareFromJSON(data.Compare)
+	}
+
+	return nil, fmt.Errorf("workflow.Predicate: unknown type %s", data.Type)
+}
+
+func PredicateToJSON(x Predicate) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchPredicateR2(
+		x,
+		func(x *And) ([]byte, error) {
+			body, err := AndToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(PredicateUnionJSON{
+				Type: "workflow.And",
+				And:  body,
+			})
+		},
+		func(x *Or) ([]byte, error) {
+			body, err := OrToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(PredicateUnionJSON{
+				Type: "workflow.Or",
+				Or:   body,
+			})
+		},
+		func(x *Not) ([]byte, error) {
+			body, err := NotToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(PredicateUnionJSON{
+				Type: "workflow.Not",
+				Not:  body,
+			})
+		},
+		func(x *Compare) ([]byte, error) {
+			body, err := CompareToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(PredicateUnionJSON{
+				Type:    "workflow.Compare",
+				Compare: body,
+			})
+		},
+	)
+}
+
+func AndFromJSON(x []byte) (*And, error) {
+	result := new(And)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func AndToJSON(x *And) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*And)(nil)
+	_ json.Marshaler   = (*And)(nil)
+)
+
+func (r *And) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONAnd(*r)
+}
+func (r *And) _marshalJSONAnd(x And) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldL []byte
+	fieldL, err = r._marshalJSONSlicePredicate(x.L)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: And._marshalJSONAnd: field name L; %w", err)
+	}
+	partial["L"] = fieldL
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: And._marshalJSONAnd: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *And) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONPredicate(v)
+		if err != nil {
+			return nil, fmt.Errorf("workflow: And._marshalJSONSlicePredicate: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: And._marshalJSONSlicePredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *And) _marshalJSONPredicate(x Predicate) ([]byte, error) {
+	result, err := shared.JSONMarshal[Predicate](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: And._marshalJSONPredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *And) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONAnd(data)
+	if err != nil {
+		return fmt.Errorf("workflow: And.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *And) _unmarshalJSONAnd(data []byte) (And, error) {
+	result := And{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: And._unmarshalJSONAnd: native struct unwrap; %w", err)
+	}
+	if fieldL, ok := partial["L"]; ok {
+		result.L, err = r._unmarshalJSONSlicePredicate(fieldL)
+		if err != nil {
+			return result, fmt.Errorf("workflow: And._unmarshalJSONAnd: field L; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *And) _unmarshalJSONSlicePredicate(data []byte) ([]Predicate, error) {
+	result := make([]Predicate, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: And._unmarshalJSONSlicePredicate: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONPredicate(v)
+		if err != nil {
+			return result, fmt.Errorf("workflow: And._unmarshalJSONSlicePredicate: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *And) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
+	result, err := shared.JSONUnmarshal[Predicate](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: And._unmarshalJSONPredicate: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func OrFromJSON(x []byte) (*Or, error) {
+	result := new(Or)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func OrToJSON(x *Or) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Or)(nil)
+	_ json.Marshaler   = (*Or)(nil)
+)
+
+func (r *Or) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONOr(*r)
+}
+func (r *Or) _marshalJSONOr(x Or) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldL []byte
+	fieldL, err = r._marshalJSONSlicePredicate(x.L)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Or._marshalJSONOr: field name L; %w", err)
+	}
+	partial["L"] = fieldL
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Or._marshalJSONOr: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Or) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONPredicate(v)
+		if err != nil {
+			return nil, fmt.Errorf("workflow: Or._marshalJSONSlicePredicate: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Or._marshalJSONSlicePredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *Or) _marshalJSONPredicate(x Predicate) ([]byte, error) {
+	result, err := shared.JSONMarshal[Predicate](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Or._marshalJSONPredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *Or) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONOr(data)
+	if err != nil {
+		return fmt.Errorf("workflow: Or.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Or) _unmarshalJSONOr(data []byte) (Or, error) {
+	result := Or{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Or._unmarshalJSONOr: native struct unwrap; %w", err)
+	}
+	if fieldL, ok := partial["L"]; ok {
+		result.L, err = r._unmarshalJSONSlicePredicate(fieldL)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Or._unmarshalJSONOr: field L; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Or) _unmarshalJSONSlicePredicate(data []byte) ([]Predicate, error) {
+	result := make([]Predicate, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Or._unmarshalJSONSlicePredicate: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONPredicate(v)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Or._unmarshalJSONSlicePredicate: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *Or) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
+	result, err := shared.JSONUnmarshal[Predicate](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Or._unmarshalJSONPredicate: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func NotFromJSON(x []byte) (*Not, error) {
+	result := new(Not)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func NotToJSON(x *Not) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Not)(nil)
+	_ json.Marshaler   = (*Not)(nil)
+)
+
+func (r *Not) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONNot(*r)
+}
+func (r *Not) _marshalJSONNot(x Not) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldP []byte
+	fieldP, err = r._marshalJSONPredicate(x.P)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Not._marshalJSONNot: field name P; %w", err)
+	}
+	partial["P"] = fieldP
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Not._marshalJSONNot: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Not) _marshalJSONPredicate(x Predicate) ([]byte, error) {
+	result, err := shared.JSONMarshal[Predicate](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Not._marshalJSONPredicate:; %w", err)
+	}
+	return result, nil
+}
+func (r *Not) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONNot(data)
+	if err != nil {
+		return fmt.Errorf("workflow: Not.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Not) _unmarshalJSONNot(data []byte) (Not, error) {
+	result := Not{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Not._unmarshalJSONNot: native struct unwrap; %w", err)
+	}
+	if fieldP, ok := partial["P"]; ok {
+		result.P, err = r._unmarshalJSONPredicate(fieldP)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Not._unmarshalJSONNot: field P; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Not) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
+	result, err := shared.JSONUnmarshal[Predicate](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Not._unmarshalJSONPredicate: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func CompareFromJSON(x []byte) (*Compare, error) {
+	result := new(Compare)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func CompareToJSON(x *Compare) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Compare)(nil)
+	_ json.Marshaler   = (*Compare)(nil)
+)
+
+func (r *Compare) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONCompare(*r)
+}
+func (r *Compare) _marshalJSONCompare(x Compare) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldOperation []byte
+	fieldOperation, err = r._marshalJSONstring(x.Operation)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Operation; %w", err)
+	}
+	partial["Operation"] = fieldOperation
+	var fieldLeft []byte
+	fieldLeft, err = r._marshalJSONReshaper(x.Left)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Left; %w", err)
+	}
+	partial["Left"] = fieldLeft
+	var fieldRight []byte
+	fieldRight, err = r._marshalJSONReshaper(x.Right)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Right; %w", err)
+	}
+	partial["Right"] = fieldRight
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Compare._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) _marshalJSONReshaper(x Reshaper) ([]byte, error) {
+	result, err := shared.JSONMarshal[Reshaper](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Compare._marshalJSONReshaper:; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONCompare(data)
+	if err != nil {
+		return fmt.Errorf("workflow: Compare.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Compare) _unmarshalJSONCompare(data []byte) (Compare, error) {
+	result := Compare{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: native struct unwrap; %w", err)
+	}
+	if fieldOperation, ok := partial["Operation"]; ok {
+		result.Operation, err = r._unmarshalJSONstring(fieldOperation)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: field Operation; %w", err)
+		}
+	}
+	if fieldLeft, ok := partial["Left"]; ok {
+		result.Left, err = r._unmarshalJSONReshaper(fieldLeft)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: field Left; %w", err)
+		}
+	}
+	if fieldRight, ok := partial["Right"]; ok {
+		result.Right, err = r._unmarshalJSONReshaper(fieldRight)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Compare._unmarshalJSONCompare: field Right; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Compare) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Compare._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Compare) _unmarshalJSONReshaper(data []byte) (Reshaper, error) {
+	result, err := shared.JSONUnmarshal[Reshaper](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Compare._unmarshalJSONReshaper: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+type ReshaperVisitor interface {
+	VisitGetValue(v *GetValue) any
+	VisitSetValue(v *SetValue) any
+}
+
+type Reshaper interface {
+	AcceptReshaper(g ReshaperVisitor) any
+}
+
+var (
+	_ Reshaper = (*GetValue)(nil)
+	_ Reshaper = (*SetValue)(nil)
+)
+
+func (r *GetValue) AcceptReshaper(v ReshaperVisitor) any { return v.VisitGetValue(r) }
+func (r *SetValue) AcceptReshaper(v ReshaperVisitor) any { return v.VisitSetValue(r) }
+
+func MatchReshaperR3[T0, T1, T2 any](
+	x Reshaper,
+	f1 func(x *GetValue) (T0, T1, T2),
+	f2 func(x *SetValue) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *GetValue:
+		return f1(v)
+	case *SetValue:
+		return f2(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchReshaperR2[T0, T1 any](
+	x Reshaper,
+	f1 func(x *GetValue) (T0, T1),
+	f2 func(x *SetValue) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *GetValue:
+		return f1(v)
+	case *SetValue:
+		return f2(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchReshaperR1[T0 any](
+	x Reshaper,
+	f1 func(x *GetValue) T0,
+	f2 func(x *SetValue) T0,
+) T0 {
+	switch v := x.(type) {
+	case *GetValue:
+		return f1(v)
+	case *SetValue:
+		return f2(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchReshaperR0(
+	x Reshaper,
+	f1 func(x *GetValue),
+	f2 func(x *SetValue),
+) {
+	switch v := x.(type) {
+	case *GetValue:
+		f1(v)
+	case *SetValue:
+		f2(v)
+	}
+}
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Reshaper", ReshaperFromJSON, ReshaperToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.GetValue", GetValueFromJSON, GetValueToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.SetValue", SetValueFromJSON, SetValueToJSON)
+}
+
+type ReshaperUnionJSON struct {
+	Type     string          `json:"$type,omitempty"`
+	GetValue json.RawMessage `json:"workflow.GetValue,omitempty"`
+	SetValue json.RawMessage `json:"workflow.SetValue,omitempty"`
+}
+
+func ReshaperFromJSON(x []byte) (Reshaper, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data ReshaperUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "workflow.GetValue":
+		return GetValueFromJSON(data.GetValue)
+	case "workflow.SetValue":
+		return SetValueFromJSON(data.SetValue)
+	}
+
+	if data.GetValue != nil {
+		return GetValueFromJSON(data.GetValue)
+	} else if data.SetValue != nil {
+		return SetValueFromJSON(data.SetValue)
+	}
+
+	return nil, fmt.Errorf("workflow.Reshaper: unknown type %s", data.Type)
+}
+
+func ReshaperToJSON(x Reshaper) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchReshaperR2(
+		x,
+		func(x *GetValue) ([]byte, error) {
+			body, err := GetValueToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ReshaperUnionJSON{
+				Type:     "workflow.GetValue",
+				GetValue: body,
+			})
+		},
+		func(x *SetValue) ([]byte, error) {
+			body, err := SetValueToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ReshaperUnionJSON{
+				Type:     "workflow.SetValue",
+				SetValue: body,
+			})
+		},
+	)
+}
+
+func GetValueFromJSON(x []byte) (*GetValue, error) {
+	result := new(GetValue)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func GetValueToJSON(x *GetValue) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*GetValue)(nil)
+	_ json.Marshaler   = (*GetValue)(nil)
+)
+
+func (r *GetValue) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONGetValue(*r)
+}
+func (r *GetValue) _marshalJSONGetValue(x GetValue) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldPath []byte
+	fieldPath, err = r._marshalJSONstring(x.Path)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: GetValue._marshalJSONGetValue: field name Path; %w", err)
+	}
+	partial["Path"] = fieldPath
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: GetValue._marshalJSONGetValue: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *GetValue) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: GetValue._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *GetValue) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONGetValue(data)
+	if err != nil {
+		return fmt.Errorf("workflow: GetValue.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *GetValue) _unmarshalJSONGetValue(data []byte) (GetValue, error) {
+	result := GetValue{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: GetValue._unmarshalJSONGetValue: native struct unwrap; %w", err)
+	}
+	if fieldPath, ok := partial["Path"]; ok {
+		result.Path, err = r._unmarshalJSONstring(fieldPath)
+		if err != nil {
+			return result, fmt.Errorf("workflow: GetValue._unmarshalJSONGetValue: field Path; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *GetValue) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: GetValue._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func SetValueFromJSON(x []byte) (*SetValue, error) {
+	result := new(SetValue)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func SetValueToJSON(x *SetValue) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*SetValue)(nil)
+	_ json.Marshaler   = (*SetValue)(nil)
+)
+
+func (r *SetValue) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONSetValue(*r)
+}
+func (r *SetValue) _marshalJSONSetValue(x SetValue) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldValue []byte
+	fieldValue, err = r._marshalJSONschema_Schema(x.Value)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: SetValue._marshalJSONSetValue: field name Value; %w", err)
+	}
+	partial["Value"] = fieldValue
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: SetValue._marshalJSONSetValue: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *SetValue) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[schema.Schema](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: SetValue._marshalJSONschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *SetValue) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONSetValue(data)
+	if err != nil {
+		return fmt.Errorf("workflow: SetValue.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *SetValue) _unmarshalJSONSetValue(data []byte) (SetValue, error) {
+	result := SetValue{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: SetValue._unmarshalJSONSetValue: native struct unwrap; %w", err)
+	}
+	if fieldValue, ok := partial["Value"]; ok {
+		result.Value, err = r._unmarshalJSONschema_Schema(fieldValue)
+		if err != nil {
+			return result, fmt.Errorf("workflow: SetValue._unmarshalJSONSetValue: field Value; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *SetValue) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
+	result, err := shared.JSONUnmarshal[schema.Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: SetValue._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+type RunOptionVisitor interface {
+	VisitScheduleRun(v *ScheduleRun) any
+	VisitDelayRun(v *DelayRun) any
+}
+
+type RunOption interface {
+	AcceptRunOption(g RunOptionVisitor) any
+}
+
+var (
+	_ RunOption = (*ScheduleRun)(nil)
+	_ RunOption = (*DelayRun)(nil)
+)
+
+func (r *ScheduleRun) AcceptRunOption(v RunOptionVisitor) any { return v.VisitScheduleRun(r) }
+func (r *DelayRun) AcceptRunOption(v RunOptionVisitor) any    { return v.VisitDelayRun(r) }
+
+func MatchRunOptionR3[T0, T1, T2 any](
+	x RunOption,
+	f1 func(x *ScheduleRun) (T0, T1, T2),
+	f2 func(x *DelayRun) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *ScheduleRun:
+		return f1(v)
+	case *DelayRun:
+		return f2(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchRunOptionR2[T0, T1 any](
+	x RunOption,
+	f1 func(x *ScheduleRun) (T0, T1),
+	f2 func(x *DelayRun) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *ScheduleRun:
+		return f1(v)
+	case *DelayRun:
+		return f2(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchRunOptionR1[T0 any](
+	x RunOption,
+	f1 func(x *ScheduleRun) T0,
+	f2 func(x *DelayRun) T0,
+) T0 {
+	switch v := x.(type) {
+	case *ScheduleRun:
+		return f1(v)
+	case *DelayRun:
+		return f2(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchRunOptionR0(
+	x RunOption,
+	f1 func(x *ScheduleRun),
+	f2 func(x *DelayRun),
+) {
+	switch v := x.(type) {
+	case *ScheduleRun:
+		f1(v)
+	case *DelayRun:
+		f2(v)
+	}
+}
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.RunOption", RunOptionFromJSON, RunOptionToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.ScheduleRun", ScheduleRunFromJSON, ScheduleRunToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.DelayRun", DelayRunFromJSON, DelayRunToJSON)
+}
+
+type RunOptionUnionJSON struct {
+	Type        string          `json:"$type,omitempty"`
+	ScheduleRun json.RawMessage `json:"workflow.ScheduleRun,omitempty"`
+	DelayRun    json.RawMessage `json:"workflow.DelayRun,omitempty"`
+}
+
+func RunOptionFromJSON(x []byte) (RunOption, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data RunOptionUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "workflow.ScheduleRun":
+		return ScheduleRunFromJSON(data.ScheduleRun)
+	case "workflow.DelayRun":
+		return DelayRunFromJSON(data.DelayRun)
+	}
+
+	if data.ScheduleRun != nil {
+		return ScheduleRunFromJSON(data.ScheduleRun)
+	} else if data.DelayRun != nil {
+		return DelayRunFromJSON(data.DelayRun)
+	}
+
+	return nil, fmt.Errorf("workflow.RunOption: unknown type %s", data.Type)
+}
+
+func RunOptionToJSON(x RunOption) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchRunOptionR2(
+		x,
+		func(x *ScheduleRun) ([]byte, error) {
+			body, err := ScheduleRunToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(RunOptionUnionJSON{
+				Type:        "workflow.ScheduleRun",
+				ScheduleRun: body,
+			})
+		},
+		func(x *DelayRun) ([]byte, error) {
+			body, err := DelayRunToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(RunOptionUnionJSON{
+				Type:     "workflow.DelayRun",
+				DelayRun: body,
+			})
+		},
+	)
+}
+
+func ScheduleRunFromJSON(x []byte) (*ScheduleRun, error) {
+	result := new(ScheduleRun)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func ScheduleRunToJSON(x *ScheduleRun) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*ScheduleRun)(nil)
+	_ json.Marshaler   = (*ScheduleRun)(nil)
+)
+
+func (r *ScheduleRun) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONScheduleRun(*r)
+}
+func (r *ScheduleRun) _marshalJSONScheduleRun(x ScheduleRun) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldInterval []byte
+	fieldInterval, err = r._marshalJSONstring(x.Interval)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: field name Interval; %w", err)
+	}
+	partial["Interval"] = fieldInterval
+	var fieldParentRunID []byte
+	fieldParentRunID, err = r._marshalJSONstring(x.ParentRunID)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: field name ParentRunID; %w", err)
+	}
+	partial["ParentRunID"] = fieldParentRunID
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *ScheduleRun) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *ScheduleRun) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONScheduleRun(data)
+	if err != nil {
+		return fmt.Errorf("workflow: ScheduleRun.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *ScheduleRun) _unmarshalJSONScheduleRun(data []byte) (ScheduleRun, error) {
+	result := ScheduleRun{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONScheduleRun: native struct unwrap; %w", err)
+	}
+	if fieldInterval, ok := partial["Interval"]; ok {
+		result.Interval, err = r._unmarshalJSONstring(fieldInterval)
+		if err != nil {
+			return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONScheduleRun: field Interval; %w", err)
+		}
+	}
+	if fieldParentRunID, ok := partial["ParentRunID"]; ok {
+		result.ParentRunID, err = r._unmarshalJSONstring(fieldParentRunID)
+		if err != nil {
+			return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONScheduleRun: field ParentRunID; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *ScheduleRun) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ScheduleRun._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func DelayRunFromJSON(x []byte) (*DelayRun, error) {
+	result := new(DelayRun)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func DelayRunToJSON(x *DelayRun) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*DelayRun)(nil)
+	_ json.Marshaler   = (*DelayRun)(nil)
+)
+
+func (r *DelayRun) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONDelayRun(*r)
+}
+func (r *DelayRun) _marshalJSONDelayRun(x DelayRun) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldDelayBySeconds []byte
+	fieldDelayBySeconds, err = r._marshalJSONint64(x.DelayBySeconds)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONDelayRun: field name DelayBySeconds; %w", err)
+	}
+	partial["DelayBySeconds"] = fieldDelayBySeconds
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONDelayRun: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *DelayRun) _marshalJSONint64(x int64) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONint64:; %w", err)
+	}
+	return result, nil
+}
+func (r *DelayRun) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONDelayRun(data)
+	if err != nil {
+		return fmt.Errorf("workflow: DelayRun.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *DelayRun) _unmarshalJSONDelayRun(data []byte) (DelayRun, error) {
+	result := DelayRun{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: DelayRun._unmarshalJSONDelayRun: native struct unwrap; %w", err)
+	}
+	if fieldDelayBySeconds, ok := partial["DelayBySeconds"]; ok {
+		result.DelayBySeconds, err = r._unmarshalJSONint64(fieldDelayBySeconds)
+		if err != nil {
+			return result, fmt.Errorf("workflow: DelayRun._unmarshalJSONDelayRun: field DelayBySeconds; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *DelayRun) _unmarshalJSONint64(data []byte) (int64, error) {
+	var result int64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: DelayRun._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -2991,1130 +4115,6 @@ func (r *FlowRef) _unmarshalJSONstring(data []byte) (string, error) {
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return result, fmt.Errorf("workflow: FlowRef._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-
-type ExprVisitor interface {
-	VisitEnd(v *End) any
-	VisitAssign(v *Assign) any
-	VisitApply(v *Apply) any
-	VisitChoose(v *Choose) any
-}
-
-type Expr interface {
-	AcceptExpr(g ExprVisitor) any
-}
-
-var (
-	_ Expr = (*End)(nil)
-	_ Expr = (*Assign)(nil)
-	_ Expr = (*Apply)(nil)
-	_ Expr = (*Choose)(nil)
-)
-
-func (r *End) AcceptExpr(v ExprVisitor) any    { return v.VisitEnd(r) }
-func (r *Assign) AcceptExpr(v ExprVisitor) any { return v.VisitAssign(r) }
-func (r *Apply) AcceptExpr(v ExprVisitor) any  { return v.VisitApply(r) }
-func (r *Choose) AcceptExpr(v ExprVisitor) any { return v.VisitChoose(r) }
-
-func MatchExprR3[T0, T1, T2 any](
-	x Expr,
-	f1 func(x *End) (T0, T1, T2),
-	f2 func(x *Assign) (T0, T1, T2),
-	f3 func(x *Apply) (T0, T1, T2),
-	f4 func(x *Choose) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *End:
-		return f1(v)
-	case *Assign:
-		return f2(v)
-	case *Apply:
-		return f3(v)
-	case *Choose:
-		return f4(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchExprR2[T0, T1 any](
-	x Expr,
-	f1 func(x *End) (T0, T1),
-	f2 func(x *Assign) (T0, T1),
-	f3 func(x *Apply) (T0, T1),
-	f4 func(x *Choose) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *End:
-		return f1(v)
-	case *Assign:
-		return f2(v)
-	case *Apply:
-		return f3(v)
-	case *Choose:
-		return f4(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchExprR1[T0 any](
-	x Expr,
-	f1 func(x *End) T0,
-	f2 func(x *Assign) T0,
-	f3 func(x *Apply) T0,
-	f4 func(x *Choose) T0,
-) T0 {
-	switch v := x.(type) {
-	case *End:
-		return f1(v)
-	case *Assign:
-		return f2(v)
-	case *Apply:
-		return f3(v)
-	case *Choose:
-		return f4(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchExprR0(
-	x Expr,
-	f1 func(x *End),
-	f2 func(x *Assign),
-	f3 func(x *Apply),
-	f4 func(x *Choose),
-) {
-	switch v := x.(type) {
-	case *End:
-		f1(v)
-	case *Assign:
-		f2(v)
-	case *Apply:
-		f3(v)
-	case *Choose:
-		f4(v)
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Expr", ExprFromJSON, ExprToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.End", EndFromJSON, EndToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Assign", AssignFromJSON, AssignToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Apply", ApplyFromJSON, ApplyToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Choose", ChooseFromJSON, ChooseToJSON)
-}
-
-type ExprUnionJSON struct {
-	Type   string          `json:"$type,omitempty"`
-	End    json.RawMessage `json:"workflow.End,omitempty"`
-	Assign json.RawMessage `json:"workflow.Assign,omitempty"`
-	Apply  json.RawMessage `json:"workflow.Apply,omitempty"`
-	Choose json.RawMessage `json:"workflow.Choose,omitempty"`
-}
-
-func ExprFromJSON(x []byte) (Expr, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data ExprUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "workflow.End":
-		return EndFromJSON(data.End)
-	case "workflow.Assign":
-		return AssignFromJSON(data.Assign)
-	case "workflow.Apply":
-		return ApplyFromJSON(data.Apply)
-	case "workflow.Choose":
-		return ChooseFromJSON(data.Choose)
-	}
-
-	if data.End != nil {
-		return EndFromJSON(data.End)
-	} else if data.Assign != nil {
-		return AssignFromJSON(data.Assign)
-	} else if data.Apply != nil {
-		return ApplyFromJSON(data.Apply)
-	} else if data.Choose != nil {
-		return ChooseFromJSON(data.Choose)
-	}
-
-	return nil, fmt.Errorf("workflow.Expr: unknown type %s", data.Type)
-}
-
-func ExprToJSON(x Expr) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchExprR2(
-		x,
-		func(x *End) ([]byte, error) {
-			body, err := EndToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(ExprUnionJSON{
-				Type: "workflow.End",
-				End:  body,
-			})
-		},
-		func(x *Assign) ([]byte, error) {
-			body, err := AssignToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(ExprUnionJSON{
-				Type:   "workflow.Assign",
-				Assign: body,
-			})
-		},
-		func(x *Apply) ([]byte, error) {
-			body, err := ApplyToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(ExprUnionJSON{
-				Type:  "workflow.Apply",
-				Apply: body,
-			})
-		},
-		func(x *Choose) ([]byte, error) {
-			body, err := ChooseToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(ExprUnionJSON{
-				Type:   "workflow.Choose",
-				Choose: body,
-			})
-		},
-	)
-}
-
-func EndFromJSON(x []byte) (*End, error) {
-	result := new(End)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func EndToJSON(x *End) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*End)(nil)
-	_ json.Marshaler   = (*End)(nil)
-)
-
-func (r *End) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONEnd(*r)
-}
-func (r *End) _marshalJSONEnd(x End) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: field name ID; %w", err)
-	}
-	partial["ID"] = fieldID
-	var fieldResult []byte
-	fieldResult, err = r._marshalJSONReshaper(x.Result)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: field name Result; %w", err)
-	}
-	partial["Result"] = fieldResult
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *End) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: End._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *End) _marshalJSONReshaper(x Reshaper) ([]byte, error) {
-	result, err := shared.JSONMarshal[Reshaper](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: End._marshalJSONReshaper:; %w", err)
-	}
-	return result, nil
-}
-func (r *End) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONEnd(data)
-	if err != nil {
-		return fmt.Errorf("workflow: End.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *End) _unmarshalJSONEnd(data []byte) (End, error) {
-	result := End{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: native struct unwrap; %w", err)
-	}
-	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
-		if err != nil {
-			return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: field ID; %w", err)
-		}
-	}
-	if fieldResult, ok := partial["Result"]; ok {
-		result.Result, err = r._unmarshalJSONReshaper(fieldResult)
-		if err != nil {
-			return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: field Result; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *End) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: End._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *End) _unmarshalJSONReshaper(data []byte) (Reshaper, error) {
-	result, err := shared.JSONUnmarshal[Reshaper](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: End._unmarshalJSONReshaper: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func AssignFromJSON(x []byte) (*Assign, error) {
-	result := new(Assign)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func AssignToJSON(x *Assign) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Assign)(nil)
-	_ json.Marshaler   = (*Assign)(nil)
-)
-
-func (r *Assign) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONAssign(*r)
-}
-func (r *Assign) _marshalJSONAssign(x Assign) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name ID; %w", err)
-	}
-	partial["ID"] = fieldID
-	var fieldVarOk []byte
-	fieldVarOk, err = r._marshalJSONstring(x.VarOk)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name VarOk; %w", err)
-	}
-	partial["VarOk"] = fieldVarOk
-	var fieldVarErr []byte
-	fieldVarErr, err = r._marshalJSONstring(x.VarErr)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name VarErr; %w", err)
-	}
-	partial["VarErr"] = fieldVarErr
-	var fieldVal []byte
-	fieldVal, err = r._marshalJSONExpr(x.Val)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name Val; %w", err)
-	}
-	partial["Val"] = fieldVal
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Assign) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Assign) _marshalJSONExpr(x Expr) ([]byte, error) {
-	result, err := shared.JSONMarshal[Expr](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONExpr:; %w", err)
-	}
-	return result, nil
-}
-func (r *Assign) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONAssign(data)
-	if err != nil {
-		return fmt.Errorf("workflow: Assign.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Assign) _unmarshalJSONAssign(data []byte) (Assign, error) {
-	result := Assign{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: native struct unwrap; %w", err)
-	}
-	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field ID; %w", err)
-		}
-	}
-	if fieldVarOk, ok := partial["VarOk"]; ok {
-		result.VarOk, err = r._unmarshalJSONstring(fieldVarOk)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field VarOk; %w", err)
-		}
-	}
-	if fieldVarErr, ok := partial["VarErr"]; ok {
-		result.VarErr, err = r._unmarshalJSONstring(fieldVarErr)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field VarErr; %w", err)
-		}
-	}
-	if fieldVal, ok := partial["Val"]; ok {
-		result.Val, err = r._unmarshalJSONExpr(fieldVal)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field Val; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Assign) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Assign._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Assign) _unmarshalJSONExpr(data []byte) (Expr, error) {
-	result, err := shared.JSONUnmarshal[Expr](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Assign._unmarshalJSONExpr: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func ApplyFromJSON(x []byte) (*Apply, error) {
-	result := new(Apply)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func ApplyToJSON(x *Apply) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Apply)(nil)
-	_ json.Marshaler   = (*Apply)(nil)
-)
-
-func (r *Apply) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONApply(*r)
-}
-func (r *Apply) _marshalJSONApply(x Apply) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name ID; %w", err)
-	}
-	partial["ID"] = fieldID
-	var fieldName []byte
-	fieldName, err = r._marshalJSONstring(x.Name)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Name; %w", err)
-	}
-	partial["Name"] = fieldName
-	var fieldArgs []byte
-	fieldArgs, err = r._marshalJSONSliceReshaper(x.Args)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Args; %w", err)
-	}
-	partial["Args"] = fieldArgs
-	var fieldAwait []byte
-	fieldAwait, err = r._marshalJSONPtrApplyAwaitOptions(x.Await)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Await; %w", err)
-	}
-	if fieldAwait != nil {
-		partial["Await"] = fieldAwait
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Apply) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Apply) _marshalJSONSliceReshaper(x []Reshaper) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONReshaper(v)
-		if err != nil {
-			return nil, fmt.Errorf("workflow: Apply._marshalJSONSliceReshaper: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONSliceReshaper:; %w", err)
-	}
-	return result, nil
-}
-func (r *Apply) _marshalJSONReshaper(x Reshaper) ([]byte, error) {
-	result, err := shared.JSONMarshal[Reshaper](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONReshaper:; %w", err)
-	}
-	return result, nil
-}
-func (r *Apply) _marshalJSONPtrApplyAwaitOptions(x *ApplyAwaitOptions) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return r._marshalJSONApplyAwaitOptions(*x)
-}
-func (r *Apply) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
-	result, err := shared.JSONMarshal[ApplyAwaitOptions](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONApplyAwaitOptions:; %w", err)
-	}
-	return result, nil
-}
-func (r *Apply) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONApply(data)
-	if err != nil {
-		return fmt.Errorf("workflow: Apply.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Apply) _unmarshalJSONApply(data []byte) (Apply, error) {
-	result := Apply{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: native struct unwrap; %w", err)
-	}
-	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field ID; %w", err)
-		}
-	}
-	if fieldName, ok := partial["Name"]; ok {
-		result.Name, err = r._unmarshalJSONstring(fieldName)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field Name; %w", err)
-		}
-	}
-	if fieldArgs, ok := partial["Args"]; ok {
-		result.Args, err = r._unmarshalJSONSliceReshaper(fieldArgs)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field Args; %w", err)
-		}
-	}
-	if fieldAwait, ok := partial["Await"]; ok {
-		result.Await, err = r._unmarshalJSONPtrApplyAwaitOptions(fieldAwait)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field Await; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Apply) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Apply._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Apply) _unmarshalJSONSliceReshaper(data []byte) ([]Reshaper, error) {
-	result := make([]Reshaper, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Apply._unmarshalJSONSliceReshaper: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONReshaper(v)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Apply._unmarshalJSONSliceReshaper: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *Apply) _unmarshalJSONReshaper(data []byte) (Reshaper, error) {
-	result, err := shared.JSONUnmarshal[Reshaper](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Apply._unmarshalJSONReshaper: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Apply) _unmarshalJSONPtrApplyAwaitOptions(data []byte) (*ApplyAwaitOptions, error) {
-	if len(data) == 0 {
-		return nil, nil
-	}
-	if string(data[:4]) == "null" {
-		return nil, nil
-	}
-	result, err := r._unmarshalJSONApplyAwaitOptions(data)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._unmarshalJSONPtrApplyAwaitOptions: pointer; %w", err)
-	}
-	return &result, nil
-}
-func (r *Apply) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyAwaitOptions, error) {
-	result, err := shared.JSONUnmarshal[ApplyAwaitOptions](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Apply._unmarshalJSONApplyAwaitOptions: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func ChooseFromJSON(x []byte) (*Choose, error) {
-	result := new(Choose)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func ChooseToJSON(x *Choose) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Choose)(nil)
-	_ json.Marshaler   = (*Choose)(nil)
-)
-
-func (r *Choose) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONChoose(*r)
-}
-func (r *Choose) _marshalJSONChoose(x Choose) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name ID; %w", err)
-	}
-	partial["ID"] = fieldID
-	var fieldIf []byte
-	fieldIf, err = r._marshalJSONPredicate(x.If)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name If; %w", err)
-	}
-	partial["If"] = fieldIf
-	var fieldThen []byte
-	fieldThen, err = r._marshalJSONSliceExpr(x.Then)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name Then; %w", err)
-	}
-	partial["Then"] = fieldThen
-	var fieldElse []byte
-	fieldElse, err = r._marshalJSONSliceExpr(x.Else)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name Else; %w", err)
-	}
-	partial["Else"] = fieldElse
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Choose) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Choose) _marshalJSONPredicate(x Predicate) ([]byte, error) {
-	result, err := shared.JSONMarshal[Predicate](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONPredicate:; %w", err)
-	}
-	return result, nil
-}
-func (r *Choose) _marshalJSONSliceExpr(x []Expr) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONExpr(v)
-		if err != nil {
-			return nil, fmt.Errorf("workflow: Choose._marshalJSONSliceExpr: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONSliceExpr:; %w", err)
-	}
-	return result, nil
-}
-func (r *Choose) _marshalJSONExpr(x Expr) ([]byte, error) {
-	result, err := shared.JSONMarshal[Expr](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONExpr:; %w", err)
-	}
-	return result, nil
-}
-func (r *Choose) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONChoose(data)
-	if err != nil {
-		return fmt.Errorf("workflow: Choose.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Choose) _unmarshalJSONChoose(data []byte) (Choose, error) {
-	result := Choose{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: native struct unwrap; %w", err)
-	}
-	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field ID; %w", err)
-		}
-	}
-	if fieldIf, ok := partial["If"]; ok {
-		result.If, err = r._unmarshalJSONPredicate(fieldIf)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field If; %w", err)
-		}
-	}
-	if fieldThen, ok := partial["Then"]; ok {
-		result.Then, err = r._unmarshalJSONSliceExpr(fieldThen)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field Then; %w", err)
-		}
-	}
-	if fieldElse, ok := partial["Else"]; ok {
-		result.Else, err = r._unmarshalJSONSliceExpr(fieldElse)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field Else; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Choose) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Choose._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Choose) _unmarshalJSONPredicate(data []byte) (Predicate, error) {
-	result, err := shared.JSONUnmarshal[Predicate](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Choose._unmarshalJSONPredicate: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func (r *Choose) _unmarshalJSONSliceExpr(data []byte) ([]Expr, error) {
-	result := make([]Expr, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Choose._unmarshalJSONSliceExpr: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONExpr(v)
-		if err != nil {
-			return result, fmt.Errorf("workflow: Choose._unmarshalJSONSliceExpr: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *Choose) _unmarshalJSONExpr(data []byte) (Expr, error) {
-	result, err := shared.JSONUnmarshal[Expr](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: Choose._unmarshalJSONExpr: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-type ReshaperVisitor interface {
-	VisitGetValue(v *GetValue) any
-	VisitSetValue(v *SetValue) any
-}
-
-type Reshaper interface {
-	AcceptReshaper(g ReshaperVisitor) any
-}
-
-var (
-	_ Reshaper = (*GetValue)(nil)
-	_ Reshaper = (*SetValue)(nil)
-)
-
-func (r *GetValue) AcceptReshaper(v ReshaperVisitor) any { return v.VisitGetValue(r) }
-func (r *SetValue) AcceptReshaper(v ReshaperVisitor) any { return v.VisitSetValue(r) }
-
-func MatchReshaperR3[T0, T1, T2 any](
-	x Reshaper,
-	f1 func(x *GetValue) (T0, T1, T2),
-	f2 func(x *SetValue) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *GetValue:
-		return f1(v)
-	case *SetValue:
-		return f2(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchReshaperR2[T0, T1 any](
-	x Reshaper,
-	f1 func(x *GetValue) (T0, T1),
-	f2 func(x *SetValue) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *GetValue:
-		return f1(v)
-	case *SetValue:
-		return f2(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchReshaperR1[T0 any](
-	x Reshaper,
-	f1 func(x *GetValue) T0,
-	f2 func(x *SetValue) T0,
-) T0 {
-	switch v := x.(type) {
-	case *GetValue:
-		return f1(v)
-	case *SetValue:
-		return f2(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchReshaperR0(
-	x Reshaper,
-	f1 func(x *GetValue),
-	f2 func(x *SetValue),
-) {
-	switch v := x.(type) {
-	case *GetValue:
-		f1(v)
-	case *SetValue:
-		f2(v)
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Reshaper", ReshaperFromJSON, ReshaperToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.GetValue", GetValueFromJSON, GetValueToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.SetValue", SetValueFromJSON, SetValueToJSON)
-}
-
-type ReshaperUnionJSON struct {
-	Type     string          `json:"$type,omitempty"`
-	GetValue json.RawMessage `json:"workflow.GetValue,omitempty"`
-	SetValue json.RawMessage `json:"workflow.SetValue,omitempty"`
-}
-
-func ReshaperFromJSON(x []byte) (Reshaper, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data ReshaperUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "workflow.GetValue":
-		return GetValueFromJSON(data.GetValue)
-	case "workflow.SetValue":
-		return SetValueFromJSON(data.SetValue)
-	}
-
-	if data.GetValue != nil {
-		return GetValueFromJSON(data.GetValue)
-	} else if data.SetValue != nil {
-		return SetValueFromJSON(data.SetValue)
-	}
-
-	return nil, fmt.Errorf("workflow.Reshaper: unknown type %s", data.Type)
-}
-
-func ReshaperToJSON(x Reshaper) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchReshaperR2(
-		x,
-		func(x *GetValue) ([]byte, error) {
-			body, err := GetValueToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(ReshaperUnionJSON{
-				Type:     "workflow.GetValue",
-				GetValue: body,
-			})
-		},
-		func(x *SetValue) ([]byte, error) {
-			body, err := SetValueToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(ReshaperUnionJSON{
-				Type:     "workflow.SetValue",
-				SetValue: body,
-			})
-		},
-	)
-}
-
-func GetValueFromJSON(x []byte) (*GetValue, error) {
-	result := new(GetValue)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func GetValueToJSON(x *GetValue) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*GetValue)(nil)
-	_ json.Marshaler   = (*GetValue)(nil)
-)
-
-func (r *GetValue) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONGetValue(*r)
-}
-func (r *GetValue) _marshalJSONGetValue(x GetValue) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldPath []byte
-	fieldPath, err = r._marshalJSONstring(x.Path)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: GetValue._marshalJSONGetValue: field name Path; %w", err)
-	}
-	partial["Path"] = fieldPath
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: GetValue._marshalJSONGetValue: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *GetValue) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: GetValue._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *GetValue) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONGetValue(data)
-	if err != nil {
-		return fmt.Errorf("workflow: GetValue.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *GetValue) _unmarshalJSONGetValue(data []byte) (GetValue, error) {
-	result := GetValue{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: GetValue._unmarshalJSONGetValue: native struct unwrap; %w", err)
-	}
-	if fieldPath, ok := partial["Path"]; ok {
-		result.Path, err = r._unmarshalJSONstring(fieldPath)
-		if err != nil {
-			return result, fmt.Errorf("workflow: GetValue._unmarshalJSONGetValue: field Path; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *GetValue) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: GetValue._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func SetValueFromJSON(x []byte) (*SetValue, error) {
-	result := new(SetValue)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func SetValueToJSON(x *SetValue) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*SetValue)(nil)
-	_ json.Marshaler   = (*SetValue)(nil)
-)
-
-func (r *SetValue) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONSetValue(*r)
-}
-func (r *SetValue) _marshalJSONSetValue(x SetValue) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldValue []byte
-	fieldValue, err = r._marshalJSONschema_Schema(x.Value)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: SetValue._marshalJSONSetValue: field name Value; %w", err)
-	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: SetValue._marshalJSONSetValue: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *SetValue) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
-	result, err := shared.JSONMarshal[schema.Schema](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: SetValue._marshalJSONschema_Schema:; %w", err)
-	}
-	return result, nil
-}
-func (r *SetValue) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONSetValue(data)
-	if err != nil {
-		return fmt.Errorf("workflow: SetValue.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *SetValue) _unmarshalJSONSetValue(data []byte) (SetValue, error) {
-	result := SetValue{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: SetValue._unmarshalJSONSetValue: native struct unwrap; %w", err)
-	}
-	if fieldValue, ok := partial["Value"]; ok {
-		result.Value, err = r._unmarshalJSONschema_Schema(fieldValue)
-		if err != nil {
-			return result, fmt.Errorf("workflow: SetValue._unmarshalJSONSetValue: field Value; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *SetValue) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
-	result, err := shared.JSONUnmarshal[schema.Schema](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: SetValue._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

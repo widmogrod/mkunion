@@ -6,226 +6,64 @@ import (
 )
 
 func init() {
-	shape.Register(StateShape())
-	shape.Register(NextOperationShape())
-	shape.Register(DoneShape())
-	shape.Register(ErrorShape())
-	shape.Register(AwaitShape())
-	shape.Register(ScheduledShape())
-	shape.Register(ScheduleStoppedShape())
-	shape.Register(BaseStateShape())
-	shape.Register(WorkflowShape())
-	shape.Register(FlowShape())
-	shape.Register(FlowRefShape())
-	shape.Register(ExprShape())
-	shape.Register(EndShape())
-	shape.Register(AssignShape())
-	shape.Register(ApplyShape())
-	shape.Register(ChooseShape())
-	shape.Register(ReshaperShape())
-	shape.Register(GetValueShape())
-	shape.Register(SetValueShape())
-	shape.Register(ApplyAwaitOptionsShape())
-	shape.Register(PredicateShape())
 	shape.Register(AndShape())
-	shape.Register(OrShape())
-	shape.Register(NotShape())
-	shape.Register(CompareShape())
-	shape.Register(RunOptionShape())
-	shape.Register(ScheduleRunShape())
-	shape.Register(DelayRunShape())
-	shape.Register(CommandShape())
-	shape.Register(RunShape())
+	shape.Register(ApplyAwaitOptionsShape())
+	shape.Register(ApplyShape())
+	shape.Register(AssignShape())
+	shape.Register(AwaitShape())
+	shape.Register(BaseStateShape())
 	shape.Register(CallbackShape())
-	shape.Register(TryRecoverShape())
-	shape.Register(StopScheduleShape())
-	shape.Register(ResumeScheduleShape())
-	shape.Register(ResumeOptionsShape())
+	shape.Register(ChooseShape())
+	shape.Register(CommandShape())
+	shape.Register(CompareShape())
+	shape.Register(DelayRunShape())
+	shape.Register(DoneShape())
+	shape.Register(EndShape())
+	shape.Register(ErrorShape())
 	shape.Register(ExecutionShape())
+	shape.Register(ExprShape())
+	shape.Register(FlowRefShape())
+	shape.Register(FlowShape())
+	shape.Register(GetValueShape())
+	shape.Register(NextOperationShape())
+	shape.Register(NotShape())
+	shape.Register(OrShape())
+	shape.Register(PredicateShape())
+	shape.Register(ReshaperShape())
+	shape.Register(ResumeOptionsShape())
+	shape.Register(ResumeScheduleShape())
+	shape.Register(RunOptionShape())
+	shape.Register(RunShape())
+	shape.Register(ScheduleRunShape())
+	shape.Register(ScheduleStoppedShape())
+	shape.Register(ScheduledShape())
+	shape.Register(SetValueShape())
+	shape.Register(StateShape())
+	shape.Register(StopScheduleShape())
+	shape.Register(TryRecoverShape())
+	shape.Register(WorkflowShape())
 }
 
 //shape:shape
 
-func StateShape() shape.Shape {
+func CommandShape() shape.Shape {
 	return &shape.UnionLike{
-		Name:          "State",
+		Name:          "Command",
 		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Variant: []shape.Shape{
-			NextOperationShape(),
-			DoneShape(),
-			ErrorShape(),
-			AwaitShape(),
-			ScheduledShape(),
-			ScheduleStoppedShape(),
+			RunShape(),
+			CallbackShape(),
+			TryRecoverShape(),
+			StopScheduleShape(),
+			ResumeScheduleShape(),
 		},
 	}
 }
 
-func NextOperationShape() shape.Shape {
+func RunShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "NextOperation",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Result",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				},
-			},
-			{
-				Name: "BaseState",
-				Type: &shape.RefName{
-					Name:          "BaseState",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-	}
-}
-
-func DoneShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Done",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Result",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				},
-			},
-			{
-				Name: "BaseState",
-				Type: &shape.RefName{
-					Name:          "BaseState",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-	}
-}
-
-func ErrorShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Error",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Code",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Reason",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Retried",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-			{
-				Name: "BaseState",
-				Type: &shape.RefName{
-					Name:          "BaseState",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-	}
-}
-
-func AwaitShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Await",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "CallbackID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Timeout",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-			{
-				Name: "BaseState",
-				Type: &shape.RefName{
-					Name:          "BaseState",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-	}
-}
-
-func ScheduledShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Scheduled",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "ExpectedRunTimestamp",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-			{
-				Name: "BaseState",
-				Type: &shape.RefName{
-					Name:          "BaseState",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-	}
-}
-
-func ScheduleStoppedShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ScheduleStopped",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "BaseState",
-				Type: &shape.RefName{
-					Name:          "BaseState",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-	}
-}
-
-//shape:shape
-func BaseStateShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "BaseState",
+		Name:          "Run",
 		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
@@ -238,41 +76,11 @@ func BaseStateShape() shape.Shape {
 				},
 			},
 			{
-				Name: "RunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "StepID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Variables",
-				Type: &shape.MapLike{
-					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-					Val: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-			{
-				Name: "ExprResult",
-				Type: &shape.MapLike{
-					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-					Val: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-			{
-				Name: "DefaultMaxRetries",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
+				Name: "Input",
+				Type: &shape.RefName{
+					Name:          "Schema",
+					PkgName:       "schema",
+					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 				},
 			},
 			{
@@ -284,9 +92,68 @@ func BaseStateShape() shape.Shape {
 				},
 			},
 		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
+	}
+}
+
+func CallbackShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Callback",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "CallbackID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Result",
+				Type: &shape.RefName{
+					Name:          "Schema",
+					PkgName:       "schema",
+					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+				},
+			},
+		},
+	}
+}
+
+func TryRecoverShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "TryRecover",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "RunID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+	}
+}
+
+func StopScheduleShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "StopSchedule",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "ParentRunID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+	}
+}
+
+func ResumeScheduleShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ResumeSchedule",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "ParentRunID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
 	}
@@ -343,6 +210,56 @@ func FlowRefShape() shape.Shape {
 			{
 				Name: "FlowID",
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+	}
+}
+
+//shape:shape
+
+func RunOptionShape() shape.Shape {
+	return &shape.UnionLike{
+		Name:          "RunOption",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Variant: []shape.Shape{
+			ScheduleRunShape(),
+			DelayRunShape(),
+		},
+	}
+}
+
+func ScheduleRunShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ScheduleRun",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Interval",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "ParentRunID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+	}
+}
+
+func DelayRunShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "DelayRun",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "DelayBySeconds",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
+				},
 			},
 		},
 	}
@@ -672,48 +589,176 @@ func CompareShape() shape.Shape {
 
 //shape:shape
 
-func RunOptionShape() shape.Shape {
+func StateShape() shape.Shape {
 	return &shape.UnionLike{
-		Name:          "RunOption",
+		Name:          "State",
 		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Variant: []shape.Shape{
-			ScheduleRunShape(),
-			DelayRunShape(),
+			NextOperationShape(),
+			DoneShape(),
+			ErrorShape(),
+			AwaitShape(),
+			ScheduledShape(),
+			ScheduleStoppedShape(),
 		},
 	}
 }
 
-func ScheduleRunShape() shape.Shape {
+func NextOperationShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "ScheduleRun",
+		Name:          "NextOperation",
 		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
-				Name: "Interval",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Name: "Result",
+				Type: &shape.RefName{
+					Name:          "Schema",
+					PkgName:       "schema",
+					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+				},
 			},
 			{
-				Name: "ParentRunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Name: "BaseState",
+				Type: &shape.RefName{
+					Name:          "BaseState",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 		},
 	}
 }
 
-func DelayRunShape() shape.Shape {
+func DoneShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "DelayRun",
+		Name:          "Done",
 		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
-				Name: "DelayBySeconds",
+				Name: "Result",
+				Type: &shape.RefName{
+					Name:          "Schema",
+					PkgName:       "schema",
+					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+				},
+			},
+			{
+				Name: "BaseState",
+				Type: &shape.RefName{
+					Name:          "BaseState",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
+			},
+		},
+	}
+}
+
+func ErrorShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Error",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Code",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Reason",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Retried",
 				Type: &shape.PrimitiveLike{
 					Kind: &shape.NumberLike{
 						Kind: &shape.Int64{},
 					},
+				},
+			},
+			{
+				Name: "BaseState",
+				Type: &shape.RefName{
+					Name:          "BaseState",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
+			},
+		},
+	}
+}
+
+func AwaitShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Await",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "CallbackID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Timeout",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
+				},
+			},
+			{
+				Name: "BaseState",
+				Type: &shape.RefName{
+					Name:          "BaseState",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
+			},
+		},
+	}
+}
+
+func ScheduledShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Scheduled",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "ExpectedRunTimestamp",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
+				},
+			},
+			{
+				Name: "BaseState",
+				Type: &shape.RefName{
+					Name:          "BaseState",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
+			},
+		},
+	}
+}
+
+func ScheduleStoppedShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ScheduleStopped",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "BaseState",
+				Type: &shape.RefName{
+					Name:          "BaseState",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 				},
 			},
 		},
@@ -721,25 +766,9 @@ func DelayRunShape() shape.Shape {
 }
 
 //shape:shape
-
-func CommandShape() shape.Shape {
-	return &shape.UnionLike{
-		Name:          "Command",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Variant: []shape.Shape{
-			RunShape(),
-			CallbackShape(),
-			TryRecoverShape(),
-			StopScheduleShape(),
-			ResumeScheduleShape(),
-		},
-	}
-}
-
-func RunShape() shape.Shape {
+func BaseStateShape() shape.Shape {
 	return &shape.StructLike{
-		Name:          "Run",
+		Name:          "BaseState",
 		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
@@ -752,11 +781,41 @@ func RunShape() shape.Shape {
 				},
 			},
 			{
-				Name: "Input",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+				Name: "RunID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "StepID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Variables",
+				Type: &shape.MapLike{
+					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+					Val: &shape.RefName{
+						Name:          "Schema",
+						PkgName:       "schema",
+						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+					},
+				},
+			},
+			{
+				Name: "ExprResult",
+				Type: &shape.MapLike{
+					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+					Val: &shape.RefName{
+						Name:          "Schema",
+						PkgName:       "schema",
+						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+					},
+				},
+			},
+			{
+				Name: "DefaultMaxRetries",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
 				},
 			},
 			{
@@ -765,89 +824,6 @@ func RunShape() shape.Shape {
 					Name:          "RunOption",
 					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-	}
-}
-
-func CallbackShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Callback",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "CallbackID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Result",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				},
-			},
-		},
-	}
-}
-
-func TryRecoverShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "TryRecover",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "RunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-		},
-	}
-}
-
-func StopScheduleShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "StopSchedule",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "ParentRunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-		},
-	}
-}
-
-func ResumeScheduleShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ResumeSchedule",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "ParentRunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-		},
-	}
-}
-
-//shape:shape
-func ResumeOptionsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ResumeOptions",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timeout",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
 				},
 			},
 		},
@@ -908,6 +884,30 @@ func ExecutionShape() shape.Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 					},
 				},
+			},
+		},
+	}
+}
+
+//shape:shape
+func ResumeOptionsShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ResumeOptions",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Timeout",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Int64{},
+					},
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"serde": {
+				Value: "json",
 			},
 		},
 	}
