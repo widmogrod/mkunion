@@ -25,34 +25,34 @@ func FromPrimitiveGo(x any) Schema {
 		return MkBool(y)
 
 	case int:
-		return MkInt(uint64(y))
+		return MkInt(int64(y))
 
 	case int8:
-		return MkInt(uint64(y))
+		return MkInt(int64(y))
 
 	case int16:
-		return MkInt(uint64(y))
+		return MkInt(int64(y))
 
 	case int32:
-		return MkInt(uint64(y))
+		return MkInt(int64(y))
 
 	case int64:
-		return MkInt(uint64(y))
+		return MkInt(int64(y))
 
 	case uint:
-		return MkInt(uint64(y))
+		return MkUint(uint64(y))
 
 	case uint8:
-		return MkInt(uint64(y))
+		return MkUint(uint64(y))
 
 	case uint16:
-		return MkInt(uint64(y))
+		return MkUint(uint64(y))
 
 	case uint32:
-		return MkInt(uint64(y))
+		return MkUint(uint64(y))
 
 	case uint64:
-		return MkInt(uint64(y))
+		return MkUint(uint64(y))
 
 	case float32:
 		return MkFloat(float64(y))
@@ -147,15 +147,15 @@ func ToGoPrimitive(x Schema) (any, error) {
 }
 
 func ToGoG[A any](x Schema) (res A, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(error); ok {
-				err = fmt.Errorf("schema.ToGoG: panic recover; %w", e)
-			} else {
-				err = fmt.Errorf("schema.ToGoG: panic recover; %#v", e)
-			}
-		}
-	}()
+	//defer func() {
+	//	if r := recover(); r != nil {
+	//		if e, ok := r.(error); ok {
+	//			err = fmt.Errorf("schema.ToGoG: panic recover; %w", e)
+	//		} else {
+	//			err = fmt.Errorf("schema.ToGoG: panic recover; %#v", e)
+	//		}
+	//	}
+	//}()
 
 	res = ToGo[A](x)
 	return
@@ -168,7 +168,36 @@ func ToGo[A any](x Schema) A {
 			panic(fmt.Errorf("schema.ToGo: primitive; %w", err))
 		}
 
-		return value.(A)
+		var result A
+		switch y := value.(type) {
+		case float64:
+			switch any(result).(type) {
+			case int:
+				return any(int(y)).(A)
+			//case int8:
+			//	return any(int8(y)).(A)
+			//case int16:
+			//	return any(int16(y)).(A)
+			//case int32:
+			//	return any(int32(y)).(A)
+			//case int64:
+			//	return any(int64(y)).(A)
+			//case uint:
+			//	return any(uint(y)).(A)
+			//case uint8:
+			//	return any(uint8(y)).(A)
+			//case uint16:
+			//	return any(uint16(y)).(A)
+			//case uint32:
+			//	return any(uint32(y)).(A)
+			//case uint64:
+			//	return any(uint64(y)).(A)
+			//case float32:
+			//	return any(float32(y)).(A)
+			case float64:
+				return any(float64(y)).(A)
+			}
+		}
 	}
 
 	v := reflect.TypeOf(new(A)).Elem()
@@ -265,34 +294,34 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 					return shape.MatchNumberKindR1(
 						x.Kind,
 						func(x *shape.UInt) Schema {
-							return MkInt(uint64(yreflect.Uint()))
+							return MkUint(yreflect.Uint())
 						},
 						func(x *shape.UInt8) Schema {
-							return MkInt(uint64(yreflect.Uint()))
+							return MkUint(yreflect.Uint())
 						},
 						func(x *shape.UInt16) Schema {
-							return MkInt(uint64(yreflect.Uint()))
+							return MkUint(yreflect.Uint())
 						},
 						func(x *shape.UInt32) Schema {
-							return MkInt(uint64(yreflect.Uint()))
+							return MkUint(yreflect.Uint())
 						},
 						func(x *shape.UInt64) Schema {
-							return MkInt(uint64(yreflect.Uint()))
+							return MkUint(yreflect.Uint())
 						},
 						func(x *shape.Int) Schema {
-							return MkInt(uint64(yreflect.Int()))
+							return MkInt(yreflect.Int())
 						},
 						func(x *shape.Int8) Schema {
-							return MkInt(uint64(yreflect.Int()))
+							return MkInt(yreflect.Int())
 						},
 						func(x *shape.Int16) Schema {
-							return MkInt(uint64(yreflect.Int()))
+							return MkInt(yreflect.Int())
 						},
 						func(x *shape.Int32) Schema {
-							return MkInt(uint64(yreflect.Int()))
+							return MkInt(yreflect.Int())
 						},
 						func(x *shape.Int64) Schema {
-							return MkInt(uint64(yreflect.Int()))
+							return MkInt(yreflect.Int())
 						},
 						func(x *shape.Float32) Schema {
 							return MkFloat(yreflect.Float())
