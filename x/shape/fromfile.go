@@ -271,6 +271,18 @@ func (f *InferredInfo) RetrieveShapeNamedAs(name string) Shape {
 	return f.shapes[name]
 }
 
+func (f *InferredInfo) RetrieveShapeFromRef(x *RefName) Shape {
+	shapes := f.RetrieveShapes()
+	for _, shape := range shapes {
+		// weak check
+		if Name(shape) == Name(x) {
+			return shape
+		}
+	}
+
+	return nil
+}
+
 func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
 	var result []Shape
 	for _, shape := range f.RetrieveShapes() {
