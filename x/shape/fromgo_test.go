@@ -141,7 +141,7 @@ func TestFromGoo(t *testing.T) {
 								},
 								{
 									Name: "ArrayLen",
-									Type: &PointerLike{Type: &PrimitiveLike{&NumberLike{}}},
+									Type: &PointerLike{Type: &PrimitiveLike{&NumberLike{Kind: &Int{}}}},
 								},
 							},
 						},

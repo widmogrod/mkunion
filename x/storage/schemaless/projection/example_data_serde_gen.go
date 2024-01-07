@@ -4,13 +4,7 @@ package projection
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/widmogrod/mkunion/x/shape"
 )
-
-func init() {
-	shape.Register(GameShape())
-	shape.Register(SessionsStatsShape())
-}
 
 var (
 	_ json.Unmarshaler = (*Game)(nil)
@@ -159,40 +153,6 @@ func (r *Game) _unmarshalJSONbool(data []byte) (bool, error) {
 	return result, nil
 }
 
-//shape:shape
-func GameShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Game",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "SessionID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Players",
-				Type: &shape.ListLike{
-					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-				},
-			},
-			{
-				Name: "Winner",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "IsDraw",
-				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
 var (
 	_ json.Unmarshaler = (*SessionsStats)(nil)
 	_ json.Marshaler   = (*SessionsStats)(nil)
@@ -280,44 +240,4 @@ func (r *SessionsStats) _unmarshalJSONint(data []byte) (int, error) {
 		return result, fmt.Errorf("projection: SessionsStats._unmarshalJSONint: native primitive unwrap; %w", err)
 	}
 	return result, nil
-}
-
-//shape:shape
-func SessionsStatsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "SessionsStats",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Wins",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int{},
-					},
-				},
-			},
-			{
-				Name: "Draws",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int{},
-					},
-				},
-			},
-			{
-				Name: "Loose",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int{},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }

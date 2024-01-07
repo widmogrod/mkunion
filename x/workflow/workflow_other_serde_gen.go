@@ -5,14 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
-
-func init() {
-	shape.Register(FunctionInputShape())
-	shape.Register(FunctionOutputShape())
-}
 
 var (
 	_ json.Unmarshaler = (*FunctionInput)(nil)
@@ -148,40 +142,6 @@ func (r *FunctionInput) _unmarshalJSONschema_Schema(data []byte) (schema.Schema,
 	return result, nil
 }
 
-//shape:shape
-func FunctionInputShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "FunctionInput",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Name",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "CallbackID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Args",
-				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
 var (
 	_ json.Unmarshaler = (*FunctionOutput)(nil)
 	_ json.Marshaler   = (*FunctionOutput)(nil)
@@ -244,28 +204,4 @@ func (r *FunctionOutput) _unmarshalJSONschema_Schema(data []byte) (schema.Schema
 		return result, fmt.Errorf("workflow: FunctionOutput._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
 	}
 	return result, nil
-}
-
-//shape:shape
-func FunctionOutputShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "FunctionOutput",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Result",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }

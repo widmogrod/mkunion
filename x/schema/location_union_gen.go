@@ -4,16 +4,8 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
-
-func init() {
-	shape.Register(LocationShape())
-	shape.Register(LocationFieldShape())
-	shape.Register(LocationIndexShape())
-	shape.Register(LocationAnythingShape())
-}
 
 type LocationVisitor interface {
 	VisitLocationField(v *LocationField) any
@@ -105,61 +97,6 @@ func MatchLocationR0(
 		f2(v)
 	case *LocationAnything:
 		f3(v)
-	}
-}
-
-//shape:shape
-
-func LocationShape() shape.Shape {
-	return &shape.UnionLike{
-		Name:          "Location",
-		PkgName:       "schema",
-		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Variant: []shape.Shape{
-			LocationFieldShape(),
-			LocationIndexShape(),
-			LocationAnythingShape(),
-		},
-	}
-}
-
-func LocationFieldShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "LocationField",
-		PkgName:       "schema",
-		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Name",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-		},
-	}
-}
-
-func LocationIndexShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "LocationIndex",
-		PkgName:       "schema",
-		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Index",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int{},
-					},
-				},
-			},
-		},
-	}
-}
-
-func LocationAnythingShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "LocationAnything",
-		PkgName:       "schema",
-		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 	}
 }
 func init() {

@@ -270,17 +270,6 @@ func GenerateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		}
 		shapesContents.Write(contents)
 
-		shapeGenContents, err := GenerateShapeFollow(union, &pkgMap, &initFunc, inferred)
-		if err != nil {
-			return shapesContents, fmt.Errorf("failed to generate shape for %s: %w", shape.ToGoTypeName(union), err)
-		}
-		if shapeGenContents != nil {
-			_, err = shapeGenContents.WriteTo(&shapesContents)
-			if err != nil {
-				return shapesContents, fmt.Errorf("failed to write shape for %s: %w", shape.ToGoTypeName(union), err)
-			}
-		}
-
 		genSerde := generators.NewSerdeJSONUnion(union)
 		genSerde.SkipImportsAndPackage(true)
 
@@ -332,17 +321,6 @@ func GenerateSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 			return shapesContents, fmt.Errorf("mkunion.GenerateSerde: failed to generate json serde for %s: %w", shape.ToGoTypeName(x), err)
 		}
 		shapesContents.WriteString(contents)
-
-		genShapeContents, err := GenerateShapeFollow(x, &pkgMap, &initFunc, inferred)
-		if err != nil {
-			return shapesContents, fmt.Errorf("mkunion.GenerateSerde: failed to generate shape for %s: %w", shape.ToGoTypeName(x), err)
-		}
-		if genShapeContents != nil {
-			_, err = genShapeContents.WriteTo(&shapesContents)
-			if err != nil {
-				return shapesContents, fmt.Errorf("mkunion.GenerateSerde: failed to write shape for %s: %w", shape.ToGoTypeName(x), err)
-			}
-		}
 
 		pkgMap = generators.MergePkgMaps(pkgMap,
 			genSerde.ExtractImports(x),

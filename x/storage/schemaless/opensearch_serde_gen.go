@@ -4,15 +4,8 @@ package schemaless
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
-
-func init() {
-	shape.Register(OpenSearchSearchResultShape())
-	shape.Register(OpenSearchSearchResultHitsShape())
-	shape.Register(OpenSearchSearchResultHitShape())
-}
 
 var (
 	_ json.Unmarshaler = (*OpenSearchSearchResult[any])(nil)
@@ -76,92 +69,6 @@ func (r *OpenSearchSearchResult[A]) _unmarshalJSONOpenSearchSearchResultHitsLb_A
 		return result, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._unmarshalJSONOpenSearchSearchResultHitsLb_A_bL: native ref unwrap; %w", err)
 	}
 	return result, nil
-}
-
-//shape:shape
-func OpenSearchSearchResultShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "OpenSearchSearchResult",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Hits",
-				Type: &shape.RefName{
-					Name:          "OpenSearchSearchResultHits",
-					PkgName:       "schemaless",
-					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-					Indexed: []shape.Shape{
-						&shape.RefName{
-							Name:          "A",
-							PkgName:       "",
-							PkgImportName: "",
-						},
-					},
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "hits",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
-//shape:shape
-func OpenSearchSearchResultHitsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "OpenSearchSearchResultHits",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Hits",
-				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name:          "OpenSearchSearchResultHit",
-						PkgName:       "schemaless",
-						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-						Indexed: []shape.Shape{
-							&shape.RefName{
-								Name:          "A",
-								PkgName:       "",
-								PkgImportName: "",
-							},
-						},
-					},
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "hits",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }
 
 var (
@@ -257,52 +164,6 @@ func (r *OpenSearchSearchResultHits[A]) _unmarshalJSONOpenSearchSearchResultHitL
 		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHits[A]._unmarshalJSONOpenSearchSearchResultHitLb_A_bL: native ref unwrap; %w", err)
 	}
 	return result, nil
-}
-
-//shape:shape
-func OpenSearchSearchResultHitShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "OpenSearchSearchResultHit",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Item",
-				Type: &shape.RefName{
-					Name:          "A",
-					PkgName:       "",
-					PkgImportName: "",
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "_source",
-					},
-				},
-			},
-			{
-				Name: "Sort",
-				Type: &shape.ListLike{
-					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "sort",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }
 
 var (

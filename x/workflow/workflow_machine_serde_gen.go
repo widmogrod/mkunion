@@ -5,167 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
-
-func init() {
-	shape.Register(ResumeOptionsShape())
-}
-
-var (
-	_ json.Unmarshaler = (*ResumeOptions)(nil)
-	_ json.Marshaler   = (*ResumeOptions)(nil)
-)
-
-func (r *ResumeOptions) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONResumeOptions(*r)
-}
-func (r *ResumeOptions) _marshalJSONResumeOptions(x ResumeOptions) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldTimeout []byte
-	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: field name Timeout; %w", err)
-	}
-	partial["Timeout"] = fieldTimeout
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *ResumeOptions) _marshalJSONint64(x int64) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONint64:; %w", err)
-	}
-	return result, nil
-}
-func (r *ResumeOptions) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONResumeOptions(data)
-	if err != nil {
-		return fmt.Errorf("workflow: ResumeOptions.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *ResumeOptions) _unmarshalJSONResumeOptions(data []byte) (ResumeOptions, error) {
-	result := ResumeOptions{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: native struct unwrap; %w", err)
-	}
-	if fieldTimeout, ok := partial["Timeout"]; ok {
-		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
-		if err != nil {
-			return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: field Timeout; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *ResumeOptions) _unmarshalJSONint64(data []byte) (int64, error) {
-	var result int64
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-
-//shape:shape
-func ResumeOptionsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ResumeOptions",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timeout",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
-
-var (
-	_ json.Unmarshaler = (*ApplyAwaitOptions)(nil)
-	_ json.Marshaler   = (*ApplyAwaitOptions)(nil)
-)
-
-func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONApplyAwaitOptions(*r)
-}
-func (r *ApplyAwaitOptions) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldTimeout []byte
-	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name Timeout; %w", err)
-	}
-	partial["Timeout"] = fieldTimeout
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *ApplyAwaitOptions) _marshalJSONint64(x int64) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONint64:; %w", err)
-	}
-	return result, nil
-}
-func (r *ApplyAwaitOptions) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONApplyAwaitOptions(data)
-	if err != nil {
-		return fmt.Errorf("workflow: ApplyAwaitOptions.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *ApplyAwaitOptions) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyAwaitOptions, error) {
-	result := ApplyAwaitOptions{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: native struct unwrap; %w", err)
-	}
-	if fieldTimeout, ok := partial["Timeout"]; ok {
-		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
-		if err != nil {
-			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field Timeout; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *ApplyAwaitOptions) _unmarshalJSONint64(data []byte) (int64, error) {
-	var result int64
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
 
 var (
 	_ json.Unmarshaler = (*BaseState)(nil)
@@ -390,6 +231,136 @@ func (r *BaseState) _unmarshalJSONRunOption(data []byte) (RunOption, error) {
 	result, err := shared.JSONUnmarshal[RunOption](data)
 	if err != nil {
 		return result, fmt.Errorf("workflow: BaseState._unmarshalJSONRunOption: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+var (
+	_ json.Unmarshaler = (*ResumeOptions)(nil)
+	_ json.Marshaler   = (*ResumeOptions)(nil)
+)
+
+func (r *ResumeOptions) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONResumeOptions(*r)
+}
+func (r *ResumeOptions) _marshalJSONResumeOptions(x ResumeOptions) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldTimeout []byte
+	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: field name Timeout; %w", err)
+	}
+	partial["Timeout"] = fieldTimeout
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *ResumeOptions) _marshalJSONint64(x int64) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONint64:; %w", err)
+	}
+	return result, nil
+}
+func (r *ResumeOptions) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONResumeOptions(data)
+	if err != nil {
+		return fmt.Errorf("workflow: ResumeOptions.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *ResumeOptions) _unmarshalJSONResumeOptions(data []byte) (ResumeOptions, error) {
+	result := ResumeOptions{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: native struct unwrap; %w", err)
+	}
+	if fieldTimeout, ok := partial["Timeout"]; ok {
+		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
+		if err != nil {
+			return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONResumeOptions: field Timeout; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *ResumeOptions) _unmarshalJSONint64(data []byte) (int64, error) {
+	var result int64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+
+var (
+	_ json.Unmarshaler = (*ApplyAwaitOptions)(nil)
+	_ json.Marshaler   = (*ApplyAwaitOptions)(nil)
+)
+
+func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONApplyAwaitOptions(*r)
+}
+func (r *ApplyAwaitOptions) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldTimeout []byte
+	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name Timeout; %w", err)
+	}
+	partial["Timeout"] = fieldTimeout
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *ApplyAwaitOptions) _marshalJSONint64(x int64) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONint64:; %w", err)
+	}
+	return result, nil
+}
+func (r *ApplyAwaitOptions) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONApplyAwaitOptions(data)
+	if err != nil {
+		return fmt.Errorf("workflow: ApplyAwaitOptions.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *ApplyAwaitOptions) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyAwaitOptions, error) {
+	result := ApplyAwaitOptions{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: native struct unwrap; %w", err)
+	}
+	if fieldTimeout, ok := partial["Timeout"]; ok {
+		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
+		if err != nil {
+			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field Timeout; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *ApplyAwaitOptions) _unmarshalJSONint64(data []byte) (int64, error) {
+	var result int64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

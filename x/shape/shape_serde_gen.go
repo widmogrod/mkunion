@@ -7,10 +7,6 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
-func init() {
-	Register(TypeParamShape())
-}
-
 var (
 	_ json.Unmarshaler = (*TypeParam)(nil)
 	_ json.Marshaler   = (*TypeParam)(nil)
@@ -100,30 +96,4 @@ func (r *TypeParam) _unmarshalJSONShape(data []byte) (Shape, error) {
 		return result, fmt.Errorf("shape: TypeParam._unmarshalJSONShape: native ref unwrap; %w", err)
 	}
 	return result, nil
-}
-func TypeParamShape() Shape {
-	return &StructLike{
-		Name:          "TypeParam",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Name",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "Type",
-				Type: &RefName{
-					Name:          "Shape",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-		},
-		Tags: map[string]Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }

@@ -4,17 +4,9 @@ package projection
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 	"time"
 )
-
-func init() {
-	shape.Register(WindowDescriptionShape())
-	shape.Register(SessionWindowShape())
-	shape.Register(SlidingWindowShape())
-	shape.Register(FixedWindowShape())
-}
 
 type WindowDescriptionVisitor interface {
 	VisitSessionWindow(v *SessionWindow) any
@@ -112,83 +104,6 @@ func MatchWindowDescriptionR0(
 		f2(v)
 	case *FixedWindow:
 		f3(v)
-	}
-}
-
-//shape:shape
-
-func WindowDescriptionShape() shape.Shape {
-	return &shape.UnionLike{
-		Name:          "WindowDescription",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Variant: []shape.Shape{
-			SessionWindowShape(),
-			SlidingWindowShape(),
-			FixedWindowShape(),
-		},
-	}
-}
-
-func SessionWindowShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "SessionWindow",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "GapDuration",
-				Type: &shape.RefName{
-					Name:          "Duration",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-		},
-	}
-}
-
-func SlidingWindowShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "SlidingWindow",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Width",
-				Type: &shape.RefName{
-					Name:          "Duration",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-			{
-				Name: "Period",
-				Type: &shape.RefName{
-					Name:          "Duration",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-		},
-	}
-}
-
-func FixedWindowShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "FixedWindow",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Width",
-				Type: &shape.RefName{
-					Name:          "Duration",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-		},
 	}
 }
 func init() {

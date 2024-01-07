@@ -430,7 +430,7 @@ func GuardToString(x shape.Guard) string {
 
 			fmt.Fprintf(result, "&shape.Enum{\n")
 			if len(x.Val) > 0 {
-				fmt.Fprintf(result, "\tVal: []string{,\n")
+				fmt.Fprintf(result, "\tVal: []string{\n")
 				for _, val := range x.Val {
 					fmt.Fprintf(result, "\t\t%q,\n", val)
 				}
