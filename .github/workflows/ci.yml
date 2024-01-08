@@ -21,7 +21,7 @@ jobs:
       # initiate docker-compose services
       - run: |
           pip install awscli-local
-      - run: dev/bootstrap.sh& sleep 30
+      - run: dev/bootstrap.sh& sleep 60
 
       # run tests
       - run: |
