@@ -71,7 +71,11 @@ export function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         filter: (x: predicate.WherePredicates) => {
             setState({
                 ...state,
-                where: mergeFilters(state.where, x)
+                where: mergeFilters(state.where, x),
+                // always reset the cursor when filtering
+                // user can be on a page that doesn't exist anymore
+                nextPage: undefined,
+                prevPage: undefined
             })
         }
     } as PaginatedTableContext<T>
