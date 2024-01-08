@@ -26,7 +26,7 @@ jobs:
       # run tests
       - run: |
           set -e
-          retries=10
+          retries=3
           until [ $retries -le 0 ]; do
             if go test -v ./...; then
               break
