@@ -871,7 +871,7 @@ function App() {
                                                 </dl>
                                                 <WorkflowToString flow={error.BaseState?.Flow}/>
                                                 <ListVariables data={error.BaseState}/>
-                                                <TryRecover error={error}/>
+                                                <TryRecover error={error} onFinish={() => ctx.refresh()}/>
                                             </>
 
                                         case "workflow.Await":
@@ -915,6 +915,7 @@ function App() {
                                                         submitCallbackResult(await_.CallbackID, {
                                                             "schema.String": (document.getElementById("callbackValue") as HTMLInputElement).value
                                                         }, (data) => {
+                                                            ctx.refresh()
                                                             setState(data)
                                                         })
                                                     }}>
@@ -940,7 +941,9 @@ function App() {
                                                     <WorkflowToString flow={scheduled.BaseState?.Flow}/>
                                                     <ListVariables data={scheduled.BaseState}/>
                                                     <button onClick={() => {
-                                                        stopSchedule(parentRunID)
+                                                        stopSchedule(parentRunID).finally(() => {
+                                                            ctx.refresh()
+                                                        })
                                                     }}>
                                                         Stop Schedule
                                                     </button>
@@ -961,7 +964,9 @@ function App() {
                                                 <WorkflowToString flow={scheduleStopped.BaseState?.Flow}/>
                                                 <ListVariables data={scheduleStopped.BaseState}/>
                                                 <button onClick={() => {
-                                                    resumeSchedule(parentRunID1)
+                                                    resumeSchedule(parentRunID1).finally(() => {
+                                                        ctx.refresh()
+                                                    })
                                                 }}>
                                                     Resume Schedule
                                                 </button>
@@ -1323,8 +1328,8 @@ const recover = (runID: string) => {
         .then(data => data as workflow.State)
 }
 
-function TryRecover(props: { error: workflow.Error }) {
-    return <button onClick={() => props.error.BaseState?.RunID && recover(props.error.BaseState?.RunID)}>
+function TryRecover(props: { error: workflow.Error , onFinish: (data : workflow.State) => void}) {
+    return <button onClick={() => props.error.BaseState?.RunID && recover(props.error.BaseState?.RunID).then(props.onFinish)}>
         Try recover
     </button>
 }
