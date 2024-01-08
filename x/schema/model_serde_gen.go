@@ -4,13 +4,8 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
-
-func init() {
-	shape.Register(FieldShape())
-}
 
 var (
 	_ json.Unmarshaler = (*Field)(nil)
@@ -101,30 +96,4 @@ func (r *Field) _unmarshalJSONSchema(data []byte) (Schema, error) {
 		return result, fmt.Errorf("schema: Field._unmarshalJSONSchema: native ref unwrap; %w", err)
 	}
 	return result, nil
-}
-func FieldShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "Field",
-		PkgName:       "schema",
-		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Name",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Value",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }

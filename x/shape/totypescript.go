@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -327,14 +328,29 @@ func (r *TypeScriptRenderer) initContentsFor(pkgImportName string) *strings.Buil
 }
 
 func (r *TypeScriptRenderer) WriteToDir(dir string) error {
-	for pkgImportName, content := range r.contents {
+	sorted := make([]string, 0, len(r.contents))
+	for pkgImportName := range r.contents {
+		sorted = append(sorted, pkgImportName)
+	}
+	sort.Strings(sorted)
+
+	for _, pkgImportName := range sorted {
+		content := r.contents[pkgImportName]
 		imports := r.imports[pkgImportName]
 		if imports == nil {
 			continue
 		}
 
 		importsContent := &strings.Builder{}
-		for pkg, imp := range imports.imports {
+
+		sortedImports := make([]string, 0, len(imports.imports))
+		for pkg := range imports.imports {
+			sortedImports = append(sortedImports, pkg)
+		}
+		sort.Strings(sortedImports)
+
+		for _, pkg := range sortedImports {
+			imp := imports.imports[pkg]
 			_, err := fmt.Fprintf(importsContent, "//eslint-disable-next-line\n")
 			_, err = fmt.Fprintf(importsContent, "import * as %s from '%s'\n", pkg, r.normaliseImport(imp))
 			if err != nil {

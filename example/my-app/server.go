@@ -197,8 +197,6 @@ func main() {
 	}))
 
 	e.POST("/message", TypedJSONRequest(
-		ChatCMDFromJSON,
-		ChatResultToJSON,
 		func(x ChatCMD) (ChatResult, error) {
 			ctx := context.Background()
 
@@ -354,8 +352,6 @@ func main() {
 	})
 
 	e.POST("/flow", TypedJSONRequest(
-		workflow.WorkflowFromJSON,
-		workflow.WorkflowToJSON,
 		func(x workflow.Workflow) (workflow.Workflow, error) {
 			flow, ok := x.(*workflow.Flow)
 			if !ok {
@@ -500,8 +496,6 @@ func main() {
 	})
 
 	e.POST("/", TypedJSONRequest(
-		workflow.CommandFromJSON,
-		workflow.StateToJSON,
 		func(cmd workflow.Command) (workflow.State, error) {
 			return srv.CreateOrUpdate(cmd)
 		}))
@@ -523,8 +517,6 @@ func main() {
 	})
 
 	e.POST("/callback", TypedJSONRequest(
-		workflow.CommandFromJSON,
-		workflow.StateToJSON,
 		func(cmd workflow.Command) (workflow.State, error) {
 			callbackCMD, ok := cmd.(*workflow.Callback)
 			if !ok {
@@ -699,7 +691,7 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0
 	log.Infof("exiting")
 }
 
-func TypedJSONRequest[A, B any](des func([]byte) (A, error), ser func(B) ([]byte, error), handle func(x A) (B, error)) func(c echo.Context) error {
+func TypedJSONRequest[A, B any](handle func(x A) (B, error)) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		data, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -707,7 +699,7 @@ func TypedJSONRequest[A, B any](des func([]byte) (A, error), ser func(B) ([]byte
 			return err
 		}
 
-		in, err := des(data)
+		in, err := shared.JSONUnmarshal[A](data)
 		if err != nil {
 			log.Errorf("TypedJSONRequest: failed to parse request body: %v", err)
 			return err
@@ -723,7 +715,7 @@ func TypedJSONRequest[A, B any](des func([]byte) (A, error), ser func(B) ([]byte
 			return fmt.Errorf("TypedJSONRequest: TypedRequest: expected %T, got %T", b, out)
 		}
 
-		result, err := ser(out)
+		result, err := shared.JSONMarshal[B](out)
 		if err != nil {
 			log.Errorf("TypedJSONRequest: failed to convert to json: %v", err)
 			return err

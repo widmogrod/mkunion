@@ -5,7 +5,6 @@ import (
 )
 
 //go:generate go run ../../../cmd/mkunion/main.go
-//go:generate go run ../../../cmd/mkunion/main.go serde
 
 //go:tag mkunion:"Example"
 type (
@@ -25,8 +24,6 @@ type (
 	I []Example
 	J [2]string
 	K A
-	// L Example is not allowed, since Example is interface,
-	// and interface cannot have methods implemented as Visitor pattern requires
 	L = List
 	//go:tag json:"m_list,omitempty"
 	M List
@@ -35,9 +32,15 @@ type (
 	P ListOf2[ListOf[any], *ListOf2[int64, *time.Duration]]
 )
 
+//go:tag mkunion:"AliasExample"
+type (
+	A2 = A
+	B2 = B
+)
+
 // List is a list of elements
 //
-//go:tag json:"list,omitempty"
+//go:tag json:"list,omitempty" serde:"json"
 type List struct{}
 
 //go:tag serde:"json" json:"list_of,omitempty"

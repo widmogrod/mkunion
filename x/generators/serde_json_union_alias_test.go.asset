@@ -1,0 +1,122 @@
+package testutils
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
+)
+
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Forest", ForestFromJSON, ForestToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Tree2", Tree2FromJSON, Tree2ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Leaf2", Leaf2FromJSON, Leaf2ToJSON)
+}
+
+type ForestUnionJSON struct {
+	Type string `json:"$type,omitempty"`
+	Tree2 json.RawMessage `json:"testutils.Tree2,omitempty"`
+	Leaf2 json.RawMessage `json:"testutils.Leaf2,omitempty"`
+}
+
+func ForestFromJSON(x []byte) (Forest, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data ForestUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "testutils.Tree2":
+		return Tree2FromJSON(data.Tree2)
+	case "testutils.Leaf2":
+		return Leaf2FromJSON(data.Leaf2)
+	}
+
+	if data.Tree2 != nil {
+		return Tree2FromJSON(data.Tree2)
+	} else if data.Leaf2 != nil {
+		return Leaf2FromJSON(data.Leaf2)
+	}
+
+	return nil, fmt.Errorf("testutils.Forest: unknown type %s", data.Type)
+}
+
+func ForestToJSON(x Forest) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchForestR2(
+		x,
+		func(x *Tree2) ([]byte, error) {
+			body, err := Tree2ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ForestUnionJSON{
+				Type: "testutils.Tree2",
+				Tree2: body,
+			})
+		},
+		func(x *Leaf2) ([]byte, error) {
+			body, err := Leaf2ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(ForestUnionJSON{
+				Type: "testutils.Leaf2",
+				Leaf2: body,
+			})
+		},
+	)
+}
+
+func Tree2FromJSON(x []byte) (*Tree2, error) {
+	result := new(Tree2)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Tree2ToJSON(x *Tree2) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Tree2)(nil)
+	_ json.Marshaler   = (*Tree2)(nil)
+)
+
+
+
+func Leaf2FromJSON(x []byte) (*Leaf2, error) {
+	result := new(Leaf2)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Leaf2ToJSON(x *Leaf2) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Leaf2)(nil)
+	_ json.Marshaler   = (*Leaf2)(nil)
+)
+
+

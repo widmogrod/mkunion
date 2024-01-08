@@ -7,38 +7,1551 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
+type NumberKindVisitor interface {
+	VisitUInt(v *UInt) any
+	VisitUInt8(v *UInt8) any
+	VisitUInt16(v *UInt16) any
+	VisitUInt32(v *UInt32) any
+	VisitUInt64(v *UInt64) any
+	VisitInt(v *Int) any
+	VisitInt8(v *Int8) any
+	VisitInt16(v *Int16) any
+	VisitInt32(v *Int32) any
+	VisitInt64(v *Int64) any
+	VisitFloat32(v *Float32) any
+	VisitFloat64(v *Float64) any
+}
+
+type NumberKind interface {
+	AcceptNumberKind(g NumberKindVisitor) any
+}
+
+var (
+	_ NumberKind = (*UInt)(nil)
+	_ NumberKind = (*UInt8)(nil)
+	_ NumberKind = (*UInt16)(nil)
+	_ NumberKind = (*UInt32)(nil)
+	_ NumberKind = (*UInt64)(nil)
+	_ NumberKind = (*Int)(nil)
+	_ NumberKind = (*Int8)(nil)
+	_ NumberKind = (*Int16)(nil)
+	_ NumberKind = (*Int32)(nil)
+	_ NumberKind = (*Int64)(nil)
+	_ NumberKind = (*Float32)(nil)
+	_ NumberKind = (*Float64)(nil)
+)
+
+func (r *UInt) AcceptNumberKind(v NumberKindVisitor) any    { return v.VisitUInt(r) }
+func (r *UInt8) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitUInt8(r) }
+func (r *UInt16) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt16(r) }
+func (r *UInt32) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt32(r) }
+func (r *UInt64) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt64(r) }
+func (r *Int) AcceptNumberKind(v NumberKindVisitor) any     { return v.VisitInt(r) }
+func (r *Int8) AcceptNumberKind(v NumberKindVisitor) any    { return v.VisitInt8(r) }
+func (r *Int16) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt16(r) }
+func (r *Int32) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt32(r) }
+func (r *Int64) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt64(r) }
+func (r *Float32) AcceptNumberKind(v NumberKindVisitor) any { return v.VisitFloat32(r) }
+func (r *Float64) AcceptNumberKind(v NumberKindVisitor) any { return v.VisitFloat64(r) }
+
+func MatchNumberKindR3[T0, T1, T2 any](
+	x NumberKind,
+	f1 func(x *UInt) (T0, T1, T2),
+	f2 func(x *UInt8) (T0, T1, T2),
+	f3 func(x *UInt16) (T0, T1, T2),
+	f4 func(x *UInt32) (T0, T1, T2),
+	f5 func(x *UInt64) (T0, T1, T2),
+	f6 func(x *Int) (T0, T1, T2),
+	f7 func(x *Int8) (T0, T1, T2),
+	f8 func(x *Int16) (T0, T1, T2),
+	f9 func(x *Int32) (T0, T1, T2),
+	f10 func(x *Int64) (T0, T1, T2),
+	f11 func(x *Float32) (T0, T1, T2),
+	f12 func(x *Float64) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *UInt:
+		return f1(v)
+	case *UInt8:
+		return f2(v)
+	case *UInt16:
+		return f3(v)
+	case *UInt32:
+		return f4(v)
+	case *UInt64:
+		return f5(v)
+	case *Int:
+		return f6(v)
+	case *Int8:
+		return f7(v)
+	case *Int16:
+		return f8(v)
+	case *Int32:
+		return f9(v)
+	case *Int64:
+		return f10(v)
+	case *Float32:
+		return f11(v)
+	case *Float64:
+		return f12(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchNumberKindR2[T0, T1 any](
+	x NumberKind,
+	f1 func(x *UInt) (T0, T1),
+	f2 func(x *UInt8) (T0, T1),
+	f3 func(x *UInt16) (T0, T1),
+	f4 func(x *UInt32) (T0, T1),
+	f5 func(x *UInt64) (T0, T1),
+	f6 func(x *Int) (T0, T1),
+	f7 func(x *Int8) (T0, T1),
+	f8 func(x *Int16) (T0, T1),
+	f9 func(x *Int32) (T0, T1),
+	f10 func(x *Int64) (T0, T1),
+	f11 func(x *Float32) (T0, T1),
+	f12 func(x *Float64) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *UInt:
+		return f1(v)
+	case *UInt8:
+		return f2(v)
+	case *UInt16:
+		return f3(v)
+	case *UInt32:
+		return f4(v)
+	case *UInt64:
+		return f5(v)
+	case *Int:
+		return f6(v)
+	case *Int8:
+		return f7(v)
+	case *Int16:
+		return f8(v)
+	case *Int32:
+		return f9(v)
+	case *Int64:
+		return f10(v)
+	case *Float32:
+		return f11(v)
+	case *Float64:
+		return f12(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchNumberKindR1[T0 any](
+	x NumberKind,
+	f1 func(x *UInt) T0,
+	f2 func(x *UInt8) T0,
+	f3 func(x *UInt16) T0,
+	f4 func(x *UInt32) T0,
+	f5 func(x *UInt64) T0,
+	f6 func(x *Int) T0,
+	f7 func(x *Int8) T0,
+	f8 func(x *Int16) T0,
+	f9 func(x *Int32) T0,
+	f10 func(x *Int64) T0,
+	f11 func(x *Float32) T0,
+	f12 func(x *Float64) T0,
+) T0 {
+	switch v := x.(type) {
+	case *UInt:
+		return f1(v)
+	case *UInt8:
+		return f2(v)
+	case *UInt16:
+		return f3(v)
+	case *UInt32:
+		return f4(v)
+	case *UInt64:
+		return f5(v)
+	case *Int:
+		return f6(v)
+	case *Int8:
+		return f7(v)
+	case *Int16:
+		return f8(v)
+	case *Int32:
+		return f9(v)
+	case *Int64:
+		return f10(v)
+	case *Float32:
+		return f11(v)
+	case *Float64:
+		return f12(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchNumberKindR0(
+	x NumberKind,
+	f1 func(x *UInt),
+	f2 func(x *UInt8),
+	f3 func(x *UInt16),
+	f4 func(x *UInt32),
+	f5 func(x *UInt64),
+	f6 func(x *Int),
+	f7 func(x *Int8),
+	f8 func(x *Int16),
+	f9 func(x *Int32),
+	f10 func(x *Int64),
+	f11 func(x *Float32),
+	f12 func(x *Float64),
+) {
+	switch v := x.(type) {
+	case *UInt:
+		f1(v)
+	case *UInt8:
+		f2(v)
+	case *UInt16:
+		f3(v)
+	case *UInt32:
+		f4(v)
+	case *UInt64:
+		f5(v)
+	case *Int:
+		f6(v)
+	case *Int8:
+		f7(v)
+	case *Int16:
+		f8(v)
+	case *Int32:
+		f9(v)
+	case *Int64:
+		f10(v)
+	case *Float32:
+		f11(v)
+	case *Float64:
+		f12(v)
+	}
+}
 func init() {
-	Register(ShapeShape())
-	Register(AnyShape())
-	Register(RefNameShape())
-	Register(PointerLikeShape())
-	Register(AliasLikeShape())
-	Register(PrimitiveLikeShape())
-	Register(ListLikeShape())
-	Register(MapLikeShape())
-	Register(StructLikeShape())
-	Register(UnionLikeShape())
-	Register(PrimitiveKindShape())
-	Register(BooleanLikeShape())
-	Register(StringLikeShape())
-	Register(NumberLikeShape())
-	Register(NumberKindShape())
-	Register(UIntShape())
-	Register(UInt8Shape())
-	Register(UInt16Shape())
-	Register(UInt32Shape())
-	Register(UInt64Shape())
-	Register(IntShape())
-	Register(Int8Shape())
-	Register(Int16Shape())
-	Register(Int32Shape())
-	Register(Int64Shape())
-	Register(Float32Shape())
-	Register(Float64Shape())
-	Register(GuardShape())
-	Register(EnumShape())
-	Register(RequiredShape())
-	Register(AndGuardShape())
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberKind", NumberKindFromJSON, NumberKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt", UIntFromJSON, UIntToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt8", UInt8FromJSON, UInt8ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt16", UInt16FromJSON, UInt16ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt32", UInt32FromJSON, UInt32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt64", UInt64FromJSON, UInt64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int", IntFromJSON, IntToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int8", Int8FromJSON, Int8ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int16", Int16FromJSON, Int16ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int32", Int32FromJSON, Int32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int64", Int64FromJSON, Int64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float32", Float32FromJSON, Float32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float64", Float64FromJSON, Float64ToJSON)
+}
+
+type NumberKindUnionJSON struct {
+	Type    string          `json:"$type,omitempty"`
+	UInt    json.RawMessage `json:"shape.UInt,omitempty"`
+	UInt8   json.RawMessage `json:"shape.UInt8,omitempty"`
+	UInt16  json.RawMessage `json:"shape.UInt16,omitempty"`
+	UInt32  json.RawMessage `json:"shape.UInt32,omitempty"`
+	UInt64  json.RawMessage `json:"shape.UInt64,omitempty"`
+	Int     json.RawMessage `json:"shape.Int,omitempty"`
+	Int8    json.RawMessage `json:"shape.Int8,omitempty"`
+	Int16   json.RawMessage `json:"shape.Int16,omitempty"`
+	Int32   json.RawMessage `json:"shape.Int32,omitempty"`
+	Int64   json.RawMessage `json:"shape.Int64,omitempty"`
+	Float32 json.RawMessage `json:"shape.Float32,omitempty"`
+	Float64 json.RawMessage `json:"shape.Float64,omitempty"`
+}
+
+func NumberKindFromJSON(x []byte) (NumberKind, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data NumberKindUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "shape.UInt":
+		return UIntFromJSON(data.UInt)
+	case "shape.UInt8":
+		return UInt8FromJSON(data.UInt8)
+	case "shape.UInt16":
+		return UInt16FromJSON(data.UInt16)
+	case "shape.UInt32":
+		return UInt32FromJSON(data.UInt32)
+	case "shape.UInt64":
+		return UInt64FromJSON(data.UInt64)
+	case "shape.Int":
+		return IntFromJSON(data.Int)
+	case "shape.Int8":
+		return Int8FromJSON(data.Int8)
+	case "shape.Int16":
+		return Int16FromJSON(data.Int16)
+	case "shape.Int32":
+		return Int32FromJSON(data.Int32)
+	case "shape.Int64":
+		return Int64FromJSON(data.Int64)
+	case "shape.Float32":
+		return Float32FromJSON(data.Float32)
+	case "shape.Float64":
+		return Float64FromJSON(data.Float64)
+	}
+
+	if data.UInt != nil {
+		return UIntFromJSON(data.UInt)
+	} else if data.UInt8 != nil {
+		return UInt8FromJSON(data.UInt8)
+	} else if data.UInt16 != nil {
+		return UInt16FromJSON(data.UInt16)
+	} else if data.UInt32 != nil {
+		return UInt32FromJSON(data.UInt32)
+	} else if data.UInt64 != nil {
+		return UInt64FromJSON(data.UInt64)
+	} else if data.Int != nil {
+		return IntFromJSON(data.Int)
+	} else if data.Int8 != nil {
+		return Int8FromJSON(data.Int8)
+	} else if data.Int16 != nil {
+		return Int16FromJSON(data.Int16)
+	} else if data.Int32 != nil {
+		return Int32FromJSON(data.Int32)
+	} else if data.Int64 != nil {
+		return Int64FromJSON(data.Int64)
+	} else if data.Float32 != nil {
+		return Float32FromJSON(data.Float32)
+	} else if data.Float64 != nil {
+		return Float64FromJSON(data.Float64)
+	}
+
+	return nil, fmt.Errorf("shape.NumberKind: unknown type %s", data.Type)
+}
+
+func NumberKindToJSON(x NumberKind) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchNumberKindR2(
+		x,
+		func(x *UInt) ([]byte, error) {
+			body, err := UIntToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type: "shape.UInt",
+				UInt: body,
+			})
+		},
+		func(x *UInt8) ([]byte, error) {
+			body, err := UInt8ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:  "shape.UInt8",
+				UInt8: body,
+			})
+		},
+		func(x *UInt16) ([]byte, error) {
+			body, err := UInt16ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:   "shape.UInt16",
+				UInt16: body,
+			})
+		},
+		func(x *UInt32) ([]byte, error) {
+			body, err := UInt32ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:   "shape.UInt32",
+				UInt32: body,
+			})
+		},
+		func(x *UInt64) ([]byte, error) {
+			body, err := UInt64ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:   "shape.UInt64",
+				UInt64: body,
+			})
+		},
+		func(x *Int) ([]byte, error) {
+			body, err := IntToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type: "shape.Int",
+				Int:  body,
+			})
+		},
+		func(x *Int8) ([]byte, error) {
+			body, err := Int8ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type: "shape.Int8",
+				Int8: body,
+			})
+		},
+		func(x *Int16) ([]byte, error) {
+			body, err := Int16ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:  "shape.Int16",
+				Int16: body,
+			})
+		},
+		func(x *Int32) ([]byte, error) {
+			body, err := Int32ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:  "shape.Int32",
+				Int32: body,
+			})
+		},
+		func(x *Int64) ([]byte, error) {
+			body, err := Int64ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:  "shape.Int64",
+				Int64: body,
+			})
+		},
+		func(x *Float32) ([]byte, error) {
+			body, err := Float32ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:    "shape.Float32",
+				Float32: body,
+			})
+		},
+		func(x *Float64) ([]byte, error) {
+			body, err := Float64ToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(NumberKindUnionJSON{
+				Type:    "shape.Float64",
+				Float64: body,
+			})
+		},
+	)
+}
+
+func UIntFromJSON(x []byte) (*UInt, error) {
+	result := new(UInt)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func UIntToJSON(x *UInt) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*UInt)(nil)
+	_ json.Marshaler   = (*UInt)(nil)
+)
+
+func (r *UInt) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONUInt(*r)
+}
+func (r *UInt) _marshalJSONUInt(x UInt) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UInt._marshalJSONUInt: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *UInt) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONUInt(data)
+	if err != nil {
+		return fmt.Errorf("shape: UInt.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *UInt) _unmarshalJSONUInt(data []byte) (UInt, error) {
+	result := UInt{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: UInt._unmarshalJSONUInt: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func UInt8FromJSON(x []byte) (*UInt8, error) {
+	result := new(UInt8)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func UInt8ToJSON(x *UInt8) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*UInt8)(nil)
+	_ json.Marshaler   = (*UInt8)(nil)
+)
+
+func (r *UInt8) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONUInt8(*r)
+}
+func (r *UInt8) _marshalJSONUInt8(x UInt8) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UInt8._marshalJSONUInt8: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *UInt8) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONUInt8(data)
+	if err != nil {
+		return fmt.Errorf("shape: UInt8.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *UInt8) _unmarshalJSONUInt8(data []byte) (UInt8, error) {
+	result := UInt8{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: UInt8._unmarshalJSONUInt8: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func UInt16FromJSON(x []byte) (*UInt16, error) {
+	result := new(UInt16)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func UInt16ToJSON(x *UInt16) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*UInt16)(nil)
+	_ json.Marshaler   = (*UInt16)(nil)
+)
+
+func (r *UInt16) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONUInt16(*r)
+}
+func (r *UInt16) _marshalJSONUInt16(x UInt16) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UInt16._marshalJSONUInt16: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *UInt16) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONUInt16(data)
+	if err != nil {
+		return fmt.Errorf("shape: UInt16.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *UInt16) _unmarshalJSONUInt16(data []byte) (UInt16, error) {
+	result := UInt16{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: UInt16._unmarshalJSONUInt16: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func UInt32FromJSON(x []byte) (*UInt32, error) {
+	result := new(UInt32)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func UInt32ToJSON(x *UInt32) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*UInt32)(nil)
+	_ json.Marshaler   = (*UInt32)(nil)
+)
+
+func (r *UInt32) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONUInt32(*r)
+}
+func (r *UInt32) _marshalJSONUInt32(x UInt32) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UInt32._marshalJSONUInt32: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *UInt32) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONUInt32(data)
+	if err != nil {
+		return fmt.Errorf("shape: UInt32.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *UInt32) _unmarshalJSONUInt32(data []byte) (UInt32, error) {
+	result := UInt32{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: UInt32._unmarshalJSONUInt32: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func UInt64FromJSON(x []byte) (*UInt64, error) {
+	result := new(UInt64)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func UInt64ToJSON(x *UInt64) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*UInt64)(nil)
+	_ json.Marshaler   = (*UInt64)(nil)
+)
+
+func (r *UInt64) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONUInt64(*r)
+}
+func (r *UInt64) _marshalJSONUInt64(x UInt64) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UInt64._marshalJSONUInt64: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *UInt64) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONUInt64(data)
+	if err != nil {
+		return fmt.Errorf("shape: UInt64.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *UInt64) _unmarshalJSONUInt64(data []byte) (UInt64, error) {
+	result := UInt64{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: UInt64._unmarshalJSONUInt64: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func IntFromJSON(x []byte) (*Int, error) {
+	result := new(Int)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func IntToJSON(x *Int) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Int)(nil)
+	_ json.Marshaler   = (*Int)(nil)
+)
+
+func (r *Int) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONInt(*r)
+}
+func (r *Int) _marshalJSONInt(x Int) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Int._marshalJSONInt: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Int) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONInt(data)
+	if err != nil {
+		return fmt.Errorf("shape: Int.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Int) _unmarshalJSONInt(data []byte) (Int, error) {
+	result := Int{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Int._unmarshalJSONInt: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func Int8FromJSON(x []byte) (*Int8, error) {
+	result := new(Int8)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Int8ToJSON(x *Int8) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Int8)(nil)
+	_ json.Marshaler   = (*Int8)(nil)
+)
+
+func (r *Int8) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONInt8(*r)
+}
+func (r *Int8) _marshalJSONInt8(x Int8) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Int8._marshalJSONInt8: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Int8) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONInt8(data)
+	if err != nil {
+		return fmt.Errorf("shape: Int8.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Int8) _unmarshalJSONInt8(data []byte) (Int8, error) {
+	result := Int8{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Int8._unmarshalJSONInt8: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func Int16FromJSON(x []byte) (*Int16, error) {
+	result := new(Int16)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Int16ToJSON(x *Int16) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Int16)(nil)
+	_ json.Marshaler   = (*Int16)(nil)
+)
+
+func (r *Int16) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONInt16(*r)
+}
+func (r *Int16) _marshalJSONInt16(x Int16) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Int16._marshalJSONInt16: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Int16) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONInt16(data)
+	if err != nil {
+		return fmt.Errorf("shape: Int16.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Int16) _unmarshalJSONInt16(data []byte) (Int16, error) {
+	result := Int16{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Int16._unmarshalJSONInt16: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func Int32FromJSON(x []byte) (*Int32, error) {
+	result := new(Int32)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Int32ToJSON(x *Int32) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Int32)(nil)
+	_ json.Marshaler   = (*Int32)(nil)
+)
+
+func (r *Int32) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONInt32(*r)
+}
+func (r *Int32) _marshalJSONInt32(x Int32) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Int32._marshalJSONInt32: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Int32) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONInt32(data)
+	if err != nil {
+		return fmt.Errorf("shape: Int32.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Int32) _unmarshalJSONInt32(data []byte) (Int32, error) {
+	result := Int32{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Int32._unmarshalJSONInt32: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func Int64FromJSON(x []byte) (*Int64, error) {
+	result := new(Int64)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Int64ToJSON(x *Int64) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Int64)(nil)
+	_ json.Marshaler   = (*Int64)(nil)
+)
+
+func (r *Int64) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONInt64(*r)
+}
+func (r *Int64) _marshalJSONInt64(x Int64) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Int64._marshalJSONInt64: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Int64) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONInt64(data)
+	if err != nil {
+		return fmt.Errorf("shape: Int64.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Int64) _unmarshalJSONInt64(data []byte) (Int64, error) {
+	result := Int64{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Int64._unmarshalJSONInt64: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func Float32FromJSON(x []byte) (*Float32, error) {
+	result := new(Float32)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Float32ToJSON(x *Float32) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Float32)(nil)
+	_ json.Marshaler   = (*Float32)(nil)
+)
+
+func (r *Float32) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONFloat32(*r)
+}
+func (r *Float32) _marshalJSONFloat32(x Float32) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Float32._marshalJSONFloat32: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Float32) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONFloat32(data)
+	if err != nil {
+		return fmt.Errorf("shape: Float32.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Float32) _unmarshalJSONFloat32(data []byte) (Float32, error) {
+	result := Float32{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Float32._unmarshalJSONFloat32: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func Float64FromJSON(x []byte) (*Float64, error) {
+	result := new(Float64)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Float64ToJSON(x *Float64) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Float64)(nil)
+	_ json.Marshaler   = (*Float64)(nil)
+)
+
+func (r *Float64) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONFloat64(*r)
+}
+func (r *Float64) _marshalJSONFloat64(x Float64) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Float64._marshalJSONFloat64: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Float64) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONFloat64(data)
+	if err != nil {
+		return fmt.Errorf("shape: Float64.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Float64) _unmarshalJSONFloat64(data []byte) (Float64, error) {
+	result := Float64{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Float64._unmarshalJSONFloat64: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+type GuardVisitor interface {
+	VisitEnum(v *Enum) any
+	VisitRequired(v *Required) any
+	VisitAndGuard(v *AndGuard) any
+}
+
+type Guard interface {
+	AcceptGuard(g GuardVisitor) any
+}
+
+var (
+	_ Guard = (*Enum)(nil)
+	_ Guard = (*Required)(nil)
+	_ Guard = (*AndGuard)(nil)
+)
+
+func (r *Enum) AcceptGuard(v GuardVisitor) any     { return v.VisitEnum(r) }
+func (r *Required) AcceptGuard(v GuardVisitor) any { return v.VisitRequired(r) }
+func (r *AndGuard) AcceptGuard(v GuardVisitor) any { return v.VisitAndGuard(r) }
+
+func MatchGuardR3[T0, T1, T2 any](
+	x Guard,
+	f1 func(x *Enum) (T0, T1, T2),
+	f2 func(x *Required) (T0, T1, T2),
+	f3 func(x *AndGuard) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *Enum:
+		return f1(v)
+	case *Required:
+		return f2(v)
+	case *AndGuard:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchGuardR2[T0, T1 any](
+	x Guard,
+	f1 func(x *Enum) (T0, T1),
+	f2 func(x *Required) (T0, T1),
+	f3 func(x *AndGuard) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *Enum:
+		return f1(v)
+	case *Required:
+		return f2(v)
+	case *AndGuard:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchGuardR1[T0 any](
+	x Guard,
+	f1 func(x *Enum) T0,
+	f2 func(x *Required) T0,
+	f3 func(x *AndGuard) T0,
+) T0 {
+	switch v := x.(type) {
+	case *Enum:
+		return f1(v)
+	case *Required:
+		return f2(v)
+	case *AndGuard:
+		return f3(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchGuardR0(
+	x Guard,
+	f1 func(x *Enum),
+	f2 func(x *Required),
+	f3 func(x *AndGuard),
+) {
+	switch v := x.(type) {
+	case *Enum:
+		f1(v)
+	case *Required:
+		f2(v)
+	case *AndGuard:
+		f3(v)
+	}
+}
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AndGuard", AndGuardFromJSON, AndGuardToJSON)
+}
+
+type GuardUnionJSON struct {
+	Type     string          `json:"$type,omitempty"`
+	Enum     json.RawMessage `json:"shape.Enum,omitempty"`
+	Required json.RawMessage `json:"shape.Required,omitempty"`
+	AndGuard json.RawMessage `json:"shape.AndGuard,omitempty"`
+}
+
+func GuardFromJSON(x []byte) (Guard, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data GuardUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "shape.Enum":
+		return EnumFromJSON(data.Enum)
+	case "shape.Required":
+		return RequiredFromJSON(data.Required)
+	case "shape.AndGuard":
+		return AndGuardFromJSON(data.AndGuard)
+	}
+
+	if data.Enum != nil {
+		return EnumFromJSON(data.Enum)
+	} else if data.Required != nil {
+		return RequiredFromJSON(data.Required)
+	} else if data.AndGuard != nil {
+		return AndGuardFromJSON(data.AndGuard)
+	}
+
+	return nil, fmt.Errorf("shape.Guard: unknown type %s", data.Type)
+}
+
+func GuardToJSON(x Guard) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchGuardR2(
+		x,
+		func(x *Enum) ([]byte, error) {
+			body, err := EnumToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type: "shape.Enum",
+				Enum: body,
+			})
+		},
+		func(x *Required) ([]byte, error) {
+			body, err := RequiredToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type:     "shape.Required",
+				Required: body,
+			})
+		},
+		func(x *AndGuard) ([]byte, error) {
+			body, err := AndGuardToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type:     "shape.AndGuard",
+				AndGuard: body,
+			})
+		},
+	)
+}
+
+func EnumFromJSON(x []byte) (*Enum, error) {
+	result := new(Enum)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func EnumToJSON(x *Enum) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Enum)(nil)
+	_ json.Marshaler   = (*Enum)(nil)
+)
+
+func (r *Enum) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONEnum(*r)
+}
+func (r *Enum) _marshalJSONEnum(x Enum) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldVal []byte
+	fieldVal, err = r._marshalJSONSlicestring(x.Val)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: field name Val; %w", err)
+	}
+	partial["Val"] = fieldVal
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Enum) _marshalJSONSlicestring(x []string) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONstring(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Enum) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Enum) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONEnum(data)
+	if err != nil {
+		return fmt.Errorf("shape: Enum.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Enum) _unmarshalJSONEnum(data []byte) (Enum, error) {
+	result := Enum{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: native struct unwrap; %w", err)
+	}
+	if fieldVal, ok := partial["Val"]; ok {
+		result.Val, err = r._unmarshalJSONSlicestring(fieldVal)
+		if err != nil {
+			return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: field Val; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Enum) _unmarshalJSONSlicestring(data []byte) ([]string, error) {
+	result := make([]string, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONstring(v)
+		if err != nil {
+			return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *Enum) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("shape: Enum._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func RequiredFromJSON(x []byte) (*Required, error) {
+	result := new(Required)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func RequiredToJSON(x *Required) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Required)(nil)
+	_ json.Marshaler   = (*Required)(nil)
+)
+
+func (r *Required) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONRequired(*r)
+}
+func (r *Required) _marshalJSONRequired(x Required) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Required._marshalJSONRequired: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Required) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONRequired(data)
+	if err != nil {
+		return fmt.Errorf("shape: Required.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Required) _unmarshalJSONRequired(data []byte) (Required, error) {
+	result := Required{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Required._unmarshalJSONRequired: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func AndGuardFromJSON(x []byte) (*AndGuard, error) {
+	result := new(AndGuard)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func AndGuardToJSON(x *AndGuard) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*AndGuard)(nil)
+	_ json.Marshaler   = (*AndGuard)(nil)
+)
+
+func (r *AndGuard) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONAndGuard(*r)
+}
+func (r *AndGuard) _marshalJSONAndGuard(x AndGuard) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldL []byte
+	fieldL, err = r._marshalJSONSliceGuard(x.L)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: field name L; %w", err)
+	}
+	partial["L"] = fieldL
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *AndGuard) _marshalJSONSliceGuard(x []Guard) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONGuard(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard:; %w", err)
+	}
+	return result, nil
+}
+func (r *AndGuard) _marshalJSONGuard(x Guard) ([]byte, error) {
+	result, err := shared.JSONMarshal[Guard](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONGuard:; %w", err)
+	}
+	return result, nil
+}
+func (r *AndGuard) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONAndGuard(data)
+	if err != nil {
+		return fmt.Errorf("shape: AndGuard.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *AndGuard) _unmarshalJSONAndGuard(data []byte) (AndGuard, error) {
+	result := AndGuard{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: native struct unwrap; %w", err)
+	}
+	if fieldL, ok := partial["L"]; ok {
+		result.L, err = r._unmarshalJSONSliceGuard(fieldL)
+		if err != nil {
+			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: field L; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *AndGuard) _unmarshalJSONSliceGuard(data []byte) ([]Guard, error) {
+	result := make([]Guard, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONGuard(v)
+		if err != nil {
+			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *AndGuard) _unmarshalJSONGuard(data []byte) (Guard, error) {
+	result, err := shared.JSONUnmarshal[Guard](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONGuard: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
 
 type ShapeVisitor interface {
@@ -221,296 +1734,6 @@ func MatchShapeR0(
 		f8(v)
 	case *UnionLike:
 		f9(v)
-	}
-}
-
-func ShapeShape() Shape {
-	return &UnionLike{
-		Name:          "Shape",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Variant: []Shape{
-			AnyShape(),
-			RefNameShape(),
-			PointerLikeShape(),
-			AliasLikeShape(),
-			PrimitiveLikeShape(),
-			ListLikeShape(),
-			MapLikeShape(),
-			StructLikeShape(),
-			UnionLikeShape(),
-		},
-	}
-}
-
-func AnyShape() Shape {
-	return &StructLike{
-		Name:          "Any",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func RefNameShape() Shape {
-	return &StructLike{
-		Name:          "RefName",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Name",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgImportName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "Indexed",
-				Type: &ListLike{
-					Element: &RefName{
-						Name:          "Shape",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
-				},
-			},
-		},
-	}
-}
-
-func PointerLikeShape() Shape {
-	return &StructLike{
-		Name:          "PointerLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Type",
-				Type: &RefName{
-					Name:          "Shape",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-		},
-	}
-}
-
-func AliasLikeShape() Shape {
-	return &StructLike{
-		Name:          "AliasLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Name",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgImportName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "IsAlias",
-				Type: &PrimitiveLike{Kind: &BooleanLike{}},
-			},
-			{
-				Name: "Type",
-				Type: &RefName{
-					Name:          "Shape",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-			{
-				Name: "Tags",
-				Type: &MapLike{
-					Key: &PrimitiveLike{Kind: &StringLike{}},
-					Val: &RefName{
-						Name:          "Tag",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
-				},
-			},
-		},
-	}
-}
-
-func PrimitiveLikeShape() Shape {
-	return &StructLike{
-		Name:          "PrimitiveLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Kind",
-				Type: &RefName{
-					Name:          "PrimitiveKind",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-		},
-	}
-}
-
-func ListLikeShape() Shape {
-	return &StructLike{
-		Name:          "ListLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Element",
-				Type: &RefName{
-					Name:          "Shape",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-			{
-				Name: "ArrayLen",
-				Type: &PointerLike{
-					Type: &PrimitiveLike{
-						Kind: &NumberLike{},
-					},
-				},
-			},
-		},
-	}
-}
-
-func MapLikeShape() Shape {
-	return &StructLike{
-		Name:          "MapLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Key",
-				Type: &RefName{
-					Name:          "Shape",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-			{
-				Name: "Val",
-				Type: &RefName{
-					Name:          "Shape",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-		},
-	}
-}
-
-func StructLikeShape() Shape {
-	return &StructLike{
-		Name:          "StructLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Name",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgImportName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "TypeParams",
-				Type: &ListLike{
-					Element: &RefName{
-						Name:          "TypeParam",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
-				},
-			},
-			{
-				Name: "Fields",
-				Type: &ListLike{
-					Element: &PointerLike{
-						Type: &RefName{
-							Name:          "FieldLike",
-							PkgName:       "shape",
-							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-						},
-					},
-				},
-			},
-			{
-				Name: "Tags",
-				Type: &MapLike{
-					Key: &PrimitiveLike{Kind: &StringLike{}},
-					Val: &RefName{
-						Name:          "Tag",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
-				},
-			},
-		},
-	}
-}
-
-func UnionLikeShape() Shape {
-	return &StructLike{
-		Name:          "UnionLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Name",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "PkgImportName",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "Variant",
-				Type: &ListLike{
-					Element: &RefName{
-						Name:          "Shape",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
-				},
-			},
-			{
-				Name: "Tags",
-				Type: &MapLike{
-					Key: &PrimitiveLike{Kind: &StringLike{}},
-					Val: &RefName{
-						Name:          "Tag",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
-				},
-			},
-		},
 	}
 }
 func init() {
@@ -2110,53 +3333,6 @@ func MatchPrimitiveKindR0(
 		f3(v)
 	}
 }
-
-func PrimitiveKindShape() Shape {
-	return &UnionLike{
-		Name:          "PrimitiveKind",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Variant: []Shape{
-			BooleanLikeShape(),
-			StringLikeShape(),
-			NumberLikeShape(),
-		},
-	}
-}
-
-func BooleanLikeShape() Shape {
-	return &StructLike{
-		Name:          "BooleanLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func StringLikeShape() Shape {
-	return &StructLike{
-		Name:          "StringLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func NumberLikeShape() Shape {
-	return &StructLike{
-		Name:          "NumberLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Kind",
-				Type: &RefName{
-					Name:          "NumberKind",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-				},
-			},
-		},
-	}
-}
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveKind", PrimitiveKindFromJSON, PrimitiveKindToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.BooleanLike", BooleanLikeFromJSON, BooleanLikeToJSON)
@@ -2425,1728 +3601,6 @@ func (r *NumberLike) _unmarshalJSONNumberKind(data []byte) (NumberKind, error) {
 	result, err := shared.JSONUnmarshal[NumberKind](data)
 	if err != nil {
 		return result, fmt.Errorf("shape: NumberLike._unmarshalJSONNumberKind: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-type NumberKindVisitor interface {
-	VisitUInt(v *UInt) any
-	VisitUInt8(v *UInt8) any
-	VisitUInt16(v *UInt16) any
-	VisitUInt32(v *UInt32) any
-	VisitUInt64(v *UInt64) any
-	VisitInt(v *Int) any
-	VisitInt8(v *Int8) any
-	VisitInt16(v *Int16) any
-	VisitInt32(v *Int32) any
-	VisitInt64(v *Int64) any
-	VisitFloat32(v *Float32) any
-	VisitFloat64(v *Float64) any
-}
-
-type NumberKind interface {
-	AcceptNumberKind(g NumberKindVisitor) any
-}
-
-var (
-	_ NumberKind = (*UInt)(nil)
-	_ NumberKind = (*UInt8)(nil)
-	_ NumberKind = (*UInt16)(nil)
-	_ NumberKind = (*UInt32)(nil)
-	_ NumberKind = (*UInt64)(nil)
-	_ NumberKind = (*Int)(nil)
-	_ NumberKind = (*Int8)(nil)
-	_ NumberKind = (*Int16)(nil)
-	_ NumberKind = (*Int32)(nil)
-	_ NumberKind = (*Int64)(nil)
-	_ NumberKind = (*Float32)(nil)
-	_ NumberKind = (*Float64)(nil)
-)
-
-func (r *UInt) AcceptNumberKind(v NumberKindVisitor) any    { return v.VisitUInt(r) }
-func (r *UInt8) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitUInt8(r) }
-func (r *UInt16) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt16(r) }
-func (r *UInt32) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt32(r) }
-func (r *UInt64) AcceptNumberKind(v NumberKindVisitor) any  { return v.VisitUInt64(r) }
-func (r *Int) AcceptNumberKind(v NumberKindVisitor) any     { return v.VisitInt(r) }
-func (r *Int8) AcceptNumberKind(v NumberKindVisitor) any    { return v.VisitInt8(r) }
-func (r *Int16) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt16(r) }
-func (r *Int32) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt32(r) }
-func (r *Int64) AcceptNumberKind(v NumberKindVisitor) any   { return v.VisitInt64(r) }
-func (r *Float32) AcceptNumberKind(v NumberKindVisitor) any { return v.VisitFloat32(r) }
-func (r *Float64) AcceptNumberKind(v NumberKindVisitor) any { return v.VisitFloat64(r) }
-
-func MatchNumberKindR3[T0, T1, T2 any](
-	x NumberKind,
-	f1 func(x *UInt) (T0, T1, T2),
-	f2 func(x *UInt8) (T0, T1, T2),
-	f3 func(x *UInt16) (T0, T1, T2),
-	f4 func(x *UInt32) (T0, T1, T2),
-	f5 func(x *UInt64) (T0, T1, T2),
-	f6 func(x *Int) (T0, T1, T2),
-	f7 func(x *Int8) (T0, T1, T2),
-	f8 func(x *Int16) (T0, T1, T2),
-	f9 func(x *Int32) (T0, T1, T2),
-	f10 func(x *Int64) (T0, T1, T2),
-	f11 func(x *Float32) (T0, T1, T2),
-	f12 func(x *Float64) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *UInt:
-		return f1(v)
-	case *UInt8:
-		return f2(v)
-	case *UInt16:
-		return f3(v)
-	case *UInt32:
-		return f4(v)
-	case *UInt64:
-		return f5(v)
-	case *Int:
-		return f6(v)
-	case *Int8:
-		return f7(v)
-	case *Int16:
-		return f8(v)
-	case *Int32:
-		return f9(v)
-	case *Int64:
-		return f10(v)
-	case *Float32:
-		return f11(v)
-	case *Float64:
-		return f12(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchNumberKindR2[T0, T1 any](
-	x NumberKind,
-	f1 func(x *UInt) (T0, T1),
-	f2 func(x *UInt8) (T0, T1),
-	f3 func(x *UInt16) (T0, T1),
-	f4 func(x *UInt32) (T0, T1),
-	f5 func(x *UInt64) (T0, T1),
-	f6 func(x *Int) (T0, T1),
-	f7 func(x *Int8) (T0, T1),
-	f8 func(x *Int16) (T0, T1),
-	f9 func(x *Int32) (T0, T1),
-	f10 func(x *Int64) (T0, T1),
-	f11 func(x *Float32) (T0, T1),
-	f12 func(x *Float64) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *UInt:
-		return f1(v)
-	case *UInt8:
-		return f2(v)
-	case *UInt16:
-		return f3(v)
-	case *UInt32:
-		return f4(v)
-	case *UInt64:
-		return f5(v)
-	case *Int:
-		return f6(v)
-	case *Int8:
-		return f7(v)
-	case *Int16:
-		return f8(v)
-	case *Int32:
-		return f9(v)
-	case *Int64:
-		return f10(v)
-	case *Float32:
-		return f11(v)
-	case *Float64:
-		return f12(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchNumberKindR1[T0 any](
-	x NumberKind,
-	f1 func(x *UInt) T0,
-	f2 func(x *UInt8) T0,
-	f3 func(x *UInt16) T0,
-	f4 func(x *UInt32) T0,
-	f5 func(x *UInt64) T0,
-	f6 func(x *Int) T0,
-	f7 func(x *Int8) T0,
-	f8 func(x *Int16) T0,
-	f9 func(x *Int32) T0,
-	f10 func(x *Int64) T0,
-	f11 func(x *Float32) T0,
-	f12 func(x *Float64) T0,
-) T0 {
-	switch v := x.(type) {
-	case *UInt:
-		return f1(v)
-	case *UInt8:
-		return f2(v)
-	case *UInt16:
-		return f3(v)
-	case *UInt32:
-		return f4(v)
-	case *UInt64:
-		return f5(v)
-	case *Int:
-		return f6(v)
-	case *Int8:
-		return f7(v)
-	case *Int16:
-		return f8(v)
-	case *Int32:
-		return f9(v)
-	case *Int64:
-		return f10(v)
-	case *Float32:
-		return f11(v)
-	case *Float64:
-		return f12(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchNumberKindR0(
-	x NumberKind,
-	f1 func(x *UInt),
-	f2 func(x *UInt8),
-	f3 func(x *UInt16),
-	f4 func(x *UInt32),
-	f5 func(x *UInt64),
-	f6 func(x *Int),
-	f7 func(x *Int8),
-	f8 func(x *Int16),
-	f9 func(x *Int32),
-	f10 func(x *Int64),
-	f11 func(x *Float32),
-	f12 func(x *Float64),
-) {
-	switch v := x.(type) {
-	case *UInt:
-		f1(v)
-	case *UInt8:
-		f2(v)
-	case *UInt16:
-		f3(v)
-	case *UInt32:
-		f4(v)
-	case *UInt64:
-		f5(v)
-	case *Int:
-		f6(v)
-	case *Int8:
-		f7(v)
-	case *Int16:
-		f8(v)
-	case *Int32:
-		f9(v)
-	case *Int64:
-		f10(v)
-	case *Float32:
-		f11(v)
-	case *Float64:
-		f12(v)
-	}
-}
-
-func NumberKindShape() Shape {
-	return &UnionLike{
-		Name:          "NumberKind",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Variant: []Shape{
-			UIntShape(),
-			UInt8Shape(),
-			UInt16Shape(),
-			UInt32Shape(),
-			UInt64Shape(),
-			IntShape(),
-			Int8Shape(),
-			Int16Shape(),
-			Int32Shape(),
-			Int64Shape(),
-			Float32Shape(),
-			Float64Shape(),
-		},
-	}
-}
-
-func UIntShape() Shape {
-	return &StructLike{
-		Name:          "UInt",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func UInt8Shape() Shape {
-	return &StructLike{
-		Name:          "UInt8",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func UInt16Shape() Shape {
-	return &StructLike{
-		Name:          "UInt16",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func UInt32Shape() Shape {
-	return &StructLike{
-		Name:          "UInt32",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func UInt64Shape() Shape {
-	return &StructLike{
-		Name:          "UInt64",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func IntShape() Shape {
-	return &StructLike{
-		Name:          "Int",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func Int8Shape() Shape {
-	return &StructLike{
-		Name:          "Int8",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func Int16Shape() Shape {
-	return &StructLike{
-		Name:          "Int16",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func Int32Shape() Shape {
-	return &StructLike{
-		Name:          "Int32",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func Int64Shape() Shape {
-	return &StructLike{
-		Name:          "Int64",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func Float32Shape() Shape {
-	return &StructLike{
-		Name:          "Float32",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func Float64Shape() Shape {
-	return &StructLike{
-		Name:          "Float64",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberKind", NumberKindFromJSON, NumberKindToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt", UIntFromJSON, UIntToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt8", UInt8FromJSON, UInt8ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt16", UInt16FromJSON, UInt16ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt32", UInt32FromJSON, UInt32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt64", UInt64FromJSON, UInt64ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int", IntFromJSON, IntToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int8", Int8FromJSON, Int8ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int16", Int16FromJSON, Int16ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int32", Int32FromJSON, Int32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int64", Int64FromJSON, Int64ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float32", Float32FromJSON, Float32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float64", Float64FromJSON, Float64ToJSON)
-}
-
-type NumberKindUnionJSON struct {
-	Type    string          `json:"$type,omitempty"`
-	UInt    json.RawMessage `json:"shape.UInt,omitempty"`
-	UInt8   json.RawMessage `json:"shape.UInt8,omitempty"`
-	UInt16  json.RawMessage `json:"shape.UInt16,omitempty"`
-	UInt32  json.RawMessage `json:"shape.UInt32,omitempty"`
-	UInt64  json.RawMessage `json:"shape.UInt64,omitempty"`
-	Int     json.RawMessage `json:"shape.Int,omitempty"`
-	Int8    json.RawMessage `json:"shape.Int8,omitempty"`
-	Int16   json.RawMessage `json:"shape.Int16,omitempty"`
-	Int32   json.RawMessage `json:"shape.Int32,omitempty"`
-	Int64   json.RawMessage `json:"shape.Int64,omitempty"`
-	Float32 json.RawMessage `json:"shape.Float32,omitempty"`
-	Float64 json.RawMessage `json:"shape.Float64,omitempty"`
-}
-
-func NumberKindFromJSON(x []byte) (NumberKind, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data NumberKindUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "shape.UInt":
-		return UIntFromJSON(data.UInt)
-	case "shape.UInt8":
-		return UInt8FromJSON(data.UInt8)
-	case "shape.UInt16":
-		return UInt16FromJSON(data.UInt16)
-	case "shape.UInt32":
-		return UInt32FromJSON(data.UInt32)
-	case "shape.UInt64":
-		return UInt64FromJSON(data.UInt64)
-	case "shape.Int":
-		return IntFromJSON(data.Int)
-	case "shape.Int8":
-		return Int8FromJSON(data.Int8)
-	case "shape.Int16":
-		return Int16FromJSON(data.Int16)
-	case "shape.Int32":
-		return Int32FromJSON(data.Int32)
-	case "shape.Int64":
-		return Int64FromJSON(data.Int64)
-	case "shape.Float32":
-		return Float32FromJSON(data.Float32)
-	case "shape.Float64":
-		return Float64FromJSON(data.Float64)
-	}
-
-	if data.UInt != nil {
-		return UIntFromJSON(data.UInt)
-	} else if data.UInt8 != nil {
-		return UInt8FromJSON(data.UInt8)
-	} else if data.UInt16 != nil {
-		return UInt16FromJSON(data.UInt16)
-	} else if data.UInt32 != nil {
-		return UInt32FromJSON(data.UInt32)
-	} else if data.UInt64 != nil {
-		return UInt64FromJSON(data.UInt64)
-	} else if data.Int != nil {
-		return IntFromJSON(data.Int)
-	} else if data.Int8 != nil {
-		return Int8FromJSON(data.Int8)
-	} else if data.Int16 != nil {
-		return Int16FromJSON(data.Int16)
-	} else if data.Int32 != nil {
-		return Int32FromJSON(data.Int32)
-	} else if data.Int64 != nil {
-		return Int64FromJSON(data.Int64)
-	} else if data.Float32 != nil {
-		return Float32FromJSON(data.Float32)
-	} else if data.Float64 != nil {
-		return Float64FromJSON(data.Float64)
-	}
-
-	return nil, fmt.Errorf("shape.NumberKind: unknown type %s", data.Type)
-}
-
-func NumberKindToJSON(x NumberKind) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchNumberKindR2(
-		x,
-		func(x *UInt) ([]byte, error) {
-			body, err := UIntToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type: "shape.UInt",
-				UInt: body,
-			})
-		},
-		func(x *UInt8) ([]byte, error) {
-			body, err := UInt8ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:  "shape.UInt8",
-				UInt8: body,
-			})
-		},
-		func(x *UInt16) ([]byte, error) {
-			body, err := UInt16ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:   "shape.UInt16",
-				UInt16: body,
-			})
-		},
-		func(x *UInt32) ([]byte, error) {
-			body, err := UInt32ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:   "shape.UInt32",
-				UInt32: body,
-			})
-		},
-		func(x *UInt64) ([]byte, error) {
-			body, err := UInt64ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:   "shape.UInt64",
-				UInt64: body,
-			})
-		},
-		func(x *Int) ([]byte, error) {
-			body, err := IntToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type: "shape.Int",
-				Int:  body,
-			})
-		},
-		func(x *Int8) ([]byte, error) {
-			body, err := Int8ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type: "shape.Int8",
-				Int8: body,
-			})
-		},
-		func(x *Int16) ([]byte, error) {
-			body, err := Int16ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:  "shape.Int16",
-				Int16: body,
-			})
-		},
-		func(x *Int32) ([]byte, error) {
-			body, err := Int32ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:  "shape.Int32",
-				Int32: body,
-			})
-		},
-		func(x *Int64) ([]byte, error) {
-			body, err := Int64ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:  "shape.Int64",
-				Int64: body,
-			})
-		},
-		func(x *Float32) ([]byte, error) {
-			body, err := Float32ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:    "shape.Float32",
-				Float32: body,
-			})
-		},
-		func(x *Float64) ([]byte, error) {
-			body, err := Float64ToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(NumberKindUnionJSON{
-				Type:    "shape.Float64",
-				Float64: body,
-			})
-		},
-	)
-}
-
-func UIntFromJSON(x []byte) (*UInt, error) {
-	result := new(UInt)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func UIntToJSON(x *UInt) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*UInt)(nil)
-	_ json.Marshaler   = (*UInt)(nil)
-)
-
-func (r *UInt) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONUInt(*r)
-}
-func (r *UInt) _marshalJSONUInt(x UInt) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt._marshalJSONUInt: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *UInt) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONUInt(data)
-	if err != nil {
-		return fmt.Errorf("shape: UInt.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *UInt) _unmarshalJSONUInt(data []byte) (UInt, error) {
-	result := UInt{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: UInt._unmarshalJSONUInt: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func UInt8FromJSON(x []byte) (*UInt8, error) {
-	result := new(UInt8)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func UInt8ToJSON(x *UInt8) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*UInt8)(nil)
-	_ json.Marshaler   = (*UInt8)(nil)
-)
-
-func (r *UInt8) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONUInt8(*r)
-}
-func (r *UInt8) _marshalJSONUInt8(x UInt8) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt8._marshalJSONUInt8: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *UInt8) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONUInt8(data)
-	if err != nil {
-		return fmt.Errorf("shape: UInt8.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *UInt8) _unmarshalJSONUInt8(data []byte) (UInt8, error) {
-	result := UInt8{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: UInt8._unmarshalJSONUInt8: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func UInt16FromJSON(x []byte) (*UInt16, error) {
-	result := new(UInt16)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func UInt16ToJSON(x *UInt16) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*UInt16)(nil)
-	_ json.Marshaler   = (*UInt16)(nil)
-)
-
-func (r *UInt16) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONUInt16(*r)
-}
-func (r *UInt16) _marshalJSONUInt16(x UInt16) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt16._marshalJSONUInt16: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *UInt16) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONUInt16(data)
-	if err != nil {
-		return fmt.Errorf("shape: UInt16.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *UInt16) _unmarshalJSONUInt16(data []byte) (UInt16, error) {
-	result := UInt16{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: UInt16._unmarshalJSONUInt16: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func UInt32FromJSON(x []byte) (*UInt32, error) {
-	result := new(UInt32)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func UInt32ToJSON(x *UInt32) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*UInt32)(nil)
-	_ json.Marshaler   = (*UInt32)(nil)
-)
-
-func (r *UInt32) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONUInt32(*r)
-}
-func (r *UInt32) _marshalJSONUInt32(x UInt32) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt32._marshalJSONUInt32: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *UInt32) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONUInt32(data)
-	if err != nil {
-		return fmt.Errorf("shape: UInt32.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *UInt32) _unmarshalJSONUInt32(data []byte) (UInt32, error) {
-	result := UInt32{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: UInt32._unmarshalJSONUInt32: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func UInt64FromJSON(x []byte) (*UInt64, error) {
-	result := new(UInt64)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func UInt64ToJSON(x *UInt64) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*UInt64)(nil)
-	_ json.Marshaler   = (*UInt64)(nil)
-)
-
-func (r *UInt64) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONUInt64(*r)
-}
-func (r *UInt64) _marshalJSONUInt64(x UInt64) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt64._marshalJSONUInt64: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *UInt64) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONUInt64(data)
-	if err != nil {
-		return fmt.Errorf("shape: UInt64.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *UInt64) _unmarshalJSONUInt64(data []byte) (UInt64, error) {
-	result := UInt64{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: UInt64._unmarshalJSONUInt64: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func IntFromJSON(x []byte) (*Int, error) {
-	result := new(Int)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func IntToJSON(x *Int) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Int)(nil)
-	_ json.Marshaler   = (*Int)(nil)
-)
-
-func (r *Int) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONInt(*r)
-}
-func (r *Int) _marshalJSONInt(x Int) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int._marshalJSONInt: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Int) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONInt(data)
-	if err != nil {
-		return fmt.Errorf("shape: Int.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Int) _unmarshalJSONInt(data []byte) (Int, error) {
-	result := Int{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Int._unmarshalJSONInt: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func Int8FromJSON(x []byte) (*Int8, error) {
-	result := new(Int8)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func Int8ToJSON(x *Int8) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Int8)(nil)
-	_ json.Marshaler   = (*Int8)(nil)
-)
-
-func (r *Int8) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONInt8(*r)
-}
-func (r *Int8) _marshalJSONInt8(x Int8) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int8._marshalJSONInt8: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Int8) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONInt8(data)
-	if err != nil {
-		return fmt.Errorf("shape: Int8.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Int8) _unmarshalJSONInt8(data []byte) (Int8, error) {
-	result := Int8{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Int8._unmarshalJSONInt8: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func Int16FromJSON(x []byte) (*Int16, error) {
-	result := new(Int16)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func Int16ToJSON(x *Int16) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Int16)(nil)
-	_ json.Marshaler   = (*Int16)(nil)
-)
-
-func (r *Int16) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONInt16(*r)
-}
-func (r *Int16) _marshalJSONInt16(x Int16) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int16._marshalJSONInt16: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Int16) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONInt16(data)
-	if err != nil {
-		return fmt.Errorf("shape: Int16.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Int16) _unmarshalJSONInt16(data []byte) (Int16, error) {
-	result := Int16{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Int16._unmarshalJSONInt16: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func Int32FromJSON(x []byte) (*Int32, error) {
-	result := new(Int32)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func Int32ToJSON(x *Int32) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Int32)(nil)
-	_ json.Marshaler   = (*Int32)(nil)
-)
-
-func (r *Int32) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONInt32(*r)
-}
-func (r *Int32) _marshalJSONInt32(x Int32) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int32._marshalJSONInt32: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Int32) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONInt32(data)
-	if err != nil {
-		return fmt.Errorf("shape: Int32.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Int32) _unmarshalJSONInt32(data []byte) (Int32, error) {
-	result := Int32{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Int32._unmarshalJSONInt32: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func Int64FromJSON(x []byte) (*Int64, error) {
-	result := new(Int64)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func Int64ToJSON(x *Int64) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Int64)(nil)
-	_ json.Marshaler   = (*Int64)(nil)
-)
-
-func (r *Int64) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONInt64(*r)
-}
-func (r *Int64) _marshalJSONInt64(x Int64) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int64._marshalJSONInt64: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Int64) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONInt64(data)
-	if err != nil {
-		return fmt.Errorf("shape: Int64.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Int64) _unmarshalJSONInt64(data []byte) (Int64, error) {
-	result := Int64{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Int64._unmarshalJSONInt64: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func Float32FromJSON(x []byte) (*Float32, error) {
-	result := new(Float32)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func Float32ToJSON(x *Float32) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Float32)(nil)
-	_ json.Marshaler   = (*Float32)(nil)
-)
-
-func (r *Float32) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONFloat32(*r)
-}
-func (r *Float32) _marshalJSONFloat32(x Float32) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Float32._marshalJSONFloat32: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Float32) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONFloat32(data)
-	if err != nil {
-		return fmt.Errorf("shape: Float32.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Float32) _unmarshalJSONFloat32(data []byte) (Float32, error) {
-	result := Float32{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Float32._unmarshalJSONFloat32: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func Float64FromJSON(x []byte) (*Float64, error) {
-	result := new(Float64)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func Float64ToJSON(x *Float64) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Float64)(nil)
-	_ json.Marshaler   = (*Float64)(nil)
-)
-
-func (r *Float64) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONFloat64(*r)
-}
-func (r *Float64) _marshalJSONFloat64(x Float64) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Float64._marshalJSONFloat64: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Float64) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONFloat64(data)
-	if err != nil {
-		return fmt.Errorf("shape: Float64.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Float64) _unmarshalJSONFloat64(data []byte) (Float64, error) {
-	result := Float64{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Float64._unmarshalJSONFloat64: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-type GuardVisitor interface {
-	VisitEnum(v *Enum) any
-	VisitRequired(v *Required) any
-	VisitAndGuard(v *AndGuard) any
-}
-
-type Guard interface {
-	AcceptGuard(g GuardVisitor) any
-}
-
-var (
-	_ Guard = (*Enum)(nil)
-	_ Guard = (*Required)(nil)
-	_ Guard = (*AndGuard)(nil)
-)
-
-func (r *Enum) AcceptGuard(v GuardVisitor) any     { return v.VisitEnum(r) }
-func (r *Required) AcceptGuard(v GuardVisitor) any { return v.VisitRequired(r) }
-func (r *AndGuard) AcceptGuard(v GuardVisitor) any { return v.VisitAndGuard(r) }
-
-func MatchGuardR3[T0, T1, T2 any](
-	x Guard,
-	f1 func(x *Enum) (T0, T1, T2),
-	f2 func(x *Required) (T0, T1, T2),
-	f3 func(x *AndGuard) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *Enum:
-		return f1(v)
-	case *Required:
-		return f2(v)
-	case *AndGuard:
-		return f3(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchGuardR2[T0, T1 any](
-	x Guard,
-	f1 func(x *Enum) (T0, T1),
-	f2 func(x *Required) (T0, T1),
-	f3 func(x *AndGuard) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *Enum:
-		return f1(v)
-	case *Required:
-		return f2(v)
-	case *AndGuard:
-		return f3(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchGuardR1[T0 any](
-	x Guard,
-	f1 func(x *Enum) T0,
-	f2 func(x *Required) T0,
-	f3 func(x *AndGuard) T0,
-) T0 {
-	switch v := x.(type) {
-	case *Enum:
-		return f1(v)
-	case *Required:
-		return f2(v)
-	case *AndGuard:
-		return f3(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchGuardR0(
-	x Guard,
-	f1 func(x *Enum),
-	f2 func(x *Required),
-	f3 func(x *AndGuard),
-) {
-	switch v := x.(type) {
-	case *Enum:
-		f1(v)
-	case *Required:
-		f2(v)
-	case *AndGuard:
-		f3(v)
-	}
-}
-
-func GuardShape() Shape {
-	return &UnionLike{
-		Name:          "Guard",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Variant: []Shape{
-			EnumShape(),
-			RequiredShape(),
-			AndGuardShape(),
-		},
-	}
-}
-
-func EnumShape() Shape {
-	return &StructLike{
-		Name:          "Enum",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Val",
-				Type: &ListLike{
-					Element: &PrimitiveLike{Kind: &StringLike{}},
-				},
-			},
-		},
-	}
-}
-
-func RequiredShape() Shape {
-	return &StructLike{
-		Name:          "Required",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func AndGuardShape() Shape {
-	return &StructLike{
-		Name:          "AndGuard",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "L",
-				Type: &ListLike{
-					Element: &RefName{
-						Name:          "Guard",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
-				},
-			},
-		},
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AndGuard", AndGuardFromJSON, AndGuardToJSON)
-}
-
-type GuardUnionJSON struct {
-	Type     string          `json:"$type,omitempty"`
-	Enum     json.RawMessage `json:"shape.Enum,omitempty"`
-	Required json.RawMessage `json:"shape.Required,omitempty"`
-	AndGuard json.RawMessage `json:"shape.AndGuard,omitempty"`
-}
-
-func GuardFromJSON(x []byte) (Guard, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data GuardUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "shape.Enum":
-		return EnumFromJSON(data.Enum)
-	case "shape.Required":
-		return RequiredFromJSON(data.Required)
-	case "shape.AndGuard":
-		return AndGuardFromJSON(data.AndGuard)
-	}
-
-	if data.Enum != nil {
-		return EnumFromJSON(data.Enum)
-	} else if data.Required != nil {
-		return RequiredFromJSON(data.Required)
-	} else if data.AndGuard != nil {
-		return AndGuardFromJSON(data.AndGuard)
-	}
-
-	return nil, fmt.Errorf("shape.Guard: unknown type %s", data.Type)
-}
-
-func GuardToJSON(x Guard) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchGuardR2(
-		x,
-		func(x *Enum) ([]byte, error) {
-			body, err := EnumToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(GuardUnionJSON{
-				Type: "shape.Enum",
-				Enum: body,
-			})
-		},
-		func(x *Required) ([]byte, error) {
-			body, err := RequiredToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(GuardUnionJSON{
-				Type:     "shape.Required",
-				Required: body,
-			})
-		},
-		func(x *AndGuard) ([]byte, error) {
-			body, err := AndGuardToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(GuardUnionJSON{
-				Type:     "shape.AndGuard",
-				AndGuard: body,
-			})
-		},
-	)
-}
-
-func EnumFromJSON(x []byte) (*Enum, error) {
-	result := new(Enum)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func EnumToJSON(x *Enum) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Enum)(nil)
-	_ json.Marshaler   = (*Enum)(nil)
-)
-
-func (r *Enum) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONEnum(*r)
-}
-func (r *Enum) _marshalJSONEnum(x Enum) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldVal []byte
-	fieldVal, err = r._marshalJSONSlicestring(x.Val)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: field name Val; %w", err)
-	}
-	partial["Val"] = fieldVal
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Enum) _marshalJSONSlicestring(x []string) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONstring(v)
-		if err != nil {
-			return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Enum) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Enum) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONEnum(data)
-	if err != nil {
-		return fmt.Errorf("shape: Enum.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Enum) _unmarshalJSONEnum(data []byte) (Enum, error) {
-	result := Enum{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: native struct unwrap; %w", err)
-	}
-	if fieldVal, ok := partial["Val"]; ok {
-		result.Val, err = r._unmarshalJSONSlicestring(fieldVal)
-		if err != nil {
-			return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: field Val; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Enum) _unmarshalJSONSlicestring(data []byte) ([]string, error) {
-	result := make([]string, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONstring(v)
-		if err != nil {
-			return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *Enum) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("shape: Enum._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func RequiredFromJSON(x []byte) (*Required, error) {
-	result := new(Required)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func RequiredToJSON(x *Required) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*Required)(nil)
-	_ json.Marshaler   = (*Required)(nil)
-)
-
-func (r *Required) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONRequired(*r)
-}
-func (r *Required) _marshalJSONRequired(x Required) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Required._marshalJSONRequired: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *Required) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONRequired(data)
-	if err != nil {
-		return fmt.Errorf("shape: Required.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *Required) _unmarshalJSONRequired(data []byte) (Required, error) {
-	result := Required{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Required._unmarshalJSONRequired: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func AndGuardFromJSON(x []byte) (*AndGuard, error) {
-	result := new(AndGuard)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func AndGuardToJSON(x *AndGuard) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*AndGuard)(nil)
-	_ json.Marshaler   = (*AndGuard)(nil)
-)
-
-func (r *AndGuard) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONAndGuard(*r)
-}
-func (r *AndGuard) _marshalJSONAndGuard(x AndGuard) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldL []byte
-	fieldL, err = r._marshalJSONSliceGuard(x.L)
-	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: field name L; %w", err)
-	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *AndGuard) _marshalJSONSliceGuard(x []Guard) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONGuard(v)
-		if err != nil {
-			return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard:; %w", err)
-	}
-	return result, nil
-}
-func (r *AndGuard) _marshalJSONGuard(x Guard) ([]byte, error) {
-	result, err := shared.JSONMarshal[Guard](x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONGuard:; %w", err)
-	}
-	return result, nil
-}
-func (r *AndGuard) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONAndGuard(data)
-	if err != nil {
-		return fmt.Errorf("shape: AndGuard.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *AndGuard) _unmarshalJSONAndGuard(data []byte) (AndGuard, error) {
-	result := AndGuard{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: native struct unwrap; %w", err)
-	}
-	if fieldL, ok := partial["L"]; ok {
-		result.L, err = r._unmarshalJSONSliceGuard(fieldL)
-		if err != nil {
-			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: field L; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *AndGuard) _unmarshalJSONSliceGuard(data []byte) ([]Guard, error) {
-	result := make([]Guard, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONGuard(v)
-		if err != nil {
-			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *AndGuard) _unmarshalJSONGuard(data []byte) (Guard, error) {
-	result, err := shared.JSONUnmarshal[Guard](data)
-	if err != nil {
-		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONGuard: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

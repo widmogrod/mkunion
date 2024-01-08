@@ -6,8 +6,7 @@ import (
 	"testing"
 )
 
-func TestNewSerdeJSONTagged_Struct(t *testing.T) {
-	//t.Skip("not implemented")
+func TestNewSerdeJSONTagged_ListOf2(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	if err != nil {
 		t.Fatal(err)
@@ -370,14 +369,14 @@ func (r *ListOf2[T1,T2]) _unmarshalJSONschema_Schema(data []byte) (schema.Schema
 `, result)
 }
 
-func TestNewSerdeJSONTagged_Alias(t *testing.T) {
+func TestNewSerdeJSONTagged_ListOfAliasAny(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	generator := NewSerdeJSONTagged(
-		inferred.RetrieveShapeNamedAs("K"),
+		inferred.RetrieveShapeNamedAs("ListOfAliasAny"),
 	)
 
 	result, err := generator.Generate()
@@ -390,51 +389,10 @@ import (
 )
 
 var (
-	_ json.Unmarshaler = (*K)(nil)
-	_ json.Marshaler   = (*K)(nil)
+	_ json.Unmarshaler = (*ListOfAliasAny)(nil)
+	_ json.Marshaler   = (*ListOfAliasAny)(nil)
 )
 
-func (r *K) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONK(*r)
-}
-func (r *K) _marshalJSONK(x K) ([]byte, error) {
-	return r._marshalJSONstring(string(x))
-}
-func (r *K) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("testutils: K._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *K) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONK(data)
-	if err != nil {
-		return fmt.Errorf("testutils: K.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *K) _unmarshalJSONK(data []byte) (K, error) {
-	var result K
-	intermidiary, err := r._unmarshalJSONstring(data)
-	if err != nil {
-		return result, fmt.Errorf("testutils: K._unmarshalJSONK: alias; %w", err)
-	}
-	result = K(intermidiary)
-	return result, nil
-}
-func (r *K) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("testutils: K._unmarshalJSONstring: native primitive unwrap; %w", err)
-	}
-	return result, nil
-}
 `, result)
 }
 

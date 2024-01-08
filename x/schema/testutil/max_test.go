@@ -39,11 +39,11 @@ func TestMaxScalars(t *testing.T) {
 			"Int64":   schema.MkInt(math.MaxInt64),
 			"Float32": schema.MkFloat(math.MaxFloat32),
 			"Float64": schema.MkFloat(math.MaxFloat64),
-			"Uint":    schema.MkInt(math.MaxUint),
-			"Uint8":   schema.MkInt(math.MaxInt8),
-			"Uint16":  schema.MkInt(math.MaxUint16),
-			"Uint32":  schema.MkInt(math.MaxUint32),
-			"Uint64":  schema.MkInt(math.MaxUint64),
+			"Uint":    schema.MkUint(math.MaxUint),
+			"Uint8":   schema.MkUint(math.MaxInt8),
+			"Uint16":  schema.MkUint(math.MaxUint16),
+			"Uint32":  schema.MkUint(math.MaxUint32),
+			"Uint64":  schema.MkUint(math.MaxUint64),
 		}, s)
 	})
 }

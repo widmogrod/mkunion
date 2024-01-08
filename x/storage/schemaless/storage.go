@@ -6,7 +6,7 @@ import (
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go serde
+//go:generate go run ../../../cmd/mkunion/main.go
 
 type RecordType = string
 type Repository[T any] interface {

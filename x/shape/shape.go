@@ -1,7 +1,6 @@
 package shape
 
 // go:generate ../../cmd/mkunion/mkunion
-// go:generate ../../cmd/mkunion/mkunion serde
 
 //go:tag mkunion:"Shape"
 type (
@@ -314,6 +313,19 @@ func UnwrapPointer(x string) string {
 	}
 
 	return x
+}
+
+// IsWeekAlias returns true if given shape is an alias and it's week alias.
+// example:
+//
+//	type A = string
+func IsWeekAlias(x Shape) bool {
+	alias, isAlias := x.(*AliasLike)
+	if !isAlias {
+		return false
+	}
+
+	return alias.IsAlias
 }
 
 func IsString(x Shape) bool {

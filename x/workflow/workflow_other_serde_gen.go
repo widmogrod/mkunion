@@ -5,100 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
-
-func init() {
-	shape.Register(FunctionOutputShape())
-	shape.Register(FunctionInputShape())
-}
-
-var (
-	_ json.Unmarshaler = (*FunctionOutput)(nil)
-	_ json.Marshaler   = (*FunctionOutput)(nil)
-)
-
-func (r *FunctionOutput) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONFunctionOutput(*r)
-}
-func (r *FunctionOutput) _marshalJSONFunctionOutput(x FunctionOutput) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldResult []byte
-	fieldResult, err = r._marshalJSONschema_Schema(x.Result)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONFunctionOutput: field name Result; %w", err)
-	}
-	partial["Result"] = fieldResult
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONFunctionOutput: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *FunctionOutput) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
-	result, err := shared.JSONMarshal[schema.Schema](x)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONschema_Schema:; %w", err)
-	}
-	return result, nil
-}
-func (r *FunctionOutput) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONFunctionOutput(data)
-	if err != nil {
-		return fmt.Errorf("workflow: FunctionOutput.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *FunctionOutput) _unmarshalJSONFunctionOutput(data []byte) (FunctionOutput, error) {
-	result := FunctionOutput{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("workflow: FunctionOutput._unmarshalJSONFunctionOutput: native struct unwrap; %w", err)
-	}
-	if fieldResult, ok := partial["Result"]; ok {
-		result.Result, err = r._unmarshalJSONschema_Schema(fieldResult)
-		if err != nil {
-			return result, fmt.Errorf("workflow: FunctionOutput._unmarshalJSONFunctionOutput: field Result; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *FunctionOutput) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
-	result, err := shared.JSONUnmarshal[schema.Schema](data)
-	if err != nil {
-		return result, fmt.Errorf("workflow: FunctionOutput._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-func FunctionOutputShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "FunctionOutput",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Result",
-				Type: &shape.RefName{
-					Name:          "Schema",
-					PkgName:       "schema",
-					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
 
 var (
 	_ json.Unmarshaler = (*FunctionInput)(nil)
@@ -233,35 +141,67 @@ func (r *FunctionInput) _unmarshalJSONschema_Schema(data []byte) (schema.Schema,
 	}
 	return result, nil
 }
-func FunctionInputShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "FunctionInput",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Name",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "CallbackID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Args",
-				Type: &shape.ListLike{
-					Element: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
+
+var (
+	_ json.Unmarshaler = (*FunctionOutput)(nil)
+	_ json.Marshaler   = (*FunctionOutput)(nil)
+)
+
+func (r *FunctionOutput) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
 	}
+	return r._marshalJSONFunctionOutput(*r)
+}
+func (r *FunctionOutput) _marshalJSONFunctionOutput(x FunctionOutput) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldResult []byte
+	fieldResult, err = r._marshalJSONschema_Schema(x.Result)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONFunctionOutput: field name Result; %w", err)
+	}
+	partial["Result"] = fieldResult
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONFunctionOutput: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *FunctionOutput) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[schema.Schema](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *FunctionOutput) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONFunctionOutput(data)
+	if err != nil {
+		return fmt.Errorf("workflow: FunctionOutput.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *FunctionOutput) _unmarshalJSONFunctionOutput(data []byte) (FunctionOutput, error) {
+	result := FunctionOutput{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: FunctionOutput._unmarshalJSONFunctionOutput: native struct unwrap; %w", err)
+	}
+	if fieldResult, ok := partial["Result"]; ok {
+		result.Result, err = r._unmarshalJSONschema_Schema(fieldResult)
+		if err != nil {
+			return result, fmt.Errorf("workflow: FunctionOutput._unmarshalJSONFunctionOutput: field Result; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *FunctionOutput) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
+	result, err := shared.JSONUnmarshal[schema.Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: FunctionOutput._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
+	}
+	return result, nil
 }

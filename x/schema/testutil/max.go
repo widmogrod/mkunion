@@ -1,6 +1,6 @@
 package testutil
 
-//go:generate go run ../../../cmd/mkunion/main.go serde
+//go:generate go run ../../../cmd/mkunion/main.go
 
 //go:tag serde:"json"
 type Max struct {

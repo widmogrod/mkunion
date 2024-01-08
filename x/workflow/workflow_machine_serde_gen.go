@@ -5,15 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
-	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 )
-
-func init() {
-	shape.Register(ApplyAwaitOptionsShape())
-	shape.Register(BaseStateShape())
-	shape.Register(ResumeOptionsShape())
-}
 
 var (
 	_ json.Unmarshaler = (*ApplyAwaitOptions)(nil)
@@ -78,28 +71,6 @@ func (r *ApplyAwaitOptions) _unmarshalJSONint64(data []byte) (int64, error) {
 		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
-}
-func ApplyAwaitOptionsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ApplyAwaitOptions",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timeout",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }
 
 var (
@@ -328,74 +299,6 @@ func (r *BaseState) _unmarshalJSONRunOption(data []byte) (RunOption, error) {
 	}
 	return result, nil
 }
-func BaseStateShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "BaseState",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Flow",
-				Type: &shape.RefName{
-					Name:          "Workflow",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-			{
-				Name: "RunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "StepID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Variables",
-				Type: &shape.MapLike{
-					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-					Val: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-			{
-				Name: "ExprResult",
-				Type: &shape.MapLike{
-					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-					Val: &shape.RefName{
-						Name:          "Schema",
-						PkgName:       "schema",
-						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-					},
-				},
-			},
-			{
-				Name: "DefaultMaxRetries",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-			{
-				Name: "RunOption",
-				Type: &shape.RefName{
-					Name:          "RunOption",
-					PkgName:       "workflow",
-					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
-}
 
 var (
 	_ json.Unmarshaler = (*ResumeOptions)(nil)
@@ -460,26 +363,4 @@ func (r *ResumeOptions) _unmarshalJSONint64(data []byte) (int64, error) {
 		return result, fmt.Errorf("workflow: ResumeOptions._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
-}
-func ResumeOptionsShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "ResumeOptions",
-		PkgName:       "workflow",
-		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timeout",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
-	}
 }

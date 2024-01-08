@@ -6,7 +6,6 @@ import (
 )
 
 //go:generate go run ../../../cmd/mkunion/main.go
-//go:generate go run ../../../cmd/mkunion/main.go serde
 
 //go:tag mkunion:"Tree"
 type (
@@ -26,6 +25,14 @@ type (
 	La   []Tree
 	Ka   []map[string]Tree
 )
+
+//go:tag mkunion:"Forest"
+type (
+	Tree2 = Branch
+	Leaf2 = Leaf
+)
+
+type ListOfAliasAny = ListOf[any]
 
 //go:tag serde:"json"
 type ListOf[T any] struct {

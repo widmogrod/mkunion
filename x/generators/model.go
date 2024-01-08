@@ -46,6 +46,8 @@ func GenerateInitFunc(inits InitFuncs) string {
 		return ""
 	}
 
+	sort.Strings(inits)
+
 	result := &strings.Builder{}
 	result.WriteString("func init() {\n")
 

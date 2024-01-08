@@ -47,18 +47,20 @@ func (g *SerdeJSONTagged) Generate() (string, error) {
 	}
 	body.WriteString(varPart)
 
-	marshalPart, err := g.GenerateMarshalJSON(g.shape)
-	if err != nil {
-		return "", fmt.Errorf("generators.SerdeJSONTagged.Generate: when generating marshal %w", err)
+	if !shape.IsWeekAlias(g.shape) {
+		marshalPart, err := g.GenerateMarshalJSON(g.shape)
+		if err != nil {
+			return "", fmt.Errorf("generators.SerdeJSONTagged.Generate: when generating marshal %w", err)
 
-	}
-	body.WriteString(marshalPart)
+		}
+		body.WriteString(marshalPart)
 
-	unmarshalPart, err := g.GenerateUnmarshalJSON(g.shape)
-	if err != nil {
-		return "", fmt.Errorf("generators.SerdeJSONTagged.Generate: when generating unmarshal %w", err)
+		unmarshalPart, err := g.GenerateUnmarshalJSON(g.shape)
+		if err != nil {
+			return "", fmt.Errorf("generators.SerdeJSONTagged.Generate: when generating unmarshal %w", err)
+		}
+		body.WriteString(unmarshalPart)
 	}
-	body.WriteString(unmarshalPart)
 
 	head := &strings.Builder{}
 	if !g.skipImportsAndPackage {
@@ -234,6 +236,10 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 		return "", nil
 	} else {
 		g.didGenerateMarshalJSONMethod[methodName] = true
+	}
+
+	if shape.IsWeekAlias(x) {
+		return "", nil
 	}
 
 	rootTypeName := g.rootTypeName()
@@ -504,6 +510,10 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 		return "", nil
 	} else {
 		g.didGenerateUnmarshalJSONMethod[methodName] = true
+	}
+
+	if shape.IsWeekAlias(x) {
+		return "", nil
 	}
 
 	rootTypeName := g.rootTypeName()

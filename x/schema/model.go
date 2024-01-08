@@ -1,8 +1,8 @@
 package schema
 
-//go:generate go run ../../cmd/mkunion/main.go serde
+//go:generate go run ../../cmd/mkunion/main.go
 
-//go:generate go run ../../cmd/mkunion/main.go -name=Schema
+//go:tag mkunion:"Schema"
 type (
 	None   struct{}
 	Bool   bool
@@ -34,7 +34,12 @@ func MkBool(b bool) *Bool {
 	return (*Bool)(&b)
 }
 
-func MkInt(x uint64) *Number {
+func MkInt(x int64) *Number {
+	v := float64(x)
+	return (*Number)(&v)
+}
+
+func MkUint(x uint64) *Number {
 	v := float64(x)
 	return (*Number)(&v)
 }
@@ -70,4 +75,9 @@ func MkField(name string, value Schema) Field {
 		Name:  name,
 		Value: value,
 	}
+}
+
+func AppendList(list *List, items ...Schema) *List {
+	result := append(*list, items...)
+	return &result
 }

@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -225,30 +226,46 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 
 func (f *InferredInfo) RetrieveShapes() []Shape {
 	shapes := make(map[string]Shape)
+
+	ordered := make([]string, 0)
 	for name, shape := range f.shapes {
 		shapes[name] = shape
+		ordered = append(ordered, name)
 	}
+	sort.Strings(ordered)
 
-	var result = make([]Shape, 0)
-	for unionName, variantsNames := range f.possibleVariantTypes {
+	var result []Shape
+	unionNames := f.sortedPossibleUnionNames()
+	for _, unionName := range unionNames {
 		union := f.RetrieveUnion(unionName)
 		if union == nil {
 			continue
 		}
 
 		result = append(result, union)
-
 		delete(shapes, unionName)
-		for _, variantName := range variantsNames {
+		for _, variantName := range f.possibleVariantTypes[unionName] {
 			delete(shapes, variantName)
 		}
 	}
 
-	for _, shape := range shapes {
-		result = append(result, shape)
+	for _, name := range ordered {
+		if _, ok := shapes[name]; !ok {
+			continue
+		}
+		result = append(result, shapes[name])
 	}
 
 	return result
+}
+
+func (f *InferredInfo) sortedPossibleUnionNames() []string {
+	unionNames := make([]string, len(f.possibleVariantTypes))
+	for unionName := range f.possibleVariantTypes {
+		unionNames = append(unionNames, unionName)
+	}
+	sort.Strings(unionNames)
+	return unionNames
 }
 
 func (f *InferredInfo) RetrieveStructs() []*StructLike {
@@ -264,6 +281,18 @@ func (f *InferredInfo) RetrieveStructs() []*StructLike {
 
 func (f *InferredInfo) RetrieveShapeNamedAs(name string) Shape {
 	return f.shapes[name]
+}
+
+func (f *InferredInfo) RetrieveShapeFromRef(x *RefName) Shape {
+	shapes := f.RetrieveShapes()
+	for _, shape := range shapes {
+		// weak check
+		if Name(shape) == Name(x) {
+			return shape
+		}
+	}
+
+	return nil
 }
 
 func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
@@ -392,7 +421,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
-					IsAlias:       IsAlias(t),
+					IsAlias:       IsASTAlias(t),
 					Type:          &PrimitiveLike{Kind: &StringLike{}},
 					Tags:          f.possibleTaggedTypes[f.currentType],
 				}
@@ -404,7 +433,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
-					IsAlias:       IsAlias(t),
+					IsAlias:       IsASTAlias(t),
 					Type: &PrimitiveLike{
 						Kind: &NumberLike{
 							Kind: TypeStringToNumberKindMap[next.Name],
@@ -418,7 +447,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
-					IsAlias:       IsAlias(t),
+					IsAlias:       IsASTAlias(t),
 					Type:          &PrimitiveLike{Kind: &BooleanLike{}},
 					Tags:          f.possibleTaggedTypes[f.currentType],
 				}
@@ -431,7 +460,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
-					IsAlias:       IsAlias(t),
+					IsAlias:       IsASTAlias(t),
 					Type: &RefName{
 						Name:          next.Name,
 						PkgName:       f.pkgName,
@@ -449,7 +478,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
-				IsAlias:       IsAlias(t),
+				IsAlias:       IsASTAlias(t),
 				Type:          f.selectExrToShape(next),
 				Tags:          f.possibleTaggedTypes[f.currentType],
 			}
@@ -463,7 +492,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
-				IsAlias:       IsAlias(t),
+				IsAlias:       IsASTAlias(t),
 				Type:          FromAST(next, opt...),
 				Tags:          f.possibleTaggedTypes[f.currentType],
 			}
@@ -477,7 +506,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
-				IsAlias:       IsAlias(t),
+				IsAlias:       IsASTAlias(t),
 				Type:          FromAST(next, opt...),
 				Tags:          f.possibleTaggedTypes[f.currentType],
 			}
@@ -490,7 +519,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
-				IsAlias:       IsAlias(t),
+				IsAlias:       IsASTAlias(t),
 				Type: &MapLike{
 					Key: FromAST(next.Key, opt...),
 					Val: FromAST(next.Value, opt...),
@@ -505,7 +534,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
-				IsAlias:       IsAlias(t),
+				IsAlias:       IsASTAlias(t),
 				Type: &ListLike{
 					Element: FromAST(next.Elt, opt...),
 					//ElementIsPointer: IsStarExpr(next.Elt),
@@ -521,6 +550,20 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				PkgImportName: f.pkgImportName,
 				TypeParams:    f.extractTypeParams(t.TypeParams),
 				Tags:          f.possibleTaggedTypes[f.currentType],
+			}
+
+		case *ast.StarExpr:
+			// example:
+			//  type A *string
+			//  type B = *int
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.pkgName,
+				PkgImportName: f.pkgImportName,
+				IsAlias:       IsASTAlias(t),
+				Type: &PointerLike{
+					Type: FromAST(next.X, opt...),
+				},
 			}
 		}
 
@@ -818,7 +861,7 @@ func (f *InferredInfo) optionAST() []FromASTOption {
 	}
 }
 
-func IsAlias(t *ast.TypeSpec) bool {
+func IsASTAlias(t *ast.TypeSpec) bool {
 	return t.Assign != 0
 }
 
