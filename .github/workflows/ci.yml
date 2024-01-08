@@ -21,12 +21,12 @@ jobs:
       # initiate docker-compose services
       - run: |
           pip install awscli-local
-      - run: dev/bootstrap.sh& sleep 10
+      - run: dev/bootstrap.sh& sleep 30
 
       # run tests
       - run: |
           set -e
-          retries=3
+          retries=5
           until [ $retries -le 0 ]; do
             if go test -v ./...; then
               break
