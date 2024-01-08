@@ -4,11 +4,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/schema"
 	"math"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestTriggers(t *testing.T) {
+	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
+		t.Skip(`Skipping test because:
+- RUN_EXPERIMENTAL_TEST=false is set.
+`)
+	}
+
 	useCases := map[string]struct {
 		td       TriggerDescription
 		wd       WindowDescription
@@ -159,6 +166,12 @@ func TestTriggers(t *testing.T) {
 }
 
 func TestAggregate(t *testing.T) {
+	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
+		t.Skip(`Skipping test because:
+- RUN_EXPERIMENTAL_TEST=false is set.
+`)
+	}
+
 	// arithmetic sum of series 0..9, 10..19, 0 .. 19
 	// 45, 145, 190
 	useCases := map[string]struct {

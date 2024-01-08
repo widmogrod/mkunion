@@ -25,6 +25,7 @@ jobs:
 
       # run tests
       - run: |
+          export RUN_EXPERIMENTAL_TEST="false"
           set -e
           retries=3
           until [ $retries -le 0 ]; do

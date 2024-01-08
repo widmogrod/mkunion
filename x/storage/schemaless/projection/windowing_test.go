@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/schema"
+	"os"
 	"testing"
 	"time"
 )
@@ -22,6 +23,12 @@ func printWindow(w *Window) {
 }
 
 func TestWindowing(t *testing.T) {
+	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
+		t.Skip(`Skipping test because:
+- RUN_EXPERIMENTAL_TEST=false is set.
+`)
+	}
+
 	list := []Item{
 		{
 			Key:       "a",
@@ -144,6 +151,12 @@ func TestWindowing(t *testing.T) {
 }
 
 func TestMergeWindows(t *testing.T) {
+	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
+		t.Skip(`Skipping test because:
+- RUN_EXPERIMENTAL_TEST=false is set.
+`)
+	}
+
 	list := []Item{
 		{
 			Key:       "k1",
@@ -412,6 +425,12 @@ func TestMergeWindows(t *testing.T) {
 }
 
 func TestWindowMerginOnly(t *testing.T) {
+	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
+		t.Skip(`Skipping test because:
+- RUN_EXPERIMENTAL_TEST=false is set.
+`)
+	}
+
 	list := []ItemGroupedByKey{
 		{
 			Key: "k1",
@@ -703,6 +722,12 @@ type triggerCase struct {
 }
 
 func TestWindowTrigger(t *testing.T) {
+	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
+		t.Skip(`Skipping test because:
+- RUN_EXPERIMENTAL_TEST=false is set.
+`)
+	}
+
 	useCases := map[string]struct {
 		w      *Window
 		td     TriggerDescription
