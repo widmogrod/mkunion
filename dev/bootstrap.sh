@@ -40,5 +40,12 @@ echo "export AWS_SQS_QUEUE_URL=$queue_url" >> $envrc_file
 echo "Localstack is UI is at port"
 echo "http://localhost:8080"
 
+## check if it should stream logs, or just end
+## don't trigger trap on exit
+if [ "$1" == "-nologs" ]; then
+  trap - EXIT
+  exit 0
+fi
+
 echo "Streaming logs"
 docker compose -f $cwd/compose.yml logs -f
