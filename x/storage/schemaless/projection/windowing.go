@@ -495,7 +495,7 @@ func (wt *WindowTrigger) Reset() {
 	wt.ts = wt.initState(wt.td)
 }
 
-//go:generate mkunion match -name=EvaluateTrigger
+//go:generate go run ../../../../cmd/mkunion/main.go match -name=EvaluateTrigger
 type EvaluateTrigger[T0 TriggerDescription, T1 TriggerType] interface {
 	MatchPeriod(*AtPeriod, *AtPeriod)
 	MatchCount(*AtWindowItemSize, *AtWindowItemSize)
