@@ -885,6 +885,8 @@ function App() {
                                                     <dd>{error.Code}</dd>
                                                     <dt>Message</dt>
                                                     <dd>{error.Reason}</dd>
+                                                    <dt>Retried</dt>
+                                                    <dd>{error.Retried} / {error.BaseState?.DefaultMaxRetries}</dd>
                                                 </dl>
                                                 <WorkflowToString flow={error.BaseState?.Flow}/>
                                                 <ListVariables data={error.BaseState}/>
