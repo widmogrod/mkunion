@@ -71,7 +71,11 @@ export function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         filter: (x: predicate.WherePredicates) => {
             setState({
                 ...state,
-                where: mergeFilters(state.where, x)
+                where: mergeFilters(state.where, x),
+                // always reset the cursor when filtering
+                // user can be on a page that doesn't exist anymore
+                nextPage: undefined,
+                prevPage: undefined
             })
         }
     } as PaginatedTableContext<T>
@@ -195,7 +199,7 @@ export function PaginatedTable<T>(props: PaginatedTableProps<T>) {
     return <table>
         <thead>
         <tr>
-            <th colSpan={5} className={"option-row"}>
+            <th colSpan={3} className={"option-row"}>
                 <button className={"refresh"} onClick={() => ctx.refresh()}>Refresh</button>
 
                 {props.actions && props.actions.map((action) => {
@@ -216,11 +220,9 @@ export function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         </tr>
         <tr>
             <th onClick={batchSelection} className={batchSelectionState()}>
-                <button>select</button>
+                <button>✧</button>
             </th>
-            <th onClick={changeSort("ID")} className={sortState("ID")}>ID</th>
-            <th onClick={changeSort("Type")} className={sortState("Type")}>Type</th>
-            <th onClick={changeSort("Version")} className={sortState("Version")}>Version</th>
+            <th>Prop</th>
             <th>Data</th>
         </tr>
         </thead>
@@ -229,9 +231,18 @@ export function PaginatedTable<T>(props: PaginatedTableProps<T>) {
             return (
                 <tr key={item.ID}>
                     <td><input type={"checkbox"} onChange={selectRowToggle(item)} checked={isSelected(item)}/></td>
-                    <td>{item.ID}</td>
-                    <td>{item.Type}</td>
-                    <td>{item.Version}</td>
+                    <td>
+                        <dl>
+                            <dt onClick={changeSort("ID")} className={sortState("ID")}>ID</dt>
+                            <dd>{item.ID}</dd>
+
+                            <dt onClick={changeSort("Type")} className={sortState("Type")}>Type</dt>
+                            <dd>{item.Type}</dd>
+
+                            <dt onClick={changeSort("Version")} className={sortState("Version")}>Version</dt>
+                            <dd>{item.Version}</dd>
+                        </dl>
+                    </td>
                     <td>{props.mapData && props.mapData(item, ctx)}</td>
                 </tr>
             );
@@ -243,7 +254,7 @@ export function PaginatedTable<T>(props: PaginatedTableProps<T>) {
         </tbody>
         <tfoot>
         <tr>
-            <td colSpan={5} className={"option-row"}>
+            <td colSpan={3} className={"option-row"}>
                 {data.Next && <button onClick={nextPage} className={"next-page"}>Next page</button>}
                 {data.Prev && <button onClick={prevPage} className={"prev-page"}>Prev page</button>}
             </td>

@@ -9,6 +9,7 @@ aside {
     width: 300px;
     margin: 0 10px 0 0;
 }
+
 main {
     float: left;
     width: calc(100% - 310px);
@@ -24,9 +25,11 @@ span {
 span.schedguled {
     background-color: #b8975d;
 }
+
 span.error {
     background-color: #de7773;
 }
+
 span.await {
     background-color: #52d2d2;
 }
@@ -102,12 +105,48 @@ table > thead .filter-rules {
     float: right;
 }
 
-.filter-rules {
-
+/* make definitions inline, but new definition term must start from new line
+   definition is on right side, and wraps text */
+dl {
+    margin: 0 10px 0 0;
+    padding: 0;
+    overflow: auto;
 }
+
+dt {
+    float: left;
+    clear: left;
+    font-weight: normal;
+    text-align: right;
+    margin: 0;
+    padding: 2px 10px;
+    width: 30px;
+}
+
+dd {
+    float: left;
+    padding: 2px 0;
+    margin-bottom: 5px;
+    text-wrap: normal;
+}
+
+dt:hover {
+    background-color: #51887a;
+    color: #ffffff;
+    padding: 2px 10px;
+}
+
 
 .filter-group, .filter-rule {
     margin-left: 40px;
+}
+
+.filter-in,
+.filter-out {
+    font-size: 0.8em;
+    padding: 2px 10px;
+    background-color: #97a8a4;
+    border: none;
 }
 
 table > tbody > tr {
@@ -129,10 +168,11 @@ tfoot tr {
     font-size: 1.2em;
 }
 
-button.next-page{
+button.next-page {
     float: right;
 }
-button.prev-page{
+
+button.prev-page {
     float: left;
 }
 
@@ -142,6 +182,7 @@ table table {
     font-size: 0.8em;
     min-width: 0;
 }
+
 table table th, td {
     padding: 5px 10px;
 }
@@ -179,4 +220,13 @@ table table th, td {
 .sort-asc,
 .sort-desc {
     cursor: pointer;
+}
+
+.debug-window {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    overflow: auto;
+    padding: 10px;
+    font-size: 0.8em;
+    color: #666666;
 }

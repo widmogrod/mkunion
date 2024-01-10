@@ -725,6 +725,9 @@ function App() {
                     <tr>
                         <td>
                             <PaginatedTable<workflow.Flow>
+                                sort={{
+                                    "ID": true,
+                                }}
                                 load={(state) => {
                                     return listFlows({
                                         ...state,
@@ -746,9 +749,18 @@ function App() {
                                     },
                                 ]}
                             />
+
+                            <div className={"debug-window"}>
+                                <img src={`data:image/jpeg;base64,${image}`} alt=""/>
+                                <pre>Func output: {output}</pre>
+                                <pre>Workflow output: {JSON.stringify(state, null, 2)} </pre>
+                            </div>
                         </td>
                         <td>
                             <PaginatedTable<workflow.State>
+                                sort={{
+                                    "ID": true,
+                                }}
                                 load={(state) => {
                                     return listStates({
                                         ...state,
@@ -799,9 +811,11 @@ function App() {
                                                     return (
                                                         <>
                                                             <span className="done">workflow.Done</span>
-                                                            <img
-                                                                src={`data:image/jpeg;base64,${done.Result["schema.Binary"]}`}
-                                                                alt=""/>
+                                                            <div className={"result"}>
+                                                                <img
+                                                                    src={`data:image/jpeg;base64,${done.Result["schema.Binary"]}`}
+                                                                    alt=""/>
+                                                            </div>
                                                             <WorkflowToString flow={done.BaseState?.Flow}/>
                                                             <ListVariables data={done.BaseState}/>
                                                         </>
@@ -827,7 +841,7 @@ function App() {
                                                                 }
                                                             }
                                                         })}
-                                                                className={"filter filter-in"}>only
+                                                                className={"filter filter-in"}>show only
                                                         </button>
                                                         <button onClick={() => ctx.filter({
                                                             Predicate: {
@@ -849,7 +863,10 @@ function App() {
                                                         })}
                                                                 className={"filter filter-out"}>exclude
                                                         </button>
-                                                        {done.Result["schema.String"]}
+                                                        <div className={"result"}>
+                                                            {done.Result["schema.String"]}
+                                                        </div>
+
                                                         <WorkflowToString flow={done.BaseState?.Flow}/>
                                                         <ListVariables data={done.BaseState}/>
                                                     </>
@@ -868,10 +885,12 @@ function App() {
                                                     <dd>{error.Code}</dd>
                                                     <dt>Message</dt>
                                                     <dd>{error.Reason}</dd>
+                                                    <dt>Retried</dt>
+                                                    <dd>{error.Retried} / {error.BaseState?.DefaultMaxRetries}</dd>
                                                 </dl>
                                                 <WorkflowToString flow={error.BaseState?.Flow}/>
                                                 <ListVariables data={error.BaseState}/>
-                                                <TryRecover error={error}/>
+                                                <TryRecover error={error} onFinish={() => ctx.refresh()}/>
                                             </>
 
                                         case "workflow.Await":
@@ -915,6 +934,7 @@ function App() {
                                                         submitCallbackResult(await_.CallbackID, {
                                                             "schema.String": (document.getElementById("callbackValue") as HTMLInputElement).value
                                                         }, (data) => {
+                                                            ctx.refresh()
                                                             setState(data)
                                                         })
                                                     }}>
@@ -940,7 +960,9 @@ function App() {
                                                     <WorkflowToString flow={scheduled.BaseState?.Flow}/>
                                                     <ListVariables data={scheduled.BaseState}/>
                                                     <button onClick={() => {
-                                                        stopSchedule(parentRunID)
+                                                        stopSchedule(parentRunID).finally(() => {
+                                                            ctx.refresh()
+                                                        })
                                                     }}>
                                                         Stop Schedule
                                                     </button>
@@ -961,7 +983,9 @@ function App() {
                                                 <WorkflowToString flow={scheduleStopped.BaseState?.Flow}/>
                                                 <ListVariables data={scheduleStopped.BaseState}/>
                                                 <button onClick={() => {
-                                                    resumeSchedule(parentRunID1)
+                                                    resumeSchedule(parentRunID1).finally(() => {
+                                                        ctx.refresh()
+                                                    })
                                                 }}>
                                                     Resume Schedule
                                                 </button>
@@ -972,11 +996,6 @@ function App() {
                                         <span className="unknown">{data.$type}</span>
                                     </>
                                 }}/>
-                        </td>
-                        <td>
-                            <img src={`data:image/jpeg;base64,${image}`} alt=""/>
-                            <pre>Func output: {output}</pre>
-                            <pre>Workflow output: {JSON.stringify(state, null, 2)} </pre>
                         </td>
                     </tr>
                     </tbody>
@@ -1323,8 +1342,9 @@ const recover = (runID: string) => {
         .then(data => data as workflow.State)
 }
 
-function TryRecover(props: { error: workflow.Error }) {
-    return <button onClick={() => props.error.BaseState?.RunID && recover(props.error.BaseState?.RunID)}>
+function TryRecover(props: { error: workflow.Error, onFinish: (data: workflow.State) => void }) {
+    return <button
+        onClick={() => props.error.BaseState?.RunID && recover(props.error.BaseState?.RunID).then(props.onFinish)}>
         Try recover
     </button>
 }
