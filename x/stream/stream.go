@@ -2,50 +2,58 @@ package stream
 
 import "fmt"
 
+//go:generate go run ../../cmd/mkunion
+
 var (
 	ErrEndOfStream     = fmt.Errorf("end of stream")
 	ErrOffsetSetOnPush = fmt.Errorf("offset set on push")
 )
 
+//go:tag mkunion:"PullCMD"
+type (
+	FromBeginning struct{}
+	FromOffset    = Offset
+)
+
+//go:tag serde:"json"
+type Offset string
+
+func (o *Offset) IsSet() bool {
+	return o != nil && *o != ""
+}
+
 type Item[A any] struct {
 	Key    string
 	Data   A
-	Offset int
+	Offset *Offset
 }
 
 type Stream[A any] interface {
 	Push(x *Item[A]) error
-	Pull(offset int) (*Item[A], error)
+	Pull(offset PullCMD) (*Item[A], error)
 }
 
-func NewInMemoryStream[A any]() *InMemoryStream[A] {
-	return &InMemoryStream[A]{}
+var (
+	ErrEmptyOffsetInParsing = fmt.Errorf("offset fail; empty offset")
+	ErrParsingOffset        = fmt.Errorf("offset fail; parsing offset")
+)
+
+func MkOffsetFromInt(x int) *Offset {
+	result := Offset(fmt.Sprintf("%d", x))
+	return &result
 }
 
-type InMemoryStream[A any] struct {
-	values []*Item[A]
-}
-
-var _ Stream[int] = (*InMemoryStream[int])(nil)
-
-func (i *InMemoryStream[A]) Push(x *Item[A]) error {
-	if x.Offset != 0 {
-		return ErrOffsetSetOnPush
+func ParseOffsetAsInt(x *Offset) (int, error) {
+	if x == nil {
+		return 0, ErrEmptyOffsetInParsing
 	}
 
-	i.values = append(i.values, &Item[A]{
-		Key:    x.Key,
-		Data:   x.Data,
-		Offset: len(i.values),
-	})
-	return nil
-}
+	var result int
 
-func (i *InMemoryStream[A]) Pull(fromOffset int) (*Item[A], error) {
-	if fromOffset+1 >= len(i.values) {
-		return nil, ErrEndOfStream
+	_, err := fmt.Sscanf(string(*x), "%d", &result)
+	if err != nil {
+		return 0, fmt.Errorf("stream.ParseOffsetAsInt: %w; %w", err, ErrParsingOffset)
 	}
 
-	// Pull from the offset excluding the offset itself
-	return i.values[fromOffset+1], nil
+	return result, nil
 }
