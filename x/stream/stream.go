@@ -34,8 +34,8 @@ type Stream[A any] interface {
 }
 
 var (
-	ErrEmptyOffsetInParsing = fmt.Errorf("offset fail; empty offset")
-	ErrParsingOffset        = fmt.Errorf("offset fail; parsing offset")
+	ErrParsingOffsetEmptyOffset = fmt.Errorf("offset parsing empty value of offset")
+	ErrParsingOffsetParser      = fmt.Errorf("offset parser error")
 )
 
 func MkOffsetFromInt(x int) *Offset {
@@ -45,14 +45,14 @@ func MkOffsetFromInt(x int) *Offset {
 
 func ParseOffsetAsInt(x *Offset) (int, error) {
 	if x == nil {
-		return 0, ErrEmptyOffsetInParsing
+		return 0, ErrParsingOffsetEmptyOffset
 	}
 
 	var result int
 
 	_, err := fmt.Sscanf(string(*x), "%d", &result)
 	if err != nil {
-		return 0, fmt.Errorf("stream.ParseOffsetAsInt: %w; %w", err, ErrParsingOffset)
+		return 0, fmt.Errorf("stream.ParseOffsetAsInt: %w; %w", err, ErrParsingOffsetParser)
 	}
 
 	return result, nil

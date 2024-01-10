@@ -30,10 +30,6 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 		return nil, ErrEndOfStream
 	}
 
-	if fromOffset == nil {
-		fromOffset = &FromBeginning{}
-	}
-
 	return MatchPullCMDR2(
 		fromOffset,
 		func(x *FromBeginning) (*Item[A], error) {
@@ -42,7 +38,7 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 		func(x *FromOffset) (*Item[A], error) {
 			offset, err := ParseOffsetAsInt(x)
 			if err != nil {
-				return nil, fmt.Errorf("stream.InMemoryStream: Pull: %w", err)
+				return nil, fmt.Errorf("stream.InMemoryStream: Pull %+#v: %w", x, err)
 			}
 
 			if offset+1 >= len(i.values) {
