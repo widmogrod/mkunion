@@ -24,34 +24,38 @@ func NewPushAndPullInMemoryContext[A, B any](in stream.Stream[A], out stream.Str
 	return &PushAndPullInMemoryContext[A, B]{
 		input:  in,
 		output: out,
-		offset: -1,
 	}
 }
 
 func NewPushOnlyInMemoryContext[A any](out stream.Stream[A]) PushOnly[A] {
 	return &PushAndPullInMemoryContext[any, A]{
 		output: out,
-		offset: -1,
 	}
 }
 
 func NewPullOnlyInMemoryContext[A any](in stream.Stream[A]) PullOnly[A] {
 	return &PushAndPullInMemoryContext[A, any]{
-		input:  in,
-		offset: -1,
+		input: in,
 	}
 }
 
 var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 
 type PushAndPullInMemoryContext[A, B any] struct {
-	offset int
+	offset *stream.Offset
 	input  stream.Stream[A]
 	output stream.Stream[B]
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) PullIn() (A, error) {
-	item, err := c.input.Pull(c.offset)
+	var pull stream.PullCMD
+	if c.offset == nil {
+		pull = &stream.FromBeginning{}
+	} else {
+		pull = c.offset
+	}
+
+	item, err := c.input.Pull(pull)
 	if err != nil {
 		var result A
 		return result, fmt.Errorf("projection.PushAndPullInMemoryContext: PullIn: %w", err)
@@ -136,9 +140,6 @@ func NewJoinInMemoryContext[A, B any](a stream.Stream[A], b stream.Stream[B]) Pu
 		b: b,
 
 		mod: true,
-
-		offsetA: -1,
-		offsetB: -1,
 	}
 }
 
@@ -150,8 +151,8 @@ type InMemoryJoinContext[A, B any] struct {
 	endA bool
 	endB bool
 
-	offsetA int
-	offsetB int
+	offsetA *stream.Offset
+	offsetB *stream.Offset
 }
 
 var _ PullOnly[*Either[any, any]] = (*InMemoryJoinContext[any, any])(nil)
