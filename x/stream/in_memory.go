@@ -30,6 +30,10 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 		return nil, ErrEndOfStream
 	}
 
+	if fromOffset == nil {
+		return nil, ErrEmptyCommand
+	}
+
 	return MatchPullCMDR2(
 		fromOffset,
 		func(x *FromBeginning) (*Item[A], error) {
