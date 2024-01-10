@@ -35,7 +35,11 @@ func TestInMemoryStream_Push(t *testing.T) {
 	err = s.Push(&Item[int]{Data: 3, Offset: MkOffsetFromInt(123)})
 	assert.ErrorAs(t, err, &ErrOffsetSetOnPush)
 
-	value, err := s.Pull(&FromBeginning{})
+	value, err := s.Pull(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, value.Data)
+
+	value, err = s.Pull(&FromBeginning{})
 	assert.NoError(t, err)
 	assert.Equal(t, 1, value.Data)
 
