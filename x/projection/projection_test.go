@@ -3,11 +3,12 @@ package projection
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/stream"
 	"testing"
 )
 
 func TestProjection(t *testing.T) {
-	out1 := NewInMemoryStream[int]()
+	out1 := stream.NewInMemoryStream[int]()
 	ctx1 := NewPushOnlyInMemoryContext[int](out1)
 
 	err := DoLoad(ctx1, func(push func(int) error) error {
@@ -21,7 +22,7 @@ func TestProjection(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	out2 := NewInMemoryStream[float64]()
+	out2 := stream.NewInMemoryStream[float64]()
 	ctx2 := NewPushAndPullInMemoryContext[int, float64](out1, out2)
 	err = DoMap[int, float64](ctx2, func(x int) float64 {
 		return float64(x) * 2

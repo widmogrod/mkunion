@@ -3,49 +3,8 @@ package projection
 import (
 	"errors"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/stream"
 )
-
-var (
-	ErrEndOfStream = fmt.Errorf("end of stream")
-)
-
-type Item[A any] struct {
-	Value  A
-	Offset int
-}
-
-type Stream[A any] interface {
-	Push(x A) error
-	Pull(offset int) (Item[A], error)
-}
-
-func NewInMemoryStream[A any]() *InMemoryStream[A] {
-	return &InMemoryStream[A]{}
-}
-
-type InMemoryStream[A any] struct {
-	values []Item[A]
-}
-
-var _ Stream[int] = (*InMemoryStream[int])(nil)
-
-func (i *InMemoryStream[A]) Push(x A) error {
-	i.values = append(i.values, Item[A]{
-		Value:  x,
-		Offset: len(i.values),
-	})
-	return nil
-}
-
-func (i *InMemoryStream[A]) Pull(fromOffset int) (Item[A], error) {
-	if fromOffset+1 >= len(i.values) {
-		var res Item[A]
-		return res, ErrEndOfStream
-	}
-
-	// Pull from the offset excluding the offset itself
-	return i.values[fromOffset+1], nil
-}
 
 type (
 	PushAndPull[A, B any] interface {
@@ -61,7 +20,7 @@ type (
 	}
 )
 
-func NewPushAndPullInMemoryContext[A, B any](in Stream[A], out Stream[B]) *PushAndPullInMemoryContext[A, B] {
+func NewPushAndPullInMemoryContext[A, B any](in stream.Stream[A], out stream.Stream[B]) *PushAndPullInMemoryContext[A, B] {
 	return &PushAndPullInMemoryContext[A, B]{
 		input:  in,
 		output: out,
@@ -69,14 +28,14 @@ func NewPushAndPullInMemoryContext[A, B any](in Stream[A], out Stream[B]) *PushA
 	}
 }
 
-func NewPushOnlyInMemoryContext[A any](out Stream[A]) PushOnly[A] {
+func NewPushOnlyInMemoryContext[A any](out stream.Stream[A]) PushOnly[A] {
 	return &PushAndPullInMemoryContext[any, A]{
 		output: out,
 		offset: -1,
 	}
 }
 
-func NewPullOnlyInMemoryContext[A any](in Stream[A]) PullOnly[A] {
+func NewPullOnlyInMemoryContext[A any](in stream.Stream[A]) PullOnly[A] {
 	return &PushAndPullInMemoryContext[A, any]{
 		input:  in,
 		offset: -1,
@@ -87,22 +46,25 @@ var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 
 type PushAndPullInMemoryContext[A, B any] struct {
 	offset int
-	input  Stream[A]
-	output Stream[B]
+	input  stream.Stream[A]
+	output stream.Stream[B]
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) PullIn() (A, error) {
 	item, err := c.input.Pull(c.offset)
 	if err != nil {
-		return item.Value, fmt.Errorf("projection.PushAndPullInMemoryContext: PullIn: %w", err)
+		var result A
+		return result, fmt.Errorf("projection.PushAndPullInMemoryContext: PullIn: %w", err)
 	}
 
 	c.offset = item.Offset
-	return item.Value, nil
+	return item.Data, nil
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) PushOut(x B) error {
-	err := c.output.Push(x)
+	err := c.output.Push(&stream.Item[B]{
+		Data: x,
+	})
 	if err != nil {
 		return fmt.Errorf("projection.PushAndPullInMemoryContext: PushOut: %w", err)
 	}
@@ -125,7 +87,7 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(A) B) error {
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
-			if errors.Is(err, ErrEndOfStream) {
+			if errors.Is(err, stream.ErrEndOfStream) {
 				return nil
 			}
 			return fmt.Errorf("projection.DoMap: pull: %w", err)
@@ -150,7 +112,7 @@ func DoSink[A any](ctx PullOnly[A], f func(A) error) error {
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
-			if errors.Is(err, ErrEndOfStream) {
+			if errors.Is(err, stream.ErrEndOfStream) {
 				return nil
 			}
 			return fmt.Errorf("projection.DoSink: pull: %w", err)
@@ -168,7 +130,7 @@ type Either[A, B any] struct {
 	Right *B
 }
 
-func NewJoinInMemoryContext[A, B any](a Stream[A], b Stream[B]) PullOnly[*Either[A, B]] {
+func NewJoinInMemoryContext[A, B any](a stream.Stream[A], b stream.Stream[B]) PullOnly[*Either[A, B]] {
 	return &InMemoryJoinContext[A, B]{
 		a: a,
 		b: b,
@@ -181,8 +143,8 @@ func NewJoinInMemoryContext[A, B any](a Stream[A], b Stream[B]) PullOnly[*Either
 }
 
 type InMemoryJoinContext[A, B any] struct {
-	a Stream[A]
-	b Stream[B]
+	a stream.Stream[A]
+	b stream.Stream[B]
 
 	mod  bool
 	endA bool
@@ -196,14 +158,14 @@ var _ PullOnly[*Either[any, any]] = (*InMemoryJoinContext[any, any])(nil)
 
 func (i *InMemoryJoinContext[A, B]) PullIn() (*Either[A, B], error) {
 	if i.endA && i.endB {
-		return nil, ErrEndOfStream
+		return nil, stream.ErrEndOfStream
 	}
 
 	if !i.endA && i.mod == true {
 		i.mod = !i.mod
 		val, err := i.a.Pull(i.offsetA)
 		if err != nil {
-			if errors.Is(err, ErrEndOfStream) {
+			if errors.Is(err, stream.ErrEndOfStream) {
 				i.endA = true
 				return i.PullIn()
 			}
@@ -213,13 +175,13 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (*Either[A, B], error) {
 		i.offsetA = val.Offset
 
 		return &Either[A, B]{
-			Left: &val.Value,
+			Left: &val.Data,
 		}, nil
 	} else if !i.endB && i.mod == false {
 		i.mod = !i.mod
 		val, err := i.b.Pull(i.offsetB)
 		if err != nil {
-			if errors.Is(err, ErrEndOfStream) {
+			if errors.Is(err, stream.ErrEndOfStream) {
 				i.endB = true
 				return i.PullIn()
 			}
@@ -229,7 +191,7 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (*Either[A, B], error) {
 		i.offsetB = val.Offset
 
 		return &Either[A, B]{
-			Right: &val.Value,
+			Right: &val.Data,
 		}, nil
 	}
 
@@ -237,6 +199,6 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (*Either[A, B], error) {
 	return i.PullIn()
 }
 
-func DoJoin[A, B any](a Stream[A], b Stream[B]) PullOnly[*Either[A, B]] {
+func DoJoin[A, B any](a stream.Stream[A], b stream.Stream[B]) PullOnly[*Either[A, B]] {
 	return NewJoinInMemoryContext(a, b)
 }
