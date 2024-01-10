@@ -7,6 +7,7 @@ import "fmt"
 var (
 	ErrEndOfStream     = fmt.Errorf("end of stream")
 	ErrOffsetSetOnPush = fmt.Errorf("offset set on push")
+	ErrEmptyCommand    = fmt.Errorf("empty command")
 )
 
 //go:tag mkunion:"PullCMD"
