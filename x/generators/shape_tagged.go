@@ -156,6 +156,15 @@ func (g *ShapeTagged) generateUnionFunc(s *shape.UnionLike) (string, error) {
 	fmt.Fprintf(result, "\t\tName: \"%s\",\n", s.Name)
 	fmt.Fprintf(result, "\t\tPkgName: \"%s\",\n", s.PkgName)
 	fmt.Fprintf(result, "\t\tPkgImportName: \"%s\",\n", s.PkgImportName)
+
+	if len(s.TypeParams) > 0 {
+		fmt.Fprintf(result, "\t\tTypeParams: []shape.TypeParam{\n")
+		for _, param := range s.TypeParams {
+			fmt.Fprintf(result, "%s,\n", padLeftTabs(3, TypeParamToString(param)))
+		}
+		fmt.Fprintf(result, "\t\t},\n")
+	}
+
 	fmt.Fprintf(result, "\t\tVariant: []shape.Shape{\n")
 	for _, variant := range s.Variant {
 		variantName, supports := TypeNameIfSupports(variant)
@@ -328,6 +337,14 @@ func ShapeToString(x shape.Shape) string {
 			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
 			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
 			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
+
+			if len(x.TypeParams) > 0 {
+				fmt.Fprintf(result, "\tTypeParams: []shape.TypeParam{\n")
+				for _, param := range x.TypeParams {
+					fmt.Fprintf(result, "%s,\n", padLeftTabs(2, TypeParamToString(param)))
+				}
+				fmt.Fprintf(result, "\t},\n")
+			}
 
 			if len(x.Variant) > 0 {
 				fmt.Fprintf(result, "\tVariant: []shape.Shape{\n")
