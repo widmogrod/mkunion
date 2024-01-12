@@ -35,17 +35,6 @@ func main() {
 				Aliases:  []string{"n"},
 				Required: false,
 			},
-			&cli.StringFlag{
-				Name:     "skip-extension",
-				Aliases:  []string{"skip-ext"},
-				Value:    "",
-				Required: false,
-			},
-			&cli.StringFlag{
-				Name:     "include-extension",
-				Aliases:  []string{"inc-ext"},
-				Required: false,
-			},
 			&cli.StringSliceFlag{
 				Name:      "input-go-file",
 				Aliases:   []string{"i", "input"},
@@ -57,10 +46,6 @@ func main() {
 				Aliases:  []string{"v"},
 				Required: false,
 				Value:    false,
-			},
-			&cli.BoolFlag{
-				Name:     "no-compact",
-				Required: false,
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -269,6 +254,10 @@ func GenerateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 			return shapesContents, fmt.Errorf("failed to generate genVisitor for %s: %w", shape.ToGoTypeName(union), err)
 		}
 		shapesContents.Write(contents)
+
+		if shape.TagHasOption(union.Tags, "mkunion", "noserde") {
+			continue
+		}
 
 		genSerde := generators.NewSerdeJSONUnion(union)
 		genSerde.SkipImportsAndPackage(true)
