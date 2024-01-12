@@ -238,6 +238,16 @@ func TestFromGoo(t *testing.T) {
 									Type: &PrimitiveLike{Kind: &StringLike{}},
 								},
 								{
+									Name: "TypeParams",
+									Type: &ListLike{
+										Element: &RefName{
+											Name:          "TypeParam",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
+									},
+								},
+								{
 									Name: "Variant",
 									Type: &ListLike{
 										Element: &RefName{
