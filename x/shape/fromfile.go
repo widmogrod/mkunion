@@ -215,10 +215,24 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 		return nil
 	}
 
+	var typeParams []TypeParam
+	for _, v := range variants {
+		typeParams = append(typeParams, ExtractTypeParams(v)...)
+	}
+
+	// deduplicate typeParams by name
+	var uniqueTypeParams []TypeParam
+	for _, typeParam := range typeParams {
+		if !nameExistsInParams(typeParam.Name, uniqueTypeParams) {
+			uniqueTypeParams = append(uniqueTypeParams, typeParam)
+		}
+	}
+
 	return &UnionLike{
 		Name:          name,
 		PkgName:       f.pkgName,
 		PkgImportName: f.pkgImportName,
+		TypeParams:    uniqueTypeParams,
 		Variant:       variants,
 		Tags:          f.possibleTaggedTypes[name],
 	}
@@ -524,7 +538,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Key: FromAST(next.Key, opt...),
 					Val: FromAST(next.Value, opt...),
 					//KeyIsPointer: IsStarExpr(next.Key),
-					//ValIsPointer: IsStarExpr(next.Value),
+					//ValIsPointer: IsStarExpr(next.Term),
 				},
 				Tags: f.possibleTaggedTypes[f.currentType],
 			}

@@ -50,6 +50,7 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
+		TypeParams    []TypeParam
 		Variant       []Shape
 		Tags          map[string]Tag
 	}
@@ -199,6 +200,25 @@ func TagGetValue(x map[string]Tag, tag, defaults string) string {
 	}
 
 	return t.Value
+}
+
+func TagHasOption(x map[string]Tag, tag, option string) bool {
+	if x == nil {
+		return false
+	}
+
+	t, ok := x[tag]
+	if !ok {
+		return false
+	}
+
+	for _, v := range t.Options {
+		if v == option {
+			return true
+		}
+	}
+
+	return false
 }
 
 //go:tag mkunion:"Guard"
@@ -435,4 +455,13 @@ func ExtractRefs(x Shape) []*RefName {
 			return result
 		},
 	)
+}
+
+func ExtractTypeParams(x Shape) []TypeParam {
+	switch x := x.(type) {
+	case *StructLike:
+		return x.TypeParams
+	}
+
+	return nil
 }
