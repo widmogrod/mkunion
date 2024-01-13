@@ -24,10 +24,13 @@ func (o *Offset) IsSet() bool {
 }
 
 type Item[A any] struct {
-	Key    string
-	Data   A
-	Offset *Offset
+	Key       string
+	Data      A
+	EventTime *EventTime
+	Offset    *Offset
 }
+
+type EventTime = int64
 
 type Stream[A any] interface {
 	Push(x *Item[A]) error
@@ -57,4 +60,8 @@ func ParseOffsetAsInt(x *Offset) (int, error) {
 	}
 
 	return result, nil
+}
+
+func MkEventTimeFromInt(x int64) *EventTime {
+	return &x
 }

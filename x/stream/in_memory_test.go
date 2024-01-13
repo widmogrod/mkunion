@@ -1,12 +1,13 @@
 package stream
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestNewInMemoryStream(t *testing.T) {
-	s := NewInMemoryStream[int]()
+	s := NewInMemoryStream[int](WithSystemTime)
 	if s == nil {
 		t.Fatalf("NewInMemoryStream: got nil")
 	}
@@ -21,7 +22,7 @@ func TestNewInMemoryStream(t *testing.T) {
 }
 
 func TestInMemoryStream_Push(t *testing.T) {
-	s := NewInMemoryStream[int]()
+	s := NewInMemoryStream[int](WithSystemTimeFixed(4513))
 	if s == nil {
 		t.Fatalf("NewInMemoryStream: got nil")
 	}
@@ -40,11 +41,27 @@ func TestInMemoryStream_Push(t *testing.T) {
 
 	value, err = s.Pull(&FromBeginning{})
 	assert.NoError(t, err)
-	assert.Equal(t, 1, value.Data)
+
+	expected := &Item[int]{
+		Data:      1,
+		EventTime: MkEventTimeFromInt(4513),
+		Offset:    MkOffsetFromInt(0),
+	}
+	if diff := cmp.Diff(expected, value); diff != "" {
+		t.Fatalf("Pull: diff: (-want +got)\n%s", diff)
+	}
 
 	value, err = s.Pull(value.Offset)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, value.Data)
+	expected = &Item[int]{
+		Data:      2,
+		EventTime: MkEventTimeFromInt(4513),
+		Offset:    MkOffsetFromInt(1),
+	}
+	if diff := cmp.Diff(expected, value); diff != "" {
+		t.Fatalf("Pull: diff: (-want +got)\n%s", diff)
+	}
 
 	value, err = s.Pull(value.Offset)
 	assert.ErrorAs(t, err, &ErrEndOfStream)

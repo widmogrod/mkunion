@@ -1,13 +1,29 @@
 package stream
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
-func NewInMemoryStream[A any]() *InMemoryStream[A] {
-	return &InMemoryStream[A]{}
+func WithSystemTime() EventTime {
+	return time.Now().UnixNano()
+}
+
+func WithSystemTimeFixed(x EventTime) func() EventTime {
+	return func() EventTime {
+		return x
+	}
+}
+
+func NewInMemoryStream[A any](systemTime func() EventTime) *InMemoryStream[A] {
+	return &InMemoryStream[A]{
+		systemTime: systemTime,
+	}
 }
 
 type InMemoryStream[A any] struct {
-	values []*Item[A]
+	values     []*Item[A]
+	systemTime func() EventTime
 }
 
 var _ Stream[int] = (*InMemoryStream[int])(nil)
@@ -18,9 +34,10 @@ func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 	}
 
 	i.values = append(i.values, &Item[A]{
-		Key:    x.Key,
-		Data:   x.Data,
-		Offset: MkOffsetFromInt(len(i.values)),
+		Key:       x.Key,
+		Data:      x.Data,
+		EventTime: i.ensureEventTime(x.EventTime),
+		Offset:    MkOffsetFromInt(len(i.values)),
 	})
 	return nil
 }
@@ -52,4 +69,13 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 			return i.values[offset+1], nil
 		},
 	)
+}
+
+func (i *InMemoryStream[A]) ensureEventTime(eventTime *EventTime) *EventTime {
+	if eventTime != nil {
+		return eventTime
+	}
+
+	result := i.systemTime()
+	return &result
 }
