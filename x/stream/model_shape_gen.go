@@ -6,6 +6,7 @@ import (
 )
 
 func init() {
+	shape.Register(EventTimeShape())
 	shape.Register(FromBeginningShape())
 	shape.Register(FromOffsetShape())
 	shape.Register(ItemShape())
@@ -65,6 +66,21 @@ func OffsetShape() shape.Shape {
 }
 
 //shape:shape
+func EventTimeShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "EventTime",
+		PkgName:       "stream",
+		PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+		IsAlias:       true,
+		Type: &shape.PrimitiveLike{
+			Kind: &shape.NumberLike{
+				Kind: &shape.Int64{},
+			},
+		},
+	}
+}
+
+//shape:shape
 func ItemShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Item",
@@ -87,6 +103,16 @@ func ItemShape() shape.Shape {
 					Name:          "A",
 					PkgName:       "",
 					PkgImportName: "",
+				},
+			},
+			{
+				Name: "EventTime",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "EventTime",
+						PkgName:       "stream",
+						PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+					},
 				},
 			},
 			{
