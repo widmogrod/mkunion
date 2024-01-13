@@ -260,6 +260,12 @@ func OtherShape() shape.Shape {
 		Name: "Other",
 		PkgName: "testutils",
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
 		Type: &shape.RefName{
 				Name: "Some",
 				PkgName: "testutils",

@@ -240,6 +240,15 @@ func ShapeToString(x shape.Shape) string {
 			fmt.Fprintf(result, "\tName: %q,\n", x.Name)
 			fmt.Fprintf(result, "\tPkgName: %q,\n", x.PkgName)
 			fmt.Fprintf(result, "\tPkgImportName: %q,\n", x.PkgImportName)
+
+			if len(x.TypeParams) > 0 {
+				fmt.Fprintf(result, "\tTypeParams: []shape.TypeParam{\n")
+				for _, param := range x.TypeParams {
+					fmt.Fprintf(result, "%s,\n", padLeftTabs(2, TypeParamToString(param)))
+				}
+				fmt.Fprintf(result, "\t},\n")
+			}
+
 			if len(x.Tags) > 0 {
 				fmt.Fprintf(result, "\tTags: %s,\n", padLeftTabs2(1, TagsToStr(x.Tags)))
 			}
