@@ -18,6 +18,7 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
+		TypeParams    []TypeParam
 		IsAlias       bool
 		Type          Shape
 		Tags          map[string]Tag
@@ -393,6 +394,10 @@ func ExtractRefs(x Shape) []*RefName {
 				PkgImportName: x.PkgImportName,
 			})
 
+			for _, param := range x.TypeParams {
+				result = append(result, ExtractRefs(param.Type)...)
+			}
+
 			result = append(result, ExtractRefs(x.Type)...)
 			return result
 		},
@@ -449,6 +454,9 @@ func ExtractRefs(x Shape) []*RefName {
 				PkgImportName: x.PkgImportName,
 			})
 
+			for _, param := range x.TypeParams {
+				result = append(result, ExtractRefs(param.Type)...)
+			}
 			for _, variant := range x.Variant {
 				result = append(result, ExtractRefs(variant)...)
 			}
@@ -460,6 +468,10 @@ func ExtractRefs(x Shape) []*RefName {
 func ExtractTypeParams(x Shape) []TypeParam {
 	switch x := x.(type) {
 	case *StructLike:
+		return x.TypeParams
+	case *UnionLike:
+		return x.TypeParams
+	case *AliasLike:
 		return x.TypeParams
 	}
 

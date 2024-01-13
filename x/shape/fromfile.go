@@ -474,6 +474,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 					Name:          f.currentType,
 					PkgName:       f.pkgName,
 					PkgImportName: f.pkgImportName,
+					TypeParams:    f.extractTypeParams(t.TypeParams),
 					IsAlias:       IsASTAlias(t),
 					Type: &RefName{
 						Name:          next.Name,
@@ -492,6 +493,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
 				IsAlias:       IsASTAlias(t),
 				Type:          f.selectExrToShape(next),
 				Tags:          f.possibleTaggedTypes[f.currentType],
@@ -506,6 +508,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
 				IsAlias:       IsASTAlias(t),
 				Type:          FromAST(next, opt...),
 				Tags:          f.possibleTaggedTypes[f.currentType],
@@ -520,6 +523,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
 				IsAlias:       IsASTAlias(t),
 				Type:          FromAST(next, opt...),
 				Tags:          f.possibleTaggedTypes[f.currentType],
@@ -533,6 +537,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
 				IsAlias:       IsASTAlias(t),
 				Type: &MapLike{
 					Key: FromAST(next.Key, opt...),
@@ -548,6 +553,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
 				IsAlias:       IsASTAlias(t),
 				Type: &ListLike{
 					Element: FromAST(next.Elt, opt...),
@@ -574,6 +580,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				Name:          f.currentType,
 				PkgName:       f.pkgName,
 				PkgImportName: f.pkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
 				IsAlias:       IsASTAlias(t),
 				Type: &PointerLike{
 					Type: FromAST(next.X, opt...),
