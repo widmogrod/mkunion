@@ -20,6 +20,9 @@ func TestGeneric(t *testing.T) {
 		func(x *Item[int]) string {
 			return fmt.Sprintf("%s: %d", x.Key, x.Data)
 		},
+		func(x *Other[int]) string {
+			return fmt.Sprintf("%d", x.ValueOf)
+		},
 	)
 
 	assert.Equal(t, "foo: 42", y)

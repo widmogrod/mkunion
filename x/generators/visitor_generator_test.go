@@ -186,6 +186,7 @@ func TestVisitorGenerator_Generic(t *testing.T) {
 
 type RecordVisitor[A any] interface {
 	VisitItem(v *Item[A]) any
+	VisitOther(v *Other[A]) any
 }
 
 type Record[A any] interface {
@@ -194,17 +195,22 @@ type Record[A any] interface {
 
 var (
 	_ Record[any] = (*Item[any])(nil)
+	_ Record[any] = (*Other[any])(nil)
 )
 
 func (r *Item[A]) AcceptRecord(v RecordVisitor[A]) any { return v.VisitItem(r) }
+func (r *Other[A]) AcceptRecord(v RecordVisitor[A]) any { return v.VisitOther(r) }
 
 func MatchRecordR3[A any, T0, T1, T2 any](
 	x Record[A],
 	f1 func(x *Item[A]) (T0, T1, T2),
+	f2 func(x *Other[A]) (T0, T1, T2),
 ) (T0, T1, T2) {
 	switch v := x.(type) {
 	case *Item[A]:
 		return f1(v)
+	case *Other[A]:
+		return f2(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -215,10 +221,13 @@ func MatchRecordR3[A any, T0, T1, T2 any](
 func MatchRecordR2[A any, T0, T1 any](
 	x Record[A],
 	f1 func(x *Item[A]) (T0, T1),
+	f2 func(x *Other[A]) (T0, T1),
 ) (T0, T1) {
 	switch v := x.(type) {
 	case *Item[A]:
 		return f1(v)
+	case *Other[A]:
+		return f2(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -228,10 +237,13 @@ func MatchRecordR2[A any, T0, T1 any](
 func MatchRecordR1[A any, T0 any](
 	x Record[A],
 	f1 func(x *Item[A]) T0,
+	f2 func(x *Other[A]) T0,
 ) T0 {
 	switch v := x.(type) {
 	case *Item[A]:
 		return f1(v)
+	case *Other[A]:
+		return f2(v)
 	}
 	var result1 T0
 	return result1
@@ -240,10 +252,13 @@ func MatchRecordR1[A any, T0 any](
 func MatchRecordR0[A any](
 	x Record[A],
 	f1 func(x *Item[A]),
+	f2 func(x *Other[A]),
 ) {
 	switch v := x.(type) {
 	case *Item[A]:
 		f1(v)
+	case *Other[A]:
+		f2(v)
 	}
 }
 `, string(result))

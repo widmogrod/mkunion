@@ -9,7 +9,9 @@ type (
 		Data A
 	}
 
-	//Error[A any] struct {
-	//	Err A
-	//}
+	Other[A any] Some[A]
 )
+
+type Some[B any] struct {
+	ValueOf B
+}

@@ -204,6 +204,7 @@ import (
 
 func init() {
 	shape.Register(ItemShape())
+	shape.Register(OtherShape())
 	shape.Register(RecordShape())
 }
 
@@ -221,6 +222,7 @@ func RecordShape() shape.Shape {
 		},
 		Variant: []shape.Shape{
 			ItemShape(),
+			OtherShape(),
 		},
 	}
 }
@@ -250,6 +252,26 @@ func ItemShape() shape.Shape {
 				},
 			},
 		},
+	}
+}
+
+func OtherShape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "Other",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		Type: &shape.RefName{
+				Name: "Some",
+				PkgName: "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				Indexed: []shape.Shape{
+					&shape.RefName{
+						Name: "A",
+						PkgName: "testutils",
+						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+					},
+				},
+			},
 	}
 }
 `, result)
