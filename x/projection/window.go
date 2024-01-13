@@ -62,6 +62,8 @@ func DoWindow[A, B any](
 			}
 		}
 
+		byKey = make(map[string]map[WindowKey]WindowByKey[B])
+
 		return nil
 	}
 

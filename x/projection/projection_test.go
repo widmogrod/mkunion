@@ -48,7 +48,7 @@ func TestProjection(t *testing.T) {
 
 	orderOfEvents := []string{}
 	out3 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	ctx4 := DoJoin[int, float64, float64](out1, out2, out3)
+	ctx4 := NewJoinInMemoryContext[int, float64, float64](out1, out2, out3)
 	err = DoSink[Either[int, float64]](ctx4, func(x Data[Either[int, float64]]) error {
 		return MatchDataR1(
 			x,
@@ -97,11 +97,11 @@ func TestProjection(t *testing.T) {
 	}
 
 	if diff := cmp.Diff(expectedOrder, orderOfEvents); diff != "" {
-		t.Fatalf("DoJoin: diff: (-want +got)\n%s", diff)
+		t.Fatalf("NewJoinPushAndPullContext: diff: (-want +got)\n%s", diff)
 	}
 
 	out4 := stream.NewInMemoryStream[string](stream.WithSystemTime)
-	ctx5 := DoJoin[int, float64, string](out1, out2, out4)
+	ctx5 := NewJoinInMemoryContext[int, float64, string](out1, out2, out4)
 	err = DoWindow(ctx5, func(x Either[int, float64], agg string) (string, error) {
 		var concat string
 		if agg == "" {
@@ -137,6 +137,6 @@ func TestProjection(t *testing.T) {
 	}
 
 	if diff := cmp.Diff(expectedOrder, orderOfEvents); diff != "" {
-		t.Fatalf("DoJoin: diff: (-want +got)\n%s", diff)
+		t.Fatalf("NewJoinPushAndPullContext: diff: (-want +got)\n%s", diff)
 	}
 }

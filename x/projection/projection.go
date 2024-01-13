@@ -271,11 +271,3 @@ func (i *InMemoryJoinContext[A, B, C]) PushOut(x Data[C]) error {
 	}
 	return nil
 }
-
-func DoJoin[A, B, C any](
-	a stream.Stream[A],
-	b stream.Stream[B],
-	out stream.Stream[C],
-) PushAndPull[Either[A, B], C] {
-	return NewJoinInMemoryContext(a, b, out)
-}
