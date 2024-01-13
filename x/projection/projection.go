@@ -19,11 +19,6 @@ type (
 
 type EventTime = int64
 
-type Window struct {
-	Start int64
-	End   int64
-}
-
 func RecordToStreamItem[A any](x Data[A]) *stream.Item[A] {
 	return MatchDataR1[A, *stream.Item[A]](x,
 		func(x *Record[A]) *stream.Item[A] {
@@ -98,10 +93,10 @@ func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
 	c.offset = item.Offset
 
 	result := &Record[A]{
-		Key:  item.Key,
-		Data: item.Data,
-		//EventTime: 0,
-		//Window:    nil,
+		Key:       item.Key,
+		Data:      item.Data,
+		EventTime: item.EventTime,
+		Offset:    item.Offset,
 	}
 
 	return result, nil
@@ -169,18 +164,24 @@ type (
 	}
 )
 
-func NewJoinInMemoryContext[A, B any](a stream.Stream[A], b stream.Stream[B]) *InMemoryJoinContext[A, B] {
-	return &InMemoryJoinContext[A, B]{
-		a: a,
-		b: b,
-
-		mod: true,
+func NewJoinInMemoryContext[A, B, C any](
+	a stream.Stream[A],
+	b stream.Stream[B],
+	out stream.Stream[C],
+) PushAndPull[Either[A, B], C] {
+	return &InMemoryJoinContext[A, B, C]{
+		a:      a,
+		b:      b,
+		output: out,
+		mod:    true,
 	}
 }
 
-type InMemoryJoinContext[A, B any] struct {
+type InMemoryJoinContext[A, B, C any] struct {
 	a stream.Stream[A]
 	b stream.Stream[B]
+
+	output stream.Stream[C]
 
 	mod  bool
 	endA bool
@@ -190,9 +191,9 @@ type InMemoryJoinContext[A, B any] struct {
 	offsetB *stream.Offset
 }
 
-var _ PullOnly[Either[any, any]] = (*InMemoryJoinContext[any, any])(nil)
+var _ PushAndPull[Either[any, any], any] = (*InMemoryJoinContext[any, any, any])(nil)
 
-func (i *InMemoryJoinContext[A, B]) PullIn() (Data[Either[A, B]], error) {
+func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 	if i.endA && i.endB {
 		return nil, stream.ErrEndOfStream
 	}
@@ -223,8 +224,8 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (Data[Either[A, B]], error) {
 			Data: &Left[A, B]{
 				Left: val.Data,
 			},
-			//EventTime: 0,
-			//Window:    nil,
+			EventTime: val.EventTime,
+			Offset:    val.Offset,
 		}, nil
 	} else if !i.endB && i.mod == false {
 		i.mod = !i.mod
@@ -252,8 +253,8 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (Data[Either[A, B]], error) {
 			Data: &Right[A, B]{
 				Right: val.Data,
 			},
-			//EventTime: 0,
-			//Window:    nil,
+			EventTime: val.EventTime,
+			Offset:    val.Offset,
 		}, nil
 	}
 
@@ -261,6 +262,20 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (Data[Either[A, B]], error) {
 	return i.PullIn()
 }
 
-func DoJoin[A, B any](a stream.Stream[A], b stream.Stream[B]) PullOnly[Either[A, B]] {
-	return NewJoinInMemoryContext(a, b)
+func (i *InMemoryJoinContext[A, B, C]) PushOut(x Data[C]) error {
+	item := RecordToStreamItem(x)
+
+	err := i.output.Push(item)
+	if err != nil {
+		return fmt.Errorf("projection.PushAndPullInMemoryContext: PushOut: %w", err)
+	}
+	return nil
+}
+
+func DoJoin[A, B, C any](
+	a stream.Stream[A],
+	b stream.Stream[B],
+	out stream.Stream[C],
+) PushAndPull[Either[A, B], C] {
+	return NewJoinInMemoryContext(a, b, out)
 }
