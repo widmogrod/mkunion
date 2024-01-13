@@ -7,10 +7,6 @@ import (
 	"math"
 )
 
-var (
-	ErrMergeResultNil = errors.New("merge result is nil")
-)
-
 type Window struct {
 	Start int64
 	End   int64
@@ -20,7 +16,7 @@ type WindowKey = string
 
 type WindowByKey[A any] struct {
 	Window *Window
-	Record *Record[A]
+	Record A
 }
 
 func WindowToKey(w *Window) WindowKey {
@@ -38,17 +34,17 @@ func MkWindow(x EventTime) []*Window {
 	return result
 }
 
-func WindowToRecord[A any](window WindowByKey[A]) *Record[A] {
+func WindowToRecord[A any](key string, window WindowByKey[A]) *Record[A] {
 	return &Record[A]{
-		Key:       window.Record.Key,
-		Data:      window.Record.Data,
+		Key:       key,
+		Data:      window.Record,
 		EventTime: &window.Window.Start,
 	}
 }
 
 func DoWindow[A, B any](
 	ctx PushAndPull[A, B],
-	merge func(x *Record[A], agg *Record[B]) (*Record[B], error),
+	merge func(x A, agg B) (B, error),
 ) error {
 	// group by key
 	// each group of keys, group by window
@@ -57,9 +53,9 @@ func DoWindow[A, B any](
 	byKey := make(map[string]map[WindowKey]WindowByKey[B])
 
 	flush := func() error {
-		for _, byWindow := range byKey {
+		for key, byWindow := range byKey {
 			for _, window := range byWindow {
-				err := ctx.PushOut(WindowToRecord(window))
+				err := ctx.PushOut(WindowToRecord(key, window))
 				if err != nil {
 					return fmt.Errorf("projection.DoWindow: push: %w", err)
 				}
@@ -94,13 +90,10 @@ func DoWindow[A, B any](
 					windowKey := WindowToKey(w)
 					window, ok := byKey[dataKey][windowKey]
 					if !ok {
-						result, err := merge(x, nil)
+						var zero B
+						result, err := merge(x.Data, zero)
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: merge first key=%s window=%s: %w", dataKey, windowKey, err)
-						}
-
-						if result == nil {
-							return fmt.Errorf("projection.DoWindow: merge first key=%s window=%s: %w", dataKey, windowKey, ErrMergeResultNil)
 						}
 
 						byKey[dataKey][windowKey] = WindowByKey[B]{
@@ -108,13 +101,9 @@ func DoWindow[A, B any](
 							Record: result,
 						}
 					} else {
-						result, err := merge(x, window.Record)
+						result, err := merge(x.Data, window.Record)
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: merge key=%s window=%s: %w", dataKey, windowKey, err)
-						}
-
-						if result == nil {
-							return fmt.Errorf("projection.DoWindow: merge first key=%s window=%s: %w", dataKey, windowKey, ErrMergeResultNil)
 						}
 
 						window.Record = result

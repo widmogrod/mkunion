@@ -102,20 +102,15 @@ func TestProjection(t *testing.T) {
 
 	out4 := stream.NewInMemoryStream[string](stream.WithSystemTime)
 	ctx5 := DoJoin[int, float64, string](out1, out2, out4)
-	err = DoWindow(ctx5, func(x *Record[Either[int, float64]], agg *Record[string]) (*Record[string], error) {
+	err = DoWindow(ctx5, func(x Either[int, float64], agg string) (string, error) {
 		var concat string
-		if agg == nil {
-			concat = fmt.Sprintf("%v", x.Data)
+		if agg == "" {
+			concat = fmt.Sprintf("%v", x)
 		} else {
-			concat = fmt.Sprintf("%s,%v", agg.Data, x.Data)
+			concat = fmt.Sprintf("%s,%v", agg, x)
 		}
 
-		return &Record[string]{
-			Key:       x.Key,
-			Data:      concat,
-			EventTime: x.EventTime,
-			Offset:    x.Offset,
-		}, nil
+		return concat, nil
 	})
 	assert.NoError(t, err)
 
