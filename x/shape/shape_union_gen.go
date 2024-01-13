@@ -2628,6 +2628,12 @@ func (r *AliasLike) _marshalJSONAliasLike(x AliasLike) ([]byte, error) {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name PkgImportName; %w", err)
 	}
 	partial["PkgImportName"] = fieldPkgImportName
+	var fieldTypeParams []byte
+	fieldTypeParams, err = r._marshalJSONSliceTypeParam(x.TypeParams)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name TypeParams; %w", err)
+	}
+	partial["TypeParams"] = fieldTypeParams
 	var fieldIsAlias []byte
 	fieldIsAlias, err = r._marshalJSONbool(x.IsAlias)
 	if err != nil {
@@ -2656,6 +2662,28 @@ func (r *AliasLike) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *AliasLike) _marshalJSONSliceTypeParam(x []TypeParam) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONTypeParam(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: AliasLike._marshalJSONSliceTypeParam: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AliasLike._marshalJSONSliceTypeParam:; %w", err)
+	}
+	return result, nil
+}
+func (r *AliasLike) _marshalJSONTypeParam(x TypeParam) ([]byte, error) {
+	result, err := shared.JSONMarshal[TypeParam](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AliasLike._marshalJSONTypeParam:; %w", err)
 	}
 	return result, nil
 }
@@ -2729,6 +2757,12 @@ func (r *AliasLike) _unmarshalJSONAliasLike(data []byte) (AliasLike, error) {
 			return result, fmt.Errorf("shape: AliasLike._unmarshalJSONAliasLike: field PkgImportName; %w", err)
 		}
 	}
+	if fieldTypeParams, ok := partial["TypeParams"]; ok {
+		result.TypeParams, err = r._unmarshalJSONSliceTypeParam(fieldTypeParams)
+		if err != nil {
+			return result, fmt.Errorf("shape: AliasLike._unmarshalJSONAliasLike: field TypeParams; %w", err)
+		}
+	}
 	if fieldIsAlias, ok := partial["IsAlias"]; ok {
 		result.IsAlias, err = r._unmarshalJSONbool(fieldIsAlias)
 		if err != nil {
@@ -2754,6 +2788,29 @@ func (r *AliasLike) _unmarshalJSONstring(data []byte) (string, error) {
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return result, fmt.Errorf("shape: AliasLike._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *AliasLike) _unmarshalJSONSliceTypeParam(data []byte) ([]TypeParam, error) {
+	result := make([]TypeParam, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: AliasLike._unmarshalJSONSliceTypeParam: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONTypeParam(v)
+		if err != nil {
+			return result, fmt.Errorf("shape: AliasLike._unmarshalJSONSliceTypeParam: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *AliasLike) _unmarshalJSONTypeParam(data []byte) (TypeParam, error) {
+	result, err := shared.JSONUnmarshal[TypeParam](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: AliasLike._unmarshalJSONTypeParam: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

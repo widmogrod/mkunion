@@ -364,6 +364,16 @@ func AliasLikeShape() Shape {
 				Type: &PrimitiveLike{Kind: &StringLike{}},
 			},
 			{
+				Name: "TypeParams",
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "TypeParam",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					},
+				},
+			},
+			{
 				Name: "IsAlias",
 				Type: &PrimitiveLike{Kind: &BooleanLike{}},
 			},
@@ -571,27 +581,6 @@ func UnionLikeShape() Shape {
 }
 
 //shape:shape
-func TagShape() Shape {
-	return &StructLike{
-		Name:          "Tag",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Value",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "Options",
-				Type: &ListLike{
-					Element: &PrimitiveLike{Kind: &StringLike{}},
-				},
-			},
-		},
-	}
-}
-
-//shape:shape
 func TypeParamShape() Shape {
 	return &StructLike{
 		Name:          "TypeParam",
@@ -614,6 +603,27 @@ func TypeParamShape() Shape {
 		Tags: map[string]Tag{
 			"serde": {
 				Value: "json",
+			},
+		},
+	}
+}
+
+//shape:shape
+func TagShape() Shape {
+	return &StructLike{
+		Name:          "Tag",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Fields: []*FieldLike{
+			{
+				Name: "Value",
+				Type: &PrimitiveLike{Kind: &StringLike{}},
+			},
+			{
+				Name: "Options",
+				Type: &ListLike{
+					Element: &PrimitiveLike{Kind: &StringLike{}},
+				},
 			},
 		},
 	}
