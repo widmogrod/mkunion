@@ -8,14 +8,9 @@ import (
 
 //go:generate go run ../../cmd/mkunion/main.go
 
-//go:tag mkunion:"Record,noserde"
+//go:tag mkunion:"Data,noserde"
 type (
-	Data[A any] struct {
-		Key       string
-		Data      A
-		EventTime EventTime
-		Window    *Window
-	}
+	Record[A any] stream.Item[A]
 
 	Watermark[A any] struct {
 		EventTime EventTime
@@ -29,9 +24,9 @@ type Window struct {
 	End   int64
 }
 
-func RecordToStreamItem[A any](x Record[A]) *stream.Item[A] {
-	return MatchRecordR1[A, *stream.Item[A]](x,
-		func(x *Data[A]) *stream.Item[A] {
+func RecordToStreamItem[A any](x Data[A]) *stream.Item[A] {
+	return MatchDataR1[A, *stream.Item[A]](x,
+		func(x *Record[A]) *stream.Item[A] {
 			return &stream.Item[A]{
 				Key:  x.Key,
 				Data: x.Data,
@@ -53,10 +48,10 @@ type (
 		PushOnly[B]
 	}
 	PullOnly[A any] interface {
-		PullIn() (Record[A], error)
+		PullIn() (Data[A], error)
 	}
 	PushOnly[A any] interface {
-		PushOut(Record[A]) error
+		PushOut(Data[A]) error
 	}
 )
 
@@ -87,7 +82,7 @@ type PushAndPullInMemoryContext[A, B any] struct {
 	output stream.Stream[B]
 }
 
-func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Record[A], error) {
+func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
 	var pull stream.PullCMD
 	if c.offset == nil {
 		pull = &stream.FromBeginning{}
@@ -102,17 +97,17 @@ func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Record[A], error) {
 
 	c.offset = item.Offset
 
-	result := &Data[A]{
-		Key:       item.Key,
-		Data:      item.Data,
-		EventTime: 0,
-		Window:    nil,
+	result := &Record[A]{
+		Key:  item.Key,
+		Data: item.Data,
+		//EventTime: 0,
+		//Window:    nil,
 	}
 
 	return result, nil
 }
 
-func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Record[B]) error {
+func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Data[B]) error {
 	item := RecordToStreamItem(x)
 
 	err := c.output.Push(item)
@@ -122,7 +117,7 @@ func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Record[B]) error {
 	return nil
 }
 
-func DoMap[A, B any](ctx PushAndPull[A, B], f func(Record[A]) Record[B]) error {
+func DoMap[A, B any](ctx PushAndPull[A, B], f func(Data[A]) Data[B]) error {
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
@@ -139,7 +134,7 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(Record[A]) Record[B]) error {
 	}
 }
 
-func DoLoad[A any](ctx PushOnly[A], f func(push func(Record[A]) error) error) error {
+func DoLoad[A any](ctx PushOnly[A], f func(push func(Data[A]) error) error) error {
 	err := f(ctx.PushOut)
 	if err != nil {
 		return fmt.Errorf("projection.DoLoad: load: %w", err)
@@ -147,7 +142,7 @@ func DoLoad[A any](ctx PushOnly[A], f func(push func(Record[A]) error) error) er
 	return nil
 }
 
-func DoSink[A any](ctx PullOnly[A], f func(Record[A]) error) error {
+func DoSink[A any](ctx PullOnly[A], f func(Data[A]) error) error {
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
@@ -197,7 +192,7 @@ type InMemoryJoinContext[A, B any] struct {
 
 var _ PullOnly[Either[any, any]] = (*InMemoryJoinContext[any, any])(nil)
 
-func (i *InMemoryJoinContext[A, B]) PullIn() (Record[Either[A, B]], error) {
+func (i *InMemoryJoinContext[A, B]) PullIn() (Data[Either[A, B]], error) {
 	if i.endA && i.endB {
 		return nil, stream.ErrEndOfStream
 	}
@@ -223,13 +218,13 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (Record[Either[A, B]], error) {
 
 		i.offsetA = val.Offset
 
-		return &Data[Either[A, B]]{
+		return &Record[Either[A, B]]{
 			Key: val.Key,
 			Data: &Left[A, B]{
 				Left: val.Data,
 			},
-			EventTime: 0,
-			Window:    nil,
+			//EventTime: 0,
+			//Window:    nil,
 		}, nil
 	} else if !i.endB && i.mod == false {
 		i.mod = !i.mod
@@ -252,13 +247,13 @@ func (i *InMemoryJoinContext[A, B]) PullIn() (Record[Either[A, B]], error) {
 
 		i.offsetB = val.Offset
 
-		return &Data[Either[A, B]]{
+		return &Record[Either[A, B]]{
 			Key: val.Key,
 			Data: &Right[A, B]{
 				Right: val.Data,
 			},
-			EventTime: 0,
-			Window:    nil,
+			//EventTime: 0,
+			//Window:    nil,
 		}, nil
 	}
 
