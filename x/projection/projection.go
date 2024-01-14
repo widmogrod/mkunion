@@ -10,9 +10,14 @@ import (
 
 //go:tag mkunion:"Data,noserde"
 type (
-	Record[A any] stream.Item[A]
+	Record[A any] struct {
+		Key       string
+		Data      A
+		EventTime EventTime
+	}
 
 	Watermark[A any] struct {
+		Key       string
 		EventTime EventTime
 	}
 )
@@ -23,18 +28,36 @@ func RecordToStreamItem[A any](x Data[A]) *stream.Item[A] {
 	return MatchDataR1[A, *stream.Item[A]](x,
 		func(x *Record[A]) *stream.Item[A] {
 			return &stream.Item[A]{
-				Key:  x.Key,
-				Data: x.Data,
+				Key:       x.Key,
+				Data:      x.Data,
+				EventTime: &x.EventTime,
 			}
 		},
 		func(x *Watermark[A]) *stream.Item[A] {
 			var zero A
 			return &stream.Item[A]{
-				Key:  "$watermark",
-				Data: zero,
+				Key:       x.Key,
+				Data:      zero,
+				EventTime: &x.EventTime,
+				Offset:    nil,
 			}
 		},
 	)
+}
+
+func StreamItemToRecord[A any](x *stream.Item[A]) Data[A] {
+	return &Record[A]{
+		Key:       x.Key,
+		Data:      x.Data,
+		EventTime: *x.EventTime,
+	}
+}
+func StreamItemToRecordSetData[A, B any](x *stream.Item[A], data B) *Record[B] {
+	return &Record[B]{
+		Key:       x.Key,
+		Data:      data,
+		EventTime: *x.EventTime,
+	}
 }
 
 type (
@@ -96,13 +119,7 @@ func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
 
 	c.state.Offset = item.Offset
 
-	result := &Record[A]{
-		Key:       item.Key,
-		Data:      item.Data,
-		EventTime: item.EventTime,
-		Offset:    item.Offset,
-	}
-
+	result := StreamItemToRecord(item)
 	return result, nil
 }
 
@@ -207,10 +224,11 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 			return fmt.Errorf("projection.DoMap: pull: %w", err)
 		}
 
-		return MatchDataR1(
+		err = MatchDataR1(
 			val,
 			func(x *Record[A]) error {
-				err = ctx.PushOut(f(x))
+				y := f(x)
+				err = ctx.PushOut(y)
 				if err != nil {
 					return fmt.Errorf("projection.DoMap: push: %w", err)
 				}
@@ -222,10 +240,14 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 				return nil
 			},
 		)
+
+		if err != nil {
+			return fmt.Errorf("projection.DoMap: map: %w", err)
+		}
 	}
 }
 
-func DoSink[A any](ctx PullOnly[A], f func(Data[A]) error) error {
+func DoSink[A any](ctx PullOnly[A], f func(*Record[A]) error) error {
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
@@ -235,7 +257,16 @@ func DoSink[A any](ctx PullOnly[A], f func(Data[A]) error) error {
 			return fmt.Errorf("projection.DoSink: pull: %w", err)
 		}
 
-		err = f(val)
+		err = MatchDataR1(
+			val,
+			func(x *Record[A]) error {
+				return f(x)
+			},
+			func(x *Watermark[A]) error {
+				// TODO do snapshot
+				return nil
+			},
+		)
 		if err != nil {
 			return fmt.Errorf("projection.DoSink: sink: %w", err)
 		}
@@ -309,14 +340,7 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		i.offsetA = val.Offset
 
-		return &Record[Either[A, B]]{
-			Key: val.Key,
-			Data: &Left[A, B]{
-				Left: val.Data,
-			},
-			EventTime: val.EventTime,
-			Offset:    val.Offset,
-		}, nil
+		return StreamItemToRecordSetData[A, Either[A, B]](val, &Left[A, B]{Left: val.Data}), nil
 	} else if !i.endB && i.mod == false {
 		i.mod = !i.mod
 
@@ -338,14 +362,7 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		i.offsetB = val.Offset
 
-		return &Record[Either[A, B]]{
-			Key: val.Key,
-			Data: &Right[A, B]{
-				Right: val.Data,
-			},
-			EventTime: val.EventTime,
-			Offset:    val.Offset,
-		}, nil
+		return StreamItemToRecordSetData[B, Either[A, B]](val, &Right[A, B]{Right: val.Data}), nil
 	}
 
 	i.mod = !i.mod

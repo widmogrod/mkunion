@@ -30,8 +30,9 @@ func TestProjection_HappyPath(t *testing.T) {
 	ctx2 := NewPushAndPullInMemoryContext[int, float64](out1, out2)
 	err = DoMap[int, float64](ctx2, func(x *Record[int]) *Record[float64] {
 		return &Record[float64]{
-			Key:  x.Key,
-			Data: float64(x.Data) * 2,
+			Key:       x.Key,
+			Data:      float64(x.Data) * 2,
+			EventTime: x.EventTime,
 		}
 	})
 	assert.NoError(t, err)
@@ -39,24 +40,15 @@ func TestProjection_HappyPath(t *testing.T) {
 	orderOfEvents := []string{}
 	out3 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
 	ctx4 := NewJoinInMemoryContext[int, float64, float64](out1, out2, out3)
-	err = DoSink[Either[int, float64]](ctx4, func(x Data[Either[int, float64]]) error {
-		return MatchDataR1(
-			x,
-			func(x *Record[Either[int, float64]]) error {
-				return MatchEitherR1(
-					x.Data,
-					func(x *Left[int, float64]) error {
-						orderOfEvents = append(orderOfEvents, fmt.Sprintf("left-%d", x.Left))
-						return nil
-					},
-					func(x *Right[int, float64]) error {
-						orderOfEvents = append(orderOfEvents, fmt.Sprintf("right-%.2f", x.Right))
-						return nil
-					},
-				)
+	err = DoSink[Either[int, float64]](ctx4, func(x *Record[Either[int, float64]]) error {
+		return MatchEitherR1(
+			x.Data,
+			func(x *Left[int, float64]) error {
+				orderOfEvents = append(orderOfEvents, fmt.Sprintf("left-%d", x.Left))
+				return nil
 			},
-			func(x *Watermark[Either[int, float64]]) error {
-				orderOfEvents = append(orderOfEvents, fmt.Sprintf("watermark-%d", x.EventTime))
+			func(x *Right[int, float64]) error {
+				orderOfEvents = append(orderOfEvents, fmt.Sprintf("right-%.2f", x.Right))
 				return nil
 			},
 		)
@@ -106,18 +98,9 @@ func TestProjection_HappyPath(t *testing.T) {
 
 	orderOfEvents = []string{}
 	ctx6 := NewPullOnlyInMemoryContext[string](out4)
-	err = DoSink[string](ctx6, func(x Data[string]) error {
-		return MatchDataR1(
-			x,
-			func(x *Record[string]) error {
-				orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%s", x.Key, x.Data))
-				return nil
-			},
-			func(x *Watermark[string]) error {
-				orderOfEvents = append(orderOfEvents, fmt.Sprintf("watermark-%d", x.EventTime))
-				return nil
-			},
-		)
+	err = DoSink[string](ctx6, func(x *Record[string]) error {
+		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%s", x.Key, x.Data))
+		return nil
 	})
 	assert.NoError(t, err)
 
@@ -152,18 +135,9 @@ func TestProjection_Recovery(t *testing.T) {
 
 	var orderOfEvents []string
 	ctx2 := NewPullOnlyInMemoryContext[int](out1)
-	err = DoSink[int](ctx2, func(x Data[int]) error {
-		return MatchDataR1(
-			x,
-			func(x *Record[int]) error {
-				orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%d", x.Key, x.Data))
-				return nil
-			},
-			func(x *Watermark[int]) error {
-				orderOfEvents = append(orderOfEvents, fmt.Sprintf("watermark-%d", x.EventTime))
-				return nil
-			},
-		)
+	err = DoSink[int](ctx2, func(x *Record[int]) error {
+		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%d", x.Key, x.Data))
+		return nil
 	})
 	assert.NoError(t, err)
 

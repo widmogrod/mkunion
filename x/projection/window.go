@@ -38,7 +38,7 @@ func WindowToRecord[A any](key string, window WindowByKey[A]) *Record[A] {
 	return &Record[A]{
 		Key:       key,
 		Data:      window.Record,
-		EventTime: &window.Window.Start,
+		EventTime: window.Window.Start,
 	}
 }
 
@@ -88,7 +88,7 @@ func DoWindow[A, B any](
 					byKey[dataKey] = make(map[WindowKey]WindowByKey[B])
 				}
 
-				for _, w := range MkWindow(*x.EventTime) {
+				for _, w := range MkWindow(x.EventTime) {
 					windowKey := WindowToKey(w)
 					window, ok := byKey[dataKey][windowKey]
 					if !ok {
