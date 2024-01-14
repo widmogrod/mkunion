@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestProjection(t *testing.T) {
+func TestProjection_HappyPath(t *testing.T) {
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
 	ctx1 := NewPushOnlyInMemoryContext[int](out1)
 
@@ -138,5 +138,59 @@ func TestProjection(t *testing.T) {
 
 	if diff := cmp.Diff(expectedOrder, orderOfEvents); diff != "" {
 		t.Fatalf("NewJoinPushAndPullContext: diff: (-want +got)\n%s", diff)
+	}
+}
+
+func TestProjection_Recovery(t *testing.T) {
+	//sna1 := NewSnapshotStore()
+	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
+	ctx1 := NewPushOnlyInMemoryContext[int](out1)
+
+	err := DoLoad(ctx1, func(push func(Data[int]) error) error {
+		for i := 0; i < 10; i++ {
+			err := push(&Record[int]{
+				Key:  fmt.Sprintf("key-%d", i%2),
+				Data: i,
+			})
+			if err != nil {
+				return fmt.Errorf("projection.Range: push: %w", err)
+			}
+		}
+		return nil
+	})
+	assert.NoError(t, err)
+
+	var orderOfEvents []string
+	ctx2 := NewPullOnlyInMemoryContext[int](out1)
+	err = DoSink[int](ctx2, func(x Data[int]) error {
+		return MatchDataR1(
+			x,
+			func(x *Record[int]) error {
+				orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%d", x.Key, x.Data))
+				return nil
+			},
+			func(x *Watermark[int]) error {
+				orderOfEvents = append(orderOfEvents, fmt.Sprintf("watermark-%d", x.EventTime))
+				return nil
+			},
+		)
+	})
+	assert.NoError(t, err)
+
+	expectedOrder := []string{
+		"record-key-0:0",
+		"record-key-1:1",
+		"record-key-0:2",
+		"record-key-1:3",
+		"record-key-0:4",
+		"record-key-1:5",
+		"record-key-0:6",
+		"record-key-1:7",
+		"record-key-0:8",
+		"record-key-1:9",
+	}
+
+	if diff := cmp.Diff(expectedOrder, orderOfEvents); diff != "" {
+		t.Fatalf("diff: (-want +got)\n%s", diff)
 	}
 }
