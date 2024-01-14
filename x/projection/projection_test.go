@@ -28,21 +28,11 @@ func TestProjection_HappyPath(t *testing.T) {
 
 	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
 	ctx2 := NewPushAndPullInMemoryContext[int, float64](out1, out2)
-	err = DoMap[int, float64](ctx2, func(x Data[int]) Data[float64] {
-		return MatchDataR1(
-			x,
-			func(x *Record[int]) Data[float64] {
-				return &Record[float64]{
-					Key:  x.Key,
-					Data: float64(x.Data) * 2,
-				}
-			},
-			func(x *Watermark[int]) Data[float64] {
-				return &Watermark[float64]{
-					EventTime: x.EventTime,
-				}
-			},
-		)
+	err = DoMap[int, float64](ctx2, func(x *Record[int]) *Record[float64] {
+		return &Record[float64]{
+			Key:  x.Key,
+			Data: float64(x.Data) * 2,
+		}
 	})
 	assert.NoError(t, err)
 

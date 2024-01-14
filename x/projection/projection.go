@@ -197,7 +197,7 @@ func DoLoad[A any](ctx PushOnly[A], f func(push func(record *Record[A]) error) e
 	return nil
 }
 
-func DoMap[A, B any](ctx PushAndPull[A, B], f func(Data[A]) Data[B]) error {
+func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error {
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
@@ -207,10 +207,21 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(Data[A]) Data[B]) error {
 			return fmt.Errorf("projection.DoMap: pull: %w", err)
 		}
 
-		err = ctx.PushOut(f(val))
-		if err != nil {
-			return fmt.Errorf("projection.DoMap: push: %w", err)
-		}
+		return MatchDataR1(
+			val,
+			func(x *Record[A]) error {
+				err = ctx.PushOut(f(x))
+				if err != nil {
+					return fmt.Errorf("projection.DoMap: push: %w", err)
+				}
+
+				return nil
+			},
+			func(x *Watermark[A]) error {
+				// TODO do snapshot
+				return nil
+			},
+		)
 	}
 }
 
