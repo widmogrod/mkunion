@@ -249,8 +249,24 @@ func SimulateProblemShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
 		Fields: []*shape.FieldLike{
 			{
+				Name: "ErrorOnPullInProbability",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Float64{},
+					},
+				},
+			},
+			{
 				Name: "ErrorOnPullIn",
 				Type: &shape.Any{},
+			},
+			{
+				Name: "ErrorOnPushOutProbability",
+				Type: &shape.PrimitiveLike{
+					Kind: &shape.NumberLike{
+						Kind: &shape.Float64{},
+					},
+				},
 			},
 			{
 				Name: "ErrorOnPushOut",
@@ -279,6 +295,22 @@ func SnapshotStateShape() shape.Shape {
 						PkgName:       "stream",
 						PkgImportName: "github.com/widmogrod/mkunion/x/stream",
 					},
+				},
+			},
+			{
+				Name: "PullTopic",
+				Type: &shape.RefName{
+					Name:          "Topic",
+					PkgName:       "stream",
+					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+				},
+			},
+			{
+				Name: "PushTopic",
+				Type: &shape.RefName{
+					Name:          "Topic",
+					PkgName:       "stream",
+					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
 				},
 			},
 			{

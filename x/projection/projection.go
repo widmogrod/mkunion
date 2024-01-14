@@ -25,18 +25,21 @@ type (
 
 type EventTime = int64
 
-func RecordToStreamItem[A any](x Data[A]) *stream.Item[A] {
+func RecordToStreamItem[A any](topic string, x Data[A]) *stream.Item[A] {
 	return MatchDataR1[A, *stream.Item[A]](x,
 		func(x *Record[A]) *stream.Item[A] {
 			return &stream.Item[A]{
+				Topic:     topic,
 				Key:       x.Key,
 				Data:      x.Data,
 				EventTime: &x.EventTime,
+				Offset:    nil,
 			}
 		},
 		func(x *Watermark[A]) *stream.Item[A] {
 			var zero A
 			return &stream.Item[A]{
+				Topic:     topic,
 				Key:       x.Key,
 				Data:      zero,
 				EventTime: &x.EventTime,
@@ -133,7 +136,7 @@ func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Data[B]) error {
 		}
 	}
 
-	item := RecordToStreamItem(x)
+	item := RecordToStreamItem(c.state.PushTopic, x)
 
 	err := c.output.Push(item)
 	if err != nil {
@@ -148,10 +151,15 @@ func (c *PushAndPullInMemoryContext[A, B]) CurrentState() SnapshotState {
 
 func (c *PushAndPullInMemoryContext[A, B]) pullCommand(x SnapshotState) stream.PullCMD {
 	if x.Offset == nil {
-		return &stream.FromBeginning{}
+		return &stream.FromBeginning{
+			Topic: x.PullTopic,
+		}
 	}
 
-	return x.Offset
+	return &stream.FromOffset{
+		Topic:  x.PullTopic,
+		Offset: x.Offset,
+	}
 }
 
 type SimulateProblem struct {
@@ -176,10 +184,12 @@ func InjectRuntimeProblem(ctx any, x *SimulateProblem) {
 	}
 }
 
-func NewSnapshotStateForInMemoryContext(id string) SnapshotState {
+func NewSnapshotStateForInMemoryContext(id, pullTopic, pushTopic string) SnapshotState {
 	return SnapshotState{
-		ID:     id,
-		Offset: nil,
+		ID:        id,
+		PullTopic: pullTopic,
+		PushTopic: pushTopic,
+		Offset:    nil,
 	}
 }
 
@@ -191,6 +201,8 @@ var (
 type SnapshotState struct {
 	ID        string
 	Offset    *stream.Offset
+	PullTopic stream.Topic
+	PushTopic stream.Topic
 	Completed bool
 }
 
@@ -208,6 +220,8 @@ func copySnapshot(x *SnapshotState) *SnapshotState {
 	return &SnapshotState{
 		ID:        x.ID,
 		Offset:    x.Offset,
+		PullTopic: x.PullTopic,
+		PushTopic: x.PushTopic,
 		Completed: x.Completed,
 	}
 }
@@ -234,10 +248,12 @@ func (c *SnapshotStore) LoadLastSnapshot(id string) (*SnapshotState, error) {
 	return copySnapshot(snapshot), nil
 }
 
-func (c *SnapshotStore) InitSnapshot(id string) *SnapshotState {
+func (c *SnapshotStore) InitSnapshot(id, pullTopic, pushTopic string) *SnapshotState {
 	return &SnapshotState{
 		ID:        id,
 		Offset:    nil,
+		PullTopic: pullTopic,
+		PushTopic: pushTopic,
 		Completed: false,
 	}
 }
@@ -323,14 +339,21 @@ type (
 
 func NewJoinInMemoryContext[A, B, C any](
 	a stream.Stream[A],
+	aTopic stream.Topic,
 	b stream.Stream[B],
+	bTopic stream.Topic,
 	out stream.Stream[C],
+	outTopic stream.Topic,
 ) PushAndPull[Either[A, B], C] {
 	return &InMemoryJoinContext[A, B, C]{
 		a:      a,
 		b:      b,
 		output: out,
 		mod:    true,
+
+		aTopic:   aTopic,
+		bTopic:   bTopic,
+		outTopic: outTopic,
 	}
 }
 
@@ -339,6 +362,10 @@ type InMemoryJoinContext[A, B, C any] struct {
 	b stream.Stream[B]
 
 	output stream.Stream[C]
+
+	aTopic   stream.Topic
+	bTopic   stream.Topic
+	outTopic stream.Topic
 
 	mod  bool
 	endA bool
@@ -362,9 +389,14 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		var pull stream.PullCMD
 		if i.offsetA == nil {
-			pull = &stream.FromBeginning{}
+			pull = &stream.FromBeginning{
+				Topic: i.aTopic,
+			}
 		} else {
-			pull = i.offsetA
+			pull = &stream.FromOffset{
+				Topic:  i.aTopic,
+				Offset: i.offsetA,
+			}
 		}
 
 		val, err := i.a.Pull(pull)
@@ -384,9 +416,14 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		var pull stream.PullCMD
 		if i.offsetB == nil {
-			pull = &stream.FromBeginning{}
+			pull = &stream.FromBeginning{
+				Topic: i.bTopic,
+			}
 		} else {
-			pull = i.offsetB
+			pull = &stream.FromOffset{
+				Topic:  i.bTopic,
+				Offset: i.offsetB,
+			}
 		}
 
 		val, err := i.b.Pull(pull)
@@ -408,7 +445,7 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 }
 
 func (i *InMemoryJoinContext[A, B, C]) PushOut(x Data[C]) error {
-	item := RecordToStreamItem(x)
+	item := RecordToStreamItem(i.outTopic, x)
 
 	err := i.output.Push(item)
 	if err != nil {

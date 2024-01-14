@@ -11,7 +11,7 @@ import (
 
 func TestProjection_HappyPath(t *testing.T) {
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
-	state1 := NewSnapshotStateForInMemoryContext("load-1")
+	state1 := NewSnapshotStateForInMemoryContext("load-1", "topic-in-1", "topic-out-1")
 	ctx1 := NewPushOnlyInMemoryContext[int](state1, out1)
 
 	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
@@ -29,7 +29,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	state2 := NewSnapshotStateForInMemoryContext("map-1")
+	state2 := NewSnapshotStateForInMemoryContext("map-1", "topic-out-1", "topic-out-2")
 	ctx2 := NewPushAndPullInMemoryContext[int, float64](state2, out1, out2)
 	err = DoMap[int, float64](ctx2, func(x *Record[int]) *Record[float64] {
 		return &Record[float64]{
@@ -42,7 +42,11 @@ func TestProjection_HappyPath(t *testing.T) {
 
 	orderOfEvents := []string{}
 	out3 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	ctx4 := NewJoinInMemoryContext[int, float64, float64](out1, out2, out3)
+	ctx4 := NewJoinInMemoryContext[int, float64, float64](
+		out1, "topic-out-1",
+		out2, "topic-out-2",
+		out3, "topic-out-3")
+
 	err = DoSink[Either[int, float64]](ctx4, func(x *Record[Either[int, float64]]) error {
 		return MatchEitherR1(
 			x.Data,
@@ -86,7 +90,10 @@ func TestProjection_HappyPath(t *testing.T) {
 	}
 
 	out4 := stream.NewInMemoryStream[string](stream.WithSystemTime)
-	ctx5 := NewJoinInMemoryContext[int, float64, string](out1, out2, out4)
+	ctx5 := NewJoinInMemoryContext[int, float64, string](
+		out1, "topic-out-1",
+		out2, "topic-out-2",
+		out4, "topic-out-4")
 	err = DoWindow(ctx5, func(x Either[int, float64], agg string) (string, error) {
 		var concat string
 		if agg == "" {
@@ -100,7 +107,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	orderOfEvents = []string{}
-	state3 := NewSnapshotStateForInMemoryContext("sink-2")
+	state3 := NewSnapshotStateForInMemoryContext("sink-2", "topic-out-4", "topic-out-3")
 	ctx6 := NewPullOnlyInMemoryContext[string](state3, out4)
 	err = DoSink[string](ctx6, func(x *Record[string]) error {
 		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%s", x.Key, x.Data))
@@ -133,7 +140,7 @@ func TestProjection_Recovery(t *testing.T) {
 
 	store := NewSnapshotStore()
 
-	recovery := NewRecoveryOptions("recovery-load", store).WithMaxRecoveryAttempts(recoveryAttempts)
+	recovery := NewRecoveryOptions("recovery-load", "in-1", "out-1", store).WithMaxRecoveryAttempts(recoveryAttempts)
 	err := Recovery(recovery, func(state SnapshotState) error {
 		ctx1 := NewPushOnlyInMemoryContext[int](state, out1)
 		InjectRuntimeProblem(ctx1, &SimulateProblem{
@@ -146,8 +153,9 @@ func TestProjection_Recovery(t *testing.T) {
 		return DoLoad(ctx1, func(push func(*Record[int]) error) error {
 			for i := 0; i < 10; i++ {
 				err := push(&Record[int]{
-					Key:  fmt.Sprintf("key-%d", i%2),
-					Data: i,
+					Key:       fmt.Sprintf("key-%d", i%2),
+					Data:      i,
+					EventTime: stream.WithSystemTime(),
 				})
 				if err != nil {
 					return fmt.Errorf("projection.Range: push: %w", err)
@@ -170,7 +178,7 @@ func TestProjection_Recovery(t *testing.T) {
 		ErrorOnPull:            fmt.Errorf("simulated pull error"),
 	})
 
-	recovery = NewRecoveryOptions("recovery-load", store).WithMaxRecoveryAttempts(recoveryAttempts)
+	recovery = NewRecoveryOptions("recovery-load", "out-1", "out-2", store).WithMaxRecoveryAttempts(recoveryAttempts)
 	err = Recovery(recovery, func(state SnapshotState) error {
 		ctx2 := NewPushAndPullInMemoryContext[int, float64](state, out1, out2)
 		InjectRuntimeProblem(ctx2, &SimulateProblem{

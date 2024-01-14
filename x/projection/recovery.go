@@ -10,9 +10,11 @@ var (
 	ErrMaxRecoveryAttemptsReached = errors.New("max recovery attempts reached")
 )
 
-func NewRecoveryOptions(id string, snapshotStore *SnapshotStore) *RecoveryOptions {
+func NewRecoveryOptions(id, pullTopic, pushTopic string, snapshotStore *SnapshotStore) *RecoveryOptions {
 	return &RecoveryOptions{
 		id:                  id,
+		pullTopic:           pullTopic,
+		pushTopic:           pushTopic,
 		snapshotStore:       snapshotStore,
 		maxRecoveryAttempts: 3,
 	}
@@ -20,6 +22,8 @@ func NewRecoveryOptions(id string, snapshotStore *SnapshotStore) *RecoveryOption
 
 type RecoveryOptions struct {
 	id                  string
+	pullTopic           string
+	pushTopic           string
 	snapshotStore       *SnapshotStore
 	maxRecoveryAttempts uint8
 }
@@ -41,7 +45,7 @@ func Recovery(ctx *RecoveryOptions, f func(state SnapshotState) error) error {
 		}
 
 		if state == nil {
-			state = ctx.snapshotStore.InitSnapshot(ctx.id)
+			state = ctx.snapshotStore.InitSnapshot(ctx.id, ctx.pullTopic, ctx.pushTopic)
 		}
 
 		err = f(*state)
