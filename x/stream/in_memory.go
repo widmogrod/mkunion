@@ -2,6 +2,7 @@ package stream
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -24,11 +25,18 @@ func NewInMemoryStream[A any](systemTime func() EventTime) *InMemoryStream[A] {
 type InMemoryStream[A any] struct {
 	values     []*Item[A]
 	systemTime func() EventTime
+	simulate   *SimulateProblem
 }
 
 var _ Stream[int] = (*InMemoryStream[int])(nil)
 
 func (i *InMemoryStream[A]) Push(x *Item[A]) error {
+	if i.simulate != nil && i.simulate.ErrorOnPush != nil {
+		if rand.Float64() < i.simulate.ErrorOnPushProbability {
+			return i.simulate.ErrorOnPush
+		}
+	}
+
 	if x.Offset.IsSet() {
 		return ErrOffsetSetOnPush
 	}
@@ -43,6 +51,12 @@ func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 }
 
 func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
+	if i.simulate != nil && i.simulate.ErrorOnPull != nil {
+		if rand.Float64() < i.simulate.ErrorOnPullProbability {
+			return nil, i.simulate.ErrorOnPull
+		}
+	}
+
 	if len(i.values) == 0 {
 		return nil, ErrEndOfStream
 	}
@@ -78,4 +92,16 @@ func (i *InMemoryStream[A]) ensureEventTime(eventTime *EventTime) *EventTime {
 
 	result := i.systemTime()
 	return &result
+}
+
+type SimulateProblem struct {
+	ErrorOnPullProbability float64
+	ErrorOnPull            error
+
+	ErrorOnPushProbability float64
+	ErrorOnPush            error
+}
+
+func (i *InMemoryStream[A]) SimulateRuntimeProblem(x *SimulateProblem) {
+	i.simulate = x
 }
