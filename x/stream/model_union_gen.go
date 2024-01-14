@@ -185,9 +185,22 @@ func (r *FromBeginning) MarshalJSON() ([]byte, error) {
 func (r *FromBeginning) _marshalJSONFromBeginning(x FromBeginning) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
+	var fieldTopic []byte
+	fieldTopic, err = r._marshalJSONTopic(x.Topic)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromBeginning._marshalJSONFromBeginning: field name Topic; %w", err)
+	}
+	partial["Topic"] = fieldTopic
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("stream: FromBeginning._marshalJSONFromBeginning: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *FromBeginning) _marshalJSONTopic(x Topic) ([]byte, error) {
+	result, err := shared.JSONMarshal[Topic](x)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromBeginning._marshalJSONTopic:; %w", err)
 	}
 	return result, nil
 }
@@ -205,6 +218,19 @@ func (r *FromBeginning) _unmarshalJSONFromBeginning(data []byte) (FromBeginning,
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
 		return result, fmt.Errorf("stream: FromBeginning._unmarshalJSONFromBeginning: native struct unwrap; %w", err)
+	}
+	if fieldTopic, ok := partial["Topic"]; ok {
+		result.Topic, err = r._unmarshalJSONTopic(fieldTopic)
+		if err != nil {
+			return result, fmt.Errorf("stream: FromBeginning._unmarshalJSONFromBeginning: field Topic; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *FromBeginning) _unmarshalJSONTopic(data []byte) (Topic, error) {
+	result, err := shared.JSONUnmarshal[Topic](data)
+	if err != nil {
+		return result, fmt.Errorf("stream: FromBeginning._unmarshalJSONTopic: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -227,3 +253,109 @@ var (
 	_ json.Unmarshaler = (*FromOffset)(nil)
 	_ json.Marshaler   = (*FromOffset)(nil)
 )
+
+func (r *FromOffset) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONFromOffset(*r)
+}
+func (r *FromOffset) _marshalJSONFromOffset(x FromOffset) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldTopic []byte
+	fieldTopic, err = r._marshalJSONTopic(x.Topic)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromOffset._marshalJSONFromOffset: field name Topic; %w", err)
+	}
+	partial["Topic"] = fieldTopic
+	var fieldOffset []byte
+	fieldOffset, err = r._marshalJSONPtrOffset(x.Offset)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromOffset._marshalJSONFromOffset: field name Offset; %w", err)
+	}
+	if fieldOffset != nil {
+		partial["Offset"] = fieldOffset
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromOffset._marshalJSONFromOffset: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *FromOffset) _marshalJSONTopic(x Topic) ([]byte, error) {
+	result, err := shared.JSONMarshal[Topic](x)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromOffset._marshalJSONTopic:; %w", err)
+	}
+	return result, nil
+}
+func (r *FromOffset) _marshalJSONPtrOffset(x *Offset) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONOffset(*x)
+}
+func (r *FromOffset) _marshalJSONOffset(x Offset) ([]byte, error) {
+	result, err := shared.JSONMarshal[Offset](x)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromOffset._marshalJSONOffset:; %w", err)
+	}
+	return result, nil
+}
+func (r *FromOffset) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONFromOffset(data)
+	if err != nil {
+		return fmt.Errorf("stream: FromOffset.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *FromOffset) _unmarshalJSONFromOffset(data []byte) (FromOffset, error) {
+	result := FromOffset{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("stream: FromOffset._unmarshalJSONFromOffset: native struct unwrap; %w", err)
+	}
+	if fieldTopic, ok := partial["Topic"]; ok {
+		result.Topic, err = r._unmarshalJSONTopic(fieldTopic)
+		if err != nil {
+			return result, fmt.Errorf("stream: FromOffset._unmarshalJSONFromOffset: field Topic; %w", err)
+		}
+	}
+	if fieldOffset, ok := partial["Offset"]; ok {
+		result.Offset, err = r._unmarshalJSONPtrOffset(fieldOffset)
+		if err != nil {
+			return result, fmt.Errorf("stream: FromOffset._unmarshalJSONFromOffset: field Offset; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *FromOffset) _unmarshalJSONTopic(data []byte) (Topic, error) {
+	result, err := shared.JSONUnmarshal[Topic](data)
+	if err != nil {
+		return result, fmt.Errorf("stream: FromOffset._unmarshalJSONTopic: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *FromOffset) _unmarshalJSONPtrOffset(data []byte) (*Offset, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONOffset(data)
+	if err != nil {
+		return nil, fmt.Errorf("stream: FromOffset._unmarshalJSONPtrOffset: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *FromOffset) _unmarshalJSONOffset(data []byte) (Offset, error) {
+	result, err := shared.JSONUnmarshal[Offset](data)
+	if err != nil {
+		return result, fmt.Errorf("stream: FromOffset._unmarshalJSONOffset: native ref unwrap; %w", err)
+	}
+	return result, nil
+}

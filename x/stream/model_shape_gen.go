@@ -12,6 +12,7 @@ func init() {
 	shape.Register(ItemShape())
 	shape.Register(OffsetShape())
 	shape.Register(PullCMDShape())
+	shape.Register(TopicShape())
 }
 
 //shape:shape
@@ -33,20 +34,55 @@ func FromBeginningShape() shape.Shape {
 		Name:          "FromBeginning",
 		PkgName:       "stream",
 		PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Topic",
+				Type: &shape.RefName{
+					Name:          "Topic",
+					PkgName:       "stream",
+					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+				},
+			},
+		},
 	}
 }
 
 func FromOffsetShape() shape.Shape {
-	return &shape.AliasLike{
+	return &shape.StructLike{
 		Name:          "FromOffset",
 		PkgName:       "stream",
 		PkgImportName: "github.com/widmogrod/mkunion/x/stream",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "Offset",
-			PkgName:       "stream",
-			PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Topic",
+				Type: &shape.RefName{
+					Name:          "Topic",
+					PkgName:       "stream",
+					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+				},
+			},
+			{
+				Name: "Offset",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "Offset",
+						PkgName:       "stream",
+						PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+					},
+				},
+			},
 		},
+	}
+}
+
+//shape:shape
+func TopicShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "Topic",
+		PkgName:       "stream",
+		PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+		IsAlias:       true,
+		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 
@@ -93,6 +129,10 @@ func ItemShape() shape.Shape {
 			},
 		},
 		Fields: []*shape.FieldLike{
+			{
+				Name: "Topic",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
 			{
 				Name: "Key",
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},

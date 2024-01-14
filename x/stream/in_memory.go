@@ -19,11 +19,12 @@ func WithSystemTimeFixed(x EventTime) func() EventTime {
 func NewInMemoryStream[A any](systemTime func() EventTime) *InMemoryStream[A] {
 	return &InMemoryStream[A]{
 		systemTime: systemTime,
+		values:     make(map[Topic][]*Item[A]),
 	}
 }
 
 type InMemoryStream[A any] struct {
-	values     []*Item[A]
+	values     map[Topic][]*Item[A]
 	systemTime func() EventTime
 	simulate   *SimulateProblem
 }
@@ -37,15 +38,26 @@ func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 		}
 	}
 
+	if x.Topic == "" {
+		return ErrEmptyTopic
+	}
+	if x.Key == "" {
+		return ErrEmptyKey
+	}
 	if x.Offset.IsSet() {
 		return ErrOffsetSetOnPush
 	}
 
-	i.values = append(i.values, &Item[A]{
+	if i.values[x.Topic] == nil {
+		i.values[x.Topic] = make([]*Item[A], 0)
+	}
+
+	i.values[x.Topic] = append(i.values[x.Topic], &Item[A]{
+		Topic:     x.Topic,
 		Key:       x.Key,
 		Data:      x.Data,
 		EventTime: i.ensureEventTime(x.EventTime),
-		Offset:    MkOffsetFromInt(len(i.values)),
+		Offset:    MkOffsetFromInt(len(i.values[x.Topic])),
 	})
 	return nil
 }
@@ -57,10 +69,6 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 		}
 	}
 
-	if len(i.values) == 0 {
-		return nil, ErrEndOfStream
-	}
-
 	if fromOffset == nil {
 		return nil, ErrEmptyCommand
 	}
@@ -68,19 +76,43 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 	return MatchPullCMDR2(
 		fromOffset,
 		func(x *FromBeginning) (*Item[A], error) {
-			return i.values[0], nil
+			if x.Topic == "" {
+				return nil, ErrEmptyTopic
+			}
+
+			if i.values[x.Topic] == nil {
+				return nil, ErrEndOfStream
+			}
+
+			if len(i.values[x.Topic]) == 0 {
+				return nil, ErrEndOfStream
+			}
+
+			return i.values[x.Topic][0], nil
 		},
 		func(x *FromOffset) (*Item[A], error) {
-			offset, err := ParseOffsetAsInt(x)
+			if x.Topic == "" {
+				return nil, ErrEmptyTopic
+			}
+
+			offset, err := ParseOffsetAsInt(x.Offset)
 			if err != nil {
 				return nil, fmt.Errorf("stream.InMemoryStream: Pull %+#v: %w", x, err)
 			}
 
-			if offset+1 >= len(i.values) {
+			if i.values[x.Topic] == nil {
 				return nil, ErrEndOfStream
 			}
 
-			return i.values[offset+1], nil
+			if len(i.values[x.Topic]) == 0 {
+				return nil, ErrEndOfStream
+			}
+
+			if offset+1 >= len(i.values[x.Topic]) {
+				return nil, ErrEndOfStream
+			}
+
+			return i.values[x.Topic][offset+1], nil
 		},
 	)
 }

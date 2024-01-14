@@ -8,13 +8,22 @@ var (
 	ErrEndOfStream     = fmt.Errorf("end of stream")
 	ErrOffsetSetOnPush = fmt.Errorf("offset set on push")
 	ErrEmptyCommand    = fmt.Errorf("empty command")
+	ErrEmptyTopic      = fmt.Errorf("no topic specified")
+	ErrEmptyKey        = fmt.Errorf("empty key")
 )
 
 //go:tag mkunion:"PullCMD"
 type (
-	FromBeginning struct{}
-	FromOffset    = Offset
+	FromBeginning struct {
+		Topic Topic
+	}
+	FromOffset struct {
+		Topic  Topic
+		Offset *Offset
+	}
 )
+
+type Topic = string
 
 //go:tag serde:"json"
 type Offset string
@@ -24,6 +33,7 @@ func (o *Offset) IsSet() bool {
 }
 
 type Item[A any] struct {
+	Topic     string
 	Key       string
 	Data      A
 	EventTime *EventTime
