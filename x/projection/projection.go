@@ -187,8 +187,10 @@ func (c *SnapshotStore) LoadLastSnapshot(id string) (*SnapshotState, error) {
 	return copySnapshot(snapshot), nil
 }
 
-func DoLoad[A any](ctx PushOnly[A], f func(push func(Data[A]) error) error) error {
-	err := f(ctx.PushOut)
+func DoLoad[A any](ctx PushOnly[A], f func(push func(record *Record[A]) error) error) error {
+	err := f(func(record *Record[A]) error {
+		return ctx.PushOut(record)
+	})
 	if err != nil {
 		return fmt.Errorf("projection.DoLoad: load: %w", err)
 	}

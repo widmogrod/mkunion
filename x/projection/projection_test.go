@@ -12,7 +12,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
 	ctx1 := NewPushOnlyInMemoryContext[int](out1)
 
-	err := DoLoad(ctx1, func(push func(Data[int]) error) error {
+	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
 		for i := 0; i < 10; i++ {
 			err := push(&Record[int]{
 				Key:  fmt.Sprintf("key-%d", i%2),
@@ -146,7 +146,7 @@ func TestProjection_Recovery(t *testing.T) {
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
 	ctx1 := NewPushOnlyInMemoryContext[int](out1)
 
-	err := DoLoad(ctx1, func(push func(Data[int]) error) error {
+	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
 		for i := 0; i < 10; i++ {
 			err := push(&Record[int]{
 				Key:  fmt.Sprintf("key-%d", i%2),
