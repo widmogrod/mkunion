@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/stream"
+	"math/rand"
 )
 
 //go:generate go run ../../cmd/mkunion/main.go
@@ -73,24 +74,24 @@ type (
 	}
 )
 
-func NewPushAndPullInMemoryContext[A, B any](in stream.Stream[A], out stream.Stream[B]) *PushAndPullInMemoryContext[A, B] {
+func NewPushAndPullInMemoryContext[A, B any](state SnapshotState, in stream.Stream[A], out stream.Stream[B]) *PushAndPullInMemoryContext[A, B] {
 	return &PushAndPullInMemoryContext[A, B]{
-		state:  SnapshotState{},
+		state:  state,
 		input:  in,
 		output: out,
 	}
 }
 
-func NewPushOnlyInMemoryContext[A any](out stream.Stream[A]) PushOnly[A] {
+func NewPushOnlyInMemoryContext[A any](state SnapshotState, out stream.Stream[A]) PushOnly[A] {
 	return &PushAndPullInMemoryContext[any, A]{
-		state:  SnapshotState{},
+		state:  state,
 		output: out,
 	}
 }
 
-func NewPullOnlyInMemoryContext[A any](in stream.Stream[A]) PullOnly[A] {
+func NewPullOnlyInMemoryContext[A any](state SnapshotState, in stream.Stream[A]) PullOnly[A] {
 	return &PushAndPullInMemoryContext[A, any]{
-		state: SnapshotState{},
+		state: state,
 		input: in,
 	}
 }
@@ -108,7 +109,9 @@ type PushAndPullInMemoryContext[A, B any] struct {
 
 func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
 	if c.simulate != nil && c.simulate.ErrorOnPullIn != nil {
-		return nil, c.simulate.ErrorOnPullIn
+		if rand.Float64() < c.simulate.ErrorOnPullInProbability {
+			return nil, c.simulate.ErrorOnPullIn
+		}
 	}
 
 	pull := c.pullCommand(c.state)
@@ -125,7 +128,9 @@ func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
 
 func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Data[B]) error {
 	if c.simulate != nil && c.simulate.ErrorOnPushOut != nil {
-		return c.simulate.ErrorOnPushOut
+		if rand.Float64() < c.simulate.ErrorOnPushOutProbability {
+			return c.simulate.ErrorOnPushOut
+		}
 	}
 
 	item := RecordToStreamItem(x)
@@ -150,13 +155,38 @@ func (c *PushAndPullInMemoryContext[A, B]) pullCommand(x SnapshotState) stream.P
 }
 
 type SimulateProblem struct {
-	ErrorOnPullIn  error
-	ErrorOnPushOut error
+	ErrorOnPullInProbability float64
+	ErrorOnPullIn            error
+
+	ErrorOnPushOutProbability float64
+	ErrorOnPushOut            error
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) SimulateRuntimeProblem(x *SimulateProblem) {
 	c.simulate = x
 }
+
+type simulationProblemAware interface {
+	SimulateRuntimeProblem(x *SimulateProblem)
+}
+
+func InjectRuntimeProblem(ctx any, x *SimulateProblem) {
+	if ctx, ok := ctx.(simulationProblemAware); ok {
+		ctx.SimulateRuntimeProblem(x)
+	}
+}
+
+func NewSnapshotStateForInMemoryContext(id string) SnapshotState {
+	return SnapshotState{
+		ID:     id,
+		Offset: nil,
+	}
+}
+
+var (
+	ErrSnapshotIDEmpty  = fmt.Errorf("empty snapshot id")
+	ErrSnapshotNotFound = fmt.Errorf("snapshot not found")
+)
 
 type SnapshotState struct {
 	ID        string
@@ -184,7 +214,7 @@ func copySnapshot(x *SnapshotState) *SnapshotState {
 
 func (c *SnapshotStore) SaveSnapshot(x SnapshotState) error {
 	if x.ID == "" {
-		return fmt.Errorf("projection.SnapshotStore: SaveSnapshot: empty id")
+		return fmt.Errorf("projection.SnapshotStore: SaveSnapshot: %w", ErrSnapshotIDEmpty)
 	}
 
 	c.snapshots[x.ID] = copySnapshot(&x)
@@ -193,15 +223,23 @@ func (c *SnapshotStore) SaveSnapshot(x SnapshotState) error {
 
 func (c *SnapshotStore) LoadLastSnapshot(id string) (*SnapshotState, error) {
 	if id == "" {
-		return nil, fmt.Errorf("projection.SnapshotStore: LoadLastSnapshot: empty id")
+		return nil, fmt.Errorf("projection.SnapshotStore: LoadLastSnapshot: %w", ErrSnapshotIDEmpty)
 	}
 
 	snapshot, ok := c.snapshots[id]
 	if !ok {
-		return nil, fmt.Errorf("projection.SnapshotStore: LoadLastSnapshot: snapshot not found")
+		return nil, fmt.Errorf("projection.SnapshotStore: LoadLastSnapshot: %w", ErrSnapshotNotFound)
 	}
 
 	return copySnapshot(snapshot), nil
+}
+
+func (c *SnapshotStore) InitSnapshot(id string) *SnapshotState {
+	return &SnapshotState{
+		ID:        id,
+		Offset:    nil,
+		Completed: false,
+	}
 }
 
 func DoLoad[A any](ctx PushOnly[A], f func(push func(record *Record[A]) error) error) error {

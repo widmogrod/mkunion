@@ -5,12 +5,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/stream"
+	"math"
 	"testing"
 )
 
 func TestProjection_HappyPath(t *testing.T) {
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
-	ctx1 := NewPushOnlyInMemoryContext[int](out1)
+	state1 := NewSnapshotStateForInMemoryContext("load-1")
+	ctx1 := NewPushOnlyInMemoryContext[int](state1, out1)
 
 	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
 		for i := 0; i < 10; i++ {
@@ -27,7 +29,8 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	ctx2 := NewPushAndPullInMemoryContext[int, float64](out1, out2)
+	state2 := NewSnapshotStateForInMemoryContext("map-1")
+	ctx2 := NewPushAndPullInMemoryContext[int, float64](state2, out1, out2)
 	err = DoMap[int, float64](ctx2, func(x *Record[int]) *Record[float64] {
 		return &Record[float64]{
 			Key:       x.Key,
@@ -97,7 +100,8 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	orderOfEvents = []string{}
-	ctx6 := NewPullOnlyInMemoryContext[string](out4)
+	state3 := NewSnapshotStateForInMemoryContext("sink-2")
+	ctx6 := NewPullOnlyInMemoryContext[string](state3, out4)
 	err = DoSink[string](ctx6, func(x *Record[string]) error {
 		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%s", x.Key, x.Data))
 		return nil
@@ -115,29 +119,75 @@ func TestProjection_HappyPath(t *testing.T) {
 }
 
 func TestProjection_Recovery(t *testing.T) {
-	//sna1 := NewSnapshotStore()
-	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
-	ctx1 := NewPushOnlyInMemoryContext[int](out1)
+	probabilityOfFailure := 0.05
+	recoveryAttempts := uint8(math.MaxUint8)
 
-	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
-		for i := 0; i < 10; i++ {
-			err := push(&Record[int]{
-				Key:  fmt.Sprintf("key-%d", i%2),
-				Data: i,
-			})
-			if err != nil {
-				return fmt.Errorf("projection.Range: push: %w", err)
+	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
+	out1.SimulateRuntimeProblem(&stream.SimulateProblem{
+		ErrorOnPullProbability: probabilityOfFailure,
+		ErrorOnPush:            fmt.Errorf("simulated push error"),
+
+		ErrorOnPushProbability: probabilityOfFailure,
+		ErrorOnPull:            fmt.Errorf("simulated pull error"),
+	})
+
+	store := NewSnapshotStore()
+
+	recovery := NewRecoveryOptions("recovery-load", store).WithMaxRecoveryAttempts(recoveryAttempts)
+	err := Recovery(recovery, func(state SnapshotState) error {
+		ctx1 := NewPushOnlyInMemoryContext[int](state, out1)
+		InjectRuntimeProblem(ctx1, &SimulateProblem{
+			ErrorOnPushOutProbability: probabilityOfFailure,
+			ErrorOnPushOut:            fmt.Errorf("simulated push error"),
+			ErrorOnPullInProbability:  probabilityOfFailure,
+			ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
+		})
+
+		return DoLoad(ctx1, func(push func(*Record[int]) error) error {
+			for i := 0; i < 10; i++ {
+				err := push(&Record[int]{
+					Key:  fmt.Sprintf("key-%d", i%2),
+					Data: i,
+				})
+				if err != nil {
+					return fmt.Errorf("projection.Range: push: %w", err)
+				}
 			}
-		}
-		return nil
+			return nil
+		})
 	})
 	assert.NoError(t, err)
 
 	var orderOfEvents []string
-	ctx2 := NewPullOnlyInMemoryContext[int](out1)
-	err = DoSink[int](ctx2, func(x *Record[int]) error {
-		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%d", x.Key, x.Data))
-		return nil
+	var orderOfUniquer = make(map[string]struct{})
+
+	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
+	out2.SimulateRuntimeProblem(&stream.SimulateProblem{
+		ErrorOnPullProbability: probabilityOfFailure,
+		ErrorOnPush:            fmt.Errorf("simulated push error"),
+
+		ErrorOnPushProbability: probabilityOfFailure,
+		ErrorOnPull:            fmt.Errorf("simulated pull error"),
+	})
+
+	recovery = NewRecoveryOptions("recovery-load", store).WithMaxRecoveryAttempts(recoveryAttempts)
+	err = Recovery(recovery, func(state SnapshotState) error {
+		ctx2 := NewPushAndPullInMemoryContext[int, float64](state, out1, out2)
+		InjectRuntimeProblem(ctx2, &SimulateProblem{
+			ErrorOnPushOutProbability: probabilityOfFailure,
+			ErrorOnPushOut:            fmt.Errorf("simulated push error"),
+			ErrorOnPullInProbability:  probabilityOfFailure,
+			ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
+		})
+		return DoSink[int](ctx2, func(x *Record[int]) error {
+			entry := fmt.Sprintf("record-%s:%d", x.Key, x.Data)
+			if _, ok := orderOfUniquer[entry]; ok {
+				return nil
+			}
+			orderOfUniquer[entry] = struct{}{}
+			orderOfEvents = append(orderOfEvents, entry)
+			return nil
+		})
 	})
 	assert.NoError(t, err)
 
