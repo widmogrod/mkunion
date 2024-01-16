@@ -246,6 +246,8 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 					shape.ErrShapeNotFound))
 			}
 
+			y = shape.IndexWith(y, x)
+
 			return FromGoReflect(y, yreflect)
 		},
 		func(x *shape.PointerLike) Schema {
@@ -455,6 +457,8 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 			if !found {
 				return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.RefName not found %#v; %w", x, shape.ErrShapeNotFound)
 			}
+
+			newShape = shape.IndexWith(newShape, x)
 
 			return ToGoReflect(newShape, ydata, zreflect)
 		},
