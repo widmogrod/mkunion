@@ -741,20 +741,27 @@ func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape 
 }
 
 func IndexWith(y Shape, ref *RefName) Shape {
-	x, ok := y.(*StructLike)
-	if !ok {
+	var typeParams []TypeParam
+	switch x := y.(type) {
+	case *StructLike:
+		typeParams = x.TypeParams
+	case *AliasLike:
+		typeParams = x.TypeParams
+	case *UnionLike:
+		typeParams = x.TypeParams
+	default:
 		return y
 	}
 
-	z := x
+	z := y
 
-	if len(x.TypeParams) != len(ref.Indexed) ||
-		len(x.TypeParams) == 0 {
+	if len(typeParams) != len(ref.Indexed) ||
+		len(typeParams) == 0 {
 		return z
 	}
 
-	params := make(map[string]Shape, len(x.TypeParams))
-	for i, param := range x.TypeParams {
+	params := make(map[string]Shape, len(typeParams))
+	for i, param := range typeParams {
 		params[param.Name] = ref.Indexed[i]
 	}
 
