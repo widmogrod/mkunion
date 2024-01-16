@@ -513,3 +513,25 @@ func Name(x Shape) string {
 		},
 	)
 }
+
+func NameToPrimitiveShape(name string) Shape {
+	switch name {
+	case "any":
+		return &Any{}
+	case "string":
+		return &PrimitiveLike{Kind: &StringLike{}}
+	case "bool":
+		return &PrimitiveLike{Kind: &BooleanLike{}}
+	case "int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64",
+		"float64", "float32",
+		"byte", "rune":
+		return &PrimitiveLike{
+			Kind: &NumberLike{
+				Kind: TypeStringToNumberKindMap[name],
+			},
+		}
+	}
+
+	return nil
+}
