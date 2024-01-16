@@ -101,13 +101,16 @@ var (
 // LookupShape scans registry for shapes.
 // it's suited for runtime and compiled code
 func LookupShape(x *RefName) (Shape, bool) {
+	if x.PkgName == "" {
+		if primitive := NameToPrimitiveShape(x.Name); primitive != nil {
+			return primitive, true
+		}
+	}
+
 	key := shapeFullName(x)
 	if v, ok := shapeRegistry.Load(key); ok {
 		return v.(Shape), true
 	}
-
-	//log.Warnf("shape.LookupShape: %s not found in shapeRegistry, trying to lookup on disk", key)
-	//return LookupShapeOnDisk(x)
 
 	return nil, false
 }
