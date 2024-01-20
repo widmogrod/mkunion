@@ -3,8 +3,10 @@ package projection
 import (
 	"errors"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/stream"
+	"math"
 	"time"
 )
 
@@ -36,6 +38,7 @@ type WindowRecord[A any] struct {
 	Key    WindowKey
 	Window *Window
 	Record A
+	//Count  uint64 // How many items were added to this window, this is useful for AtCount TriggerDescription
 }
 
 func MkWindowID(key string, window *Window) WindowID {
@@ -101,6 +104,7 @@ func DoWindow[A, B any](
 	ctx PushAndPull[A, B],
 	wd WindowDescription,
 	fm WindowFlushMode,
+	td TriggerDescription,
 	merge func(x A, agg B) (B, error),
 ) error {
 	// group by key
@@ -119,8 +123,22 @@ func DoWindow[A, B any](
 		fm,
 		func(x *Discard) func() error {
 			return func() error {
+				where, err := TriggerDescriptionToWhere(td)
+				if err != nil {
+					return fmt.Errorf("projection.DoWindow: flush trigger description to whare: %w", err)
+				}
+
+				where.Params[":watermark"] = schema.MkInt(math.MaxInt64)
+
 				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
 					RecordType: "window",
+					Where:      where,
+					Sort: []schemaless.SortField{
+						{
+							Field:      "Data.Window.End",
+							Descending: true,
+						},
+					},
 				}
 
 				for {

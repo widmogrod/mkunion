@@ -199,11 +199,6 @@ func WindowRecordShape() shape.Shape {
 				},
 			},
 		},
-		Tags: map[string]shape.Tag{
-			"serde": {
-				Value: "json",
-			},
-		},
 	}
 }
 

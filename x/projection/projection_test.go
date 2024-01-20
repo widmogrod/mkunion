@@ -97,7 +97,8 @@ func TestProjection_HappyPath(t *testing.T) {
 
 	wd := &FixedWindow{Width: math.MaxInt64}
 	fm := &Discard{}
-	err = DoWindow(ctx5, wd, fm, func(x Either[int, float64], agg string) (string, error) {
+	td := &AtWatermark{}
+	err = DoWindow(ctx5, wd, fm, td, func(x Either[int, float64], agg string) (string, error) {
 		var concat string
 		if agg == "" {
 			concat = fmt.Sprintf("%v", x)

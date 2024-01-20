@@ -155,22 +155,9 @@ func (r *AtWatermark) MarshalJSON() ([]byte, error) {
 func (r *AtWatermark) _marshalJSONAtWatermark(x AtWatermark) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
-	var fieldTimestamp []byte
-	fieldTimestamp, err = r._marshalJSONint64(x.Timestamp)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AtWatermark._marshalJSONAtWatermark: field name Timestamp; %w", err)
-	}
-	partial["Timestamp"] = fieldTimestamp
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("projection: AtWatermark._marshalJSONAtWatermark: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *AtWatermark) _marshalJSONint64(x int64) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AtWatermark._marshalJSONint64:; %w", err)
 	}
 	return result, nil
 }
@@ -188,20 +175,6 @@ func (r *AtWatermark) _unmarshalJSONAtWatermark(data []byte) (AtWatermark, error
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
 		return result, fmt.Errorf("projection: AtWatermark._unmarshalJSONAtWatermark: native struct unwrap; %w", err)
-	}
-	if fieldTimestamp, ok := partial["Timestamp"]; ok {
-		result.Timestamp, err = r._unmarshalJSONint64(fieldTimestamp)
-		if err != nil {
-			return result, fmt.Errorf("projection: AtWatermark._unmarshalJSONAtWatermark: field Timestamp; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *AtWatermark) _unmarshalJSONint64(data []byte) (int64, error) {
-	var result int64
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("projection: AtWatermark._unmarshalJSONint64: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

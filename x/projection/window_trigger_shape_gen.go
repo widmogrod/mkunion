@@ -28,15 +28,5 @@ func AtWatermarkShape() shape.Shape {
 		Name:          "AtWatermark",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Timestamp",
-				Type: &shape.PrimitiveLike{
-					Kind: &shape.NumberLike{
-						Kind: &shape.Int64{},
-					},
-				},
-			},
-		},
 	}
 }
