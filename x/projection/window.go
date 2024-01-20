@@ -92,9 +92,15 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 	}
 }
 
+type WindowSnapshotState struct {
+	snapshotState SnapshotState
+	wd            WindowDescription
+}
+
 func DoWindow[A, B any](
 	ctx PushAndPull[A, B],
 	wd WindowDescription,
+	fm WindowFlushMode,
 	merge func(x A, agg B) (B, error),
 ) error {
 	// group by key
@@ -103,39 +109,50 @@ func DoWindow[A, B any](
 
 	store := NewWindowInMemoryStore[B]("window")
 
-	flush := func() error {
-		find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
-			RecordType: "window",
-		}
+	// recovery from failure:
+	// to avoid any double processing of data process should work only on data from last snapshot
+	// load all windows after last snapshot and before last watermark to memory
+	// for each window apply function
+	// save window
 
-		for {
-			records, err := store.store.FindingRecords(*find)
-			if err != nil {
-				return fmt.Errorf("projection.DoWindow: flush find: %w", err)
-			}
+	flush := MatchWindowFlushModeR1(
+		fm,
+		func(x *Discard) func() error {
+			return func() error {
+				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
+					RecordType: "window",
+				}
 
-			for _, record := range records.Items {
-				err := ctx.PushOut(WindowToRecord(record.Data.Key, *record.Data))
-				if err != nil {
-					return fmt.Errorf("projection.DoWindow: flush push: %w", err)
+				for {
+					records, err := store.store.FindingRecords(*find)
+					if err != nil {
+						return fmt.Errorf("projection.DoWindow: flush find: %w", err)
+					}
+
+					for _, record := range records.Items {
+						err := ctx.PushOut(WindowToRecord(record.Data.Key, *record.Data))
+						if err != nil {
+							return fmt.Errorf("projection.DoWindow: flush push: %w", err)
+						}
+					}
+
+					if len(records.Items) > 0 {
+						err = store.store.UpdateRecords(schemaless.Delete(records.Items...))
+						if err != nil {
+							return fmt.Errorf("projection.DoWindow: flush delete: %w", err)
+						}
+					}
+
+					if records.HasNext() {
+						find = records.Next
+						continue
+					}
+
+					return nil
 				}
 			}
-
-			if len(records.Items) > 0 {
-				err = store.store.UpdateRecords(schemaless.Delete(records.Items...))
-				if err != nil {
-					return fmt.Errorf("projection.DoWindow: flush delete: %w", err)
-				}
-			}
-
-			if records.HasNext() {
-				find = records.Next
-				continue
-			}
-
-			return nil
-		}
-	}
+		},
+	)
 
 	for {
 		item, err := ctx.PullIn()
@@ -211,10 +228,6 @@ func DoWindow[A, B any](
 			return fmt.Errorf("projection.DoWindow: merge data %T: %w", item, err)
 		}
 	}
-}
-
-type WindowSnapshotState struct {
-	snapshotState SnapshotState
 }
 
 func NewWindowInMemoryStore[A any](recordType string) *WindowInMemoryStore[A] {
