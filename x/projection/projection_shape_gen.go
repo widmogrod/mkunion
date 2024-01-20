@@ -15,8 +15,6 @@ func init() {
 	shape.Register(RecordShape())
 	shape.Register(RightShape())
 	shape.Register(SimulateProblemShape())
-	shape.Register(SnapshotStateShape())
-	shape.Register(SnapshotStoreShape())
 	shape.Register(WatermarkShape())
 }
 
@@ -273,59 +271,5 @@ func SimulateProblemShape() shape.Shape {
 				Type: &shape.Any{},
 			},
 		},
-	}
-}
-
-//shape:shape
-func SnapshotStateShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "SnapshotState",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "ID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
-				Name: "Offset",
-				Type: &shape.PointerLike{
-					Type: &shape.RefName{
-						Name:          "Offset",
-						PkgName:       "stream",
-						PkgImportName: "github.com/widmogrod/mkunion/x/stream",
-					},
-				},
-			},
-			{
-				Name: "PullTopic",
-				Type: &shape.RefName{
-					Name:          "Topic",
-					PkgName:       "stream",
-					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
-				},
-			},
-			{
-				Name: "PushTopic",
-				Type: &shape.RefName{
-					Name:          "Topic",
-					PkgName:       "stream",
-					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
-				},
-			},
-			{
-				Name: "Completed",
-				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
-			},
-		},
-	}
-}
-
-//shape:shape
-func SnapshotStoreShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "SnapshotStore",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
 	}
 }

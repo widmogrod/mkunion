@@ -96,7 +96,7 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 }
 
 type WindowSnapshotState struct {
-	snapshotState SnapshotState
+	snapshotState PullPushContextState
 	wd            WindowDescription
 	fm            WindowFlushMode
 	td            TriggerDescription

@@ -68,16 +68,19 @@ type (
 	PushAndPull[A, B any] interface {
 		PullOnly[A]
 		PushOnly[B]
+		CurrentState() SnapshotState
 	}
 	PullOnly[A any] interface {
 		PullIn() (Data[A], error)
+		CurrentState() SnapshotState
 	}
 	PushOnly[A any] interface {
 		PushOut(Data[A]) error
+		CurrentState() SnapshotState
 	}
 )
 
-func NewPushAndPullInMemoryContext[A, B any](state SnapshotState, in stream.Stream[A], out stream.Stream[B]) *PushAndPullInMemoryContext[A, B] {
+func NewPushAndPullInMemoryContext[A, B any](state *PullPushContextState, in stream.Stream[A], out stream.Stream[B]) *PushAndPullInMemoryContext[A, B] {
 	return &PushAndPullInMemoryContext[A, B]{
 		state:  state,
 		input:  in,
@@ -85,14 +88,14 @@ func NewPushAndPullInMemoryContext[A, B any](state SnapshotState, in stream.Stre
 	}
 }
 
-func NewPushOnlyInMemoryContext[A any](state SnapshotState, out stream.Stream[A]) PushOnly[A] {
+func NewPushOnlyInMemoryContext[A any](state *PullPushContextState, out stream.Stream[A]) PushOnly[A] {
 	return &PushAndPullInMemoryContext[any, A]{
 		state:  state,
 		output: out,
 	}
 }
 
-func NewPullOnlyInMemoryContext[A any](state SnapshotState, in stream.Stream[A]) PullOnly[A] {
+func NewPullOnlyInMemoryContext[A any](state *PullPushContextState, in stream.Stream[A]) PullOnly[A] {
 	return &PushAndPullInMemoryContext[A, any]{
 		state: state,
 		input: in,
@@ -102,7 +105,7 @@ func NewPullOnlyInMemoryContext[A any](state SnapshotState, in stream.Stream[A])
 var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 
 type PushAndPullInMemoryContext[A, B any] struct {
-	state SnapshotState
+	state *PullPushContextState
 
 	input    stream.Stream[A]
 	output   stream.Stream[B]
@@ -148,7 +151,7 @@ func (c *PushAndPullInMemoryContext[A, B]) CurrentState() SnapshotState {
 	return c.state
 }
 
-func (c *PushAndPullInMemoryContext[A, B]) pullCommand(x SnapshotState) stream.PullCMD {
+func (c *PushAndPullInMemoryContext[A, B]) pullCommand(x *PullPushContextState) stream.PullCMD {
 	if x.Offset == nil {
 		return &stream.FromBeginning{
 			Topic: x.PullTopic,
@@ -298,6 +301,8 @@ type InMemoryJoinContext[A, B, C any] struct {
 
 	offsetA *stream.Offset
 	offsetB *stream.Offset
+
+	state *JoinContextState
 }
 
 var _ PushAndPull[Either[any, any], any] = (*InMemoryJoinContext[any, any, any])(nil)
@@ -377,4 +382,8 @@ func (i *InMemoryJoinContext[A, B, C]) PushOut(x Data[C]) error {
 		return fmt.Errorf("projection.PushAndPullInMemoryContext: PushOut: %w", err)
 	}
 	return nil
+}
+
+func (i *InMemoryJoinContext[A, B, C]) CurrentState() SnapshotState {
+	return i.state
 }

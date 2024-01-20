@@ -11,6 +11,10 @@ var (
 	ErrMaxRecoveryAttemptsReached = errors.New("max recovery attempts reached")
 )
 
+const (
+	RecoveryRecordType = "recovery-state"
+)
+
 func NewRecoveryOptions[A any](id string, init A, store schemaless.Repository[A]) *RecoveryOptions[A] {
 	return &RecoveryOptions[A]{
 		id:                  id,
@@ -37,7 +41,7 @@ func Recovery[A any](ctx *RecoveryOptions[A], f func(state A) error) error {
 
 	for {
 		state := ctx.init
-		record, err := ctx.store.Get(ctx.id, "recovery-state")
+		record, err := ctx.store.Get(ctx.id, RecoveryRecordType)
 		if err != nil {
 			if !errors.Is(err, schemaless.ErrNotFound) {
 				return fmt.Errorf("projection.Recovery: load last state in store; %w", err)
@@ -48,6 +52,16 @@ func Recovery[A any](ctx *RecoveryOptions[A], f func(state A) error) error {
 
 		err = f(state)
 		if err == nil {
+			// FIXME: this should happen on other signals, like Watermark
+			err = ctx.store.UpdateRecords(schemaless.Save(schemaless.Record[A]{
+				ID:      ctx.id,
+				Type:    RecoveryRecordType,
+				Data:    state,
+				Version: record.Version,
+			}))
+			if err != nil {
+				return fmt.Errorf("projection.Recovery: save last state in store; %w", err)
+			}
 			return nil
 		}
 

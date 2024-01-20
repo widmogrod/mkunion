@@ -12,7 +12,7 @@ import (
 
 func TestProjection_HappyPath(t *testing.T) {
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
-	state1 := SnapshotState{
+	state1 := &PullPushContextState{
 		Offset:    nil,
 		PullTopic: "topic-in-1",
 		PushTopic: "topic-out-1",
@@ -35,7 +35,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	state2 := SnapshotState{
+	state2 := &PullPushContextState{
 		Offset:    nil,
 		PullTopic: "topic-out-1",
 		PushTopic: "topic-out-2",
@@ -121,7 +121,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	orderOfEvents = []string{}
-	state3 := SnapshotState{
+	state3 := &PullPushContextState{
 		Offset:    nil,
 		PullTopic: "topic-out-4",
 		PushTopic: "topic-out-3",
@@ -156,12 +156,12 @@ func TestProjection_Recovery(t *testing.T) {
 		ErrorOnPull:            fmt.Errorf("simulated pull error"),
 	})
 
-	var store schemaless.Repository[SnapshotState] = schemaless.NewInMemoryRepository[SnapshotState]()
+	var store schemaless.Repository[*PullPushContextState] = schemaless.NewInMemoryRepository[*PullPushContextState]()
 
 	recovery :=
 		NewRecoveryOptions(
 			"recovery-load-load",
-			SnapshotState{
+			&PullPushContextState{
 				Offset:    nil,
 				PullTopic: "in-1",
 				PushTopic: "out-1",
@@ -169,7 +169,7 @@ func TestProjection_Recovery(t *testing.T) {
 			store,
 		).WithMaxRecoveryAttempts(recoveryAttempts)
 
-	err := Recovery(recovery, func(state SnapshotState) error {
+	err := Recovery(recovery, func(state *PullPushContextState) error {
 		ctx1 := NewPushOnlyInMemoryContext[int](state, out1)
 		InjectRuntimeProblem(ctx1, &SimulateProblem{
 			ErrorOnPushOutProbability: probabilityOfFailure,
@@ -209,7 +209,7 @@ func TestProjection_Recovery(t *testing.T) {
 	recovery =
 		NewRecoveryOptions(
 			"recovery-load-sink",
-			SnapshotState{
+			&PullPushContextState{
 				Offset:    nil,
 				PullTopic: "out-1",
 				PushTopic: "out-2",
@@ -217,7 +217,7 @@ func TestProjection_Recovery(t *testing.T) {
 			store,
 		).WithMaxRecoveryAttempts(recoveryAttempts)
 
-	err = Recovery(recovery, func(state SnapshotState) error {
+	err = Recovery(recovery, func(state *PullPushContextState) error {
 		ctx2 := NewPushAndPullInMemoryContext[int, float64](state, out1, out2)
 		InjectRuntimeProblem(ctx2, &SimulateProblem{
 			ErrorOnPushOutProbability: probabilityOfFailure,
@@ -252,5 +252,15 @@ func TestProjection_Recovery(t *testing.T) {
 
 	if diff := cmp.Diff(expectedOrder, orderOfEvents); diff != "" {
 		t.Fatalf("diff: (-want +got)\n%s", diff)
+	}
+
+	results, err := store.FindingRecords(schemaless.FindingRecords[schemaless.Record[*PullPushContextState]]{
+		RecordType: RecoveryRecordType,
+	})
+	assert.NoError(t, err)
+	assert.Len(t, results.Items, 2)
+
+	for _, result := range results.Items {
+		t.Logf("recovery state: %v", result)
 	}
 }
