@@ -235,8 +235,7 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 	return shape.MatchShapeR1(
 		xschema,
 		func(x *shape.Any) Schema {
-			panic("not implemented")
-
+			panic("schema.FromGoReflect: not implemented shape.Any to Schema")
 		},
 		func(x *shape.RefName) Schema {
 			y, found := shape.LookupShape(x)
@@ -251,24 +250,19 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			return FromGoReflect(y, yreflect)
 		},
 		func(x *shape.PointerLike) Schema {
-			return FromGoReflect(x.Type, yreflect)
-		},
-		func(x *shape.AliasLike) Schema {
-			if yreflect.Kind() == reflect.Ptr {
-				yreflect = yreflect.Elem()
+			if yreflect.IsNil() {
+				return MkNone()
 			}
 
+			return FromGoReflect(x.Type, yreflect.Elem())
+		},
+		func(x *shape.AliasLike) Schema {
 			return FromGoReflect(x.Type, yreflect)
 		},
 		func(x *shape.PrimitiveLike) Schema {
 			return shape.MatchPrimitiveKindR1(
 				x.Kind,
 				func(x *shape.BooleanLike) Schema {
-					yreflect, y := toTheCoreValue(yreflect)
-					if y != nil {
-						return y
-					}
-
 					if yreflect.Kind() != reflect.Bool {
 						panic(fmt.Errorf("schema.FromGoReflect: shape.BooleanLike expected reflect.Bool, got %s", yreflect.String()))
 					}
@@ -276,11 +270,6 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 					return MkBool(yreflect.Bool())
 				},
 				func(x *shape.StringLike) Schema {
-					yreflect, y := toTheCoreValue(yreflect)
-					if y != nil {
-						return y
-					}
-
 					if yreflect.Kind() != reflect.String {
 						panic(fmt.Errorf("schema.FromGoReflect: shape.StringLike expected reflect.String, got %s", yreflect.String()))
 					}
@@ -288,11 +277,6 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 					return MkString(yreflect.String())
 				},
 				func(x *shape.NumberLike) Schema {
-					yreflect, y := toTheCoreValue(yreflect)
-					if y != nil {
-						return y
-					}
-
 					return shape.MatchNumberKindR1(
 						x.Kind,
 						func(x *shape.UInt) Schema {
@@ -336,12 +320,8 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			)
 		},
 		func(x *shape.ListLike) Schema {
-			yreflect, y := toTheCoreValue(yreflect)
-			if y != nil {
-				return y
-			}
 			if yreflect.Kind() != reflect.Slice {
-				panic(fmt.Errorf("schema.FromGoReflect: shape.ListLike expected reflect.Slice, got %s", yreflect.String()))
+				panic(fmt.Errorf("schema.FromGoReflect: shape.ListLike expected reflect.Slice, got %s", yreflect.Kind().String()))
 			}
 
 			// optimisation for []byte, otherwise it would iterate byte by byte!
@@ -357,10 +337,6 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			return &result
 		},
 		func(x *shape.MapLike) Schema {
-			yreflect, y := toTheCoreValue(yreflect)
-			if y != nil {
-				return y
-			}
 			if yreflect.Kind() != reflect.Map {
 				panic(fmt.Errorf("schema.FromGoReflect: shape.MapLike expected reflect.Map, got %s", yreflect.String()))
 			}
@@ -373,11 +349,9 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			return &result
 		},
 		func(x *shape.StructLike) Schema {
-			yreflect, y := toTheCoreValue(yreflect)
-			if y != nil {
-				return y
+			if yreflect.Kind() == reflect.Ptr {
+				yreflect = yreflect.Elem()
 			}
-
 			if yreflect.Kind() != reflect.Struct {
 				panic(fmt.Errorf("schema.FromGoReflect: shape.StructLike expected reflect.Struct, got %s", yreflect.String()))
 			}
@@ -404,6 +378,13 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			for _, variant := range x.Variant {
 				variantName := shape.ToGoTypeName(variant)
 				if variantName == valueName {
+					if yreflect.Kind() == reflect.Interface {
+						yreflect = yreflect.Elem()
+					}
+					if yreflect.Kind() == reflect.Ptr {
+						yreflect = yreflect.Elem()
+					}
+
 					return MkMap(
 						MkField(
 							"$type",
@@ -420,26 +401,6 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			panic(fmt.Errorf("schema.FromGoReflect: shape.UnionLike %s not found", valueName))
 		},
 	)
-}
-
-func toTheCoreValue(x reflect.Value) (reflect.Value, Schema) {
-	for {
-		if x.Kind() == reflect.Ptr {
-			if x.IsNil() {
-				return x, MkNone()
-			}
-
-			x = x.Elem()
-			continue
-		}
-
-		if x.Kind() == reflect.Interface {
-			x = x.Elem()
-			continue
-		}
-
-		return x, nil
-	}
 }
 
 func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (reflect.Value, error) {
