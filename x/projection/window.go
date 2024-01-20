@@ -98,6 +98,8 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 type WindowSnapshotState struct {
 	snapshotState SnapshotState
 	wd            WindowDescription
+	fm            WindowFlushMode
+	td            TriggerDescription
 }
 
 func DoWindow[A, B any](
@@ -107,10 +109,6 @@ func DoWindow[A, B any](
 	td TriggerDescription,
 	merge func(x A, agg B) (B, error),
 ) error {
-	// group by key
-	// each group of keys, group by window
-	// for each window apply function
-
 	store := NewWindowInMemoryStore[B]("window")
 
 	// recovery from failure:
@@ -133,12 +131,6 @@ func DoWindow[A, B any](
 				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
 					RecordType: "window",
 					Where:      where,
-					Sort: []schemaless.SortField{
-						{
-							Field:      "Data.Window.End",
-							Descending: true,
-						},
-					},
 				}
 
 				for {

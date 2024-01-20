@@ -4,51 +4,49 @@ import (
 	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
 
 var (
 	ErrMaxRecoveryAttemptsReached = errors.New("max recovery attempts reached")
 )
 
-func NewRecoveryOptions(id, pullTopic, pushTopic string, snapshotStore *SnapshotStore) *RecoveryOptions {
-	return &RecoveryOptions{
+func NewRecoveryOptions[A any](id string, init A, store schemaless.Repository[A]) *RecoveryOptions[A] {
+	return &RecoveryOptions[A]{
 		id:                  id,
-		pullTopic:           pullTopic,
-		pushTopic:           pushTopic,
-		snapshotStore:       snapshotStore,
+		init:                init,
+		store:               store,
 		maxRecoveryAttempts: 3,
 	}
 }
 
-type RecoveryOptions struct {
+type RecoveryOptions[A any] struct {
 	id                  string
-	pullTopic           string
-	pushTopic           string
-	snapshotStore       *SnapshotStore
+	init                A
+	store               schemaless.Repository[A]
 	maxRecoveryAttempts uint8
 }
 
-func (ctx *RecoveryOptions) WithMaxRecoveryAttempts(x uint8) *RecoveryOptions {
+func (ctx *RecoveryOptions[A]) WithMaxRecoveryAttempts(x uint8) *RecoveryOptions[A] {
 	ctx.maxRecoveryAttempts = x
 	return ctx
 }
 
-func Recovery(ctx *RecoveryOptions, f func(state SnapshotState) error) error {
+func Recovery[A any](ctx *RecoveryOptions[A], f func(state A) error) error {
 	maxAttempts := ctx.maxRecoveryAttempts
 
 	for {
-		state, err := ctx.snapshotStore.LoadLastSnapshot(ctx.id)
+		state := ctx.init
+		record, err := ctx.store.Get(ctx.id, "recovery-state")
 		if err != nil {
-			if !errors.Is(err, ErrSnapshotNotFound) {
-				return fmt.Errorf("projection.Recovery: load last state; %w", err)
+			if !errors.Is(err, schemaless.ErrNotFound) {
+				return fmt.Errorf("projection.Recovery: load last state in store; %w", err)
 			}
+		} else {
+			state = record.Data
 		}
 
-		if state == nil {
-			state = ctx.snapshotStore.InitSnapshot(ctx.id, ctx.pullTopic, ctx.pushTopic)
-		}
-
-		err = f(*state)
+		err = f(state)
 		if err == nil {
 			return nil
 		}

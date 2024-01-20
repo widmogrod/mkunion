@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/stream"
 	"math"
 	"testing"
@@ -11,7 +12,12 @@ import (
 
 func TestProjection_HappyPath(t *testing.T) {
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
-	state1 := NewSnapshotStateForInMemoryContext("load-1", "topic-in-1", "topic-out-1")
+	state1 := SnapshotState{
+		Offset:    nil,
+		PullTopic: "topic-in-1",
+		PushTopic: "topic-out-1",
+	}
+
 	ctx1 := NewPushOnlyInMemoryContext[int](state1, out1)
 
 	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
@@ -29,7 +35,11 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	state2 := NewSnapshotStateForInMemoryContext("map-1", "topic-out-1", "topic-out-2")
+	state2 := SnapshotState{
+		Offset:    nil,
+		PullTopic: "topic-out-1",
+		PushTopic: "topic-out-2",
+	}
 	ctx2 := NewPushAndPullInMemoryContext[int, float64](state2, out1, out2)
 	err = DoMap[int, float64](ctx2, func(x *Record[int]) *Record[float64] {
 		return &Record[float64]{
@@ -111,7 +121,11 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	orderOfEvents = []string{}
-	state3 := NewSnapshotStateForInMemoryContext("sink-2", "topic-out-4", "topic-out-3")
+	state3 := SnapshotState{
+		Offset:    nil,
+		PullTopic: "topic-out-4",
+		PushTopic: "topic-out-3",
+	}
 	ctx6 := NewPullOnlyInMemoryContext[string](state3, out4)
 	err = DoSink[string](ctx6, func(x *Record[string]) error {
 		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%s", x.Key, x.Data))
@@ -142,9 +156,19 @@ func TestProjection_Recovery(t *testing.T) {
 		ErrorOnPull:            fmt.Errorf("simulated pull error"),
 	})
 
-	store := NewSnapshotStore()
+	var store schemaless.Repository[SnapshotState] = schemaless.NewInMemoryRepository[SnapshotState]()
 
-	recovery := NewRecoveryOptions("recovery-load", "in-1", "out-1", store).WithMaxRecoveryAttempts(recoveryAttempts)
+	recovery :=
+		NewRecoveryOptions(
+			"recovery-load-load",
+			SnapshotState{
+				Offset:    nil,
+				PullTopic: "in-1",
+				PushTopic: "out-1",
+			},
+			store,
+		).WithMaxRecoveryAttempts(recoveryAttempts)
+
 	err := Recovery(recovery, func(state SnapshotState) error {
 		ctx1 := NewPushOnlyInMemoryContext[int](state, out1)
 		InjectRuntimeProblem(ctx1, &SimulateProblem{
@@ -182,7 +206,17 @@ func TestProjection_Recovery(t *testing.T) {
 		ErrorOnPull:            fmt.Errorf("simulated pull error"),
 	})
 
-	recovery = NewRecoveryOptions("recovery-load", "out-1", "out-2", store).WithMaxRecoveryAttempts(recoveryAttempts)
+	recovery =
+		NewRecoveryOptions(
+			"recovery-load-sink",
+			SnapshotState{
+				Offset:    nil,
+				PullTopic: "out-1",
+				PushTopic: "out-2",
+			},
+			store,
+		).WithMaxRecoveryAttempts(recoveryAttempts)
+
 	err = Recovery(recovery, func(state SnapshotState) error {
 		ctx2 := NewPushAndPullInMemoryContext[int, float64](state, out1, out2)
 		InjectRuntimeProblem(ctx2, &SimulateProblem{

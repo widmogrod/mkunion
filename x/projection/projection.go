@@ -102,8 +102,7 @@ func NewPullOnlyInMemoryContext[A any](state SnapshotState, in stream.Stream[A])
 var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 
 type PushAndPullInMemoryContext[A, B any] struct {
-	state         SnapshotState
-	snapshotStore *SnapshotStore
+	state SnapshotState
 
 	input    stream.Stream[A]
 	output   stream.Stream[B]
@@ -181,80 +180,6 @@ type simulationProblemAware interface {
 func InjectRuntimeProblem(ctx any, x *SimulateProblem) {
 	if ctx, ok := ctx.(simulationProblemAware); ok {
 		ctx.SimulateRuntimeProblem(x)
-	}
-}
-
-func NewSnapshotStateForInMemoryContext(id, pullTopic, pushTopic string) SnapshotState {
-	return SnapshotState{
-		ID:        id,
-		PullTopic: pullTopic,
-		PushTopic: pushTopic,
-		Offset:    nil,
-	}
-}
-
-var (
-	ErrSnapshotIDEmpty  = fmt.Errorf("empty snapshot id")
-	ErrSnapshotNotFound = fmt.Errorf("snapshot not found")
-)
-
-type SnapshotState struct {
-	ID        string
-	Offset    *stream.Offset
-	PullTopic stream.Topic
-	PushTopic stream.Topic
-	Completed bool
-}
-
-func NewSnapshotStore() *SnapshotStore {
-	return &SnapshotStore{
-		snapshots: make(map[string]*SnapshotState),
-	}
-}
-
-type SnapshotStore struct {
-	snapshots map[string]*SnapshotState
-}
-
-func copySnapshot(x *SnapshotState) *SnapshotState {
-	return &SnapshotState{
-		ID:        x.ID,
-		Offset:    x.Offset,
-		PullTopic: x.PullTopic,
-		PushTopic: x.PushTopic,
-		Completed: x.Completed,
-	}
-}
-
-func (c *SnapshotStore) SaveSnapshot(x SnapshotState) error {
-	if x.ID == "" {
-		return fmt.Errorf("projection.SnapshotStore: SaveSnapshot: %w", ErrSnapshotIDEmpty)
-	}
-
-	c.snapshots[x.ID] = copySnapshot(&x)
-	return nil
-}
-
-func (c *SnapshotStore) LoadLastSnapshot(id string) (*SnapshotState, error) {
-	if id == "" {
-		return nil, fmt.Errorf("projection.SnapshotStore: LoadLastSnapshot: %w", ErrSnapshotIDEmpty)
-	}
-
-	snapshot, ok := c.snapshots[id]
-	if !ok {
-		return nil, fmt.Errorf("projection.SnapshotStore: LoadLastSnapshot: %w", ErrSnapshotNotFound)
-	}
-
-	return copySnapshot(snapshot), nil
-}
-
-func (c *SnapshotStore) InitSnapshot(id, pullTopic, pushTopic string) *SnapshotState {
-	return &SnapshotState{
-		ID:        id,
-		Offset:    nil,
-		PullTopic: pullTopic,
-		PushTopic: pushTopic,
-		Completed: false,
 	}
 }
 
