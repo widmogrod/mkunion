@@ -266,22 +266,17 @@ type (
 )
 
 func NewJoinInMemoryContext[A, B, C any](
+	state *JoinContextState,
 	a stream.Stream[A],
-	aTopic stream.Topic,
 	b stream.Stream[B],
-	bTopic stream.Topic,
 	out stream.Stream[C],
-	outTopic stream.Topic,
 ) PushAndPull[Either[A, B], C] {
 	return &InMemoryJoinContext[A, B, C]{
+		state:  state,
 		a:      a,
 		b:      b,
 		output: out,
 		mod:    true,
-
-		aTopic:   aTopic,
-		bTopic:   bTopic,
-		outTopic: outTopic,
 	}
 }
 
@@ -291,18 +286,11 @@ type InMemoryJoinContext[A, B, C any] struct {
 
 	output stream.Stream[C]
 
-	aTopic   stream.Topic
-	bTopic   stream.Topic
-	outTopic stream.Topic
+	state *JoinContextState
 
 	mod  bool
 	endA bool
 	endB bool
-
-	offsetA *stream.Offset
-	offsetB *stream.Offset
-
-	state *JoinContextState
 }
 
 var _ PushAndPull[Either[any, any], any] = (*InMemoryJoinContext[any, any, any])(nil)
@@ -318,14 +306,14 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 		i.mod = !i.mod
 
 		var pull stream.PullCMD
-		if i.offsetA == nil {
+		if i.state.Offset1 == nil {
 			pull = &stream.FromBeginning{
-				Topic: i.aTopic,
+				Topic: i.state.PullTopic1,
 			}
 		} else {
 			pull = &stream.FromOffset{
-				Topic:  i.aTopic,
-				Offset: i.offsetA,
+				Topic:  i.state.PullTopic1,
+				Offset: i.state.Offset1,
 			}
 		}
 
@@ -338,21 +326,21 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 			return nil, fmt.Errorf("projection.InMemoryJoinContext: PullIn left: %w", err)
 		}
 
-		i.offsetA = val.Offset
+		i.state.Offset1 = val.Offset
 
 		return StreamItemToRecordSetData[A, Either[A, B]](val, &Left[A, B]{Left: val.Data}), nil
 	} else if !i.endB && i.mod == false {
 		i.mod = !i.mod
 
 		var pull stream.PullCMD
-		if i.offsetB == nil {
+		if i.state.Offset2 == nil {
 			pull = &stream.FromBeginning{
-				Topic: i.bTopic,
+				Topic: i.state.PullTopic2,
 			}
 		} else {
 			pull = &stream.FromOffset{
-				Topic:  i.bTopic,
-				Offset: i.offsetB,
+				Topic:  i.state.PullTopic2,
+				Offset: i.state.Offset2,
 			}
 		}
 
@@ -365,7 +353,7 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 			return nil, fmt.Errorf("projection.InMemoryJoinContext: PullIn right: %w", err)
 		}
 
-		i.offsetB = val.Offset
+		i.state.Offset2 = val.Offset
 
 		return StreamItemToRecordSetData[B, Either[A, B]](val, &Right[A, B]{Right: val.Data}), nil
 	}
@@ -375,7 +363,7 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 }
 
 func (i *InMemoryJoinContext[A, B, C]) PushOut(x Data[C]) error {
-	item := RecordToStreamItem(i.outTopic, x)
+	item := RecordToStreamItem(i.state.PushTopic, x)
 
 	err := i.output.Push(item)
 	if err != nil {

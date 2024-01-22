@@ -53,9 +53,16 @@ func TestProjection_HappyPath(t *testing.T) {
 	orderOfEvents := []string{}
 	out3 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
 	ctx4 := NewJoinInMemoryContext[int, float64, float64](
-		out1, "topic-out-1",
-		out2, "topic-out-2",
-		out3, "topic-out-3")
+		&JoinContextState{
+			Offset1:    nil,
+			PullTopic1: "topic-out-1",
+			Offset2:    nil,
+			PullTopic2: "topic-out-2",
+			PushTopic:  "topic-out-3",
+		},
+		out1,
+		out2,
+		out3)
 
 	err = DoSink[Either[int, float64]](ctx4, func(x *Record[Either[int, float64]]) error {
 		return MatchEitherR1(
@@ -101,9 +108,17 @@ func TestProjection_HappyPath(t *testing.T) {
 
 	out4 := stream.NewInMemoryStream[string](stream.WithSystemTime)
 	ctx5 := NewJoinInMemoryContext[int, float64, string](
-		out1, "topic-out-1",
-		out2, "topic-out-2",
-		out4, "topic-out-4")
+		&JoinContextState{
+			Offset1:    nil,
+			PullTopic1: "topic-out-1",
+			Offset2:    nil,
+			PullTopic2: "topic-out-2",
+			PushTopic:  "topic-out-4",
+		},
+		out1,
+		out2,
+		out4,
+	)
 
 	wd := &FixedWindow{Width: math.MaxInt64}
 	fm := &Discard{}
