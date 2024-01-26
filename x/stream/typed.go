@@ -89,3 +89,7 @@ func (t *TypedStreamTopic[A]) Pull(offset PullCMD) (*Item[A], error) {
 		Offset:    item.Offset,
 	}, nil
 }
+
+func (t *TypedStreamTopic[A]) TopicName() Topic {
+	return t.topic
+}
