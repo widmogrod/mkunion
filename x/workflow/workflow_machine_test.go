@@ -82,7 +82,7 @@ func TestExecution(t *testing.T) {
 	assert.NoError(t, err)
 
 	newState := work.State()
-	err = repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
+	_, err = repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
 		ID:   "1",
 		Type: "workflow",
 		Data: newState,
