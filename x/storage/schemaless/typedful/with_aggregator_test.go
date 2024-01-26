@@ -32,8 +32,10 @@ func TestNewRepositoryInMemory(t *testing.T) {
 		aggregate,
 	)
 
-	err := r.UpdateRecords(exampleUserRecords)
+	updated, err := r.UpdateRecords(exampleUserRecords)
 	assert.NoError(t, err)
+	assert.Len(t, updated.Saved, 5)
+	assert.Len(t, updated.Deleted, 0)
 
 	result, err := r.FindingRecords(FindingRecords[Record[User]]{
 		Where: predicate.MustWhere(

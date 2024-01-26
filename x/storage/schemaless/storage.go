@@ -11,7 +11,7 @@ import (
 type RecordType = string
 type Repository[T any] interface {
 	Get(recordID string, recordType RecordType) (Record[T], error)
-	UpdateRecords(command UpdateRecords[Record[T]]) error
+	UpdateRecords(command UpdateRecords[Record[T]]) (*UpdateRecordsResult[Record[T]], error)
 	FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error)
 }
 
@@ -47,6 +47,11 @@ type UpdateRecords[T any] struct {
 	UpdatingPolicy UpdatingPolicy
 	Saving         map[string]T
 	Deleting       map[string]T
+}
+
+type UpdateRecordsResult[T any] struct {
+	Saved   map[string]T
+	Deleted map[string]T
 }
 
 type FindingRecords[T any] struct {

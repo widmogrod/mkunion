@@ -51,10 +51,9 @@ func (os *OpenSearchRepository[A]) Get(recordID string, recordType RecordType) (
 	return typed.Item, nil
 }
 
-func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) error {
+func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) (*UpdateRecordsResult[Record[A]], error) {
 	for _, record := range command.Saving {
 		data, err := shared.JSONMarshal[Record[A]](record)
-		//data, err := schema.ToJSON(schema.FromPrimitiveGo(record))
 		if err != nil {
 			panic(err)
 		}
@@ -73,7 +72,25 @@ func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]
 		}
 	}
 
-	return nil
+	//TODO: SavingPolicy check
+
+	result := &UpdateRecordsResult[Record[A]]{
+		Saved:   make(map[string]Record[A]),
+		Deleted: make(map[string]Record[A]),
+	}
+
+	for _, value := range command.Saving {
+		value.Version++
+		result.Saved[value.ID] = value
+	}
+
+	for _, value := range command.Deleting {
+		result.Deleted[value.ID] = value
+	}
+
+	return result, nil
+
+	return nil, nil
 }
 
 type (

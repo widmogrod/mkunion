@@ -46,7 +46,7 @@ func (repo *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType Recor
 	return typed, nil
 }
 
-func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]) error {
+func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]) (*UpdateRecordsResult[Record[T]], error) {
 	schemas := UpdateRecords[Record[schema.Schema]]{
 		UpdatingPolicy: s.UpdatingPolicy,
 		Saving:         make(map[string]Record[schema.Schema]),
@@ -59,7 +59,7 @@ func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[
 	for id, record := range s.Saving {
 		err := aggregate.Append(record)
 		if err != nil {
-			return fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords aggregator.Append %w", err)
+			return nil, fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords aggregator.Append %w", err)
 		}
 
 		schemed := schema.FromGo(record.Data)
@@ -86,12 +86,35 @@ func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[
 		schemas.Saving["indices:"+versionedData.ID+":"+versionedData.Type] = versionedData
 	}
 
-	err := repo.store.UpdateRecords(schemas)
+	updated, err := repo.store.UpdateRecords(schemas)
 	if err != nil {
-		return fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords schemas store err %w", err)
+		return nil, fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords schemas store err %w", err)
 	}
 
-	return nil
+	result := &UpdateRecordsResult[Record[T]]{
+		Saved:   make(map[string]Record[T]),
+		Deleted: make(map[string]Record[T]),
+	}
+
+	for id, record := range updated.Saved {
+		typed, err := RecordAs[T](record)
+		if err != nil {
+			return nil, fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords RecordAs error id=%s %w", id, err)
+		}
+
+		result.Saved[id] = typed
+	}
+
+	for id, record := range updated.Deleted {
+		typed, err := RecordAs[T](record)
+		if err != nil {
+			return nil, fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords RecordAs error id=%s %w", id, err)
+		}
+
+		result.Deleted[id] = typed
+	}
+
+	return result, nil
 }
 
 func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error) {

@@ -12,8 +12,10 @@ func TestNewRepository2Typed(t *testing.T) {
 	storage := NewInMemoryRepository[schema.Schema]()
 	r := NewTypedRepository[User](storage)
 
-	err := r.UpdateRecords(exampleUserRecords)
+	updated, err := r.UpdateRecords(exampleUserRecords)
 	assert.NoError(t, err)
+	assert.Len(t, updated.Saved, 3)
+	assert.Len(t, updated.Deleted, 0)
 
 	result, err := r.FindingRecords(FindingRecords[Record[User]]{
 		Where: predicate.MustWhere(

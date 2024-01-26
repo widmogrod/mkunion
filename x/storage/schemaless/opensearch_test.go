@@ -30,14 +30,17 @@ To run this test, please set OPENSEARCH_ADDRESS to the address of your OpenSearc
 	repo := NewOpenSearchRepository[ExampleRecord](client, "test-records-index")
 
 	// clean database
-	err = repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
+	updated, err := repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
 		Deleting: exampleUpdateRecords.Saving,
 	})
-
 	assert.NoError(t, err, "while deleting records")
+	assert.Len(t, updated.Saved, 0, "should not save any records")
+	assert.Len(t, updated.Deleted, 5, "should delete 5 records")
 
-	err = repo.UpdateRecords(exampleUpdateRecords)
+	updated, err = repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err, "while saving records")
+	assert.Len(t, updated.Saved, 5, "should save 5 records")
+	assert.Len(t, updated.Deleted, 0, "should not delete records")
 
 	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
 		RecordType: "ExampleRecord",
