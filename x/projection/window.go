@@ -147,7 +147,7 @@ func DoWindow[A, B any](
 					}
 
 					if len(records.Items) > 0 {
-						err = store.store.UpdateRecords(schemaless.Delete(records.Items...))
+						_, err = store.store.UpdateRecords(schemaless.Delete(records.Items...))
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: flush delete: %w", err)
 						}
@@ -276,7 +276,7 @@ func (w *WindowInMemoryStore[A]) Save(x *WindowRecord[A]) error {
 		Data: x,
 	})
 	update.UpdatingPolicy = schemaless.PolicyOverwriteServerChanges
-	err := w.store.UpdateRecords(update)
+	_, err := w.store.UpdateRecords(update)
 
 	if err != nil {
 		return fmt.Errorf("projection.WindowInMemoryStore: Save: %w", err)

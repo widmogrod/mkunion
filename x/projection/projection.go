@@ -68,14 +68,17 @@ type (
 	PushAndPull[A, B any] interface {
 		PullOnly[A]
 		PushOnly[B]
-		CurrentState() SnapshotState
+		SnapshotContext
 	}
 	PullOnly[A any] interface {
 		PullIn() (Data[A], error)
-		CurrentState() SnapshotState
+		SnapshotContext
 	}
 	PushOnly[A any] interface {
 		PushOut(Data[A]) error
+		SnapshotContext
+	}
+	SnapshotContext interface {
 		CurrentState() SnapshotState
 	}
 )

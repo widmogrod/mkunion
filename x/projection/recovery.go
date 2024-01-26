@@ -1,10 +1,12 @@
 package projection
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"time"
 )
 
 var (
@@ -15,62 +17,153 @@ const (
 	RecoveryRecordType = "recovery-state"
 )
 
-func NewRecoveryOptions[A any](id string, init A, store schemaless.Repository[A]) *RecoveryOptions[A] {
-	return &RecoveryOptions[A]{
+func NewRecoveryOptions(id string, init SnapshotState, store schemaless.Repository[SnapshotState]) *RecoveryOptions[SnapshotState] {
+	return &RecoveryOptions[SnapshotState]{
 		id:                  id,
 		init:                init,
 		store:               store,
 		maxRecoveryAttempts: 3,
+		autoSnapshot:        true,
 	}
 }
 
-type RecoveryOptions[A any] struct {
+type RecoveryOptions[A SnapshotState] struct {
 	id                  string
 	init                A
 	store               schemaless.Repository[A]
 	maxRecoveryAttempts uint8
+	autoSnapshot        bool
 }
 
-func (ctx *RecoveryOptions[A]) WithMaxRecoveryAttempts(x uint8) *RecoveryOptions[A] {
-	ctx.maxRecoveryAttempts = x
-	return ctx
+func (options *RecoveryOptions[A]) WithAutoSnapshot(x bool) *RecoveryOptions[A] {
+	options.autoSnapshot = x
+	return options
 }
 
-func Recovery[A any](ctx *RecoveryOptions[A], f func(state A) error) error {
-	maxAttempts := ctx.maxRecoveryAttempts
+func (options *RecoveryOptions[A]) WithMaxRecoveryAttempts(x uint8) *RecoveryOptions[A] {
+	options.maxRecoveryAttempts = x
+	return options
+}
+
+func (options *RecoveryOptions[A]) SnapshotFrom(x SnapshotContext) error {
+	if x == nil {
+		return fmt.Errorf("projection.RecoveryOptions: SnapshotFrom: nil context")
+	}
+
+	y, ok := any(x.CurrentState()).(A)
+	if !ok {
+		return fmt.Errorf("projection.RecoveryOptions: SnapshotFrom: invalid context type %T, expects %T", x, options.init)
+	}
+	return options.Snapshot(y)
+}
+
+func (options *RecoveryOptions[A]) Snapshot(x A) error {
+	record := schemaless.Record[A]{
+		ID:      options.id,
+		Type:    RecoveryRecordType,
+		Data:    x,
+		Version: 0,
+	}
+	saving := schemaless.Save(record)
+	saving.UpdatingPolicy = schemaless.PolicyOverwriteServerChanges
+
+	upodated, err := options.store.UpdateRecords(saving)
+	if err != nil {
+		return fmt.Errorf("projection.RecoveryOptions: save last snapthot in store; %w", err)
+	}
+
+	for _, v := range upodated.Saved {
+		log.Debugf("projection.RecoveryOptions: save last snapthot in store; %d, %#v", v.Version, v.Data)
+		MatchSnapshotStateR0(
+			v.Data,
+			func(x *PullPushContextState) {
+				if x.Offset != nil {
+					log.Debugf("offset: %s", *x.Offset)
+				}
+			},
+			func(x *JoinContextState) {
+				if x.Offset1 != nil {
+					log.Debugf("offset1: %s", *x.Offset1)
+				}
+				if x.Offset2 != nil {
+					log.Debugf("offset2: %s", *x.Offset2)
+				}
+			},
+		)
+	}
+
+	return nil
+}
+
+func (options *RecoveryOptions[A]) LatestSnapshot() (A, error) {
+	record, err := options.store.Get(options.id, RecoveryRecordType)
+	if err != nil {
+		if errors.Is(err, schemaless.ErrNotFound) {
+			return options.init, nil
+		}
+		var zero A
+		return zero, fmt.Errorf("projection.RecoveryOptions: load last snapshot in store; %w", err)
+	}
+	return any(record.Data).(A), nil
+}
+
+func Recovery[T SnapshotState, A, B any](
+	recovery *RecoveryOptions[SnapshotState],
+	buildCtx func(T) (*PushAndPullInMemoryContext[A, B], error),
+	f func(ctx *PushAndPullInMemoryContext[A, B]) error,
+) error {
+	maxAttempts := recovery.maxRecoveryAttempts
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	for {
-		state := ctx.init
-		record, err := ctx.store.Get(ctx.id, RecoveryRecordType)
-		if err != nil {
-			if !errors.Is(err, schemaless.ErrNotFound) {
+		select {
+		case <-ctx.Done():
+			log.Debugf("projection.Recovery: context done")
+			return nil
+
+		default:
+			state, err := recovery.LatestSnapshot()
+			if err != nil {
 				return fmt.Errorf("projection.Recovery: load last state in store; %w", err)
 			}
-		} else {
-			state = record.Data
-		}
 
-		err = f(state)
-		if err == nil {
-			// FIXME: this should happen on other signals, like Watermark
-			err = ctx.store.UpdateRecords(schemaless.Save(schemaless.Record[A]{
-				ID:      ctx.id,
-				Type:    RecoveryRecordType,
-				Data:    state,
-				Version: record.Version,
-			}))
+			context, err := buildCtx(any(state).(T))
 			if err != nil {
-				return fmt.Errorf("projection.Recovery: save last state in store; %w", err)
+				return fmt.Errorf("projection.Recovery: build context; %w", err)
 			}
-			return nil
+
+			if recovery.autoSnapshot {
+				go func() {
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-time.After(100 * time.Millisecond):
+							err := recovery.SnapshotFrom(context)
+							if err != nil {
+								log.Errorf("projection.Recovery: save last state in store; %s", err)
+								cancel()
+								return
+							}
+						}
+					}
+				}()
+			}
+
+			err = f(context)
+			if err == nil {
+				return nil
+			}
+
+			log.Debugf("projection.Recovery: recent operation error %s; %d attempts left", err, maxAttempts)
+
+			if maxAttempts == 0 {
+				return fmt.Errorf("projection.Recovery: last operation error %w; %w", err, ErrMaxRecoveryAttemptsReached)
+			}
+
+			maxAttempts--
 		}
-
-		log.Debugf("projection.Recovery: recent operation error %s; %d attempts left", err, maxAttempts)
-
-		if maxAttempts == 0 {
-			return fmt.Errorf("projection.Recovery: last operation error %w; %w", err, ErrMaxRecoveryAttemptsReached)
-		}
-
-		maxAttempts--
 	}
 }

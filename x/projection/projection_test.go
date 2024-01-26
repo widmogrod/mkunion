@@ -1,13 +1,16 @@
 package projection
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/stream"
 	"math"
 	"testing"
+	"time"
 )
 
 func TestProjection_HappyPath(t *testing.T) {
@@ -159,8 +162,9 @@ func TestProjection_HappyPath(t *testing.T) {
 }
 
 func TestProjection_Recovery(t *testing.T) {
-	probabilityOfFailure := 0.05
-	recoveryAttempts := uint8(math.MaxUint8)
+	log.SetLevel(log.DebugLevel)
+	probabilityOfFailure := 0.20
+	recoveryAttempts := uint8(50)
 
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
 	out1.SimulateRuntimeProblem(&stream.SimulateProblem{
@@ -171,7 +175,7 @@ func TestProjection_Recovery(t *testing.T) {
 		ErrorOnPull:            fmt.Errorf("simulated pull error"),
 	})
 
-	var store schemaless.Repository[*PullPushContextState] = schemaless.NewInMemoryRepository[*PullPushContextState]()
+	var store schemaless.Repository[SnapshotState] = schemaless.NewInMemoryRepository[SnapshotState]()
 
 	recovery :=
 		NewRecoveryOptions(
@@ -182,20 +186,35 @@ func TestProjection_Recovery(t *testing.T) {
 				PushTopic: "out-1",
 			},
 			store,
-		).WithMaxRecoveryAttempts(recoveryAttempts)
+		).
+			WithMaxRecoveryAttempts(recoveryAttempts).
+			WithAutoSnapshot(false)
 
-	err := Recovery(recovery, func(state *PullPushContextState) error {
-		ctx1 := NewPushOnlyInMemoryContext[int](state, out1)
-		InjectRuntimeProblem(ctx1, &SimulateProblem{
-			ErrorOnPushOutProbability: probabilityOfFailure,
-			ErrorOnPushOut:            fmt.Errorf("simulated push error"),
-			ErrorOnPullInProbability:  probabilityOfFailure,
-			ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
-		})
-
-		return DoLoad(ctx1, func(push func(*Record[int]) error) error {
-			for i := 0; i < 10; i++ {
-				err := push(&Record[int]{
+	err := Recovery[*PullPushContextState](
+		recovery,
+		func(state *PullPushContextState) (*PushAndPullInMemoryContext[any, int], error) {
+			ctx1 := NewPushAndPullInMemoryContext[any, int](state, nil, out1)
+			ctx1.SimulateRuntimeProblem(&SimulateProblem{
+				ErrorOnPushOutProbability: probabilityOfFailure,
+				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
+				ErrorOnPullInProbability:  probabilityOfFailure,
+				ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
+			})
+			return ctx1, nil
+		},
+		func(ctx1 *PushAndPullInMemoryContext[any, int]) error {
+			state := ctx1.CurrentState()
+			startValue := 0
+			if x, ok := state.(*PullPushContextState); ok {
+				if x.Offset.IsSet() {
+					if off, err := stream.ParseOffsetAsInt(x.Offset); err == nil {
+						startValue = off
+					}
+				}
+			}
+			for i := startValue; i < 10; i++ {
+				time.Sleep(50 * time.Millisecond)
+				err := ctx1.PushOut(&Record[int]{
 					Key:       fmt.Sprintf("key-%d", i%2),
 					Data:      i,
 					EventTime: stream.WithSystemTime(),
@@ -203,11 +222,21 @@ func TestProjection_Recovery(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("projection.Range: push: %w", err)
 				}
+
+				err = recovery.Snapshot(&PullPushContextState{
+					Offset:    stream.MkOffsetFromInt(i),
+					PullTopic: "in-1",
+					PushTopic: "out-1",
+				})
+				if err != nil {
+					return fmt.Errorf("projection.Range: snapshot: %w", err)
+				}
 			}
 			return nil
 		})
-	})
 	assert.NoError(t, err)
+
+	t.Log("SINK")
 
 	var orderOfEvents []string
 	var orderOfUniquer = make(map[string]struct{})
@@ -232,24 +261,51 @@ func TestProjection_Recovery(t *testing.T) {
 			store,
 		).WithMaxRecoveryAttempts(recoveryAttempts)
 
-	err = Recovery(recovery, func(state *PullPushContextState) error {
-		ctx2 := NewPushAndPullInMemoryContext[int, float64](state, out1, out2)
-		InjectRuntimeProblem(ctx2, &SimulateProblem{
-			ErrorOnPushOutProbability: probabilityOfFailure,
-			ErrorOnPushOut:            fmt.Errorf("simulated push error"),
-			ErrorOnPullInProbability:  probabilityOfFailure,
-			ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
-		})
-		return DoSink[int](ctx2, func(x *Record[int]) error {
-			entry := fmt.Sprintf("record-%s:%d", x.Key, x.Data)
-			if _, ok := orderOfUniquer[entry]; ok {
-				return nil
+	err = Recovery(
+		recovery,
+		func(state *PullPushContextState) (*PushAndPullInMemoryContext[int, float64], error) {
+			ctx2 := NewPushAndPullInMemoryContext[int, float64](state, out1, out2)
+			ctx2.SimulateRuntimeProblem(&SimulateProblem{
+				ErrorOnPushOutProbability: probabilityOfFailure,
+				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
+				ErrorOnPullInProbability:  probabilityOfFailure,
+				ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
+			})
+			return ctx2, nil
+		},
+		func(ctx *PushAndPullInMemoryContext[int, float64]) error {
+			for {
+				val, err := ctx.PullIn()
+				if err != nil {
+					if errors.Is(err, stream.ErrEndOfStream) {
+						return nil
+					}
+					return fmt.Errorf("projection.DoSink: pull: %w", err)
+				}
+
+				err = MatchDataR1(
+					val,
+					func(x *Record[int]) error {
+						time.Sleep(50 * time.Millisecond)
+
+						entry := fmt.Sprintf("record-%s:%d", x.Key, x.Data)
+						if _, ok := orderOfUniquer[entry]; ok {
+							return nil
+						}
+						orderOfUniquer[entry] = struct{}{}
+						orderOfEvents = append(orderOfEvents, entry)
+						return nil
+					},
+					func(x *Watermark[int]) error {
+						// TODO do snapshot
+						return recovery.SnapshotFrom(ctx)
+					},
+				)
+				if err != nil {
+					return fmt.Errorf("projection.DoSink: sink: %w", err)
+				}
 			}
-			orderOfUniquer[entry] = struct{}{}
-			orderOfEvents = append(orderOfEvents, entry)
-			return nil
 		})
-	})
 	assert.NoError(t, err)
 
 	expectedOrder := []string{
@@ -269,7 +325,7 @@ func TestProjection_Recovery(t *testing.T) {
 		t.Fatalf("diff: (-want +got)\n%s", diff)
 	}
 
-	results, err := store.FindingRecords(schemaless.FindingRecords[schemaless.Record[*PullPushContextState]]{
+	results, err := store.FindingRecords(schemaless.FindingRecords[schemaless.Record[SnapshotState]]{
 		RecordType: RecoveryRecordType,
 	})
 	assert.NoError(t, err)
