@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/stream"
 	"math"
@@ -14,14 +15,19 @@ import (
 )
 
 func TestProjection_HappyPath(t *testing.T) {
-	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
+	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTime)
+	stream1 := stream.NewTypedStreamTopic[int](dataStream, "topic-out-1")
+	stream2 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-2")
+	stream3 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-3")
+	stream4 := stream.NewTypedStreamTopic[string](dataStream, "topic-out-4")
+
 	state1 := &PullPushContextState{
 		Offset:    nil,
-		PullTopic: "topic-in-1",
-		PushTopic: "topic-out-1",
+		PullTopic: stream1.TopicName(),
+		PushTopic: stream1.TopicName(),
 	}
 
-	ctx1 := NewPushOnlyInMemoryContext[int](state1, out1)
+	ctx1 := NewPushOnlyInMemoryContext[int](state1, stream1)
 
 	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
 		for i := 0; i < 10; i++ {
@@ -38,13 +44,12 @@ func TestProjection_HappyPath(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
 	state2 := &PullPushContextState{
 		Offset:    nil,
-		PullTopic: "topic-out-1",
-		PushTopic: "topic-out-2",
+		PullTopic: stream1.TopicName(),
+		PushTopic: stream2.TopicName(),
 	}
-	ctx2 := NewPushAndPullInMemoryContext[int, float64](state2, out1, out2)
+	ctx2 := NewPushAndPullInMemoryContext[int, float64](state2, stream1, stream2)
 	err = DoMap[int, float64](ctx2, func(x *Record[int]) *Record[float64] {
 		return &Record[float64]{
 			Key:       x.Key,
@@ -55,18 +60,18 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	orderOfEvents := []string{}
-	out3 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
 	ctx4 := NewJoinInMemoryContext[int, float64, float64](
 		&JoinContextState{
 			Offset1:    nil,
-			PullTopic1: "topic-out-1",
+			PullTopic1: stream1.TopicName(),
 			Offset2:    nil,
-			PullTopic2: "topic-out-2",
-			PushTopic:  "topic-out-3",
+			PullTopic2: stream2.TopicName(),
+			PushTopic:  stream3.TopicName(),
 		},
-		out1,
-		out2,
-		out3)
+		stream1,
+		stream2,
+		stream3,
+	)
 
 	err = DoSink[Either[int, float64]](ctx4, func(x *Record[Either[int, float64]]) error {
 		return MatchEitherR1(
@@ -110,18 +115,17 @@ func TestProjection_HappyPath(t *testing.T) {
 		t.Fatalf("NewJoinPushAndPullContext: diff: (-want +got)\n%s", diff)
 	}
 
-	out4 := stream.NewInMemoryStream[string](stream.WithSystemTime)
 	ctx5 := NewJoinInMemoryContext[int, float64, string](
 		&JoinContextState{
 			Offset1:    nil,
-			PullTopic1: "topic-out-1",
+			PullTopic1: stream1.TopicName(),
 			Offset2:    nil,
-			PullTopic2: "topic-out-2",
-			PushTopic:  "topic-out-4",
+			PullTopic2: stream2.TopicName(),
+			PushTopic:  stream4.TopicName(),
 		},
-		out1,
-		out2,
-		out4,
+		stream1,
+		stream2,
+		stream4,
 	)
 
 	wd := &FixedWindow{Width: math.MaxInt64}
@@ -145,7 +149,7 @@ func TestProjection_HappyPath(t *testing.T) {
 		PullTopic: "topic-out-4",
 		PushTopic: "topic-out-3",
 	}
-	ctx6 := NewPullOnlyInMemoryContext[string](state3, out4)
+	ctx6 := NewPullOnlyInMemoryContext[string](state3, stream4)
 	err = DoSink[string](ctx6, func(x *Record[string]) error {
 		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%s", x.Key, x.Data))
 		return nil
