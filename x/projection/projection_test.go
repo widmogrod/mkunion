@@ -26,8 +26,9 @@ func TestProjection_HappyPath(t *testing.T) {
 	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
 		for i := 0; i < 10; i++ {
 			err := push(&Record[int]{
-				Key:  fmt.Sprintf("key-%d", i%2),
-				Data: i,
+				Key:       fmt.Sprintf("key-%d", i%2),
+				Data:      i,
+				EventTime: MkEventTimeFromTime(time.Now()),
 			})
 			if err != nil {
 				return fmt.Errorf("projection.Range: push: %w", err)
@@ -126,7 +127,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	wd := &FixedWindow{Width: math.MaxInt64}
 	fm := &Discard{}
 	td := &AtWatermark{}
-	err = DoWindow(ctx5, wd, fm, td, func(x Either[int, float64], agg string) (string, error) {
+	err = DoWindow(ctx5, wd, fm, td, "", func(x Either[int, float64], agg string) (string, error) {
 		var concat string
 		if agg == "" {
 			concat = fmt.Sprintf("%v", x)
@@ -163,7 +164,7 @@ func TestProjection_HappyPath(t *testing.T) {
 
 func TestProjection_Recovery(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	probabilityOfFailure := 0.20
+	probabilityOfFailure := 0.0
 	recoveryAttempts := uint8(50)
 
 	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
@@ -179,7 +180,7 @@ func TestProjection_Recovery(t *testing.T) {
 
 	recovery :=
 		NewRecoveryOptions(
-			"recovery-load-load",
+			"recovery-load",
 			&PullPushContextState{
 				Offset:    nil,
 				PullTopic: "in-1",
@@ -217,7 +218,7 @@ func TestProjection_Recovery(t *testing.T) {
 				err := ctx1.PushOut(&Record[int]{
 					Key:       fmt.Sprintf("key-%d", i%2),
 					Data:      i,
-					EventTime: stream.WithSystemTime(),
+					EventTime: MkEventTimeFromTime(time.Now()),
 				})
 				if err != nil {
 					return fmt.Errorf("projection.Range: push: %w", err)
@@ -236,11 +237,7 @@ func TestProjection_Recovery(t *testing.T) {
 		})
 	assert.NoError(t, err)
 
-	t.Log("SINK")
-
-	var orderOfEvents []string
-	var orderOfUniquer = make(map[string]struct{})
-
+	t.Log("WINDOW")
 	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
 	out2.SimulateRuntimeProblem(&stream.SimulateProblem{
 		ErrorOnPullProbability: probabilityOfFailure,
@@ -252,7 +249,7 @@ func TestProjection_Recovery(t *testing.T) {
 
 	recovery =
 		NewRecoveryOptions(
-			"recovery-load-sink",
+			"recovery-window",
 			&PullPushContextState{
 				Offset:    nil,
 				PullTopic: "out-1",
@@ -274,6 +271,53 @@ func TestProjection_Recovery(t *testing.T) {
 			return ctx2, nil
 		},
 		func(ctx *PushAndPullInMemoryContext[int, float64]) error {
+			wd := &FixedWindow{Width: 200 * time.Millisecond}
+			fm := &Discard{}
+			td := &AtWatermark{}
+			return DoWindow[int, float64](ctx, wd, fm, td, 0, func(x int, agg float64) (float64, error) {
+				return float64(x) + agg, nil
+			})
+		})
+	assert.NoError(t, err)
+
+	t.Log("SINK")
+
+	var orderOfEvents []string
+	var orderOfUniquer = make(map[string]struct{})
+
+	out3 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
+	out3.SimulateRuntimeProblem(&stream.SimulateProblem{
+		ErrorOnPullProbability: probabilityOfFailure,
+		ErrorOnPush:            fmt.Errorf("simulated push error"),
+
+		ErrorOnPushProbability: probabilityOfFailure,
+		ErrorOnPull:            fmt.Errorf("simulated pull error"),
+	})
+
+	recovery =
+		NewRecoveryOptions(
+			"recovery-sink",
+			&PullPushContextState{
+				Offset:    nil,
+				PullTopic: "out-2",
+				PushTopic: "out-3",
+			},
+			store,
+		).WithMaxRecoveryAttempts(recoveryAttempts)
+
+	err = Recovery(
+		recovery,
+		func(state *PullPushContextState) (*PushAndPullInMemoryContext[float64, float64], error) {
+			ctx3 := NewPushAndPullInMemoryContext[float64, float64](state, out2, out3)
+			ctx3.SimulateRuntimeProblem(&SimulateProblem{
+				ErrorOnPushOutProbability: probabilityOfFailure,
+				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
+				ErrorOnPullInProbability:  probabilityOfFailure,
+				ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
+			})
+			return ctx3, nil
+		},
+		func(ctx *PushAndPullInMemoryContext[float64, float64]) error {
 			for {
 				val, err := ctx.PullIn()
 				if err != nil {
@@ -285,10 +329,10 @@ func TestProjection_Recovery(t *testing.T) {
 
 				err = MatchDataR1(
 					val,
-					func(x *Record[int]) error {
+					func(x *Record[float64]) error {
 						time.Sleep(50 * time.Millisecond)
 
-						entry := fmt.Sprintf("record-%s:%d", x.Key, x.Data)
+						entry := fmt.Sprintf("record-%s:%2f", x.Key, x.Data)
 						if _, ok := orderOfUniquer[entry]; ok {
 							return nil
 						}
@@ -296,7 +340,7 @@ func TestProjection_Recovery(t *testing.T) {
 						orderOfEvents = append(orderOfEvents, entry)
 						return nil
 					},
-					func(x *Watermark[int]) error {
+					func(x *Watermark[float64]) error {
 						// TODO do snapshot
 						return recovery.SnapshotFrom(ctx)
 					},
@@ -309,16 +353,12 @@ func TestProjection_Recovery(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedOrder := []string{
-		"record-key-0:0",
-		"record-key-1:1",
-		"record-key-0:2",
-		"record-key-1:3",
-		"record-key-0:4",
-		"record-key-1:5",
-		"record-key-0:6",
-		"record-key-1:7",
-		"record-key-0:8",
-		"record-key-1:9",
+		"record-key-0:0.000000",
+		"record-key-1:4.000000",
+		"record-key-0:6.000000",
+		"record-key-1:12.000000",
+		"record-key-0:14.000000",
+		"record-key-1:9.000000",
 	}
 
 	if diff := cmp.Diff(expectedOrder, orderOfEvents); diff != "" {

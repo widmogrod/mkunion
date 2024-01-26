@@ -107,6 +107,7 @@ func DoWindow[A, B any](
 	wd WindowDescription,
 	fm WindowFlushMode,
 	td TriggerDescription,
+	init B,
 	merge func(x A, agg B) (B, error),
 ) error {
 	store := NewWindowInMemoryStore[B]("window")
@@ -186,8 +187,7 @@ func DoWindow[A, B any](
 					windowRecord, err := store.Load(windowID)
 					if err != nil {
 						if errors.Is(err, ErrWindowNotFound) {
-							var zero B
-							result, err := merge(x.Data, zero)
+							result, err := merge(x.Data, init)
 							if err != nil {
 								return fmt.Errorf("projection.DoWindow: merge first key=%s window=%s: %w", dataKey, windowID, err)
 							}

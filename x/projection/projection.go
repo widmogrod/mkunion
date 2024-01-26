@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/stream"
 	"math/rand"
+	"time"
 )
 
 //go:generate go run ../../cmd/mkunion/main.go
@@ -24,6 +25,10 @@ type (
 )
 
 type EventTime = int64
+
+func MkEventTimeFromTime(x time.Time) EventTime {
+	return x.UnixNano()
+}
 
 func RecordToStreamItem[A any](topic string, x Data[A]) *stream.Item[A] {
 	return MatchDataR1[A, *stream.Item[A]](x,
