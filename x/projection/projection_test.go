@@ -23,7 +23,7 @@ func TestProjection_HappyPath(t *testing.T) {
 
 	state1 := &PullPushContextState{
 		Offset:    nil,
-		PullTopic: stream1.TopicName(),
+		PullTopic: "",
 		PushTopic: stream1.TopicName(),
 	}
 
@@ -171,8 +171,12 @@ func TestProjection_Recovery(t *testing.T) {
 	probabilityOfFailure := 0.0
 	recoveryAttempts := uint8(50)
 
-	out1 := stream.NewInMemoryStream[int](stream.WithSystemTime)
-	out1.SimulateRuntimeProblem(&stream.SimulateProblem{
+	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTime)
+	stream1 := stream.NewTypedStreamTopic[int](dataStream, "topic-out-1")
+	stream2 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-2")
+	stream3 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-3")
+
+	dataStream.SimulateRuntimeProblem(&stream.SimulateProblem{
 		ErrorOnPullProbability: probabilityOfFailure,
 		ErrorOnPush:            fmt.Errorf("simulated push error"),
 
@@ -187,8 +191,8 @@ func TestProjection_Recovery(t *testing.T) {
 			"recovery-load",
 			&PullPushContextState{
 				Offset:    nil,
-				PullTopic: "in-1",
-				PushTopic: "out-1",
+				PullTopic: "",
+				PushTopic: stream1.TopicName(),
 			},
 			store,
 		).
@@ -198,7 +202,7 @@ func TestProjection_Recovery(t *testing.T) {
 	err := Recovery[*PullPushContextState](
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[any, int], error) {
-			ctx1 := NewPushAndPullInMemoryContext[any, int](state, nil, out1)
+			ctx1 := NewPushAndPullInMemoryContext[any, int](state, nil, stream1)
 			ctx1.SimulateRuntimeProblem(&SimulateProblem{
 				ErrorOnPushOutProbability: probabilityOfFailure,
 				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
@@ -242,22 +246,14 @@ func TestProjection_Recovery(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Log("WINDOW")
-	out2 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	out2.SimulateRuntimeProblem(&stream.SimulateProblem{
-		ErrorOnPullProbability: probabilityOfFailure,
-		ErrorOnPush:            fmt.Errorf("simulated push error"),
-
-		ErrorOnPushProbability: probabilityOfFailure,
-		ErrorOnPull:            fmt.Errorf("simulated pull error"),
-	})
 
 	recovery =
 		NewRecoveryOptions(
 			"recovery-window",
 			&PullPushContextState{
 				Offset:    nil,
-				PullTopic: "out-1",
-				PushTopic: "out-2",
+				PullTopic: stream1.TopicName(),
+				PushTopic: stream2.TopicName(),
 			},
 			store,
 		).WithMaxRecoveryAttempts(recoveryAttempts)
@@ -265,7 +261,7 @@ func TestProjection_Recovery(t *testing.T) {
 	err = Recovery(
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[int, float64], error) {
-			ctx2 := NewPushAndPullInMemoryContext[int, float64](state, out1, out2)
+			ctx2 := NewPushAndPullInMemoryContext[int, float64](state, stream1, stream2)
 			ctx2.SimulateRuntimeProblem(&SimulateProblem{
 				ErrorOnPushOutProbability: probabilityOfFailure,
 				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
@@ -289,22 +285,13 @@ func TestProjection_Recovery(t *testing.T) {
 	var orderOfEvents []string
 	var orderOfUniquer = make(map[string]struct{})
 
-	out3 := stream.NewInMemoryStream[float64](stream.WithSystemTime)
-	out3.SimulateRuntimeProblem(&stream.SimulateProblem{
-		ErrorOnPullProbability: probabilityOfFailure,
-		ErrorOnPush:            fmt.Errorf("simulated push error"),
-
-		ErrorOnPushProbability: probabilityOfFailure,
-		ErrorOnPull:            fmt.Errorf("simulated pull error"),
-	})
-
 	recovery =
 		NewRecoveryOptions(
 			"recovery-sink",
 			&PullPushContextState{
 				Offset:    nil,
-				PullTopic: "out-2",
-				PushTopic: "out-3",
+				PullTopic: stream2.TopicName(),
+				PushTopic: stream3.TopicName(),
 			},
 			store,
 		).WithMaxRecoveryAttempts(recoveryAttempts)
@@ -312,7 +299,7 @@ func TestProjection_Recovery(t *testing.T) {
 	err = Recovery(
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[float64, float64], error) {
-			ctx3 := NewPushAndPullInMemoryContext[float64, float64](state, out2, out3)
+			ctx3 := NewPushAndPullInMemoryContext[float64, float64](state, stream2, stream3)
 			ctx3.SimulateRuntimeProblem(&SimulateProblem{
 				ErrorOnPushOutProbability: probabilityOfFailure,
 				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
