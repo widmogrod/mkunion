@@ -358,7 +358,7 @@ func main() {
 				return nil, errors.New("expected *workflow.Flow")
 			}
 
-			err := flowsRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.Flow]{
+			_, err := flowsRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.Flow]{
 				ID:   flow.Name,
 				Type: "flow",
 				Data: *flow,
@@ -436,7 +436,7 @@ func main() {
 			return err
 		}
 
-		err = flowsRepo.UpdateRecords(updating)
+		_, err = flowsRepo.UpdateRecords(updating)
 		if err != nil {
 			log.Errorf("failed to update records: %v", err)
 			return err
@@ -486,7 +486,7 @@ func main() {
 			return err
 		}
 
-		err = statesRepo.UpdateRecords(updating)
+		_, err = statesRepo.UpdateRecords(updating)
 		if err != nil {
 			log.Errorf("failed to update records: %v", err)
 			return err
@@ -559,7 +559,7 @@ func main() {
 
 			// save state
 			newState := work.State()
-			err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
+			_, err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
 				ID:      workflow.GetRunID(newState),
 				Type:    "process",
 				Data:    newState,
@@ -611,7 +611,7 @@ func main() {
 				})
 			}
 
-			err = statesRepo.UpdateRecords(schemaless.Save(saving...))
+			_, err = statesRepo.UpdateRecords(schemaless.Save(saving...))
 			if err != nil {
 				if errors.Is(err, schemaless.ErrVersionConflict) {
 					// make it configurable, but by default we should
@@ -792,7 +792,7 @@ func (service *Service[CMD, State]) CreateOrUpdate(cmd CMD) (res State, err erro
 		return res, fmt.Errorf("expected recordID in state")
 	}
 
-	err = service.repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
+	_, err = service.repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
 		ID:      recordID,
 		Type:    service.recordType,
 		Data:    newState,
