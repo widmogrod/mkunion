@@ -32,9 +32,8 @@ func TestProjection_HappyPath(t *testing.T) {
 	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
 		for i := 0; i < 10; i++ {
 			err := push(&Record[int]{
-				Key:       fmt.Sprintf("key-%d", i%2),
-				Data:      i,
-				EventTime: MkEventTimeFromTime(time.Now()),
+				Key:  fmt.Sprintf("key-%d", i%2),
+				Data: i,
 			})
 			if err != nil {
 				return fmt.Errorf("projection.Range: push: %w", err)
@@ -171,7 +170,7 @@ func TestProjection_Recovery(t *testing.T) {
 	probabilityOfFailure := 0.0
 	recoveryAttempts := uint8(50)
 
-	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTime)
+	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTimeFixed(0))
 	stream1 := stream.NewTypedStreamTopic[int](dataStream, "topic-out-1")
 	stream2 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-2")
 	stream3 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-3")
@@ -223,10 +222,12 @@ func TestProjection_Recovery(t *testing.T) {
 			}
 			for i := startValue; i < 10; i++ {
 				time.Sleep(50 * time.Millisecond)
+				et := 50 * time.Millisecond
+				et *= time.Duration(i)
 				err := ctx1.PushOut(&Record[int]{
 					Key:       fmt.Sprintf("key-%d", i%2),
 					Data:      i,
-					EventTime: MkEventTimeFromTime(time.Now()),
+					EventTime: int64(et),
 				})
 				if err != nil {
 					return fmt.Errorf("projection.Range: push: %w", err)
@@ -234,8 +235,8 @@ func TestProjection_Recovery(t *testing.T) {
 
 				err = recovery.Snapshot(&PullPushContextState{
 					Offset:    stream.MkOffsetFromInt(i),
-					PullTopic: "in-1",
-					PushTopic: "out-1",
+					PullTopic: "",
+					PushTopic: stream1.TopicName(),
 				})
 				if err != nil {
 					return fmt.Errorf("projection.Range: snapshot: %w", err)
@@ -344,11 +345,11 @@ func TestProjection_Recovery(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedOrder := []string{
-		"record-key-0:0.000000",
+		"record-key-0:2.000000",
 		"record-key-1:4.000000",
-		"record-key-0:6.000000",
+		"record-key-0:10.000000",
 		"record-key-1:12.000000",
-		"record-key-0:14.000000",
+		"record-key-0:8.000000",
 		"record-key-1:9.000000",
 	}
 

@@ -132,6 +132,16 @@ func DoWindow[A, B any](
 				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
 					RecordType: "window",
 					Where:      where,
+					Sort: []schemaless.SortField{
+						{
+							Field:      "Data.Window.End",
+							Descending: false,
+						},
+						{
+							Field:      "Data.Key",
+							Descending: false,
+						},
+					},
 				}
 
 				for {
