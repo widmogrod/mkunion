@@ -27,7 +27,7 @@ func TestNewTypedStream(t *testing.T) {
 				Key:   "2",
 				Data:  2,
 			})
-			assert.ErrorAs(t, err, &ErrTypedTopicMismatch)
+			assert.ErrorIs(t, err, ErrTypedTopicMismatch)
 		})
 	})
 
@@ -46,7 +46,7 @@ func TestNewTypedStream(t *testing.T) {
 				Key:   "2",
 				Data:  "hello",
 			})
-			assert.ErrorAs(t, err, &ErrTypedTopicMismatch)
+			assert.ErrorIs(t, err, ErrTypedTopicMismatch)
 		})
 	})
 
@@ -72,7 +72,7 @@ func TestNewTypedStream(t *testing.T) {
 			Topic:  "ints",
 			Offset: item.Offset,
 		})
-		assert.ErrorAs(t, err, &ErrEndOfStream)
+		assert.ErrorIs(t, err, ErrEndOfStream)
 
 	})
 

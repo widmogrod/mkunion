@@ -54,7 +54,7 @@ func (suite *Suite[TCommand, TState]) assert(t *testing.T, c *Case[TCommand, TSt
 				if c.err[idx] == nil {
 					assert.NoError(t, err)
 				} else {
-					assert.ErrorAs(t, err, &c.err[idx])
+					assert.ErrorIs(t, err, c.err[idx])
 				}
 
 				assert.Equal(t, c.state[idx], newState)
