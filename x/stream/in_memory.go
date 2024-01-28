@@ -34,7 +34,7 @@ var _ Stream[int] = (*InMemoryStream[int])(nil)
 func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 	if i.simulate != nil && i.simulate.ErrorOnPush != nil {
 		if rand.Float64() < i.simulate.ErrorOnPushProbability {
-			return fmt.Errorf("stream.Push: %w; %w", i.simulate.ErrorOnPush, ErrSimulatedError)
+			return fmt.Errorf("stream.InMemoryStream.Push: %w; %w", i.simulate.ErrorOnPush, ErrSimulatedError)
 		}
 	}
 
@@ -65,7 +65,7 @@ func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 	if i.simulate != nil && i.simulate.ErrorOnPull != nil {
 		if rand.Float64() < i.simulate.ErrorOnPullProbability {
-			return nil, i.simulate.ErrorOnPull
+			return nil, fmt.Errorf("stream.InMemoryStream.Pull: %w; %w", i.simulate.ErrorOnPull, ErrSimulatedError)
 		}
 	}
 

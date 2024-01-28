@@ -14,26 +14,26 @@ func TestNewInMemoryStream(t *testing.T) {
 	}
 
 	value, err := s.Pull(&FromBeginning{})
-	assert.ErrorAs(t, err, &ErrEndOfStream)
+	assert.ErrorIs(t, err, ErrEmptyTopic)
 	assert.Nil(t, value)
 
 	value, err = s.Pull(&FromOffset{
 		Offset: MkOffsetFromInt(1),
 	})
-	assert.ErrorAs(t, err, &ErrEndOfStream)
+	assert.ErrorIs(t, err, ErrEmptyTopic)
 	assert.Nil(t, value)
 
 	item, err := s.Pull(&FromBeginning{
 		Topic: "not-exists",
 	})
-	assert.ErrorAs(t, err, &ErrNoTopicWithName)
+	assert.ErrorIs(t, err, ErrNoTopicWithName)
 	assert.Nil(t, item)
 
 	item, err = s.Pull(&FromOffset{
 		Topic:  "not-exists",
 		Offset: MkOffsetFromInt(0),
 	})
-	assert.ErrorAs(t, err, &ErrNoTopicWithName)
+	assert.ErrorIs(t, err, ErrNoTopicWithName)
 	assert.Nil(t, item)
 }
 
@@ -45,7 +45,7 @@ func TestInMemoryStream_Push(t *testing.T) {
 		Data:   123,
 		Offset: MkOffsetFromInt(33),
 	})
-	assert.ErrorAs(t, err, &ErrOffsetSetOnPush)
+	assert.ErrorIs(t, err, ErrOffsetSetOnPush)
 }
 
 func TestInMemoryStream_HappyPath(t *testing.T) {
@@ -71,20 +71,20 @@ func TestInMemoryStream_HappyPath(t *testing.T) {
 	err = s.Push(&Item[int]{
 		Data: 3,
 	})
-	assert.ErrorAs(t, err, &ErrEmptyTopic)
+	assert.ErrorIs(t, err, ErrEmptyTopic)
 
 	err = s.Push(&Item[int]{
 		Topic:  "topic-1",
 		Data:   3,
 		Offset: MkOffsetFromInt(123),
 	})
-	assert.ErrorAs(t, err, &ErrOffsetSetOnPush)
+	assert.ErrorIs(t, err, ErrEmptyKey)
 
 	value, err := s.Pull(nil)
-	assert.ErrorAs(t, err, &ErrEmptyCommand)
+	assert.ErrorIs(t, err, ErrEmptyCommand)
 
 	_, err = s.Pull(&FromBeginning{})
-	assert.ErrorAs(t, err, &ErrEmptyTopic)
+	assert.ErrorIs(t, err, ErrEmptyTopic)
 
 	value, err = s.Pull(&FromBeginning{
 		Topic: "topic-1",
@@ -105,7 +105,7 @@ func TestInMemoryStream_HappyPath(t *testing.T) {
 	_, err = s.Pull(&FromOffset{
 		Offset: value.Offset,
 	})
-	assert.ErrorAs(t, err, &ErrEndOfStream)
+	assert.ErrorIs(t, err, ErrEmptyTopic)
 
 	value, err = s.Pull(&FromOffset{
 		Topic:  "topic-1",
@@ -127,7 +127,7 @@ func TestInMemoryStream_HappyPath(t *testing.T) {
 	value, err = s.Pull(&FromOffset{
 		Offset: value.Offset,
 	})
-	assert.ErrorAs(t, err, &ErrEndOfStream)
+	assert.ErrorIs(t, err, ErrEmptyTopic)
 }
 
 func TestInMemoryStream_TestPublishingOnTwoTopics(t *testing.T) {
@@ -193,9 +193,10 @@ func TestInMemoryStream_SimulateRuntimeProblem(t *testing.T) {
 	var customerError2 = fmt.Errorf("customer error 2")
 
 	s.SimulateRuntimeProblem(&SimulateProblem{
-		ErrorOnPushProbability: 1,
 		ErrorOnPush:            customerError1,
+		ErrorOnPushProbability: 1,
 		ErrorOnPull:            customerError2,
+		ErrorOnPullProbability: 1,
 	})
 
 	err := s.Push(&Item[int]{
@@ -203,13 +204,14 @@ func TestInMemoryStream_SimulateRuntimeProblem(t *testing.T) {
 		Key:   "123",
 		Data:  123,
 	})
-	assert.ErrorAs(t, err, &ErrSimulatedError)
-	assert.ErrorAs(t, err, &customerError1)
+	assert.ErrorIs(t, err, ErrSimulatedError)
+	assert.ErrorIs(t, err, customerError1)
 
 	_, err = s.Pull(&FromBeginning{
 		Topic: "topic-1",
 	})
 
-	assert.ErrorAs(t, err, &ErrSimulatedError)
-	assert.ErrorAs(t, err, &customerError2)
+	t.Log(err.Error())
+	assert.ErrorIs(t, err, ErrSimulatedError)
+	assert.ErrorIs(t, err, customerError2)
 }
