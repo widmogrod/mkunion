@@ -8,8 +8,10 @@ var (
 	ErrEndOfStream     = fmt.Errorf("end of stream")
 	ErrOffsetSetOnPush = fmt.Errorf("offset set on push")
 	ErrEmptyCommand    = fmt.Errorf("empty command")
+	ErrNoTopicWithName = fmt.Errorf("no topic with name")
 	ErrEmptyTopic      = fmt.Errorf("no topic specified")
 	ErrEmptyKey        = fmt.Errorf("empty key")
+	ErrSimulatedError  = fmt.Errorf("simulated error")
 )
 
 //go:tag mkunion:"PullCMD"

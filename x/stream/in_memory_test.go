@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -21,6 +22,30 @@ func TestNewInMemoryStream(t *testing.T) {
 	})
 	assert.ErrorAs(t, err, &ErrEndOfStream)
 	assert.Nil(t, value)
+
+	item, err := s.Pull(&FromBeginning{
+		Topic: "not-exists",
+	})
+	assert.ErrorAs(t, err, &ErrNoTopicWithName)
+	assert.Nil(t, item)
+
+	item, err = s.Pull(&FromOffset{
+		Topic:  "not-exists",
+		Offset: MkOffsetFromInt(0),
+	})
+	assert.ErrorAs(t, err, &ErrNoTopicWithName)
+	assert.Nil(t, item)
+}
+
+func TestInMemoryStream_Push(t *testing.T) {
+	s := NewInMemoryStream[int](WithSystemTime)
+	err := s.Push(&Item[int]{
+		Topic:  "topic-1",
+		Key:    "asdf",
+		Data:   123,
+		Offset: MkOffsetFromInt(33),
+	})
+	assert.ErrorAs(t, err, &ErrOffsetSetOnPush)
 }
 
 func TestInMemoryStream_HappyPath(t *testing.T) {
@@ -156,4 +181,35 @@ func TestInMemoryStream_TestPublishingOnTwoTopics(t *testing.T) {
 	if diff := cmp.Diff(expected, value); diff != "" {
 		t.Fatalf("Pull: diff: (-want +got)\n%s", diff)
 	}
+}
+
+func TestInMemoryStream_SimulateRuntimeProblem(t *testing.T) {
+	s := NewInMemoryStream[int](WithSystemTime)
+	if s == nil {
+		t.Fatalf("NewInMemoryStream: got nil")
+	}
+
+	var customerError1 = fmt.Errorf("customer error 1")
+	var customerError2 = fmt.Errorf("customer error 2")
+
+	s.SimulateRuntimeProblem(&SimulateProblem{
+		ErrorOnPushProbability: 1,
+		ErrorOnPush:            customerError1,
+		ErrorOnPull:            customerError2,
+	})
+
+	err := s.Push(&Item[int]{
+		Topic: "topic-1",
+		Key:   "123",
+		Data:  123,
+	})
+	assert.ErrorAs(t, err, &ErrSimulatedError)
+	assert.ErrorAs(t, err, &customerError1)
+
+	_, err = s.Pull(&FromBeginning{
+		Topic: "topic-1",
+	})
+
+	assert.ErrorAs(t, err, &ErrSimulatedError)
+	assert.ErrorAs(t, err, &customerError2)
 }
