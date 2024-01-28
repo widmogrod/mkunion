@@ -3,10 +3,10 @@ package projection
 import (
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/stream"
-	"math"
 	"time"
 )
 
@@ -95,15 +95,16 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 	}
 }
 
-type WindowSnapshotState struct {
-	snapshotState PullPushContextState
-	wd            WindowDescription
-	fm            WindowFlushMode
-	td            TriggerDescription
-}
+//type WindowSnapshotState struct {
+//	snapshotState PullPushContextState
+//	wd            WindowDescription
+//	fm            WindowFlushMode
+//	td            TriggerDescription
+//}
 
 func DoWindow[A, B any](
 	ctx PushAndPull[A, B],
+	recovery *RecoveryOptions[SnapshotState],
 	wd WindowDescription,
 	fm WindowFlushMode,
 	td TriggerDescription,
@@ -112,6 +113,7 @@ func DoWindow[A, B any](
 ) error {
 	store := NewWindowInMemoryStore[B]("window")
 
+	keysToFlush := map[string]struct{}{}
 	// recovery from failure:
 	// to avoid any double processing of data process should work only on data from last snapshot
 	// load all windows after last snapshot and before last watermark to memory
@@ -120,14 +122,15 @@ func DoWindow[A, B any](
 
 	flush := MatchWindowFlushModeR1(
 		fm,
-		func(x *Discard) func() error {
-			return func() error {
+		func(x *Discard) func(watermark *Watermark[A]) error {
+			return func(watermark *Watermark[A]) error {
 				where, err := TriggerDescriptionToWhere(td)
 				if err != nil {
 					return fmt.Errorf("projection.DoWindow: flush trigger description to whare: %w", err)
 				}
 
-				where.Params[":watermark"] = schema.MkInt(math.MaxInt64)
+				where.Params[":key"] = schema.MkString(watermark.Key)
+				where.Params[":watermark"] = schema.MkInt(watermark.EventTime)
 
 				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
 					RecordType: "window",
@@ -169,6 +172,10 @@ func DoWindow[A, B any](
 						continue
 					}
 
+					if err != nil {
+						return fmt.Errorf("projection.DoWindow: flush push: %w", err)
+					}
+
 					return nil
 				}
 			}
@@ -178,19 +185,19 @@ func DoWindow[A, B any](
 	for {
 		item, err := ctx.PullIn()
 		if err != nil {
-			if errors.Is(err, stream.ErrEndOfStream) {
-				err = flush()
-				if err != nil {
-					return fmt.Errorf("projection.DoWindow: flush on end of stream: %w", err)
-				}
-				return nil
+			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
+				continue
 			}
 			return fmt.Errorf("projection.DoWindow: pull: %w", err)
 		}
 
+		log.Debugf("projection.DoWindow: pull: %#v", item)
+
 		err = MatchDataR1(
 			item,
 			func(x *Record[A]) error {
+				keysToFlush[x.Key] = struct{}{}
+
 				dataKey := x.Key
 				for _, w := range MkWindow(x.EventTime, wd) {
 					windowID := MkWindowID(x.Key, w)
@@ -236,16 +243,45 @@ func DoWindow[A, B any](
 				return nil
 			},
 			func(x *Watermark[A]) error {
-				err := flush()
+				err := flush(x)
 				if err != nil {
 					return fmt.Errorf("projection.DoWindow: flush on watermark: %w", err)
 				}
+
+				err = ctx.PushOut(&Watermark[B]{
+					Key:       x.Key,
+					EventTime: x.EventTime,
+				})
+				if err != nil {
+					return fmt.Errorf("projection.DoWindow: push watermark: %w", err)
+				}
+
+				if IsWatermarkMarksEndOfStream(x) {
+					// this mean that we reached end of stream
+					delete(keysToFlush, x.Key)
+				}
+
+				if recovery != nil {
+					err := recovery.Snapshot(ctx.CurrentState())
+					if err != nil {
+						log.Warnf("projection.DoWindow: save snapshot failed (continue): %s", err)
+						//return fmt.Errorf("projection.DoWindow: save snapshot: %w", err)
+					}
+				}
+
 				return nil
 			},
 		)
 
 		if err != nil {
 			return fmt.Errorf("projection.DoWindow: merge data %T: %w", item, err)
+		}
+
+		//FIXME: this is not correct, we close stream, only when we know we reached end of stream
+		// this mostly happens when we work with batch of data, and we know that there is no more data to process
+		// so if we have stream that is not closed, process will wait for more data to come
+		if len(keysToFlush) == 0 {
+			return nil
 		}
 	}
 }

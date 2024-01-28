@@ -16,10 +16,10 @@ import (
 
 func TestProjection_HappyPath(t *testing.T) {
 	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTime)
-	stream1 := stream.NewTypedStreamTopic[int](dataStream, "topic-out-1")
-	stream2 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-2")
-	stream3 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-3")
-	stream4 := stream.NewTypedStreamTopic[string](dataStream, "topic-out-4")
+	stream1 := stream.NewTypedStreamTopic[Data[int]](dataStream, "topic-out-1")
+	stream2 := stream.NewTypedStreamTopic[Data[float64]](dataStream, "topic-out-2")
+	stream3 := stream.NewTypedStreamTopic[Data[float64]](dataStream, "topic-out-3")
+	stream4 := stream.NewTypedStreamTopic[Data[string]](dataStream, "topic-out-4")
 
 	state1 := &PullPushContextState{
 		Offset:    nil,
@@ -29,11 +29,20 @@ func TestProjection_HappyPath(t *testing.T) {
 
 	ctx1 := NewPushOnlyInMemoryContext[int](state1, stream1)
 
-	err := DoLoad(ctx1, func(push func(*Record[int]) error) error {
+	err := DoLoad(ctx1, func(push func(data Data[int]) error) error {
 		for i := 0; i < 10; i++ {
 			err := push(&Record[int]{
 				Key:  fmt.Sprintf("key-%d", i%2),
 				Data: i,
+			})
+			if err != nil {
+				return fmt.Errorf("projection.Range: push: %w", err)
+			}
+		}
+		for i := 0; i < 2; i++ {
+			err := push(&Watermark[int]{
+				Key:       fmt.Sprintf("key-%d", i),
+				EventTime: math.MaxInt64,
 			})
 			if err != nil {
 				return fmt.Errorf("projection.Range: push: %w", err)
@@ -130,7 +139,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	wd := &FixedWindow{Width: math.MaxInt64}
 	fm := &Discard{}
 	td := &AtWatermark{}
-	err = DoWindow(ctx5, wd, fm, td, "", func(x Either[int, float64], agg string) (string, error) {
+	err = DoWindow(ctx5, nil, wd, fm, td, "", func(x Either[int, float64], agg string) (string, error) {
 		var concat string
 		if agg == "" {
 			concat = fmt.Sprintf("%v", x)
@@ -167,13 +176,13 @@ func TestProjection_HappyPath(t *testing.T) {
 
 func TestProjection_Recovery(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	probabilityOfFailure := 0.0
+	probabilityOfFailure := 0.05
 	recoveryAttempts := uint8(50)
 
 	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTimeFixed(0))
-	stream1 := stream.NewTypedStreamTopic[int](dataStream, "topic-out-1")
-	stream2 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-2")
-	stream3 := stream.NewTypedStreamTopic[float64](dataStream, "topic-out-3")
+	stream1 := stream.NewTypedStreamTopic[Data[int]](dataStream, "topic-out-1")
+	stream2 := stream.NewTypedStreamTopic[Data[float64]](dataStream, "topic-out-2")
+	stream3 := stream.NewTypedStreamTopic[Data[float64]](dataStream, "topic-out-3")
 
 	dataStream.SimulateRuntimeProblem(&stream.SimulateProblem{
 		ErrorOnPullProbability: probabilityOfFailure,
@@ -188,10 +197,12 @@ func TestProjection_Recovery(t *testing.T) {
 	recovery :=
 		NewRecoveryOptions(
 			"recovery-load",
-			&PullPushContextState{
-				Offset:    nil,
-				PullTopic: "",
-				PushTopic: stream1.TopicName(),
+			func() SnapshotState {
+				return &PullPushContextState{
+					Offset:    nil,
+					PullTopic: "",
+					PushTopic: stream1.TopicName(),
+				}
 			},
 			store,
 		).
@@ -201,14 +212,14 @@ func TestProjection_Recovery(t *testing.T) {
 	err := Recovery[*PullPushContextState](
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[any, int], error) {
-			ctx1 := NewPushAndPullInMemoryContext[any, int](state, nil, stream1)
-			ctx1.SimulateRuntimeProblem(&SimulateProblem{
+			ctx := NewPushAndPullInMemoryContext[any, int](state, nil, stream1)
+			ctx.SimulateRuntimeProblem(&SimulateProblem{
 				ErrorOnPushOutProbability: probabilityOfFailure,
 				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
 				ErrorOnPullInProbability:  probabilityOfFailure,
 				ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
 			})
-			return ctx1, nil
+			return ctx, nil
 		},
 		func(ctx1 *PushAndPullInMemoryContext[any, int]) error {
 			state := ctx1.CurrentState()
@@ -234,7 +245,7 @@ func TestProjection_Recovery(t *testing.T) {
 				}
 
 				err = recovery.Snapshot(&PullPushContextState{
-					Offset:    stream.MkOffsetFromInt(i),
+					Offset:    stream.MkOffsetFromInt(i + 1),
 					PullTopic: "",
 					PushTopic: stream1.TopicName(),
 				})
@@ -242,8 +253,20 @@ func TestProjection_Recovery(t *testing.T) {
 					return fmt.Errorf("projection.Range: snapshot: %w", err)
 				}
 			}
+
+			for i := 0; i < 2; i++ {
+				err := ctx1.PushOut(&Watermark[int]{
+					Key:       fmt.Sprintf("key-%d", i),
+					EventTime: math.MaxInt64,
+				})
+				if err != nil {
+					return fmt.Errorf("projection.Range: push: %w", err)
+				}
+			}
+
 			return nil
-		})
+		},
+	)
 	assert.NoError(t, err)
 
 	t.Log("WINDOW")
@@ -251,34 +274,40 @@ func TestProjection_Recovery(t *testing.T) {
 	recovery =
 		NewRecoveryOptions(
 			"recovery-window",
-			&PullPushContextState{
-				Offset:    nil,
-				PullTopic: stream1.TopicName(),
-				PushTopic: stream2.TopicName(),
+			func() SnapshotState {
+				state := &PullPushContextState{
+					Offset:    nil,
+					PullTopic: stream1.TopicName(),
+					PushTopic: stream2.TopicName(),
+				}
+				return state
 			},
 			store,
-		).WithMaxRecoveryAttempts(recoveryAttempts)
+		).
+			WithMaxRecoveryAttempts(recoveryAttempts).
+			WithAutoSnapshot(false)
 
 	err = Recovery(
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[int, float64], error) {
-			ctx2 := NewPushAndPullInMemoryContext[int, float64](state, stream1, stream2)
-			ctx2.SimulateRuntimeProblem(&SimulateProblem{
+			ctx := NewPushAndPullInMemoryContext[int, float64](state, stream1, stream2)
+			ctx.SimulateRuntimeProblem(&SimulateProblem{
 				ErrorOnPushOutProbability: probabilityOfFailure,
 				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
 				ErrorOnPullInProbability:  probabilityOfFailure,
 				ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
 			})
-			return ctx2, nil
+			return ctx, nil
 		},
 		func(ctx *PushAndPullInMemoryContext[int, float64]) error {
 			wd := &FixedWindow{Width: 200 * time.Millisecond}
 			fm := &Discard{}
 			td := &AtWatermark{}
-			return DoWindow[int, float64](ctx, wd, fm, td, 0, func(x int, agg float64) (float64, error) {
+			return DoWindow[int, float64](ctx, recovery, wd, fm, td, 0, func(x int, agg float64) (float64, error) {
 				return float64(x) + agg, nil
 			})
-		})
+		},
+	)
 	assert.NoError(t, err)
 
 	t.Log("SINK")
@@ -289,10 +318,12 @@ func TestProjection_Recovery(t *testing.T) {
 	recovery =
 		NewRecoveryOptions(
 			"recovery-sink",
-			&PullPushContextState{
-				Offset:    nil,
-				PullTopic: stream2.TopicName(),
-				PushTopic: stream3.TopicName(),
+			func() SnapshotState {
+				return &PullPushContextState{
+					Offset:    nil,
+					PullTopic: stream2.TopicName(),
+					PushTopic: stream3.TopicName(),
+				}
 			},
 			store,
 		).WithMaxRecoveryAttempts(recoveryAttempts)
@@ -300,20 +331,20 @@ func TestProjection_Recovery(t *testing.T) {
 	err = Recovery(
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[float64, float64], error) {
-			ctx3 := NewPushAndPullInMemoryContext[float64, float64](state, stream2, stream3)
-			ctx3.SimulateRuntimeProblem(&SimulateProblem{
+			ctx := NewPushAndPullInMemoryContext[float64, float64](state, stream2, stream3)
+			ctx.SimulateRuntimeProblem(&SimulateProblem{
 				ErrorOnPushOutProbability: probabilityOfFailure,
 				ErrorOnPushOut:            fmt.Errorf("simulated push error"),
 				ErrorOnPullInProbability:  probabilityOfFailure,
 				ErrorOnPullIn:             fmt.Errorf("simulated pull error"),
 			})
-			return ctx3, nil
+			return ctx, nil
 		},
 		func(ctx *PushAndPullInMemoryContext[float64, float64]) error {
 			for {
 				val, err := ctx.PullIn()
 				if err != nil {
-					if errors.Is(err, stream.ErrEndOfStream) {
+					if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
 						return nil
 					}
 					return fmt.Errorf("projection.DoSink: pull: %w", err)
@@ -334,22 +365,32 @@ func TestProjection_Recovery(t *testing.T) {
 					},
 					func(x *Watermark[float64]) error {
 						// TODO do snapshot
-						return recovery.SnapshotFrom(ctx)
+						err := recovery.SnapshotFrom(ctx)
+						if err != nil {
+							return fmt.Errorf("projection.DoSink: snapshot: %w", err)
+						}
+
+						if x.EventTime == math.MaxInt64 {
+							return stream.ErrNoMoreNewDataInStream
+						}
+
+						return nil
 					},
 				)
 				if err != nil {
 					return fmt.Errorf("projection.DoSink: sink: %w", err)
 				}
 			}
-		})
+		},
+	)
 	assert.NoError(t, err)
 
 	expectedOrder := []string{
 		"record-key-0:2.000000",
-		"record-key-1:4.000000",
 		"record-key-0:10.000000",
-		"record-key-1:12.000000",
 		"record-key-0:8.000000",
+		"record-key-1:4.000000",
+		"record-key-1:12.000000",
 		"record-key-1:9.000000",
 	}
 
@@ -361,7 +402,7 @@ func TestProjection_Recovery(t *testing.T) {
 		RecordType: RecoveryRecordType,
 	})
 	assert.NoError(t, err)
-	assert.Len(t, results.Items, 2)
+	assert.Len(t, results.Items, 3)
 
 	for _, result := range results.Items {
 		t.Logf("recovery state: %v", result)

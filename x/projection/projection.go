@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/stream"
+	"math"
 	"math/rand"
-	"time"
 )
 
 //go:generate go run ../../cmd/mkunion/main.go
 
-//go:tag mkunion:"Data,noserde"
+//go:tag mkunion:"Data"
 type (
 	Record[A any] struct {
 		Key       string
@@ -26,27 +26,30 @@ type (
 
 type EventTime = int64
 
-func MkEventTimeFromTime(x time.Time) EventTime {
-	return x.UnixNano()
+func IsWatermarkMarksEndOfStream[A any](x *Watermark[A]) bool {
+	if x.EventTime == math.MaxInt64 {
+		return true
+	}
+
+	return false
 }
 
-func RecordToStreamItem[A any](topic string, x Data[A]) *stream.Item[A] {
-	return MatchDataR1[A, *stream.Item[A]](x,
-		func(x *Record[A]) *stream.Item[A] {
-			return &stream.Item[A]{
+func RecordToStreamItem[A any](topic string, x Data[A]) *stream.Item[Data[A]] {
+	return MatchDataR1[A, *stream.Item[Data[A]]](x,
+		func(x *Record[A]) *stream.Item[Data[A]] {
+			return &stream.Item[Data[A]]{
 				Topic:     topic,
 				Key:       x.Key,
-				Data:      x.Data,
+				Data:      x,
 				EventTime: &x.EventTime,
 				Offset:    nil,
 			}
 		},
-		func(x *Watermark[A]) *stream.Item[A] {
-			var zero A
-			return &stream.Item[A]{
+		func(x *Watermark[A]) *stream.Item[Data[A]] {
+			return &stream.Item[Data[A]]{
 				Topic:     topic,
 				Key:       x.Key,
-				Data:      zero,
+				Data:      x,
 				EventTime: &x.EventTime,
 				Offset:    nil,
 			}
@@ -54,19 +57,8 @@ func RecordToStreamItem[A any](topic string, x Data[A]) *stream.Item[A] {
 	)
 }
 
-func StreamItemToRecord[A any](x *stream.Item[A]) Data[A] {
-	return &Record[A]{
-		Key:       x.Key,
-		Data:      x.Data,
-		EventTime: *x.EventTime,
-	}
-}
-func StreamItemToRecordSetData[A, B any](x *stream.Item[A], data B) *Record[B] {
-	return &Record[B]{
-		Key:       x.Key,
-		Data:      data,
-		EventTime: *x.EventTime,
-	}
+func StreamItemToRecord[A any](x *stream.Item[Data[A]]) Data[A] {
+	return x.Data
 }
 
 type (
@@ -88,7 +80,7 @@ type (
 	}
 )
 
-func NewPushAndPullInMemoryContext[A, B any](state *PullPushContextState, in stream.Stream[A], out stream.Stream[B]) *PushAndPullInMemoryContext[A, B] {
+func NewPushAndPullInMemoryContext[A, B any](state *PullPushContextState, in stream.Stream[Data[A]], out stream.Stream[Data[B]]) *PushAndPullInMemoryContext[A, B] {
 	return &PushAndPullInMemoryContext[A, B]{
 		state:  state,
 		input:  in,
@@ -96,14 +88,14 @@ func NewPushAndPullInMemoryContext[A, B any](state *PullPushContextState, in str
 	}
 }
 
-func NewPushOnlyInMemoryContext[A any](state *PullPushContextState, out stream.Stream[A]) PushOnly[A] {
+func NewPushOnlyInMemoryContext[A any](state *PullPushContextState, out stream.Stream[Data[A]]) PushOnly[A] {
 	return &PushAndPullInMemoryContext[any, A]{
 		state:  state,
 		output: out,
 	}
 }
 
-func NewPullOnlyInMemoryContext[A any](state *PullPushContextState, in stream.Stream[A]) PullOnly[A] {
+func NewPullOnlyInMemoryContext[A any](state *PullPushContextState, in stream.Stream[Data[A]]) PullOnly[A] {
 	return &PushAndPullInMemoryContext[A, any]{
 		state: state,
 		input: in,
@@ -115,8 +107,8 @@ var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 type PushAndPullInMemoryContext[A, B any] struct {
 	state *PullPushContextState
 
-	input    stream.Stream[A]
-	output   stream.Stream[B]
+	input    stream.Stream[Data[A]]
+	output   stream.Stream[Data[B]]
 	simulate *SimulateProblem
 }
 
@@ -194,8 +186,8 @@ func InjectRuntimeProblem(ctx any, x *SimulateProblem) {
 	}
 }
 
-func DoLoad[A any](ctx PushOnly[A], f func(push func(record *Record[A]) error) error) error {
-	err := f(func(record *Record[A]) error {
+func DoLoad[A any](ctx PushOnly[A], f func(push func(record Data[A]) error) error) error {
+	err := f(func(record Data[A]) error {
 		return ctx.PushOut(record)
 	})
 	if err != nil {
@@ -208,7 +200,7 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
-			if errors.Is(err, stream.ErrEndOfStream) {
+			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
 				return nil
 			}
 			return fmt.Errorf("projection.DoMap: pull: %w", err)
@@ -226,7 +218,15 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 				return nil
 			},
 			func(x *Watermark[A]) error {
-				// TODO do snapshot
+				err := ctx.PushOut(&Watermark[B]{
+					Key:       x.Key,
+					EventTime: x.EventTime,
+				})
+
+				if err != nil {
+					return fmt.Errorf("projection.DoMap: push: %w", err)
+				}
+
 				return nil
 			},
 		)
@@ -241,7 +241,7 @@ func DoSink[A any](ctx PullOnly[A], f func(*Record[A]) error) error {
 	for {
 		val, err := ctx.PullIn()
 		if err != nil {
-			if errors.Is(err, stream.ErrEndOfStream) {
+			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
 				return nil
 			}
 			return fmt.Errorf("projection.DoSink: pull: %w", err)
@@ -275,9 +275,9 @@ type (
 
 func NewJoinInMemoryContext[A, B, C any](
 	state *JoinContextState,
-	a stream.Stream[A],
-	b stream.Stream[B],
-	out stream.Stream[C],
+	a stream.Stream[Data[A]],
+	b stream.Stream[Data[B]],
+	out stream.Stream[Data[C]],
 ) PushAndPull[Either[A, B], C] {
 	return &InMemoryJoinContext[A, B, C]{
 		state:  state,
@@ -289,10 +289,10 @@ func NewJoinInMemoryContext[A, B, C any](
 }
 
 type InMemoryJoinContext[A, B, C any] struct {
-	a stream.Stream[A]
-	b stream.Stream[B]
+	a stream.Stream[Data[A]]
+	b stream.Stream[Data[B]]
 
-	output stream.Stream[C]
+	output stream.Stream[Data[C]]
 
 	state *JoinContextState
 
@@ -305,7 +305,7 @@ var _ PushAndPull[Either[any, any], any] = (*InMemoryJoinContext[any, any, any])
 
 func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 	if i.endA && i.endB {
-		return nil, stream.ErrEndOfStream
+		return nil, stream.ErrNoMoreNewDataInStream
 	}
 
 	// TODO add watermark support
@@ -327,7 +327,7 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		val, err := i.a.Pull(pull)
 		if err != nil {
-			if errors.Is(err, stream.ErrEndOfStream) {
+			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
 				i.endA = true
 				return i.PullIn()
 			}
@@ -336,7 +336,22 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		i.state.Offset1 = val.Offset
 
-		return StreamItemToRecordSetData[A, Either[A, B]](val, &Left[A, B]{Left: val.Data}), nil
+		return MatchDataR1(
+			val.Data,
+			func(x *Record[A]) Data[Either[A, B]] {
+				return &Record[Either[A, B]]{
+					Key:       x.Key,
+					Data:      &Left[A, B]{Left: x.Data},
+					EventTime: x.EventTime,
+				}
+			},
+			func(x *Watermark[A]) Data[Either[A, B]] {
+				return &Watermark[Either[A, B]]{
+					Key:       x.Key,
+					EventTime: x.EventTime,
+				}
+			},
+		), nil
 	} else if !i.endB && i.mod == false {
 		i.mod = !i.mod
 
@@ -354,7 +369,7 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		val, err := i.b.Pull(pull)
 		if err != nil {
-			if errors.Is(err, stream.ErrEndOfStream) {
+			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
 				i.endB = true
 				return i.PullIn()
 			}
@@ -363,7 +378,22 @@ func (i *InMemoryJoinContext[A, B, C]) PullIn() (Data[Either[A, B]], error) {
 
 		i.state.Offset2 = val.Offset
 
-		return StreamItemToRecordSetData[B, Either[A, B]](val, &Right[A, B]{Right: val.Data}), nil
+		return MatchDataR1(
+			val.Data,
+			func(x *Record[B]) Data[Either[A, B]] {
+				return &Record[Either[A, B]]{
+					Key:       x.Key,
+					Data:      &Right[A, B]{Right: x.Data},
+					EventTime: x.EventTime,
+				}
+			},
+			func(x *Watermark[B]) Data[Either[A, B]] {
+				return &Watermark[Either[A, B]]{
+					Key:       x.Key,
+					EventTime: x.EventTime,
+				}
+			},
+		), nil
 	}
 
 	i.mod = !i.mod

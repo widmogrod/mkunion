@@ -17,7 +17,7 @@ const (
 	RecoveryRecordType = "recovery-state"
 )
 
-func NewRecoveryOptions(id string, init SnapshotState, store schemaless.Repository[SnapshotState]) *RecoveryOptions[SnapshotState] {
+func NewRecoveryOptions(id string, init func() SnapshotState, store schemaless.Repository[SnapshotState]) *RecoveryOptions[SnapshotState] {
 	return &RecoveryOptions[SnapshotState]{
 		id:                  id,
 		init:                init,
@@ -29,7 +29,7 @@ func NewRecoveryOptions(id string, init SnapshotState, store schemaless.Reposito
 
 type RecoveryOptions[A SnapshotState] struct {
 	id                  string
-	init                A
+	init                func() A
 	store               schemaless.Repository[A]
 	maxRecoveryAttempts uint8
 	autoSnapshot        bool
@@ -99,7 +99,7 @@ func (options *RecoveryOptions[A]) LatestSnapshot() (A, error) {
 	record, err := options.store.Get(options.id, RecoveryRecordType)
 	if err != nil {
 		if errors.Is(err, schemaless.ErrNotFound) {
-			return options.init, nil
+			return options.init(), nil
 		}
 		var zero A
 		return zero, fmt.Errorf("projection.RecoveryOptions: load last snapshot in store; %w", err)
