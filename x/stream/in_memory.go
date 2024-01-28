@@ -85,7 +85,7 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 			}
 
 			if len(i.values[x.Topic]) == 0 {
-				return nil, ErrEndOfStream
+				return nil, ErrNoMoreNewDataInStream
 			}
 
 			return i.values[x.Topic][0], nil
@@ -105,11 +105,11 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 			}
 
 			if len(i.values[x.Topic]) == 0 {
-				return nil, ErrEndOfStream
+				return nil, ErrNoMoreNewDataInStream
 			}
 
 			if offset+1 >= len(i.values[x.Topic]) {
-				return nil, ErrEndOfStream
+				return nil, ErrNoMoreNewDataInStream
 			}
 
 			return i.values[x.Topic][offset+1], nil

@@ -72,7 +72,7 @@ func TestNewTypedStream(t *testing.T) {
 			Topic:  "ints",
 			Offset: item.Offset,
 		})
-		assert.ErrorIs(t, err, ErrEndOfStream)
+		assert.ErrorIs(t, err, ErrNoMoreNewDataInStream)
 
 	})
 
