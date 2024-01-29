@@ -374,10 +374,20 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 			}
 
 			// find which variant is set
-			valueName := shape.ToGoTypeNameFromReflect(yreflect.Elem().Type())
+			valueName := shape.ToGoFullTypeNameFromReflect(yreflect.Elem().Type())
+			refNameOriginal := shape.MkRefNameFromReflect(yreflect.Elem().Type())
+			valueName2 := shape.ToGoTypeName(
+				shape.IndexWith(refNameOriginal, refNameOriginal),
+				shape.WithPkgImportName(),
+			)
+
 			for _, variant := range x.Variant {
-				variantName := shape.ToGoTypeName(variant)
-				if variantName == valueName {
+				s := shape.IndexWith(variant, refNameOriginal)
+				variantName := shape.ToGoTypeName(s, shape.WithPkgImportName(), shape.WithInstantiation())
+				variantShort := shape.ToGoTypeName(s)
+				k := variantName
+				_ = k
+				if variantName == valueName2 {
 					if yreflect.Kind() == reflect.Interface {
 						yreflect = yreflect.Elem()
 					}
@@ -388,10 +398,10 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 					return MkMap(
 						MkField(
 							"$type",
-							MkString(variantName),
+							MkString(variantShort),
 						),
 						MkField(
-							variantName,
+							variantShort,
 							FromGoReflect(variant, yreflect),
 						),
 					)
@@ -648,7 +658,7 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 				}
 			}
 
-			return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike %s not found %#v", x.Name, data)
+			return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike %s not found at all %#v", x.Name, data)
 		},
 	)
 }
