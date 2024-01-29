@@ -89,9 +89,14 @@ func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[int]", RecordFromJSON[int], RecordToJSON[int])
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[float64]", RecordFromJSON[float64], RecordToJSON[float64])
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[string]", RecordFromJSON[string], RecordToJSON[string])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[github.com/widmogrod/mkunion/x/projection.Either[int,float64]]", RecordFromJSON[Either[int, float64]], RecordToJSON[Either[int, float64]])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[Either[int,float64]]", RecordFromJSON[Either[int, float64]], RecordToJSON[Either[int, float64]])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Left[int,float64]", LeftFromJSON[int, float64], LeftToJSON[int, float64])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Right[int,float64]", RightFromJSON[int, float64], RightToJSON[int, float64])
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[int]", WatermarkFromJSON[int], WatermarkToJSON[int])
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[float64]", WatermarkFromJSON[float64], WatermarkToJSON[float64])
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[string]", WatermarkFromJSON[string], WatermarkToJSON[string])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[Either[int,float64]]", WatermarkFromJSON[Either[int, float64]], WatermarkToJSON[Either[int, float64]])
 }
 
 type DataUnionJSON struct {
@@ -320,12 +325,12 @@ func (r *Watermark[A]) MarshalJSON() ([]byte, error) {
 func (r *Watermark[A]) _marshalJSONWatermarkLb_A_bL(x Watermark[A]) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
-	//var fieldKey []byte
-	//fieldKey, err = r._marshalJSONstring(x.Key)
-	//if err != nil {
-	//	return nil, fmt.Errorf("projection: Watermark[A]._marshalJSONWatermarkLb_A_bL: field name Key; %w", err)
-	//}
-	//partial["Key"] = fieldKey
+	var fieldKey []byte
+	fieldKey, err = r._marshalJSONstring(x.Key)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Watermark[A]._marshalJSONWatermarkLb_A_bL: field name Key; %w", err)
+	}
+	partial["Key"] = fieldKey
 	var fieldEventTime []byte
 	fieldEventTime, err = r._marshalJSONEventTime(x.EventTime)
 	if err != nil {
@@ -367,12 +372,12 @@ func (r *Watermark[A]) _unmarshalJSONWatermarkLb_A_bL(data []byte) (Watermark[A]
 	if err != nil {
 		return result, fmt.Errorf("projection: Watermark[A]._unmarshalJSONWatermarkLb_A_bL: native struct unwrap; %w", err)
 	}
-	//if fieldKey, ok := partial["Key"]; ok {
-	//	result.Key, err = r._unmarshalJSONstring(fieldKey)
-	//	if err != nil {
-	//		return result, fmt.Errorf("projection: Watermark[A]._unmarshalJSONWatermarkLb_A_bL: field Key; %w", err)
-	//	}
-	//}
+	if fieldKey, ok := partial["Key"]; ok {
+		result.Key, err = r._unmarshalJSONstring(fieldKey)
+		if err != nil {
+			return result, fmt.Errorf("projection: Watermark[A]._unmarshalJSONWatermarkLb_A_bL: field Key; %w", err)
+		}
+	}
 	if fieldEventTime, ok := partial["EventTime"]; ok {
 		result.EventTime, err = r._unmarshalJSONEventTime(fieldEventTime)
 		if err != nil {
@@ -473,4 +478,233 @@ func MatchEitherR0[A any, B any](
 	case *Right[A, B]:
 		f2(v)
 	}
+}
+
+//func init() {
+//	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Either", EitherFromJSON, EitherToJSON)
+//	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Left", LeftFromJSON, LeftToJSON)
+//	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Right", RightFromJSON, RightToJSON)
+//}
+
+type EitherUnionJSON struct {
+	Type  string          `json:"$type,omitempty"`
+	Left  json.RawMessage `json:"projection.Left,omitempty"`
+	Right json.RawMessage `json:"projection.Right,omitempty"`
+}
+
+func EitherFromJSON[A, B any](x []byte) (Either[A, B], error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data EitherUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "projection.Left":
+		return LeftFromJSON[A, B](data.Left)
+	case "projection.Right":
+		return RightFromJSON[A, B](data.Right)
+	}
+
+	if data.Left != nil {
+		return LeftFromJSON[A, B](data.Left)
+	} else if data.Right != nil {
+		return RightFromJSON[A, B](data.Right)
+	}
+
+	return nil, fmt.Errorf("projection.Either: unknown type %s", data.Type)
+}
+
+func EitherToJSON[A, B any](x Either[A, B]) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchEitherR2(
+		x,
+		func(x *Left[A, B]) ([]byte, error) {
+			body, err := LeftToJSON[A, B](x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(EitherUnionJSON{
+				Type: "projection.Left",
+				Left: body,
+			})
+		},
+		func(x *Right[A, B]) ([]byte, error) {
+			body, err := RightToJSON[A, B](x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(EitherUnionJSON{
+				Type:  "projection.Right",
+				Right: body,
+			})
+		},
+	)
+}
+
+func LeftFromJSON[A, B any](x []byte) (*Left[A, B], error) {
+	result := new(Left[A, B])
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func LeftToJSON[A, B any](x *Left[A, B]) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Left[any, any])(nil)
+	_ json.Marshaler   = (*Left[any, any])(nil)
+)
+
+func (r *Left[A, B]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONLeftLb_ACommaB_bL(*r)
+}
+func (r *Left[A, B]) _marshalJSONLeftLb_ACommaB_bL(x Left[A, B]) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldLeft []byte
+	fieldLeft, err = r._marshalJSONA(x.Left)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Left[A,B]._marshalJSONLeftLb_ACommaB_bL: field name Left; %w", err)
+	}
+	partial["Left"] = fieldLeft
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Left[A,B]._marshalJSONLeftLb_ACommaB_bL: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Left[A, B]) _marshalJSONA(x A) ([]byte, error) {
+	result, err := shared.JSONMarshal[A](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Left[A,B]._marshalJSONA:; %w", err)
+	}
+	return result, nil
+}
+func (r *Left[A, B]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONLeftLb_ACommaB_bL(data)
+	if err != nil {
+		return fmt.Errorf("projection: Left[A,B].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Left[A, B]) _unmarshalJSONLeftLb_ACommaB_bL(data []byte) (Left[A, B], error) {
+	result := Left[A, B]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("projection: Left[A,B]._unmarshalJSONLeftLb_ACommaB_bL: native struct unwrap; %w", err)
+	}
+	if fieldLeft, ok := partial["Left"]; ok {
+		result.Left, err = r._unmarshalJSONA(fieldLeft)
+		if err != nil {
+			return result, fmt.Errorf("projection: Left[A,B]._unmarshalJSONLeftLb_ACommaB_bL: field Left; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Left[A, B]) _unmarshalJSONA(data []byte) (A, error) {
+	result, err := shared.JSONUnmarshal[A](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: Left[A,B]._unmarshalJSONA: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func RightFromJSON[A, B any](x []byte) (*Right[A, B], error) {
+	result := new(Right[A, B])
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func RightToJSON[A, B any](x *Right[A, B]) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Right[any, any])(nil)
+	_ json.Marshaler   = (*Right[any, any])(nil)
+)
+
+func (r *Right[A, B]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONRightLb_ACommaB_bL(*r)
+}
+func (r *Right[A, B]) _marshalJSONRightLb_ACommaB_bL(x Right[A, B]) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldRight []byte
+	fieldRight, err = r._marshalJSONB(x.Right)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Right[A,B]._marshalJSONRightLb_ACommaB_bL: field name Right; %w", err)
+	}
+	partial["Right"] = fieldRight
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Right[A,B]._marshalJSONRightLb_ACommaB_bL: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Right[A, B]) _marshalJSONB(x B) ([]byte, error) {
+	result, err := shared.JSONMarshal[B](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: Right[A,B]._marshalJSONB:; %w", err)
+	}
+	return result, nil
+}
+func (r *Right[A, B]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONRightLb_ACommaB_bL(data)
+	if err != nil {
+		return fmt.Errorf("projection: Right[A,B].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Right[A, B]) _unmarshalJSONRightLb_ACommaB_bL(data []byte) (Right[A, B], error) {
+	result := Right[A, B]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("projection: Right[A,B]._unmarshalJSONRightLb_ACommaB_bL: native struct unwrap; %w", err)
+	}
+	if fieldRight, ok := partial["Right"]; ok {
+		result.Right, err = r._unmarshalJSONB(fieldRight)
+		if err != nil {
+			return result, fmt.Errorf("projection: Right[A,B]._unmarshalJSONRightLb_ACommaB_bL: field Right; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Right[A, B]) _unmarshalJSONB(data []byte) (B, error) {
+	result, err := shared.JSONUnmarshal[B](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: Right[A,B]._unmarshalJSONB: native ref unwrap; %w", err)
+	}
+	return result, nil
 }
