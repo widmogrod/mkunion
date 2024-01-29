@@ -805,6 +805,18 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 				Type:          InstantiateTypeThatAreOvershadowByTypeParam(x.Type, replacement),
 				Tags:          x.Tags,
 			}
+
+			// change names of type params, to represent substitution
+			for _, param := range x.TypeParams {
+				param := param
+				if rep, ok := replacement[param.Name]; ok {
+					param.Name = ToGoTypeName(rep, WithRootPackage(x.PkgName))
+					param.Type = rep
+				}
+
+				result.TypeParams = append(result.TypeParams, param)
+			}
+
 			return result
 		},
 		func(x *PrimitiveLike) Shape {
@@ -812,8 +824,7 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 		},
 		func(x *ListLike) Shape {
 			result := &ListLike{
-				Element: InstantiateTypeThatAreOvershadowByTypeParam(x.Element, replacement),
-				//ElementIsPointer: x.ElementIsPointer,
+				Element:  InstantiateTypeThatAreOvershadowByTypeParam(x.Element, replacement),
 				ArrayLen: x.ArrayLen,
 			}
 			return result
@@ -821,9 +832,7 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 		func(x *MapLike) Shape {
 			result := &MapLike{
 				Key: InstantiateTypeThatAreOvershadowByTypeParam(x.Key, replacement),
-				//KeyIsPointer: x.KeyIsPointer,
 				Val: InstantiateTypeThatAreOvershadowByTypeParam(x.Val, replacement),
-				//ValIsPointer: x.ValIsPointer,
 			}
 			return result
 		},
@@ -864,6 +873,17 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 				PkgImportName: x.PkgImportName,
 				Tags:          x.Tags,
 			}
+			// change names of type params, to represent substitution
+			for _, param := range x.TypeParams {
+				param := param
+				if rep, ok := replacement[param.Name]; ok {
+					param.Name = ToGoTypeName(rep, WithRootPackage(x.PkgName))
+					param.Type = rep
+				}
+
+				result.TypeParams = append(result.TypeParams, param)
+			}
+
 			for _, variant := range x.Variant {
 				result.Variant = append(result.Variant, InstantiateTypeThatAreOvershadowByTypeParam(variant, replacement))
 			}
