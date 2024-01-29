@@ -38,6 +38,7 @@ type WindowRecord[A any] struct {
 	Key    WindowKey
 	Window *Window
 	Record A
+	Offset string
 	//Count  uint64 // How many items were added to this window, this is useful for AtCount TriggerDescription
 }
 
@@ -105,14 +106,13 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 func DoWindow[A, B any](
 	ctx PushAndPull[A, B],
 	recovery *RecoveryOptions[SnapshotState],
+	store *WindowInMemoryStore[B],
 	wd WindowDescription,
 	fm WindowFlushMode,
 	td TriggerDescription,
 	init B,
 	merge func(x A, agg B) (B, error),
 ) error {
-	store := NewWindowInMemoryStore[B]("window")
-
 	keysToFlush := map[string]struct{}{}
 	// recovery from failure:
 	// to avoid any double processing of data process should work only on data from last snapshot
@@ -133,7 +133,7 @@ func DoWindow[A, B any](
 				where.Params[":watermark"] = schema.MkInt(watermark.EventTime)
 
 				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
-					RecordType: "window",
+					RecordType: store.recordType,
 					Where:      where,
 					Sort: []schemaless.SortField{
 						{
@@ -186,6 +186,15 @@ func DoWindow[A, B any](
 		item, err := ctx.PullIn()
 		if err != nil {
 			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
+				//FIXME: this is not correct, we close stream, only when we know we reached end of stream
+				// this mostly happens when we work with batch of data, and we know that there is no more data to process
+				// so if we have stream that is not closed, process will wait for more data to come
+				if len(keysToFlush) == 0 {
+					log.Debugf("projection.DoWindow: pull: no more data in stream for all keys (exit)")
+					return nil
+				}
+
+				log.Debugf("projection.DoWindow: pull: no more data in stream")
 				continue
 			}
 			return fmt.Errorf("projection.DoWindow: pull: %w", err)
@@ -202,6 +211,10 @@ func DoWindow[A, B any](
 				for _, w := range MkWindow(x.EventTime, wd) {
 					windowID := MkWindowID(x.Key, w)
 					windowRecord, err := store.Load(windowID)
+					offset := "0"
+					if ctx.(*PushAndPullInMemoryContext[A, B]).nextOffset != nil {
+						offset = string(*ctx.(*PushAndPullInMemoryContext[A, B]).nextOffset)
+					}
 					if err != nil {
 						if errors.Is(err, ErrWindowNotFound) {
 							result, err := merge(x.Data, init)
@@ -213,6 +226,7 @@ func DoWindow[A, B any](
 								Key:    x.Key,
 								Window: w,
 								Record: result,
+								Offset: offset,
 							})
 
 							if err != nil {
@@ -224,6 +238,17 @@ func DoWindow[A, B any](
 
 						return fmt.Errorf("projection.DoWindow: load key=%s window=%s: %w", dataKey, windowID, err)
 					} else {
+						cmp, err := CompareOffset(offset, windowRecord.Offset)
+						if err != nil {
+							return fmt.Errorf("projection.DoWindow: compare offset key=%s window=%s: %w", dataKey, windowID, err)
+						}
+
+						if cmp <= 0 {
+							log.Warnf("projection.DoWindow: skip key=%s window=%s: offset=%s, windowOffset=%s", dataKey, windowID, offset, windowRecord.Offset)
+							// we already processed this record
+							continue
+						}
+
 						result, err := merge(x.Data, windowRecord.Record)
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: merge key=%s window=%s: %w", dataKey, windowID, err)
@@ -233,6 +258,7 @@ func DoWindow[A, B any](
 							Key:    x.Key,
 							Window: w,
 							Record: result,
+							Offset: offset,
 						})
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: save key=%s window=%s: %w", dataKey, windowID, err)
@@ -261,14 +287,6 @@ func DoWindow[A, B any](
 					delete(keysToFlush, x.Key)
 				}
 
-				if recovery != nil {
-					err := recovery.Snapshot(ctx.CurrentState())
-					if err != nil {
-						log.Warnf("projection.DoWindow: save snapshot failed (continue): %s", err)
-						//return fmt.Errorf("projection.DoWindow: save snapshot: %w", err)
-					}
-				}
-
 				return nil
 			},
 		)
@@ -277,13 +295,39 @@ func DoWindow[A, B any](
 			return fmt.Errorf("projection.DoWindow: merge data %T: %w", item, err)
 		}
 
-		//FIXME: this is not correct, we close stream, only when we know we reached end of stream
-		// this mostly happens when we work with batch of data, and we know that there is no more data to process
-		// so if we have stream that is not closed, process will wait for more data to come
-		if len(keysToFlush) == 0 {
-			return nil
+		if recovery != nil {
+			err := recovery.Snapshot(ctx.CurrentState())
+			if err != nil {
+				log.Warnf("projection.DoWindow: save snapshot failed (continue): %s", err)
+				//return fmt.Errorf("projection.DoWindow: save snapshot: %w", err)
+			}
 		}
+
 	}
+}
+
+func CompareOffset(a, b string) (int8, error) {
+	a1 := stream.Offset(a)
+	o1, err := stream.ParseOffsetAsInt(&a1)
+	if err != nil {
+		return 0, fmt.Errorf("projection.CompareOffset: parse a: %w", err)
+	}
+
+	b1 := stream.Offset(b)
+	o2, err := stream.ParseOffsetAsInt(&b1)
+	if err != nil {
+		return 0, fmt.Errorf("projection.CompareOffset: parse b: %w", err)
+	}
+
+	if o1 > o2 {
+		return 1, nil
+	}
+
+	if o1 < o2 {
+		return -1, nil
+	}
+
+	return 0, nil
 }
 
 func NewWindowInMemoryStore[A any](recordType string) *WindowInMemoryStore[A] {
