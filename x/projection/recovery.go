@@ -67,26 +67,26 @@ func (options *RecoveryOptions[A]) Snapshot(x A) error {
 	saving := schemaless.Save(record)
 	saving.UpdatingPolicy = schemaless.PolicyOverwriteServerChanges
 
-	upodated, err := options.store.UpdateRecords(saving)
+	updated, err := options.store.UpdateRecords(saving)
 	if err != nil {
 		return fmt.Errorf("projection.RecoveryOptions: save last snapthot in store; %w", err)
 	}
 
-	for _, v := range upodated.Saved {
+	for _, v := range updated.Saved {
 		log.Debugf("projection.RecoveryOptions: save last snapthot in store; %d, %#v", v.Version, v.Data)
 		MatchSnapshotStateR0(
 			v.Data,
 			func(x *PullPushContextState) {
 				if x.Offset != nil {
-					log.Debugf("offset: %s", *x.Offset)
+					log.Debugf("projection.RecoveryOptions: offset: %s", *x.Offset)
 				}
 			},
 			func(x *JoinContextState) {
 				if x.Offset1 != nil {
-					log.Debugf("offset1: %s", *x.Offset1)
+					log.Debugf("projection.RecoveryOptions: offset1: %s", *x.Offset1)
 				}
 				if x.Offset2 != nil {
-					log.Debugf("offset2: %s", *x.Offset2)
+					log.Debugf("projection.RecoveryOptions: offset2: %s", *x.Offset2)
 				}
 			},
 		)
@@ -104,6 +104,23 @@ func (options *RecoveryOptions[A]) LatestSnapshot() (A, error) {
 		var zero A
 		return zero, fmt.Errorf("projection.RecoveryOptions: load last snapshot in store; %w", err)
 	}
+
+	MatchSnapshotStateR0(
+		record.Data,
+		func(x *PullPushContextState) {
+			if x.Offset != nil {
+				log.Debugf("projection.RecoveryOptions: load offset: %s", *x.Offset)
+			}
+		},
+		func(x *JoinContextState) {
+			if x.Offset1 != nil {
+				log.Debugf("projection.RecoveryOptions: load offset1: %s", *x.Offset1)
+			}
+			if x.Offset2 != nil {
+				log.Debugf("projection.RecoveryOptions: load offset2: %s", *x.Offset2)
+			}
+		},
+	)
 	return any(record.Data).(A), nil
 }
 
