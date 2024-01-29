@@ -129,31 +129,19 @@ func shouldInstantiate(options []ToGoTypeNameOption) bool {
 	return false
 }
 
-// ToGoTypeNameFromReflect returns type name without package name
-// example:
-//
-//		schema.Any
-//	 string
-func ToGoTypeNameFromReflect(x reflect.Type) string {
-	if x.Kind() == reflect.Ptr {
-		x = x.Elem()
-	}
-
-	return x.String()
-}
-
 // ToGoFullTypeNameFromReflect returns full type name with package name
 // example:
 //
-//		github.com/widmogrod/mkunion/x/schema.Any
-//	 string
+//	string
+//	github.com/widmogrod/mkunion/x/schema.Any
+//	github.com/widmogrod/mkunion/x/projection.Record
 func ToGoFullTypeNameFromReflect(x reflect.Type) string {
 	if x.Kind() == reflect.Ptr {
 		x = x.Elem()
 	}
 
 	if x.PkgPath() == "" {
-		return x.Name()
+		return x.String()
 	}
 
 	return fmt.Sprintf("%s.%s", x.PkgPath(), x.Name())
