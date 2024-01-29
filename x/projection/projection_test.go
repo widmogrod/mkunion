@@ -18,7 +18,7 @@ func TestProjection_HappyPath(t *testing.T) {
 	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTime)
 	stream1 := stream.NewTypedStreamTopic[Data[int]](dataStream, "topic-out-1")
 	stream2 := stream.NewTypedStreamTopic[Data[float64]](dataStream, "topic-out-2")
-	stream3 := stream.NewTypedStreamTopic[Data[float64]](dataStream, "topic-out-3")
+	stream3 := stream.NewTypedStreamTopic[Data[Either[int, float64]]](dataStream, "topic-out-3")
 	stream4 := stream.NewTypedStreamTopic[Data[string]](dataStream, "topic-out-4")
 
 	state1 := &PullPushContextState{
@@ -68,20 +68,58 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	orderOfEvents := []string{}
-	ctx4 := NewJoinInMemoryContext[int, float64, float64](
-		&JoinContextState{
-			Offset1:    nil,
-			PullTopic1: stream1.TopicName(),
-			Offset2:    nil,
-			PullTopic2: stream2.TopicName(),
-			PushTopic:  stream3.TopicName(),
-		},
-		stream1,
-		stream2,
-		stream3,
-	)
 
-	err = DoSink[Either[int, float64]](ctx4, func(x *Record[Either[int, float64]]) error {
+	{
+		stateA := &PullPushContextState{
+			Offset:    nil,
+			PullTopic: stream1.TopicName(),
+			PushTopic: stream3.TopicName(),
+		}
+		ctxA := NewPushAndPullInMemoryContext[int, Either[int, float64]](stateA, stream1, stream3)
+
+		stateB := &PullPushContextState{
+			Offset:    nil,
+			PullTopic: stream2.TopicName(),
+			PushTopic: stream3.TopicName(),
+		}
+		ctxB := NewPushAndPullInMemoryContext[float64, Either[int, float64]](stateB, stream2, stream3)
+
+		err = DoJoin[int, float64, Either[int, float64]](
+			ctxA, ctxB,
+			func(x Either[*Record[int], *Record[float64]]) *Record[Either[int, float64]] {
+				return MatchEitherR1(
+					x,
+					func(x *Left[*Record[int], *Record[float64]]) *Record[Either[int, float64]] {
+						return &Record[Either[int, float64]]{
+							Key: x.Left.Key,
+							Data: &Left[int, float64]{
+								Left: x.Left.Data,
+							},
+							EventTime: x.Left.EventTime,
+						}
+					},
+					func(x *Right[*Record[int], *Record[float64]]) *Record[Either[int, float64]] {
+						return &Record[Either[int, float64]]{
+							Key: x.Right.Key,
+							Data: &Right[int, float64]{
+								Right: x.Right.Data,
+							},
+							EventTime: x.Right.EventTime,
+						}
+					},
+				)
+			},
+		)
+		assert.NoError(t, err)
+	}
+
+	state3 := &PullPushContextState{
+		Offset:    nil,
+		PullTopic: stream3.TopicName(),
+		PushTopic: "",
+	}
+	ctx5 := NewPushAndPullInMemoryContext[Either[int, float64], any](state3, stream3, nil)
+	err = DoSink[Either[int, float64]](ctx5, func(x *Record[Either[int, float64]]) error {
 		return MatchEitherR1(
 			x.Data,
 			func(x *Left[int, float64]) error {
@@ -123,23 +161,18 @@ func TestProjection_HappyPath(t *testing.T) {
 		t.Fatalf("NewJoinPushAndPullContext: diff: (-want +got)\n%s", diff)
 	}
 
-	ctx5 := NewJoinInMemoryContext[int, float64, string](
-		&JoinContextState{
-			Offset1:    nil,
-			PullTopic1: stream1.TopicName(),
-			Offset2:    nil,
-			PullTopic2: stream2.TopicName(),
-			PushTopic:  stream4.TopicName(),
-		},
-		stream1,
-		stream2,
-		stream4,
-	)
+	windowStore := NewWindowInMemoryStore[string]("window-store")
 
+	state6 := &PullPushContextState{
+		Offset:    nil,
+		PullTopic: stream3.TopicName(),
+		PushTopic: stream4.TopicName(),
+	}
+	ctx6 := NewPushAndPullInMemoryContext[Either[int, float64], string](state6, stream3, stream4)
 	wd := &FixedWindow{Width: math.MaxInt64}
 	fm := &Discard{}
 	td := &AtWatermark{}
-	err = DoWindow(ctx5, nil, wd, fm, td, "", func(x Either[int, float64], agg string) (string, error) {
+	err = DoWindow[Either[int, float64], string](ctx6, nil, windowStore, wd, fm, td, "", func(x Either[int, float64], agg string) (string, error) {
 		var concat string
 		if agg == "" {
 			concat = fmt.Sprintf("%v", x)
@@ -152,13 +185,13 @@ func TestProjection_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	orderOfEvents = []string{}
-	state3 := &PullPushContextState{
+	state7 := &PullPushContextState{
 		Offset:    nil,
-		PullTopic: "topic-out-4",
-		PushTopic: "topic-out-3",
+		PullTopic: stream4.TopicName(),
+		PushTopic: "",
 	}
-	ctx6 := NewPullOnlyInMemoryContext[string](state3, stream4)
-	err = DoSink[string](ctx6, func(x *Record[string]) error {
+	ctx7 := NewPullOnlyInMemoryContext[string](state7, stream4)
+	err = DoSink[string](ctx7, func(x *Record[string]) error {
 		orderOfEvents = append(orderOfEvents, fmt.Sprintf("record-%s:%s", x.Key, x.Data))
 		return nil
 	})
@@ -176,7 +209,7 @@ func TestProjection_HappyPath(t *testing.T) {
 
 func TestProjection_Recovery(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
-	probabilityOfFailure := 0.05
+	probabilityOfFailure := 0.20
 	recoveryAttempts := uint8(50)
 
 	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTimeFixed(0))
@@ -287,6 +320,13 @@ func TestProjection_Recovery(t *testing.T) {
 			WithMaxRecoveryAttempts(recoveryAttempts).
 			WithAutoSnapshot(false)
 
+	//TODO:
+	// - [ ] ctx.Ack(item) for consistent asynchronous snapshots
+	// - [ ] mkunion generate type registry for parametrised interface types like Record[int] or Record[float64]
+	// - [ ] DoWindow state should catch also last watermark with last offset, so that windowStore keys that have windows closed, can be deleted
+
+	windowStore := NewWindowInMemoryStore[float64]("window-store")
+
 	err = Recovery(
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[int, float64], error) {
@@ -303,7 +343,8 @@ func TestProjection_Recovery(t *testing.T) {
 			wd := &FixedWindow{Width: 200 * time.Millisecond}
 			fm := &Discard{}
 			td := &AtWatermark{}
-			return DoWindow[int, float64](ctx, recovery, wd, fm, td, 0, func(x int, agg float64) (float64, error) {
+			return DoWindow[int, float64](ctx, recovery, windowStore, wd, fm, td, 0, func(x int, agg float64) (float64, error) {
+				time.Sleep(50 * time.Millisecond)
 				return float64(x) + agg, nil
 			})
 		},
@@ -341,44 +382,49 @@ func TestProjection_Recovery(t *testing.T) {
 			return ctx, nil
 		},
 		func(ctx *PushAndPullInMemoryContext[float64, float64]) error {
+			timer := time.NewTimer(100 * time.Millisecond)
+			defer timer.Stop()
 			for {
-				val, err := ctx.PullIn()
-				if err != nil {
-					if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
-						return nil
-					}
-					return fmt.Errorf("projection.DoSink: pull: %w", err)
-				}
-
-				err = MatchDataR1(
-					val,
-					func(x *Record[float64]) error {
-						time.Sleep(50 * time.Millisecond)
-
-						entry := fmt.Sprintf("record-%s:%2f", x.Key, x.Data)
-						if _, ok := orderOfUniquer[entry]; ok {
+				select {
+				case <-timer.C:
+				default:
+					val, err := ctx.PullIn()
+					if err != nil {
+						if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
 							return nil
 						}
-						orderOfUniquer[entry] = struct{}{}
-						orderOfEvents = append(orderOfEvents, entry)
-						return nil
-					},
-					func(x *Watermark[float64]) error {
-						// TODO do snapshot
-						err := recovery.SnapshotFrom(ctx)
-						if err != nil {
-							return fmt.Errorf("projection.DoSink: snapshot: %w", err)
-						}
+						return fmt.Errorf("projection.DoSink: pull: %w", err)
+					}
+					timer.Reset(100 * time.Millisecond)
 
-						if x.EventTime == math.MaxInt64 {
-							return stream.ErrNoMoreNewDataInStream
-						}
+					log.Debugf("projection.DoSink: pull value: %#v", val)
 
-						return nil
-					},
-				)
-				if err != nil {
-					return fmt.Errorf("projection.DoSink: sink: %w", err)
+					err = MatchDataR1(
+						val,
+						func(x *Record[float64]) error {
+							time.Sleep(50 * time.Millisecond)
+
+							entry := fmt.Sprintf("record-%s:%2f", x.Key, x.Data)
+							if _, ok := orderOfUniquer[entry]; ok {
+								return nil
+							}
+							orderOfUniquer[entry] = struct{}{}
+							orderOfEvents = append(orderOfEvents, entry)
+							return nil
+						},
+						func(x *Watermark[float64]) error {
+							// TODO do snapshot
+							err := recovery.SnapshotFrom(ctx)
+							if err != nil {
+								return fmt.Errorf("projection.DoSink: snapshot: %w", err)
+							}
+
+							return nil
+						},
+					)
+					if err != nil {
+						return fmt.Errorf("projection.DoSink: sink: %w", err)
+					}
 				}
 			}
 		},
