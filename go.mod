@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.18.5
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/fatih/structtag v1.2.0
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sashabaranov/go-openai v1.17.5
