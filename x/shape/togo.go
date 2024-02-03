@@ -378,6 +378,39 @@ func ToGoTypeParamsTypes(x Shape) []Shape {
 	)
 }
 
+func ExtractTypeParams(x Shape) []TypeParam {
+	return MatchShapeR1(
+		x,
+		func(x *Any) []TypeParam {
+			return nil
+		},
+		func(x *RefName) []TypeParam {
+			return nil
+		},
+		func(x *PointerLike) []TypeParam {
+			return ExtractTypeParams(x.Type)
+		},
+		func(x *AliasLike) []TypeParam {
+			return x.TypeParams
+		},
+		func(x *PrimitiveLike) []TypeParam {
+			return nil
+		},
+		func(x *ListLike) []TypeParam {
+			return nil
+		},
+		func(x *MapLike) []TypeParam {
+			return nil
+		},
+		func(x *StructLike) []TypeParam {
+			return x.TypeParams
+		},
+		func(x *UnionLike) []TypeParam {
+			return x.TypeParams
+		},
+	)
+}
+
 func ExtractPkgImportNames(x Shape) map[string]string {
 	return MatchShapeR1(
 		x,

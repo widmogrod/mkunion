@@ -464,16 +464,3 @@ func ExtractRefs(x Shape) []*RefName {
 		},
 	)
 }
-
-func ExtractTypeParams(x Shape) []TypeParam {
-	switch x := x.(type) {
-	case *StructLike:
-		return x.TypeParams
-	case *UnionLike:
-		return x.TypeParams
-	case *AliasLike:
-		return x.TypeParams
-	}
-
-	return nil
-}
