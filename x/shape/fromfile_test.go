@@ -446,7 +446,7 @@ func TestFindInstantiationsOf(t *testing.T) {
 	useCases := map[string]struct {
 		ref      *RefName
 		shape    Shape
-		expected []Shape
+		expected []*RefName
 	}{
 		"type A ListOf[string]": {
 			ref: &RefName{
@@ -472,9 +472,16 @@ func TestFindInstantiationsOf(t *testing.T) {
 				},
 				Tags: nil,
 			},
-			expected: []Shape{
-				&RefName{
-					Name: "string",
+			expected: []*RefName{
+				{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "string",
+						},
+					},
 				},
 			},
 		},
@@ -508,8 +515,25 @@ func TestFindInstantiationsOf(t *testing.T) {
 					},
 				},
 			},
-			expected: []Shape{
-				&RefName{
+			expected: []*RefName{
+				{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "string",
+								},
+							},
+						},
+					},
+				},
+				{
 					Name:          "ListOf",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
@@ -518,9 +542,6 @@ func TestFindInstantiationsOf(t *testing.T) {
 							Name: "string",
 						},
 					},
-				},
-				&RefName{
-					Name: "string",
 				},
 			},
 		},
@@ -550,9 +571,16 @@ func TestFindInstantiationsOf(t *testing.T) {
 					},
 				},
 			},
-			expected: []Shape{
-				&RefName{
-					Name: "int",
+			expected: []*RefName{
+				{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "int",
+						},
+					},
 				},
 			},
 		},
@@ -593,9 +621,16 @@ func TestFindInstantiationsOf(t *testing.T) {
 					},
 				},
 			},
-			expected: []Shape{
-				&RefName{
-					Name: "bool",
+			expected: []*RefName{
+				{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "bool",
+						},
+					},
 				},
 			},
 		},
@@ -619,9 +654,16 @@ func TestFindInstantiationsOf(t *testing.T) {
 					},
 				},
 			},
-			expected: []Shape{
-				&RefName{
-					Name: "bool",
+			expected: []*RefName{
+				{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "bool",
+						},
+					},
 				},
 			},
 		},
@@ -646,9 +688,16 @@ func TestFindInstantiationsOf(t *testing.T) {
 					},
 				},
 			},
-			expected: []Shape{
-				&RefName{
-					Name: "bool",
+			expected: []*RefName{
+				{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "bool",
+						},
+					},
 				},
 			},
 		},
@@ -684,9 +733,16 @@ func TestFindInstantiationsOf(t *testing.T) {
 					},
 				},
 			},
-			expected: []Shape{
-				&RefName{
-					Name: "bool",
+			expected: []*RefName{
+				{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "bool",
+						},
+					},
 				},
 			},
 		},
@@ -780,17 +836,24 @@ func TestFindInstantiationsOf(t *testing.T) {
 					},
 				},
 			},
-			expected: []Shape{
-				&RefName{
-					Name: "int",
-				},
-				&RefName{
-					Name:          "ListOf",
+			expected: []*RefName{
+				{
+					Name:          "ListOf2",
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 					Indexed: []Shape{
 						&RefName{
-							Name: "float64",
+							Name: "int",
+						},
+						&RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "float64",
+								},
+							},
 						},
 					},
 				},

@@ -953,9 +953,9 @@ func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
 	return result
 }
 
-func (f *InferredInfo) FindInstantiationsOf(x *RefName) []Shape {
+func (f *InferredInfo) FindInstantiationsOf(x *RefName) []*RefName {
 	// get from all shapes declared in the file
-	var result []Shape
+	var result []*RefName
 	for _, shape := range f.RetrieveShapes() {
 		result = append(result, FindInstantiationsOf(x, shape)...)
 	}
@@ -992,19 +992,17 @@ func IsSameRef(x, y Shape) bool {
 //	type E []*ListOf[bool] is instantiation of ListOf[T] with bool
 //	type F map[string]ListOf[bool] is instantiation of ListOf[T] with bool
 //	type G = ListOf[bool] is instantiation of ListOf[T] with bool
-func FindInstantiationsOf(x *RefName, y Shape) []Shape {
+func FindInstantiationsOf(x *RefName, y Shape) []*RefName {
 	return MatchShapeR1(
 		y,
-		func(z *Any) []Shape {
+		func(z *Any) []*RefName {
 			return nil
 		},
-		func(z *RefName) []Shape {
-			var result []Shape
+		func(z *RefName) []*RefName {
+			var result []*RefName
 
 			if IsSameRef(x, z) {
-				for _, name := range z.Indexed {
-					result = append(result, name)
-				}
+				result = append(result, z)
 
 				for _, name := range z.Indexed {
 					result = append(result, FindInstantiationsOf(x, name)...)
@@ -1013,11 +1011,11 @@ func FindInstantiationsOf(x *RefName, y Shape) []Shape {
 
 			return result
 		},
-		func(z *PointerLike) []Shape {
+		func(z *PointerLike) []*RefName {
 			return FindInstantiationsOf(x, z.Type)
 		},
-		func(z *AliasLike) []Shape {
-			var result []Shape
+		func(z *AliasLike) []*RefName {
+			var result []*RefName
 			// type params can be instantiated with other types
 			for _, param := range z.TypeParams {
 				result = append(result, FindInstantiationsOf(x, param.Type)...)
@@ -1029,20 +1027,20 @@ func FindInstantiationsOf(x *RefName, y Shape) []Shape {
 
 			return filterInstantiationsThatAreTypeParamName(z.TypeParams, result)
 		},
-		func(z *PrimitiveLike) []Shape {
+		func(z *PrimitiveLike) []*RefName {
 			return nil
 		},
-		func(z *ListLike) []Shape {
+		func(z *ListLike) []*RefName {
 			return FindInstantiationsOf(x, z.Element)
 		},
-		func(z *MapLike) []Shape {
-			var result []Shape
+		func(z *MapLike) []*RefName {
+			var result []*RefName
 			result = append(result, FindInstantiationsOf(x, z.Key)...)
 			result = append(result, FindInstantiationsOf(x, z.Val)...)
 			return result
 		},
-		func(z *StructLike) []Shape {
-			var result []Shape
+		func(z *StructLike) []*RefName {
+			var result []*RefName
 
 			for _, param := range z.TypeParams {
 				result = append(result, FindInstantiationsOf(x, param.Type)...)
@@ -1054,8 +1052,8 @@ func FindInstantiationsOf(x *RefName, y Shape) []Shape {
 
 			return filterInstantiationsThatAreTypeParamName(z.TypeParams, result)
 		},
-		func(z *UnionLike) []Shape {
-			var result []Shape
+		func(z *UnionLike) []*RefName {
+			var result []*RefName
 
 			for _, param := range z.TypeParams {
 				result = append(result, FindInstantiationsOf(x, param.Type)...)
@@ -1070,7 +1068,7 @@ func FindInstantiationsOf(x *RefName, y Shape) []Shape {
 	)
 }
 
-func filterInstantiationsThatAreTypeParamName(params []TypeParam, xs []Shape) []Shape {
+func filterInstantiationsThatAreTypeParamName(params []TypeParam, xs []*RefName) []*RefName {
 	if len(params) == 0 {
 		return xs
 	}
@@ -1079,12 +1077,12 @@ func filterInstantiationsThatAreTypeParamName(params []TypeParam, xs []Shape) []
 		return xs
 	}
 
-	var result []Shape
+	var result []*RefName
 
 	for _, x := range xs {
 		found := false
 		for _, param := range params {
-			res := isParamNameMatchingShape(param, x)
+			res := isIndexedByTypeParam(param, x)
 			if res {
 				found = true
 			}
@@ -1095,6 +1093,16 @@ func filterInstantiationsThatAreTypeParamName(params []TypeParam, xs []Shape) []
 		}
 	}
 	return result
+}
+
+func isIndexedByTypeParam(param TypeParam, x *RefName) bool {
+	for _, indexedRef := range x.Indexed {
+		if isParamNameMatchingShape(param, indexedRef) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func isParamNameMatchingShape(param TypeParam, x Shape) bool {
