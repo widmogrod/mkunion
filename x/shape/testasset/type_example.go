@@ -54,3 +54,21 @@ type ListOf2[T1, T2 any] struct {
 	Data   T1
 	ListOf ListOf[T1] `json:"list_of"`
 }
+
+func init() {
+	_ = &ListOf2[*float64, *ListOf2[*A2, *time.Ticker]]{}
+	_ = func(_ *ListOf2[*B2, time.Month]) {}
+}
+
+type _someInterface interface {
+	Do(*ListOf2[*O, time.Location])
+}
+type _someStruct struct {
+	B *ListOf2[*K, time.Weekday]
+}
+
+func (*_someStruct) Exec(*ListOf2[*L, time.Location]) {}
+
+var (
+	_ = &ListOf2[ListOf[*bool], *ListOf2[Example, *time.Time]]{}
+)

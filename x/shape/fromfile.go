@@ -953,6 +953,161 @@ func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
 	return result
 }
 
+func (f *InferredInfo) FindInstantiationsOf(x *RefName) []Shape {
+	// get from all shapes declared in the file
+	var result []Shape
+	for _, shape := range f.RetrieveShapes() {
+		result = append(result, FindInstantiationsOf(x, shape)...)
+	}
+	return result
+}
+
+func IsSameRef(x, y Shape) bool {
+	if x == nil || y == nil {
+		return false
+	}
+
+	xr, ok := x.(*RefName)
+	if !ok {
+		return false
+	}
+
+	yr, ok := y.(*RefName)
+	if !ok {
+		return false
+	}
+
+	return xr.Name == yr.Name &&
+		xr.PkgName == yr.PkgName &&
+		xr.PkgImportName == yr.PkgImportName
+}
+
+// FindInstantiationsOf returns all instantiations of x in y
+// for example:
+//
+//	type A ListOf[string] is instantiation of ListOf[T] with string
+//	type B ListOf[ListOf[string]] is instantiation of ListOf[T] two times with string and ListOf[string]
+//	type C struct { A ListOf[int] } is instantiation of ListOf[T] with int
+//	type D [A ListOf[bool] ListOf[A] is instantiation of ListOf[T] with bool, and not A!
+//	type E []*ListOf[bool] is instantiation of ListOf[T] with bool
+//	type F map[string]ListOf[bool] is instantiation of ListOf[T] with bool
+//	type G = ListOf[bool] is instantiation of ListOf[T] with bool
+func FindInstantiationsOf(x *RefName, y Shape) []Shape {
+	return MatchShapeR1(
+		y,
+		func(z *Any) []Shape {
+			return nil
+		},
+		func(z *RefName) []Shape {
+			var result []Shape
+
+			if IsSameRef(x, z) {
+				for _, name := range z.Indexed {
+					result = append(result, name)
+				}
+
+				for _, name := range z.Indexed {
+					result = append(result, FindInstantiationsOf(x, name)...)
+				}
+			}
+
+			return result
+		},
+		func(z *PointerLike) []Shape {
+			return FindInstantiationsOf(x, z.Type)
+		},
+		func(z *AliasLike) []Shape {
+			var result []Shape
+			// type params can be instantiated with other types
+			for _, param := range z.TypeParams {
+				result = append(result, FindInstantiationsOf(x, param.Type)...)
+			}
+
+			// element of type can be instantiated with other types like
+			//  type A ListOf[string] is instantiation of ListOf[T] with string
+			result = append(result, FindInstantiationsOf(x, z.Type)...)
+
+			return filterInstantiationsThatAreTypeParamName(z.TypeParams, result)
+		},
+		func(z *PrimitiveLike) []Shape {
+			return nil
+		},
+		func(z *ListLike) []Shape {
+			return FindInstantiationsOf(x, z.Element)
+		},
+		func(z *MapLike) []Shape {
+			var result []Shape
+			result = append(result, FindInstantiationsOf(x, z.Key)...)
+			result = append(result, FindInstantiationsOf(x, z.Val)...)
+			return result
+		},
+		func(z *StructLike) []Shape {
+			var result []Shape
+
+			for _, param := range z.TypeParams {
+				result = append(result, FindInstantiationsOf(x, param.Type)...)
+			}
+
+			for _, field := range z.Fields {
+				result = append(result, FindInstantiationsOf(x, field.Type)...)
+			}
+
+			return filterInstantiationsThatAreTypeParamName(z.TypeParams, result)
+		},
+		func(z *UnionLike) []Shape {
+			var result []Shape
+
+			for _, param := range z.TypeParams {
+				result = append(result, FindInstantiationsOf(x, param.Type)...)
+			}
+
+			for _, variant := range z.Variant {
+				result = append(result, FindInstantiationsOf(x, variant)...)
+			}
+
+			return filterInstantiationsThatAreTypeParamName(z.TypeParams, result)
+		},
+	)
+}
+
+func filterInstantiationsThatAreTypeParamName(params []TypeParam, xs []Shape) []Shape {
+	if len(params) == 0 {
+		return xs
+	}
+
+	if len(xs) == 0 {
+		return xs
+	}
+
+	var result []Shape
+
+	for _, x := range xs {
+		found := false
+		for _, param := range params {
+			res := isParamNameMatchingShape(param, x)
+			if res {
+				found = true
+			}
+		}
+
+		if !found {
+			result = append(result, x)
+		}
+	}
+	return result
+}
+
+func isParamNameMatchingShape(param TypeParam, x Shape) bool {
+	y, ok := x.(*RefName)
+	if !ok {
+		return false
+	}
+
+	return y.Name == param.Name &&
+		y.PkgName == "" &&
+		y.PkgImportName == ""
+}
+
 func tryGetArrayLen(expr ast.Expr) *int {
 	if expr == nil {
 		return nil

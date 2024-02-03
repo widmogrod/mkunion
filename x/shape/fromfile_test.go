@@ -381,4 +381,427 @@ func TestInferFromFile(t *testing.T) {
 	if diff := cmp.Diff(expected3, alias); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
+
+	instantiations := inferred.FindInstantiationsOf(&RefName{
+		Name:          "ListOf2",
+		PkgName:       "testasset",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+	})
+	expected4 := []*RefName{
+		&RefName{
+			Name:          "ListOf",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&RefName{
+					Name: "any",
+				},
+			},
+		},
+
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "any",
+						},
+					},
+				},
+				&PointerLike{
+					Type: &RefName{
+						Name:          "ListOf2",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+						Indexed: []Shape{
+							&RefName{
+								Name: "int64",
+							},
+							&PointerLike{
+								Type: &RefName{
+									Name:          "Duration",
+									PkgName:       "time",
+									PkgImportName: "time",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(expected4, instantiations); diff != "" {
+		//t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestFindInstantiationsOf(t *testing.T) {
+	useCases := map[string]struct {
+		ref      *RefName
+		shape    Shape
+		expected []Shape
+	}{
+		"type A ListOf[string]": {
+			ref: &RefName{
+				Name:          "ListOf",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &AliasLike{
+				Name:          "A",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				TypeParams:    nil,
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "string",
+						},
+					},
+				},
+				Tags: nil,
+			},
+			expected: []Shape{
+				&RefName{
+					Name: "string",
+				},
+			},
+		},
+		"type B ListOf[ListOf[string]]": {
+			ref: &RefName{
+				Name:          "ListOf",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &AliasLike{
+				Name:          "B",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				TypeParams:    nil,
+				IsAlias:       false,
+				Type: &RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "string",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []Shape{
+				&RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "string",
+						},
+					},
+				},
+				&RefName{
+					Name: "string",
+				},
+			},
+		},
+		"type C struct { A ListOf[int] }": {
+			ref: &RefName{
+				Name:          "ListOf",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &StructLike{
+				Name:          "C",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				Fields: []*FieldLike{
+					{
+						Name: "A",
+						Type: &RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "int",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []Shape{
+				&RefName{
+					Name: "int",
+				},
+			},
+		},
+		"type D [A ListOf[bool] ListOf[A]": {
+			ref: &RefName{
+				Name:          "ListOf",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &AliasLike{
+				Name:          "D",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				TypeParams: []TypeParam{
+					{
+						Name: "A",
+						Type: &RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "bool",
+								},
+							},
+						},
+					},
+				},
+				IsAlias: false,
+				Type: &RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "A",
+						},
+					},
+				},
+			},
+			expected: []Shape{
+				&RefName{
+					Name: "bool",
+				},
+			},
+		},
+		"type E []*ListOf[bool]": {
+			ref: &RefName{
+				Name:          "ListOf",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &ListLike{
+				Element: &PointerLike{
+					Type: &RefName{
+						Name:          "ListOf",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+						Indexed: []Shape{
+							&RefName{
+								Name: "bool",
+							},
+						},
+					},
+				},
+			},
+			expected: []Shape{
+				&RefName{
+					Name: "bool",
+				},
+			},
+		},
+		"type F map[string]ListOf[bool]": {
+			ref: &RefName{
+				Name:          "ListOf",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &MapLike{
+				Key: &RefName{
+					Name: "string",
+				},
+				Val: &RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "bool",
+						},
+					},
+				},
+			},
+			expected: []Shape{
+				&RefName{
+					Name: "bool",
+				},
+			},
+		},
+		"type Either[T1 ini, T2 ListOf[bool]] interface{}": {
+			ref: &RefName{
+				Name:          "ListOf",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &UnionLike{
+				Name:          "Either",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				TypeParams: []TypeParam{
+					{
+						Name: "T1",
+						Type: &RefName{
+							Name: "ini",
+						},
+					},
+					{
+						Name: "T2",
+						Type: &RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "bool",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []Shape{
+				&RefName{
+					Name: "bool",
+				},
+			},
+		},
+		"type G[T1 int, T2 ListOf[float64]] ListOf2[T1, T2]": {
+			ref: &RefName{
+				Name:          "ListOf2",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &AliasLike{
+				Name:          "G",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				TypeParams: []TypeParam{
+					{
+						Name: "T1",
+						Type: &RefName{
+							Name: "int",
+						},
+					},
+					{
+						Name: "T2",
+						Type: &RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "float64",
+								},
+							},
+						},
+					},
+				},
+				IsAlias: false,
+				Type: &RefName{
+					Name:          "ListOf2",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "T1",
+						},
+						&RefName{
+							Name: "T2",
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+		"type G[T1, T2 any] ListOf2[int, ListOf[float64]]": {
+			ref: &RefName{
+				Name:          "ListOf2",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			},
+			shape: &AliasLike{
+				Name:          "G",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				TypeParams: []TypeParam{
+					{
+						Name: "T1",
+						Type: &Any{},
+					},
+					{
+						Name: "T2",
+						Type: &Any{},
+					},
+				},
+				IsAlias: false,
+				Type: &RefName{
+					Name:          "ListOf2",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "int",
+						},
+						&RefName{
+							Name:          "ListOf",
+							PkgName:       "testasset",
+							PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+							Indexed: []Shape{
+								&RefName{
+									Name: "float64",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []Shape{
+				&RefName{
+					Name: "int",
+				},
+				&RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&RefName{
+							Name: "float64",
+						},
+					},
+				},
+			},
+		},
+	}
+	for name, uc := range useCases {
+		t.Run(name, func(t *testing.T) {
+			if diff := cmp.Diff(uc.expected, FindInstantiationsOf(uc.ref, uc.shape)); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
 }
