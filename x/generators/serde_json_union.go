@@ -246,7 +246,10 @@ func (g *SerdeJSONUnion) constructionf(x shape.Shape, template string) string {
 	}
 
 	typeName += "["
-	for _, t := range typeParams {
+	for i, t := range typeParams {
+		if i > 0 {
+			typeName += ", "
+		}
 		typeName += fmt.Sprintf("%s %s", t.Name, shape.ToGoTypeName(t.Type))
 	}
 	typeName += "]"
