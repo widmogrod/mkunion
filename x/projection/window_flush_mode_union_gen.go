@@ -70,8 +70,8 @@ func MatchWindowFlushModeR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.WindowFlushMode", WindowFlushModeFromJSON, WindowFlushModeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Discard", DiscardFromJSON, DiscardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.WindowFlushMode", WindowFlushModeFromJSON, WindowFlushModeToJSON)
 }
 
 type WindowFlushModeUnionJSON struct {
@@ -86,11 +86,10 @@ func WindowFlushModeFromJSON(x []byte) (WindowFlushMode, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data WindowFlushModeUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -101,22 +100,20 @@ func WindowFlushModeFromJSON(x []byte) (WindowFlushMode, error) {
 	if data.Discard != nil {
 		return DiscardFromJSON(data.Discard)
 	}
-
-	return nil, fmt.Errorf("projection.WindowFlushMode: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: unknown type: %s", data.Type)
 }
 
 func WindowFlushModeToJSON(x WindowFlushMode) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchWindowFlushModeR2(
 		x,
-		func(x *Discard) ([]byte, error) {
-			body, err := DiscardToJSON(x)
+		func(y *Discard) ([]byte, error) {
+			body, err := DiscardToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.WindowFlushModeToJSON: %w", err)
 			}
-
 			return json.Marshal(WindowFlushModeUnionJSON{
 				Type:    "projection.Discard",
 				Discard: body,
@@ -129,9 +126,8 @@ func DiscardFromJSON(x []byte) (*Discard, error) {
 	result := new(Discard)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.DiscardFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

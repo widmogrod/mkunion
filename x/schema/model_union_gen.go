@@ -160,14 +160,14 @@ func MatchSchemaR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Schema", SchemaFromJSON, SchemaToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.None", NoneFromJSON, NoneToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Bool", BoolFromJSON, BoolToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Number", NumberFromJSON, NumberToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.String", StringFromJSON, StringToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Binary", BinaryFromJSON, BinaryToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Bool", BoolFromJSON, BoolToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.List", ListFromJSON, ListToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Map", MapFromJSON, MapToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.None", NoneFromJSON, NoneToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Number", NumberFromJSON, NumberToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Schema", SchemaFromJSON, SchemaToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.String", StringFromJSON, StringToJSON)
 }
 
 type SchemaUnionJSON struct {
@@ -188,11 +188,10 @@ func SchemaFromJSON(x []byte) (Schema, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data SchemaUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.SchemaFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -227,88 +226,80 @@ func SchemaFromJSON(x []byte) (Schema, error) {
 	} else if data.Map != nil {
 		return MapFromJSON(data.Map)
 	}
-
-	return nil, fmt.Errorf("schema.Schema: unknown type %s", data.Type)
+	return nil, fmt.Errorf("schema.SchemaFromJSON: unknown type: %s", data.Type)
 }
 
 func SchemaToJSON(x Schema) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchSchemaR2(
 		x,
-		func(x *None) ([]byte, error) {
-			body, err := NoneToJSON(x)
+		func(y *None) ([]byte, error) {
+			body, err := NoneToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
 			}
-
 			return json.Marshal(SchemaUnionJSON{
 				Type: "schema.None",
 				None: body,
 			})
 		},
-		func(x *Bool) ([]byte, error) {
-			body, err := BoolToJSON(x)
+		func(y *Bool) ([]byte, error) {
+			body, err := BoolToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
 			}
-
 			return json.Marshal(SchemaUnionJSON{
 				Type: "schema.Bool",
 				Bool: body,
 			})
 		},
-		func(x *Number) ([]byte, error) {
-			body, err := NumberToJSON(x)
+		func(y *Number) ([]byte, error) {
+			body, err := NumberToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
 			}
-
 			return json.Marshal(SchemaUnionJSON{
 				Type:   "schema.Number",
 				Number: body,
 			})
 		},
-		func(x *String) ([]byte, error) {
-			body, err := StringToJSON(x)
+		func(y *String) ([]byte, error) {
+			body, err := StringToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
 			}
-
 			return json.Marshal(SchemaUnionJSON{
 				Type:   "schema.String",
 				String: body,
 			})
 		},
-		func(x *Binary) ([]byte, error) {
-			body, err := BinaryToJSON(x)
+		func(y *Binary) ([]byte, error) {
+			body, err := BinaryToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
 			}
-
 			return json.Marshal(SchemaUnionJSON{
 				Type:   "schema.Binary",
 				Binary: body,
 			})
 		},
-		func(x *List) ([]byte, error) {
-			body, err := ListToJSON(x)
+		func(y *List) ([]byte, error) {
+			body, err := ListToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
 			}
-
 			return json.Marshal(SchemaUnionJSON{
 				Type: "schema.List",
 				List: body,
 			})
 		},
-		func(x *Map) ([]byte, error) {
-			body, err := MapToJSON(x)
+		func(y *Map) ([]byte, error) {
+			body, err := MapToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
 			}
-
 			return json.Marshal(SchemaUnionJSON{
 				Type: "schema.Map",
 				Map:  body,
@@ -321,9 +312,8 @@ func NoneFromJSON(x []byte) (*None, error) {
 	result := new(None)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.NoneFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -373,9 +363,8 @@ func BoolFromJSON(x []byte) (*Bool, error) {
 	result := new(Bool)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.BoolFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -434,9 +423,8 @@ func NumberFromJSON(x []byte) (*Number, error) {
 	result := new(Number)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.NumberFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -495,9 +483,8 @@ func StringFromJSON(x []byte) (*String, error) {
 	result := new(String)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.StringFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -556,9 +543,8 @@ func BinaryFromJSON(x []byte) (*Binary, error) {
 	result := new(Binary)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.BinaryFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -617,9 +603,8 @@ func ListFromJSON(x []byte) (*List, error) {
 	result := new(List)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.ListFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -708,9 +693,8 @@ func MapFromJSON(x []byte) (*Map, error) {
 	result := new(Map)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.MapFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

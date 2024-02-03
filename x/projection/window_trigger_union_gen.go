@@ -72,8 +72,8 @@ func MatchTriggerDescriptionR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.TriggerDescription", TriggerDescriptionFromJSON, TriggerDescriptionToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.AtWatermark", AtWatermarkFromJSON, AtWatermarkToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.TriggerDescription", TriggerDescriptionFromJSON, TriggerDescriptionToJSON)
 }
 
 type TriggerDescriptionUnionJSON struct {
@@ -88,11 +88,10 @@ func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data TriggerDescriptionUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -103,22 +102,20 @@ func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
 	if data.AtWatermark != nil {
 		return AtWatermarkFromJSON(data.AtWatermark)
 	}
-
-	return nil, fmt.Errorf("projection.TriggerDescription: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: unknown type: %s", data.Type)
 }
 
 func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchTriggerDescriptionR2(
 		x,
-		func(x *AtWatermark) ([]byte, error) {
-			body, err := AtWatermarkToJSON(x)
+		func(y *AtWatermark) ([]byte, error) {
+			body, err := AtWatermarkToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerDescriptionUnionJSON{
 				Type:        "projection.AtWatermark",
 				AtWatermark: body,
@@ -131,9 +128,8 @@ func AtWatermarkFromJSON(x []byte) (*AtWatermark, error) {
 	result := new(AtWatermark)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AtWatermarkFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

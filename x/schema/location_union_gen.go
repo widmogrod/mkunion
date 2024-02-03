@@ -101,9 +101,9 @@ func MatchLocationR0(
 }
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.Location", LocationFromJSON, LocationToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationAnything", LocationAnythingFromJSON, LocationAnythingToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationField", LocationFieldFromJSON, LocationFieldToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationIndex", LocationIndexFromJSON, LocationIndexToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/schema.LocationAnything", LocationAnythingFromJSON, LocationAnythingToJSON)
 }
 
 type LocationUnionJSON struct {
@@ -120,11 +120,10 @@ func LocationFromJSON(x []byte) (Location, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data LocationUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.LocationFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -143,44 +142,40 @@ func LocationFromJSON(x []byte) (Location, error) {
 	} else if data.LocationAnything != nil {
 		return LocationAnythingFromJSON(data.LocationAnything)
 	}
-
-	return nil, fmt.Errorf("schema.Location: unknown type %s", data.Type)
+	return nil, fmt.Errorf("schema.LocationFromJSON: unknown type: %s", data.Type)
 }
 
 func LocationToJSON(x Location) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchLocationR2(
 		x,
-		func(x *LocationField) ([]byte, error) {
-			body, err := LocationFieldToJSON(x)
+		func(y *LocationField) ([]byte, error) {
+			body, err := LocationFieldToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.LocationToJSON: %w", err)
 			}
-
 			return json.Marshal(LocationUnionJSON{
 				Type:          "schema.LocationField",
 				LocationField: body,
 			})
 		},
-		func(x *LocationIndex) ([]byte, error) {
-			body, err := LocationIndexToJSON(x)
+		func(y *LocationIndex) ([]byte, error) {
+			body, err := LocationIndexToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.LocationToJSON: %w", err)
 			}
-
 			return json.Marshal(LocationUnionJSON{
 				Type:          "schema.LocationIndex",
 				LocationIndex: body,
 			})
 		},
-		func(x *LocationAnything) ([]byte, error) {
-			body, err := LocationAnythingToJSON(x)
+		func(y *LocationAnything) ([]byte, error) {
+			body, err := LocationAnythingToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("schema.LocationToJSON: %w", err)
 			}
-
 			return json.Marshal(LocationUnionJSON{
 				Type:             "schema.LocationAnything",
 				LocationAnything: body,
@@ -193,9 +188,8 @@ func LocationFieldFromJSON(x []byte) (*LocationField, error) {
 	result := new(LocationField)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.LocationFieldFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -272,9 +266,8 @@ func LocationIndexFromJSON(x []byte) (*LocationIndex, error) {
 	result := new(LocationIndex)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.LocationIndexFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -351,9 +344,8 @@ func LocationAnythingFromJSON(x []byte) (*LocationAnything, error) {
 	result := new(LocationAnything)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("schema.LocationAnythingFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

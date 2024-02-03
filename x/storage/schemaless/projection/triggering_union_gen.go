@@ -137,12 +137,12 @@ func MatchTriggerDescriptionR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.TriggerDescription", TriggerDescriptionFromJSON, TriggerDescriptionToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtPeriod", AtPeriodFromJSON, AtPeriodToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWindowItemSize", AtWindowItemSizeFromJSON, AtWindowItemSizeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWatermark", AtWatermarkFromJSON, AtWatermarkToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AnyOf", AnyOfFromJSON, AnyOfToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AllOf", AllOfFromJSON, AllOfToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AnyOf", AnyOfFromJSON, AnyOfToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtPeriod", AtPeriodFromJSON, AtPeriodToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWatermark", AtWatermarkFromJSON, AtWatermarkToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWindowItemSize", AtWindowItemSizeFromJSON, AtWindowItemSizeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.TriggerDescription", TriggerDescriptionFromJSON, TriggerDescriptionToJSON)
 }
 
 type TriggerDescriptionUnionJSON struct {
@@ -161,11 +161,10 @@ func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data TriggerDescriptionUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -192,66 +191,60 @@ func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
 	} else if data.AllOf != nil {
 		return AllOfFromJSON(data.AllOf)
 	}
-
-	return nil, fmt.Errorf("projection.TriggerDescription: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: unknown type: %s", data.Type)
 }
 
 func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchTriggerDescriptionR2(
 		x,
-		func(x *AtPeriod) ([]byte, error) {
-			body, err := AtPeriodToJSON(x)
+		func(y *AtPeriod) ([]byte, error) {
+			body, err := AtPeriodToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerDescriptionUnionJSON{
 				Type:     "projection.AtPeriod",
 				AtPeriod: body,
 			})
 		},
-		func(x *AtWindowItemSize) ([]byte, error) {
-			body, err := AtWindowItemSizeToJSON(x)
+		func(y *AtWindowItemSize) ([]byte, error) {
+			body, err := AtWindowItemSizeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerDescriptionUnionJSON{
 				Type:             "projection.AtWindowItemSize",
 				AtWindowItemSize: body,
 			})
 		},
-		func(x *AtWatermark) ([]byte, error) {
-			body, err := AtWatermarkToJSON(x)
+		func(y *AtWatermark) ([]byte, error) {
+			body, err := AtWatermarkToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerDescriptionUnionJSON{
 				Type:        "projection.AtWatermark",
 				AtWatermark: body,
 			})
 		},
-		func(x *AnyOf) ([]byte, error) {
-			body, err := AnyOfToJSON(x)
+		func(y *AnyOf) ([]byte, error) {
+			body, err := AnyOfToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerDescriptionUnionJSON{
 				Type:  "projection.AnyOf",
 				AnyOf: body,
 			})
 		},
-		func(x *AllOf) ([]byte, error) {
-			body, err := AllOfToJSON(x)
+		func(y *AllOf) ([]byte, error) {
+			body, err := AllOfToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerDescriptionUnionJSON{
 				Type:  "projection.AllOf",
 				AllOf: body,
@@ -264,9 +257,8 @@ func AtPeriodFromJSON(x []byte) (*AtPeriod, error) {
 	result := new(AtPeriod)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AtPeriodFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -342,9 +334,8 @@ func AtWindowItemSizeFromJSON(x []byte) (*AtWindowItemSize, error) {
 	result := new(AtWindowItemSize)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AtWindowItemSizeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -421,9 +412,8 @@ func AtWatermarkFromJSON(x []byte) (*AtWatermark, error) {
 	result := new(AtWatermark)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AtWatermarkFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -500,9 +490,8 @@ func AnyOfFromJSON(x []byte) (*AnyOf, error) {
 	result := new(AnyOf)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AnyOfFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -609,9 +598,8 @@ func AllOfFromJSON(x []byte) (*AllOf, error) {
 	result := new(AllOf)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AllOfFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -809,10 +797,10 @@ func MatchTriggerTypeR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.TriggerType", TriggerTypeFromJSON, TriggerTypeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtPeriod1", AtPeriod1FromJSON, AtPeriod1ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWindowItemSize1", AtWindowItemSize1FromJSON, AtWindowItemSize1ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWatermark1", AtWatermark1FromJSON, AtWatermark1ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AtWindowItemSize1", AtWindowItemSize1FromJSON, AtWindowItemSize1ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.TriggerType", TriggerTypeFromJSON, TriggerTypeToJSON)
 }
 
 type TriggerTypeUnionJSON struct {
@@ -829,11 +817,10 @@ func TriggerTypeFromJSON(x []byte) (TriggerType, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data TriggerTypeUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.TriggerTypeFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -852,44 +839,40 @@ func TriggerTypeFromJSON(x []byte) (TriggerType, error) {
 	} else if data.AtWatermark1 != nil {
 		return AtWatermark1FromJSON(data.AtWatermark1)
 	}
-
-	return nil, fmt.Errorf("projection.TriggerType: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.TriggerTypeFromJSON: unknown type: %s", data.Type)
 }
 
 func TriggerTypeToJSON(x TriggerType) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchTriggerTypeR2(
 		x,
-		func(x *AtPeriod1) ([]byte, error) {
-			body, err := AtPeriod1ToJSON(x)
+		func(y *AtPeriod1) ([]byte, error) {
+			body, err := AtPeriod1ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerTypeToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerTypeUnionJSON{
 				Type:      "projection.AtPeriod1",
 				AtPeriod1: body,
 			})
 		},
-		func(x *AtWindowItemSize1) ([]byte, error) {
-			body, err := AtWindowItemSize1ToJSON(x)
+		func(y *AtWindowItemSize1) ([]byte, error) {
+			body, err := AtWindowItemSize1ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerTypeToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerTypeUnionJSON{
 				Type:              "projection.AtWindowItemSize1",
 				AtWindowItemSize1: body,
 			})
 		},
-		func(x *AtWatermark1) ([]byte, error) {
-			body, err := AtWatermark1ToJSON(x)
+		func(y *AtWatermark1) ([]byte, error) {
+			body, err := AtWatermark1ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.TriggerTypeToJSON: %w", err)
 			}
-
 			return json.Marshal(TriggerTypeUnionJSON{
 				Type:         "projection.AtWatermark1",
 				AtWatermark1: body,
@@ -902,9 +885,8 @@ func AtPeriod1FromJSON(x []byte) (*AtPeriod1, error) {
 	result := new(AtPeriod1)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AtPeriod1FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -921,9 +903,8 @@ func AtWindowItemSize1FromJSON(x []byte) (*AtWindowItemSize1, error) {
 	result := new(AtWindowItemSize1)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AtWindowItemSize1FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -940,9 +921,8 @@ func AtWatermark1FromJSON(x []byte) (*AtWatermark1, error) {
 	result := new(AtWatermark1)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AtWatermark1FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1050,10 +1030,10 @@ func MatchWindowFlushModeR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.WindowFlushMode", WindowFlushModeFromJSON, WindowFlushModeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.Accumulate", AccumulateFromJSON, AccumulateToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.Discard", DiscardFromJSON, DiscardToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.AccumulatingAndRetracting", AccumulatingAndRetractingFromJSON, AccumulatingAndRetractingToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.Discard", DiscardFromJSON, DiscardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.WindowFlushMode", WindowFlushModeFromJSON, WindowFlushModeToJSON)
 }
 
 type WindowFlushModeUnionJSON struct {
@@ -1070,11 +1050,10 @@ func WindowFlushModeFromJSON(x []byte) (WindowFlushMode, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data WindowFlushModeUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -1093,44 +1072,40 @@ func WindowFlushModeFromJSON(x []byte) (WindowFlushMode, error) {
 	} else if data.AccumulatingAndRetracting != nil {
 		return AccumulatingAndRetractingFromJSON(data.AccumulatingAndRetracting)
 	}
-
-	return nil, fmt.Errorf("projection.WindowFlushMode: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: unknown type: %s", data.Type)
 }
 
 func WindowFlushModeToJSON(x WindowFlushMode) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchWindowFlushModeR2(
 		x,
-		func(x *Accumulate) ([]byte, error) {
-			body, err := AccumulateToJSON(x)
+		func(y *Accumulate) ([]byte, error) {
+			body, err := AccumulateToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.WindowFlushModeToJSON: %w", err)
 			}
-
 			return json.Marshal(WindowFlushModeUnionJSON{
 				Type:       "projection.Accumulate",
 				Accumulate: body,
 			})
 		},
-		func(x *Discard) ([]byte, error) {
-			body, err := DiscardToJSON(x)
+		func(y *Discard) ([]byte, error) {
+			body, err := DiscardToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.WindowFlushModeToJSON: %w", err)
 			}
-
 			return json.Marshal(WindowFlushModeUnionJSON{
 				Type:    "projection.Discard",
 				Discard: body,
 			})
 		},
-		func(x *AccumulatingAndRetracting) ([]byte, error) {
-			body, err := AccumulatingAndRetractingToJSON(x)
+		func(y *AccumulatingAndRetracting) ([]byte, error) {
+			body, err := AccumulatingAndRetractingToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.WindowFlushModeToJSON: %w", err)
 			}
-
 			return json.Marshal(WindowFlushModeUnionJSON{
 				Type:                      "projection.AccumulatingAndRetracting",
 				AccumulatingAndRetracting: body,
@@ -1143,9 +1118,8 @@ func AccumulateFromJSON(x []byte) (*Accumulate, error) {
 	result := new(Accumulate)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AccumulateFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1221,9 +1195,8 @@ func DiscardFromJSON(x []byte) (*Discard, error) {
 	result := new(Discard)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.DiscardFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1273,9 +1246,8 @@ func AccumulatingAndRetractingFromJSON(x []byte) (*AccumulatingAndRetracting, er
 	result := new(AccumulatingAndRetracting)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.AccumulatingAndRetractingFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

@@ -85,9 +85,9 @@ func MatchPullCMDR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/stream.PullCMD", PullCMDFromJSON, PullCMDToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/stream.FromBeginning", FromBeginningFromJSON, FromBeginningToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/stream.FromOffset", FromOffsetFromJSON, FromOffsetToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/stream.PullCMD", PullCMDFromJSON, PullCMDToJSON)
 }
 
 type PullCMDUnionJSON struct {
@@ -103,11 +103,10 @@ func PullCMDFromJSON(x []byte) (PullCMD, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data PullCMDUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("stream.PullCMDFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -122,33 +121,30 @@ func PullCMDFromJSON(x []byte) (PullCMD, error) {
 	} else if data.FromOffset != nil {
 		return FromOffsetFromJSON(data.FromOffset)
 	}
-
-	return nil, fmt.Errorf("stream.PullCMD: unknown type %s", data.Type)
+	return nil, fmt.Errorf("stream.PullCMDFromJSON: unknown type: %s", data.Type)
 }
 
 func PullCMDToJSON(x PullCMD) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchPullCMDR2(
 		x,
-		func(x *FromBeginning) ([]byte, error) {
-			body, err := FromBeginningToJSON(x)
+		func(y *FromBeginning) ([]byte, error) {
+			body, err := FromBeginningToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("stream.PullCMDToJSON: %w", err)
 			}
-
 			return json.Marshal(PullCMDUnionJSON{
 				Type:          "stream.FromBeginning",
 				FromBeginning: body,
 			})
 		},
-		func(x *FromOffset) ([]byte, error) {
-			body, err := FromOffsetToJSON(x)
+		func(y *FromOffset) ([]byte, error) {
+			body, err := FromOffsetToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("stream.PullCMDToJSON: %w", err)
 			}
-
 			return json.Marshal(PullCMDUnionJSON{
 				Type:       "stream.FromOffset",
 				FromOffset: body,
@@ -161,9 +157,8 @@ func FromBeginningFromJSON(x []byte) (*FromBeginning, error) {
 	result := new(FromBeginning)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("stream.FromBeginningFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -239,9 +234,8 @@ func FromOffsetFromJSON(x []byte) (*FromOffset, error) {
 	result := new(FromOffset)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("stream.FromOffsetFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

@@ -85,9 +85,9 @@ func MatchSearchCMDR0(
 	}
 }
 func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/search.Fulltext", FulltextFromJSON, FulltextToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/search.SearchCMD", SearchCMDFromJSON, SearchCMDToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/search.Term", TermFromJSON, TermToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/search.Fulltext", FulltextFromJSON, FulltextToJSON)
 }
 
 type SearchCMDUnionJSON struct {
@@ -103,11 +103,10 @@ func SearchCMDFromJSON(x []byte) (SearchCMD, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data SearchCMDUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("search.SearchCMDFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -122,33 +121,30 @@ func SearchCMDFromJSON(x []byte) (SearchCMD, error) {
 	} else if data.Fulltext != nil {
 		return FulltextFromJSON(data.Fulltext)
 	}
-
-	return nil, fmt.Errorf("search.SearchCMD: unknown type %s", data.Type)
+	return nil, fmt.Errorf("search.SearchCMDFromJSON: unknown type: %s", data.Type)
 }
 
 func SearchCMDToJSON(x SearchCMD) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchSearchCMDR2(
 		x,
-		func(x *Term) ([]byte, error) {
-			body, err := TermToJSON(x)
+		func(y *Term) ([]byte, error) {
+			body, err := TermToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("search.SearchCMDToJSON: %w", err)
 			}
-
 			return json.Marshal(SearchCMDUnionJSON{
 				Type: "search.Term",
 				Term: body,
 			})
 		},
-		func(x *Fulltext) ([]byte, error) {
-			body, err := FulltextToJSON(x)
+		func(y *Fulltext) ([]byte, error) {
+			body, err := FulltextToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("search.SearchCMDToJSON: %w", err)
 			}
-
 			return json.Marshal(SearchCMDUnionJSON{
 				Type:     "search.Fulltext",
 				Fulltext: body,
@@ -161,9 +157,8 @@ func TermFromJSON(x []byte) (*Term, error) {
 	result := new(Term)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("search.TermFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -240,9 +235,8 @@ func FulltextFromJSON(x []byte) (*Fulltext, error) {
 	result := new(Fulltext)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("search.FulltextFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

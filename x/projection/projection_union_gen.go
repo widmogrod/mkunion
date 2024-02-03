@@ -99,7 +99,7 @@ func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[Either[int,float64]]", WatermarkFromJSON[Either[int, float64]], WatermarkToJSON[Either[int, float64]])
 }
 
-type DataUnionJSON struct {
+type DataUnionJSON[A any] struct {
 	Type      string          `json:"$type,omitempty"`
 	Record    json.RawMessage `json:"projection.Record,omitempty"`
 	Watermark json.RawMessage `json:"projection.Watermark,omitempty"`
@@ -112,11 +112,10 @@ func DataFromJSON[A any](x []byte) (Data[A], error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
-	var data DataUnionJSON
+	var data DataUnionJSON[A]
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.DataFromJSON[A]: %w", err)
 	}
 
 	switch data.Type {
@@ -131,34 +130,31 @@ func DataFromJSON[A any](x []byte) (Data[A], error) {
 	} else if data.Watermark != nil {
 		return WatermarkFromJSON[A](data.Watermark)
 	}
-
-	return nil, fmt.Errorf("projection.Data: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.DataFromJSON[A]: unknown type: %s", data.Type)
 }
 
 func DataToJSON[A any](x Data[A]) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchDataR2(
 		x,
-		func(x *Record[A]) ([]byte, error) {
-			body, err := RecordToJSON[A](x)
+		func(y *Record[A]) ([]byte, error) {
+			body, err := RecordToJSON[A](y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.DataToJSON[A]: %w", err)
 			}
-
-			return json.Marshal(DataUnionJSON{
+			return json.Marshal(DataUnionJSON[A]{
 				Type:   "projection.Record",
 				Record: body,
 			})
 		},
-		func(x *Watermark[A]) ([]byte, error) {
-			body, err := WatermarkToJSON[A](x)
+		func(y *Watermark[A]) ([]byte, error) {
+			body, err := WatermarkToJSON[A](y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.DataToJSON[A]: %w", err)
 			}
-
-			return json.Marshal(DataUnionJSON{
+			return json.Marshal(DataUnionJSON[A]{
 				Type:      "projection.Watermark",
 				Watermark: body,
 			})
@@ -170,9 +166,8 @@ func RecordFromJSON[A any](x []byte) (*Record[A], error) {
 	result := new(Record[A])
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.RecordFromJSON[A]: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -301,9 +296,8 @@ func WatermarkFromJSON[A any](x []byte) (*Watermark[A], error) {
 	result := new(Watermark[A])
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.WatermarkFromJSON[A]: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -479,31 +473,29 @@ func MatchEitherR0[A any, B any](
 		f2(v)
 	}
 }
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Either[any,any]", EitherFromJSON[any, any], EitherToJSON[any, any])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Left[any,any]", LeftFromJSON[any, any], LeftToJSON[any, any])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Right[any,any]", RightFromJSON[any, any], RightToJSON[any, any])
+}
 
-//func init() {
-//	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Either", EitherFromJSON, EitherToJSON)
-//	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Left", LeftFromJSON, LeftToJSON)
-//	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Right", RightFromJSON, RightToJSON)
-//}
-
-type EitherUnionJSON struct {
+type EitherUnionJSON[A any, B any] struct {
 	Type  string          `json:"$type,omitempty"`
 	Left  json.RawMessage `json:"projection.Left,omitempty"`
 	Right json.RawMessage `json:"projection.Right,omitempty"`
 }
 
-func EitherFromJSON[A, B any](x []byte) (Either[A, B], error) {
+func EitherFromJSON[A any, B any](x []byte) (Either[A, B], error) {
 	if x == nil || len(x) == 0 {
 		return nil, nil
 	}
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
-	var data EitherUnionJSON
+	var data EitherUnionJSON[A, B]
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.EitherFromJSON[A,B]: %w", err)
 	}
 
 	switch data.Type {
@@ -518,34 +510,31 @@ func EitherFromJSON[A, B any](x []byte) (Either[A, B], error) {
 	} else if data.Right != nil {
 		return RightFromJSON[A, B](data.Right)
 	}
-
-	return nil, fmt.Errorf("projection.Either: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.EitherFromJSON[A,B]: unknown type: %s", data.Type)
 }
 
-func EitherToJSON[A, B any](x Either[A, B]) ([]byte, error) {
+func EitherToJSON[A any, B any](x Either[A, B]) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchEitherR2(
 		x,
-		func(x *Left[A, B]) ([]byte, error) {
-			body, err := LeftToJSON[A, B](x)
+		func(y *Left[A, B]) ([]byte, error) {
+			body, err := LeftToJSON[A, B](y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.EitherToJSON[A,B]: %w", err)
 			}
-
-			return json.Marshal(EitherUnionJSON{
+			return json.Marshal(EitherUnionJSON[A, B]{
 				Type: "projection.Left",
 				Left: body,
 			})
 		},
-		func(x *Right[A, B]) ([]byte, error) {
-			body, err := RightToJSON[A, B](x)
+		func(y *Right[A, B]) ([]byte, error) {
+			body, err := RightToJSON[A, B](y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.EitherToJSON[A,B]: %w", err)
 			}
-
-			return json.Marshal(EitherUnionJSON{
+			return json.Marshal(EitherUnionJSON[A, B]{
 				Type:  "projection.Right",
 				Right: body,
 			})
@@ -553,17 +542,16 @@ func EitherToJSON[A, B any](x Either[A, B]) ([]byte, error) {
 	)
 }
 
-func LeftFromJSON[A, B any](x []byte) (*Left[A, B], error) {
+func LeftFromJSON[A any, B any](x []byte) (*Left[A, B], error) {
 	result := new(Left[A, B])
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.LeftFromJSON[A,B]: %w", err)
 	}
-
 	return result, nil
 }
 
-func LeftToJSON[A, B any](x *Left[A, B]) ([]byte, error) {
+func LeftToJSON[A any, B any](x *Left[A, B]) ([]byte, error) {
 	return x.MarshalJSON()
 }
 
@@ -631,17 +619,16 @@ func (r *Left[A, B]) _unmarshalJSONA(data []byte) (A, error) {
 	return result, nil
 }
 
-func RightFromJSON[A, B any](x []byte) (*Right[A, B], error) {
+func RightFromJSON[A any, B any](x []byte) (*Right[A, B], error) {
 	result := new(Right[A, B])
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.RightFromJSON[A,B]: %w", err)
 	}
-
 	return result, nil
 }
 
-func RightToJSON[A, B any](x *Right[A, B]) ([]byte, error) {
+func RightToJSON[A any, B any](x *Right[A, B]) ([]byte, error) {
 	return x.MarshalJSON()
 }
 

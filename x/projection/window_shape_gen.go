@@ -15,7 +15,6 @@ func init() {
 	shape.Register(WindowKeyShape())
 	shape.Register(WindowRecordShape())
 	shape.Register(WindowShape())
-	shape.Register(WindowSnapshotStateShape())
 }
 
 //shape:shape
@@ -198,15 +197,10 @@ func WindowRecordShape() shape.Shape {
 					PkgImportName: "",
 				},
 			},
+			{
+				Name: "Offset",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
 		},
-	}
-}
-
-//shape:shape
-func WindowSnapshotStateShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "WindowSnapshotState",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
 	}
 }

@@ -107,10 +107,10 @@ func MatchWindowDescriptionR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.WindowDescription", WindowDescriptionFromJSON, WindowDescriptionToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.FixedWindow", FixedWindowFromJSON, FixedWindowToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.SessionWindow", SessionWindowFromJSON, SessionWindowToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.SlidingWindow", SlidingWindowFromJSON, SlidingWindowToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.FixedWindow", FixedWindowFromJSON, FixedWindowToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.WindowDescription", WindowDescriptionFromJSON, WindowDescriptionToJSON)
 }
 
 type WindowDescriptionUnionJSON struct {
@@ -127,11 +127,10 @@ func WindowDescriptionFromJSON(x []byte) (WindowDescription, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data WindowDescriptionUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.WindowDescriptionFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -150,44 +149,40 @@ func WindowDescriptionFromJSON(x []byte) (WindowDescription, error) {
 	} else if data.FixedWindow != nil {
 		return FixedWindowFromJSON(data.FixedWindow)
 	}
-
-	return nil, fmt.Errorf("projection.WindowDescription: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.WindowDescriptionFromJSON: unknown type: %s", data.Type)
 }
 
 func WindowDescriptionToJSON(x WindowDescription) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchWindowDescriptionR2(
 		x,
-		func(x *SessionWindow) ([]byte, error) {
-			body, err := SessionWindowToJSON(x)
+		func(y *SessionWindow) ([]byte, error) {
+			body, err := SessionWindowToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.WindowDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(WindowDescriptionUnionJSON{
 				Type:          "projection.SessionWindow",
 				SessionWindow: body,
 			})
 		},
-		func(x *SlidingWindow) ([]byte, error) {
-			body, err := SlidingWindowToJSON(x)
+		func(y *SlidingWindow) ([]byte, error) {
+			body, err := SlidingWindowToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.WindowDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(WindowDescriptionUnionJSON{
 				Type:          "projection.SlidingWindow",
 				SlidingWindow: body,
 			})
 		},
-		func(x *FixedWindow) ([]byte, error) {
-			body, err := FixedWindowToJSON(x)
+		func(y *FixedWindow) ([]byte, error) {
+			body, err := FixedWindowToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.WindowDescriptionToJSON: %w", err)
 			}
-
 			return json.Marshal(WindowDescriptionUnionJSON{
 				Type:        "projection.FixedWindow",
 				FixedWindow: body,
@@ -200,9 +195,8 @@ func SessionWindowFromJSON(x []byte) (*SessionWindow, error) {
 	result := new(SessionWindow)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.SessionWindowFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -278,9 +272,8 @@ func SlidingWindowFromJSON(x []byte) (*SlidingWindow, error) {
 	result := new(SlidingWindow)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.SlidingWindowFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -368,9 +361,8 @@ func FixedWindowFromJSON(x []byte) (*FixedWindow, error) {
 	result := new(FixedWindow)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.FixedWindowFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

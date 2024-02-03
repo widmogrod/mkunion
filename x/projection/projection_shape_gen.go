@@ -9,7 +9,6 @@ func init() {
 	shape.Register(DataShape())
 	shape.Register(EitherShape())
 	shape.Register(EventTimeShape())
-	shape.Register(InMemoryJoinContextShape())
 	shape.Register(LeftShape())
 	shape.Register(PushAndPullInMemoryContextShape())
 	shape.Register(RecordShape())
@@ -192,29 +191,6 @@ func RightShape() shape.Shape {
 					PkgName:       "",
 					PkgImportName: "",
 				},
-			},
-		},
-	}
-}
-
-//shape:shape
-func InMemoryJoinContextShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "InMemoryJoinContext",
-		PkgName:       "projection",
-		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-			shape.TypeParam{
-				Name: "B",
-				Type: &shape.Any{},
-			},
-			shape.TypeParam{
-				Name: "C",
-				Type: &shape.Any{},
 			},
 		},
 	}

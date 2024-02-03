@@ -90,9 +90,9 @@ func MatchSnapshotStateR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.SnapshotState", SnapshotStateFromJSON, SnapshotStateToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.PullPushContextState", PullPushContextStateFromJSON, PullPushContextStateToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.JoinContextState", JoinContextStateFromJSON, JoinContextStateToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.PullPushContextState", PullPushContextStateFromJSON, PullPushContextStateToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.SnapshotState", SnapshotStateFromJSON, SnapshotStateToJSON)
 }
 
 type SnapshotStateUnionJSON struct {
@@ -108,11 +108,10 @@ func SnapshotStateFromJSON(x []byte) (SnapshotState, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data SnapshotStateUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.SnapshotStateFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -127,33 +126,30 @@ func SnapshotStateFromJSON(x []byte) (SnapshotState, error) {
 	} else if data.JoinContextState != nil {
 		return JoinContextStateFromJSON(data.JoinContextState)
 	}
-
-	return nil, fmt.Errorf("projection.SnapshotState: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.SnapshotStateFromJSON: unknown type: %s", data.Type)
 }
 
 func SnapshotStateToJSON(x SnapshotState) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchSnapshotStateR2(
 		x,
-		func(x *PullPushContextState) ([]byte, error) {
-			body, err := PullPushContextStateToJSON(x)
+		func(y *PullPushContextState) ([]byte, error) {
+			body, err := PullPushContextStateToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.SnapshotStateToJSON: %w", err)
 			}
-
 			return json.Marshal(SnapshotStateUnionJSON{
 				Type:                 "projection.PullPushContextState",
 				PullPushContextState: body,
 			})
 		},
-		func(x *JoinContextState) ([]byte, error) {
-			body, err := JoinContextStateToJSON(x)
+		func(y *JoinContextState) ([]byte, error) {
+			body, err := JoinContextStateToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.SnapshotStateToJSON: %w", err)
 			}
-
 			return json.Marshal(SnapshotStateUnionJSON{
 				Type:             "projection.JoinContextState",
 				JoinContextState: body,
@@ -166,9 +162,8 @@ func PullPushContextStateFromJSON(x []byte) (*PullPushContextState, error) {
 	result := new(PullPushContextState)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.PullPushContextStateFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -303,9 +298,8 @@ func JoinContextStateFromJSON(x []byte) (*JoinContextState, error) {
 	result := new(JoinContextState)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.JoinContextStateFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
