@@ -396,10 +396,8 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 				f.possibleVariantTypes[unionName] = append(f.possibleVariantTypes[unionName], s.Name.Name)
 			}
 		}
-		return f
 
-	case *ast.FuncDecl:
-		return nil
+		return f
 
 	case *ast.File:
 		if t.Name != nil {
@@ -671,14 +669,6 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		f.shapes[f.currentType] = structShape
 		log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
 
-		//case *ast.InterfaceType:
-		// extract from parameter types
-		//case *ast.FuncType:
-		// extract from input and output parameters
-		//_ = t
-		//case *ast.Ident:
-		//var obj ast.ObjKind = ast.Typ
-		//_ = obj
 	case *ast.IndexExpr:
 		indexed := FromAST(t, f.optionAST()...)
 		name := ToGoTypeName(indexed, WithRootPackage(f.pkgName))
@@ -693,7 +683,6 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			f.indexedShapes[name] = indexed
 		}
 	}
-
 	return f
 }
 

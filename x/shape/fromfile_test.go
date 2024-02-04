@@ -388,6 +388,68 @@ func TestInferFromFile(t *testing.T) {
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 	})
 	expected4 := []*RefName{
+		// ListOf2[*float64, *ListOf2[*A2, *time.Ticker]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PointerLike{
+					Type: &RefName{
+						Name:          "A2",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+				},
+				&PointerLike{
+					Type: &RefName{
+						Name:          "Ticker",
+						PkgName:       "time",
+						PkgImportName: "time",
+					},
+				},
+			},
+		},
+		// ListOf2[*B2, time.Month]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PointerLike{
+					Type: &RefName{
+						Name:          "B2",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+				},
+				&RefName{
+					Name:          "Month",
+					PkgName:       "time",
+					PkgImportName: "time",
+				},
+			},
+		},
+		// ListOf2[*F, float64]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PointerLike{
+					Type: &RefName{
+						Name:          "F",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+				},
+				&PrimitiveLike{
+					Kind: &NumberLike{
+						Kind: &Float64{},
+					},
+				},
+			},
+		},
 		// ListOf2[*K,time.Weekday]
 		{
 			Name:          "ListOf2",
@@ -403,6 +465,24 @@ func TestInferFromFile(t *testing.T) {
 				},
 				&RefName{
 					Name:          "Weekday",
+					PkgName:       "time",
+					PkgImportName: "time",
+				},
+			},
+		},
+		// ListOf2[*L, time.Location]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PointerLike{Type: &RefName{
+					Name:          "L",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				}},
+				&RefName{
+					Name:          "Location",
 					PkgName:       "time",
 					PkgImportName: "time",
 				},
@@ -425,6 +505,43 @@ func TestInferFromFile(t *testing.T) {
 					Name:          "Location",
 					PkgName:       "time",
 					PkgImportName: "time",
+				},
+			},
+		},
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PointerLike{
+					Type: &PrimitiveLike{
+						Kind: &NumberLike{
+							Kind: &Float64{},
+						},
+					},
+				},
+				&PointerLike{
+					Type: &RefName{
+						Name:          "ListOf2",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+						Indexed: []Shape{
+							&PointerLike{
+								&RefName{
+									Name:          "A2",
+									PkgName:       "testasset",
+									PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+								},
+							},
+							&PointerLike{
+								&RefName{
+									Name:          "Ticker",
+									PkgName:       "time",
+									PkgImportName: "time",
+								},
+							},
+						},
+					},
 				},
 			},
 		},

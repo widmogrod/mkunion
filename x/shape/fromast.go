@@ -85,9 +85,13 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 			}
 
 			return result
-		}
 
-		panic(fmt.Errorf("shape.FromAST: unsupported SelectorExpr: %#v", y))
+		case *ast.IndexExpr:
+			return FromAST(z, fx...)
+
+		default:
+			panic(fmt.Errorf("shape.FromAST: unsupported SelectorExpr: %#v", z))
+		}
 
 	case *ast.StarExpr:
 		result := FromAST(y.X, fx...)
