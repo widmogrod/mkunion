@@ -28,6 +28,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 		possibleVariantTypes: map[string][]string{},
 		possibleTaggedTypes:  map[string]map[string]Tag{},
 		shapes:               make(map[string]Shape),
+		indexedShapes:        make(map[string]Shape),
 	}
 
 	fset := token.NewFileSet()
@@ -175,6 +176,7 @@ type InferredInfo struct {
 	packageNameToPackageImport map[string]string
 	currentType                string
 	possibleTaggedTypes        map[string]map[string]Tag
+	indexedShapes              map[string]Shape
 }
 
 func (f *InferredInfo) PackageName() string {
@@ -668,6 +670,28 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 
 		f.shapes[f.currentType] = structShape
 		log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
+
+		//case *ast.InterfaceType:
+		// extract from parameter types
+		//case *ast.FuncType:
+		// extract from input and output parameters
+		//_ = t
+		//case *ast.Ident:
+		//var obj ast.ObjKind = ast.Typ
+		//_ = obj
+	case *ast.IndexExpr:
+		indexed := FromAST(t, f.optionAST()...)
+		name := ToGoTypeName(indexed, WithRootPackage(f.pkgName))
+		if _, ok := f.indexedShapes[name]; !ok {
+			f.indexedShapes[name] = indexed
+		}
+
+	case *ast.IndexListExpr:
+		indexed := FromAST(t, f.optionAST()...)
+		name := ToGoTypeName(indexed, WithRootPackage(f.pkgName))
+		if _, ok := f.indexedShapes[name]; !ok {
+			f.indexedShapes[name] = indexed
+		}
 	}
 
 	return f
@@ -956,9 +980,23 @@ func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
 func (f *InferredInfo) FindInstantiationsOf(x *RefName) []*RefName {
 	// get from all shapes declared in the file
 	var result []*RefName
-	for _, shape := range f.RetrieveShapes() {
-		result = append(result, FindInstantiationsOf(x, shape)...)
+
+	// sort map of string
+	// for deterministic results
+	// this is important for tests
+	var keys []string
+	for k := range f.indexedShapes {
+		keys = append(keys, k)
 	}
+
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		shape := f.indexedShapes[k]
+		found := findInstantiationsOf(x, shape)
+		result = append(result, found...)
+	}
+
 	return result
 }
 
@@ -980,6 +1018,78 @@ func IsSameRef(x, y Shape) bool {
 	return xr.Name == yr.Name &&
 		xr.PkgName == yr.PkgName &&
 		xr.PkgImportName == yr.PkgImportName
+}
+
+func findInstantiationsOf(x *RefName, y Shape) []*RefName {
+	return MatchShapeR1(
+		y,
+		func(z *Any) []*RefName {
+			return nil
+		},
+		func(z *RefName) []*RefName {
+			var result []*RefName
+
+			if IsSameRef(x, z) {
+				result = append(result, z)
+			}
+
+			return result
+		},
+		func(z *PointerLike) []*RefName {
+			return findInstantiationsOf(x, z.Type)
+		},
+		func(z *AliasLike) []*RefName {
+			var result []*RefName
+			// type params can be instantiated with other types
+			for _, param := range z.TypeParams {
+				result = append(result, findInstantiationsOf(x, param.Type)...)
+			}
+
+			// element of type can be instantiated with other types like
+			//  type A ListOf[string] is instantiation of ListOf[T] with string
+			result = append(result, findInstantiationsOf(x, z.Type)...)
+
+			return result
+		},
+		func(z *PrimitiveLike) []*RefName {
+			return nil
+		},
+		func(z *ListLike) []*RefName {
+			return findInstantiationsOf(x, z.Element)
+		},
+		func(z *MapLike) []*RefName {
+			var result []*RefName
+			result = append(result, findInstantiationsOf(x, z.Key)...)
+			result = append(result, findInstantiationsOf(x, z.Val)...)
+			return result
+		},
+		func(z *StructLike) []*RefName {
+			var result []*RefName
+
+			for _, param := range z.TypeParams {
+				result = append(result, findInstantiationsOf(x, param.Type)...)
+			}
+
+			for _, field := range z.Fields {
+				result = append(result, findInstantiationsOf(x, field.Type)...)
+			}
+
+			return result
+		},
+		func(z *UnionLike) []*RefName {
+			var result []*RefName
+
+			for _, param := range z.TypeParams {
+				result = append(result, findInstantiationsOf(x, param.Type)...)
+			}
+
+			for _, variant := range z.Variant {
+				result = append(result, findInstantiationsOf(x, variant)...)
+			}
+
+			return result
+		},
+	)
 }
 
 // FindInstantiationsOf returns all instantiations of x in y

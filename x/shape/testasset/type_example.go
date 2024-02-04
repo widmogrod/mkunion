@@ -29,7 +29,7 @@ type (
 	M List
 	N time.Duration
 	O ListOf[time.Duration]
-	P ListOf2[ListOf[any], *ListOf2[int64, *time.Duration]]
+	P ListOf2[ListOf[any], *ListOf2[int64, *time.Duration]] // √ - found by FindInstantiationsOf
 )
 
 //go:tag mkunion:"AliasExample"
@@ -61,14 +61,15 @@ func init() {
 }
 
 type _someInterface interface {
-	Do(*ListOf2[*O, time.Location])
+	Do(*ListOf2[*O, time.Location]) // √ - found by FindInstantiationsOf
 }
+
 type _someStruct struct {
-	B *ListOf2[*K, time.Weekday]
+	B *ListOf2[*K, time.Weekday] // √ - found by FindInstantiationsOf
 }
 
 func (*_someStruct) Exec(*ListOf2[*L, time.Location]) {}
 
 var (
-	_ = &ListOf2[ListOf[*bool], *ListOf2[Example, *time.Time]]{}
+	_ = &ListOf2[ListOf[*bool], *ListOf2[Example, *time.Time]]{} // √ - found by FindInstantiationsOf x3
 )

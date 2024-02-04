@@ -388,17 +388,67 @@ func TestInferFromFile(t *testing.T) {
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 	})
 	expected4 := []*RefName{
-		&RefName{
-			Name:          "ListOf",
+		// ListOf2[*K,time.Weekday]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PointerLike{
+					Type: &RefName{
+						Name:          "K",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+				},
+				&RefName{
+					Name:          "Weekday",
+					PkgName:       "time",
+					PkgImportName: "time",
+				},
+			},
+		},
+		// ListOf2[*O,time.Location]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PointerLike{
+					Type: &RefName{
+						Name:          "O",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+				},
+				&RefName{
+					Name:          "Location",
+					PkgName:       "time",
+					PkgImportName: "time",
+				},
+			},
+		},
+		// ListOf2[Example,*time.Time]
+		{
+			Name:          "ListOf2",
 			PkgName:       "testasset",
 			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 			Indexed: []Shape{
 				&RefName{
-					Name: "any",
+					Name:          "Example",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				},
+				&PointerLike{
+					Type: &RefName{
+						Name:          "Time",
+						PkgName:       "time",
+						PkgImportName: "time",
+					},
 				},
 			},
 		},
-
+		// ListOf2[ListOf[*bool],*ListOf2[Example,*time.Time]]
 		{
 			Name:          "ListOf2",
 			PkgName:       "testasset",
@@ -409,8 +459,8 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 					Indexed: []Shape{
-						&RefName{
-							Name: "any",
+						&PointerLike{
+							Type: &PrimitiveLike{Kind: &BooleanLike{}},
 						},
 					},
 				},
@@ -421,8 +471,43 @@ func TestInferFromFile(t *testing.T) {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 						Indexed: []Shape{
 							&RefName{
-								Name: "int64",
+								Name:          "Example",
+								PkgName:       "testasset",
+								PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 							},
+							&PointerLike{
+								Type: &RefName{
+									Name:          "Time",
+									PkgName:       "time",
+									PkgImportName: "time",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// ListOf2[ListOf[any],*ListOf2[int64,*time.Duration]]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&RefName{
+					Name:          "ListOf",
+					PkgName:       "testasset",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					Indexed: []Shape{
+						&Any{},
+					},
+				},
+				&PointerLike{
+					Type: &RefName{
+						Name:          "ListOf2",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+						Indexed: []Shape{
+							&PrimitiveLike{Kind: &NumberLike{Kind: &Int64{}}},
 							&PointerLike{
 								Type: &RefName{
 									Name:          "Duration",
@@ -435,10 +520,30 @@ func TestInferFromFile(t *testing.T) {
 				},
 			},
 		},
+		// ListOf2[int64,*time.Duration]
+		{
+			Name:          "ListOf2",
+			PkgName:       "testasset",
+			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+			Indexed: []Shape{
+				&PrimitiveLike{
+					Kind: &NumberLike{
+						Kind: &Int64{},
+					},
+				},
+				&PointerLike{
+					Type: &RefName{
+						Name:          "Duration",
+						PkgName:       "time",
+						PkgImportName: "time",
+					},
+				},
+			},
+		},
 	}
 
 	if diff := cmp.Diff(expected4, instantiations); diff != "" {
-		//t.Errorf("mismatch (-want +got):\n%s", diff)
+		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
 }
 

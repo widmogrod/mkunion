@@ -40,7 +40,8 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 			return z
 		}
 
-		panic(fmt.Errorf("shape.FromAST: unsupported IndexExpr: %#v", y))
+		log.Warnf("shape.FromAST: unsupported IndexExpr: %#v, most likely unexported type", y)
+		return result
 
 	case *ast.IndexListExpr:
 		result := FromAST(y.X, fx...)
