@@ -296,7 +296,11 @@ func (f *InferredInfo) RetrieveStructs() []*StructLike {
 }
 
 func (f *InferredInfo) RetrieveShapeNamedAs(name string) Shape {
-	return f.shapes[name]
+	if result, ok := f.shapes[name]; ok {
+		return result
+	}
+
+	return f.RetrieveUnion(name)
 }
 
 func (f *InferredInfo) RetrieveShapeFromRef(x *RefName) Shape {
