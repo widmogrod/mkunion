@@ -93,6 +93,10 @@ func WithRootPackage(pkgName string) ToGoTypeNameOption {
 }
 
 func packageWrap(options []ToGoTypeNameOption, pkgName, pkgImportName, value string) string {
+	if pkgName == "" {
+		return value
+	}
+
 	useImportName := false
 	for _, option := range options {
 		if option == usePkgImportName {
@@ -108,16 +112,11 @@ func packageWrap(options []ToGoTypeNameOption, pkgName, pkgImportName, value str
 		}
 	}
 
-	if pkgName == "" {
-		return value
-	}
-
 	if useImportName {
 		return fmt.Sprintf("%s.%s", pkgImportName, value)
 	}
 
 	return fmt.Sprintf("%s.%s", pkgName, value)
-
 }
 
 func shouldInstantiate(options []ToGoTypeNameOption) bool {
