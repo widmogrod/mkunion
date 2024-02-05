@@ -24,6 +24,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 	}
 
 	result := &InferredInfo{
+		fileName:             filename,
 		pkgImportName:        tryToFindPkgImportName(filename),
 		possibleVariantTypes: map[string][]string{},
 		possibleTaggedTypes:  map[string]map[string]Tag{},
@@ -169,6 +170,7 @@ var (
 )
 
 type InferredInfo struct {
+	fileName                   string
 	pkgName                    string
 	pkgImportName              string
 	possibleVariantTypes       map[string][]string
@@ -177,6 +179,10 @@ type InferredInfo struct {
 	currentType                string
 	possibleTaggedTypes        map[string]map[string]Tag
 	indexedShapes              map[string]Shape
+}
+
+func (f *InferredInfo) FileName() string {
+	return f.fileName
 }
 
 func (f *InferredInfo) PackageName() string {
@@ -988,6 +994,28 @@ func (f *InferredInfo) FindInstantiationsOf(x *RefName) []*RefName {
 		shape := f.indexedShapes[k]
 		found := findInstantiationsOf(x, shape)
 		result = append(result, found...)
+	}
+
+	return result
+}
+
+func (f *InferredInfo) AllInstantiations() []Shape {
+	// get from all shapes declared in the file
+	var result []Shape
+
+	// sort map of string
+	// for deterministic results
+	// this is important for tests
+	var keys []string
+	for k := range f.indexedShapes {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		shape := f.indexedShapes[k]
+		result = append(result, shape)
 	}
 
 	return result
