@@ -1,6 +1,7 @@
 package shape
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
@@ -8,6 +9,7 @@ import (
 	"go/token"
 	"golang.org/x/mod/modfile"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,7 +31,6 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 		possibleVariantTypes: map[string][]string{},
 		possibleTaggedTypes:  map[string]map[string]Tag{},
 		shapes:               make(map[string]Shape),
-		indexedShapes:        make(map[string]Shape),
 	}
 
 	fset := token.NewFileSet()
@@ -178,7 +179,6 @@ type InferredInfo struct {
 	packageNameToPackageImport map[string]string
 	currentType                string
 	possibleTaggedTypes        map[string]map[string]Tag
-	indexedShapes              map[string]Shape
 }
 
 func (f *InferredInfo) FileName() string {
@@ -306,7 +306,12 @@ func (f *InferredInfo) RetrieveShapeNamedAs(name string) Shape {
 		return result
 	}
 
-	return f.RetrieveUnion(name)
+	res := f.RetrieveUnion(name)
+	if res != nil {
+		return res
+	}
+
+	return nil
 }
 
 func (f *InferredInfo) RetrieveShapeFromRef(x *RefName) Shape {
@@ -678,21 +683,8 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 
 		f.shapes[f.currentType] = structShape
 		log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
-
-	case *ast.IndexExpr:
-		indexed := FromAST(t, f.optionAST()...)
-		name := ToGoTypeName(indexed, WithRootPackage(f.pkgName))
-		if _, ok := f.indexedShapes[name]; !ok {
-			f.indexedShapes[name] = indexed
-		}
-
-	case *ast.IndexListExpr:
-		indexed := FromAST(t, f.optionAST()...)
-		name := ToGoTypeName(indexed, WithRootPackage(f.pkgName))
-		if _, ok := f.indexedShapes[name]; !ok {
-			f.indexedShapes[name] = indexed
-		}
 	}
+
 	return f
 }
 
@@ -976,143 +968,6 @@ func (f *InferredInfo) extractTypeParams(params *ast.FieldList) []TypeParam {
 	return result
 }
 
-func (f *InferredInfo) FindInstantiationsOf(x *RefName) []*RefName {
-	// get from all shapes declared in the file
-	var result []*RefName
-
-	// sort map of string
-	// for deterministic results
-	// this is important for tests
-	var keys []string
-	for k := range f.indexedShapes {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		shape := f.indexedShapes[k]
-		found := findInstantiationsOf(x, shape)
-		result = append(result, found...)
-	}
-
-	return result
-}
-
-func (f *InferredInfo) AllInstantiations() []Shape {
-	// get from all shapes declared in the file
-	var result []Shape
-
-	// sort map of string
-	// for deterministic results
-	// this is important for tests
-	var keys []string
-	for k := range f.indexedShapes {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		shape := f.indexedShapes[k]
-		result = append(result, shape)
-	}
-
-	return result
-}
-
-func IsSameRef(x, y Shape) bool {
-	if x == nil || y == nil {
-		return false
-	}
-
-	xr, ok := x.(*RefName)
-	if !ok {
-		return false
-	}
-
-	yr, ok := y.(*RefName)
-	if !ok {
-		return false
-	}
-
-	return xr.Name == yr.Name &&
-		xr.PkgName == yr.PkgName &&
-		xr.PkgImportName == yr.PkgImportName
-}
-
-func findInstantiationsOf(x *RefName, y Shape) []*RefName {
-	return MatchShapeR1(
-		y,
-		func(z *Any) []*RefName {
-			return nil
-		},
-		func(z *RefName) []*RefName {
-			var result []*RefName
-
-			if IsSameRef(x, z) {
-				result = append(result, z)
-			}
-
-			return result
-		},
-		func(z *PointerLike) []*RefName {
-			return findInstantiationsOf(x, z.Type)
-		},
-		func(z *AliasLike) []*RefName {
-			var result []*RefName
-			// type params can be instantiated with other types
-			for _, param := range z.TypeParams {
-				result = append(result, findInstantiationsOf(x, param.Type)...)
-			}
-
-			// element of type can be instantiated with other types like
-			//  type A ListOf[string] is instantiation of ListOf[T] with string
-			result = append(result, findInstantiationsOf(x, z.Type)...)
-
-			return result
-		},
-		func(z *PrimitiveLike) []*RefName {
-			return nil
-		},
-		func(z *ListLike) []*RefName {
-			return findInstantiationsOf(x, z.Element)
-		},
-		func(z *MapLike) []*RefName {
-			var result []*RefName
-			result = append(result, findInstantiationsOf(x, z.Key)...)
-			result = append(result, findInstantiationsOf(x, z.Val)...)
-			return result
-		},
-		func(z *StructLike) []*RefName {
-			var result []*RefName
-
-			for _, param := range z.TypeParams {
-				result = append(result, findInstantiationsOf(x, param.Type)...)
-			}
-
-			for _, field := range z.Fields {
-				result = append(result, findInstantiationsOf(x, field.Type)...)
-			}
-
-			return result
-		},
-		func(z *UnionLike) []*RefName {
-			var result []*RefName
-
-			for _, param := range z.TypeParams {
-				result = append(result, findInstantiationsOf(x, param.Type)...)
-			}
-
-			for _, variant := range z.Variant {
-				result = append(result, findInstantiationsOf(x, variant)...)
-			}
-
-			return result
-		},
-	)
-}
-
 func tryGetArrayLen(expr ast.Expr) *int {
 	if expr == nil {
 		return nil
@@ -1127,4 +982,385 @@ func tryGetArrayLen(expr ast.Expr) *int {
 	}
 
 	return nil
+}
+
+func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
+	if !path.IsAbs(dir) {
+		cwd, _ := os.Getwd()
+		dir = path.Join(cwd, dir)
+	}
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("shape.NewIndexTypeInDir: %s does not exist", dir)
+	}
+
+	result := &IndexedTypeWalker{
+		indexedShapes:              make(map[string]Shape),
+		packageNameToPackageImport: make(map[string]string),
+		knownTypeNamesInPackage:    map[string]struct{}{},
+		pkgName:                    "", // will be set in ast.Walk
+		pkgImportName:              tryToFindPkgImportName(path.Join(dir, "shape_index_type_in_dir.go")),
+	}
+
+	fset := token.NewFileSet()
+
+	err := filepath.Walk(dir,
+		func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			if !strings.HasSuffix(path, ".go") {
+				return nil
+			}
+
+			f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+			if err != nil {
+				return fmt.Errorf("could not parse file %s; %w", path, err)
+			}
+
+			ast.Walk(result, f)
+
+			return nil
+		},
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("shape.NewIndexTypeInDir: %w", err)
+	}
+
+	return result, nil
+}
+
+func newIndexedTypeWalkerWithContentBody(x string, opts ...func(x *IndexedTypeWalker)) *IndexedTypeWalker {
+	walker := &IndexedTypeWalker{
+		indexedShapes:              make(map[string]Shape),
+		packageNameToPackageImport: make(map[string]string),
+		knownTypeNamesInPackage:    map[string]struct{}{},
+	}
+
+	for _, opt := range opts {
+		opt(walker)
+	}
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "_new_walker.go", []byte(x), parser.ParseComments)
+	if err != nil {
+		panic(err)
+	}
+
+	ast.Walk(walker, f)
+
+	return walker
+}
+
+type IndexedTypeWalker struct {
+	filterGenericTypes         []string
+	indexedShapes              map[string]Shape
+	packageNameToPackageImport map[string]string
+
+	knownTypeNamesInPackage map[string]struct{}
+
+	pkgName       string
+	pkgImportName string
+}
+
+func (walker *IndexedTypeWalker) PackageName() string {
+	return walker.pkgName
+}
+
+func (walker *IndexedTypeWalker) PkgMap() map[string]string {
+	return walker.packageNameToPackageImport
+}
+
+func (walker *IndexedTypeWalker) SetPkgImportName(pkgImportName string) {
+	walker.pkgImportName = pkgImportName
+}
+
+func (walker *IndexedTypeWalker) IndexedShapes() map[string]Shape {
+	return walker.indexedShapes
+}
+
+func (walker *IndexedTypeWalker) Visit(n ast.Node) ast.Visitor {
+	switch t := n.(type) {
+	case *ast.File:
+		if t.Name != nil {
+			walker.pkgName = t.Name.String()
+		}
+
+		walker.packageNameToPackageImport[walker.pkgName] = walker.pkgImportName
+
+		for _, imp := range t.Imports {
+			if imp.Name != nil {
+				walker.packageNameToPackageImport[imp.Name.String()] = strings.Trim(imp.Path.Value, "\"")
+			} else {
+				defaultPkgName := path.Base(strings.Trim(imp.Path.Value, "\""))
+				pkgName := tryToFindPkgName(strings.Trim(imp.Path.Value, "\""), defaultPkgName)
+				walker.packageNameToPackageImport[pkgName] = strings.Trim(imp.Path.Value, "\"")
+			}
+		}
+
+	case *ast.TypeSpec:
+		walker.knownTypeNamesInPackage[t.Name.Name] = struct{}{}
+
+		prev := walker.filterGenericTypes
+		walker.filterGenericTypes = walker.typeParamNames(t.TypeParams)
+
+		// for named types try to register them as indexed types
+		// if they are indexed types
+		if t.TypeParams != nil {
+			for _, param := range t.TypeParams.List {
+				walker.registerIndexedShape(param.Type)
+			}
+		}
+
+		// for the actual details of the type
+		ast.Walk(walker, t.Type)
+
+		walker.filterGenericTypes = prev
+		return nil
+
+	case *ast.ValueSpec:
+		if t.Type != nil {
+			walker.registerIndexedShape(t.Type)
+		}
+
+		if t.Values != nil {
+			for _, value := range t.Values {
+				walker.registerIndexedShape(value)
+			}
+		}
+
+		for _, val := range t.Values {
+			ast.Walk(walker, val)
+		}
+
+		return nil
+
+	case *ast.CompositeLit:
+		walker.registerIndexedShape(t.Type)
+
+	case *ast.FuncDecl:
+		fun := t.Type
+
+		prev := walker.filterGenericTypes
+		if t.Recv != nil {
+			walker.filterGenericTypes = walker.guessParamNamesReceiver(t.Recv)
+			for _, param := range t.Recv.List {
+				walker.registerIndexedShape(param.Type)
+			}
+		} else {
+			walker.filterGenericTypes = walker.typeParamNames(fun.TypeParams)
+		}
+
+		if fun.TypeParams != nil {
+			for _, param := range fun.TypeParams.List {
+				walker.registerIndexedShape(param.Type)
+			}
+		}
+
+		// walk function type params (type params of the function)
+		if fun.Params != nil {
+			for _, param := range fun.Params.List {
+				walker.registerIndexedShape(param.Type)
+			}
+		}
+
+		// walk function results (return params of the function)
+		if fun.Results != nil {
+			for _, result := range fun.Results.List {
+				walker.registerIndexedShape(result.Type)
+			}
+		}
+
+		// walk function body
+		ast.Walk(walker, t.Body)
+
+		walker.filterGenericTypes = prev
+		return nil
+
+	case *ast.FuncType:
+		// for list of params
+		// for list of results
+		// attempt to find indexed types
+		// and register them as indexed types
+
+		if t.Params != nil {
+			for _, param := range t.Params.List {
+				walker.registerIndexedShape(param.Type)
+			}
+		}
+
+		if t.Results != nil {
+			for _, result := range t.Results.List {
+				walker.registerIndexedShape(result.Type)
+			}
+		}
+
+		return nil
+
+	case *ast.CallExpr:
+		switch fun := t.Fun.(type) {
+		case *ast.IndexExpr:
+			// this is a function call with type params
+			// in such situations we're interested in indexed values, not function name
+			// example:
+			//  shared.JSONMarshal[ListOf[int]](...)
+			switch fun.Index.(type) {
+			case *ast.IndexExpr, *ast.IndexListExpr:
+				walker.registerIndexedShape(fun.Index)
+			}
+
+			// func arguments can have indexed type, so iterate them
+			for _, arg := range t.Args {
+				// function argument could be other function, so let's walk it
+				ast.Walk(walker, arg)
+			}
+
+			// we're done here, dont traverse deeper
+			return nil
+
+		case *ast.IndexListExpr:
+			// this is a function call with type params
+			// in such situations we're interested in indexed values, not function name
+			// example:
+			//  shared.JSONMarshal[ListOf2[int,any]](...)
+			for _, arg := range fun.Indices {
+				switch arg := arg.(type) {
+				case *ast.IndexExpr, *ast.IndexListExpr:
+					walker.registerIndexedShape(arg)
+				}
+			}
+
+			// func arguments can have indexed type, so iterate them
+			for _, arg := range t.Args {
+				// function argument could be other function, so let's walk it
+				ast.Walk(walker, arg)
+			}
+
+			// we're done here, dont traverse deeper
+			return nil
+
+		default:
+			// func arguments can have indexed type, so iterate them
+			for _, arg := range t.Args {
+				// function argument could be other function, so let's walk it
+				ast.Walk(walker, arg)
+			}
+
+			// we're done here, dont traverse deeper
+			return nil
+		}
+	}
+
+	return walker
+}
+
+func (walker *IndexedTypeWalker) typeParamNames(x ast.Node) []string {
+	switch t := x.(type) {
+	case *ast.FieldList:
+		if t == nil {
+			return nil
+		}
+
+		if t.List == nil {
+			return nil
+		}
+
+		var result []string
+		for _, param := range t.List {
+			for _, name := range param.Names {
+				result = append(result, name.Name)
+			}
+		}
+		return result
+	}
+
+	panic(fmt.Sprintf("typeParamNames: unknown type %T", x))
+}
+
+func (walker *IndexedTypeWalker) guessParamNamesReceiver(x *ast.FieldList) []string {
+	if x == nil {
+		return nil
+	}
+
+	if x.List == nil {
+		return nil
+	}
+
+	var result []string
+	for _, param := range x.List {
+		types := []ast.Expr{param.Type}
+		for {
+			typ := types[0]
+			types = types[1:]
+
+			switch t := typ.(type) {
+			case *ast.StarExpr:
+				types = append(types, t.X)
+			case *ast.IndexExpr:
+				types = append(types, t.Index)
+			case *ast.IndexListExpr:
+				for _, index := range t.Indices {
+					types = append(types, index)
+				}
+			case *ast.Ident:
+				if _, ok := walker.knownTypeNamesInPackage[t.Name]; !ok {
+					result = append(result, t.Name)
+				}
+			}
+
+			if len(types) == 0 {
+				break
+			}
+		}
+	}
+
+	return result
+}
+
+func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
+	switch arg.(type) {
+	case *ast.IndexExpr, *ast.IndexListExpr, *ast.StarExpr:
+		options := []FromASTOption{
+			InjectPkgName(walker.pkgName),
+			InjectPkgImportName(walker.packageNameToPackageImport),
+		}
+		indexed := FromAST(arg, options...)
+
+		// if is pointer unwrap it
+		ptr, ok := indexed.(*PointerLike)
+		if ok {
+			indexed = ptr.Type
+		}
+
+		if len(walker.filterGenericTypes) > 0 {
+			for _, name := range walker.filterGenericTypes {
+				typeParams := ExtractIndexedTypes(indexed)
+				for {
+					if len(typeParams) == 0 {
+						break
+					}
+
+					tp := typeParams[0]
+					typeParams = typeParams[1:]
+					if Name(tp) == name {
+						return
+					}
+
+					typeParams = append(typeParams, ExtractIndexedTypes(tp)...)
+				}
+			}
+		}
+
+		name := ToGoTypeName(indexed)
+
+		if _, ok := walker.indexedShapes[name]; !ok {
+			walker.indexedShapes[name] = indexed
+		}
+	}
 }

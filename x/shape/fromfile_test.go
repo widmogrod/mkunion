@@ -381,253 +381,83 @@ func TestInferFromFile(t *testing.T) {
 	if diff := cmp.Diff(expected3, alias); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
+}
 
-	instantiations := inferred.FindInstantiationsOf(&RefName{
-		Name:          "ListOf2",
-		PkgName:       "testasset",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-	})
-	expected4 := []*RefName{
-		// ListOf2[*float64, *ListOf2[*A2, *time.Ticker]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PointerLike{
-					Type: &RefName{
-						Name:          "A2",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-					},
-				},
-				&PointerLike{
-					Type: &RefName{
-						Name:          "Ticker",
-						PkgName:       "time",
-						PkgImportName: "time",
-					},
-				},
-			},
-		},
-		// ListOf2[*B2, time.Month]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PointerLike{
-					Type: &RefName{
-						Name:          "B2",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-					},
-				},
-				&RefName{
-					Name:          "Month",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-		},
-		// ListOf2[*F, float64]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PointerLike{
-					Type: &RefName{
-						Name:          "F",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-					},
-				},
-				&PrimitiveLike{
-					Kind: &NumberLike{
-						Kind: &Float64{},
-					},
-				},
-			},
-		},
-		// ListOf2[*K,time.Weekday]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PointerLike{
-					Type: &RefName{
-						Name:          "K",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-					},
-				},
-				&RefName{
-					Name:          "Weekday",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-		},
-		// ListOf2[*L, time.Location]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PointerLike{Type: &RefName{
-					Name:          "L",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				}},
-				&RefName{
-					Name:          "Location",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-		},
-		// ListOf2[*O,time.Location]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PointerLike{
-					Type: &RefName{
-						Name:          "O",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-					},
-				},
-				&RefName{
-					Name:          "Location",
-					PkgName:       "time",
-					PkgImportName: "time",
-				},
-			},
-		},
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PointerLike{
-					Type: &PrimitiveLike{
-						Kind: &NumberLike{
-							Kind: &Float64{},
-						},
-					},
-				},
-				&PointerLike{
-					Type: &RefName{
-						Name:          "ListOf2",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-						Indexed: []Shape{
-							&PointerLike{
-								&RefName{
-									Name:          "A2",
-									PkgName:       "testasset",
-									PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-								},
-							},
-							&PointerLike{
-								&RefName{
-									Name:          "Ticker",
-									PkgName:       "time",
-									PkgImportName: "time",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		// ListOf2[Example,*time.Time]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&RefName{
-					Name:          "Example",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-				},
-				&PointerLike{
-					Type: &RefName{
-						Name:          "Time",
-						PkgName:       "time",
-						PkgImportName: "time",
-					},
-				},
-			},
-		},
-		// ListOf2[ListOf[*bool],*ListOf2[Example,*time.Time]]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&RefName{
-					Name:          "ListOf",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+//func TestA(t *testing.T) {
+//	inferred, err := NewIndexTypeInDir("testasset")
+//	assert.NoError(t, err)
+//	assert.NotNil(t, inferred)
+//
+//	for _, i := range inferred.IndexedShapes() {
+//		t.Log(ToGoTypeName(i, WithInstantiation()))
+//	}
+//}
+
+func TestIndexedTypeWalker_Visit(t *testing.T) {
+	useCases := map[string]struct {
+		body     string
+		expected map[string]Shape
+	}{
+		"from interface declaration": {
+			body: `package test_package
+
+import "time"
+
+type OptionVisitor[T1 ListOf2[*O,time.Location]] interface {
+	VisitSome(v *Some[T1]) any 		// should be ignored
+	VisitNone(v *None[T1]) any 		// should be ignored
+}`,
+			expected: map[string]Shape{
+				"test_package.ListOf2[*O,time.Location]": &RefName{
+					Name:          "ListOf2",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
 					Indexed: []Shape{
 						&PointerLike{
-							Type: &PrimitiveLike{Kind: &BooleanLike{}},
+							Type: &RefName{
+								Name:          "O",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
 						},
-					},
-				},
-				&PointerLike{
-					Type: &RefName{
-						Name:          "ListOf2",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-						Indexed: []Shape{
-							&RefName{
-								Name:          "Example",
-								PkgName:       "testasset",
-								PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-							},
-							&PointerLike{
-								Type: &RefName{
-									Name:          "Time",
-									PkgName:       "time",
-									PkgImportName: "time",
-								},
-							},
+						&RefName{
+							Name:          "Location",
+							PkgName:       "time",
+							PkgImportName: "time",
 						},
 					},
 				},
 			},
 		},
-		// ListOf2[ListOf[any],*ListOf2[int64,*time.Duration]]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&RefName{
-					Name:          "ListOf",
-					PkgName:       "testasset",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+		"from variables top level": {
+			body: `package test_package
+import "time"
+
+var (
+	_ Option[ListOf2[*O,time.Location]] = (*Some[ListOf2[*O,time.Location]])(nil)
+	_ Option[ListOf2[*O,time.Location]] = (*None[ListOf2[*O,time.Location]])(nil)
+)
+`,
+			expected: map[string]Shape{
+				"test_package.Option[ListOf2[*O,time.Location]]": &RefName{
+					Name:          "Option",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
 					Indexed: []Shape{
-						&Any{},
-					},
-				},
-				&PointerLike{
-					Type: &RefName{
-						Name:          "ListOf2",
-						PkgName:       "testasset",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-						Indexed: []Shape{
-							&PrimitiveLike{Kind: &NumberLike{Kind: &Int64{}}},
-							&PointerLike{
-								Type: &RefName{
-									Name:          "Duration",
+						&RefName{
+							Name:          "ListOf2",
+							PkgName:       "test_package",
+							PkgImportName: "github.com/test_package",
+							Indexed: []Shape{
+								&PointerLike{
+									Type: &RefName{
+										Name:          "O",
+										PkgName:       "test_package",
+										PkgImportName: "github.com/test_package",
+									},
+								},
+								&RefName{
+									Name:          "Location",
 									PkgName:       "time",
 									PkgImportName: "time",
 								},
@@ -637,29 +467,145 @@ func TestInferFromFile(t *testing.T) {
 				},
 			},
 		},
-		// ListOf2[int64,*time.Duration]
-		{
-			Name:          "ListOf2",
-			PkgName:       "testasset",
-			PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
-			Indexed: []Shape{
-				&PrimitiveLike{
-					Kind: &NumberLike{
-						Kind: &Int64{},
+		"from function declaration": {
+			body: `package test_package
+
+import "time"
+
+func OptionToJSON[T1 ListOf2[*O,time.Location]](x Option[T1]) ([]byte, error) {
+	return MatchOptionR2(
+		x,
+		func (y *Some[T1]) ([]byte, error) {
+			body, err := SomeToJSON[T1](y)
+			if err != nil {
+				return nil, fmt.Errorf("testasset.OptionToJSON[T1]: %w", err)
+			}
+			return json.Marshal(OptionUnionJSON[T1]{
+				Type: "testasset.Some",
+				Some: body,
+			})
+		},
+		func (y *None[int]) ([]byte, error) {
+			body, err := NoneToJSON[int](y)
+			if err != nil {
+				return nil, fmt.Errorf("testasset.OptionToJSON[T1]: %w", err)
+			}
+			return json.Marshal(OptionUnionJSON[T1]{
+				Type: "testasset.None",
+				None: body,
+			})
+		},
+	)
+}
+`,
+			expected: map[string]Shape{
+				"test_package.ListOf2[*O,time.Location]": &RefName{
+					Name:          "ListOf2",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PointerLike{
+							Type: &RefName{
+								Name:          "O",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+						&RefName{
+							Name:          "Location",
+							PkgName:       "time",
+							PkgImportName: "time",
+						},
 					},
 				},
-				&PointerLike{
-					Type: &RefName{
-						Name:          "Duration",
-						PkgName:       "time",
-						PkgImportName: "time",
+				"test_package.None[int]": &RefName{
+					Name:          "None",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PrimitiveLike{Kind: &NumberLike{Kind: &Int{}}},
+					},
+				},
+			},
+		},
+		"from function receiver": {
+			body: `package test_package
+
+func (r *Some[T1]) _unmarshalJSONSomeLb_T1_bL(data []byte) (Some[T1], error) {
+	result := Some[int]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("testasset: Some[T1]._unmarshalJSONSomeLb_T1_bL: native struct unwrap; %w", err)
+	}
+	if fieldData, ok := partial["Data"]; ok {
+		result.Data, err = r._unmarshalJSONT1(fieldData)
+		if err != nil {
+			return result, fmt.Errorf("testasset: Some[T1]._unmarshalJSONSomeLb_T1_bL: field Data; %w", err)
+		}
+	}
+	return result, nil
+}
+`,
+			expected: map[string]Shape{
+				"test_package.Some[int]": &RefName{
+					Name:          "Some",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PrimitiveLike{Kind: &NumberLike{Kind: &Int{}}},
+					},
+				},
+			},
+		},
+		"from init function with embeded function": {
+			body: `package test_package
+
+import "time"
+
+func init() {
+	shared.JSONMarshallerRegister[T1]("github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*.O,time.Location]]", ListOf2[*O,time.Location]{}, &ListOf2[*O,time.Location]{})
+	shared.JSONMarshallerRegister[T1]("github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*.O,time.Location]]", NoneFromJSON[ListOf2[*O,time.Location]], NoneToJSON[ListOf2[*O,time.Location]])
+}`,
+			expected: map[string]Shape{
+				"test_package.ListOf2[*O,time.Location]": &RefName{
+					Name:          "ListOf2",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PointerLike{
+							Type: &RefName{
+								Name:          "O",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+						&RefName{
+							Name:          "Location",
+							PkgName:       "time",
+							PkgImportName: "time",
+						},
 					},
 				},
 			},
 		},
 	}
+	for name, uc := range useCases {
+		t.Run(name, func(t *testing.T) {
+			w := newIndexedTypeWalkerWithContentBody(
+				uc.body,
+				func(x *IndexedTypeWalker) {
+					x.SetPkgImportName("github.com/test_package")
+				},
+			)
+			assert.NotNil(t, w)
+			for _, i := range w.IndexedShapes() {
+				t.Log(ToGoTypeName(i, WithInstantiation()))
+			}
 
-	if diff := cmp.Diff(expected4, instantiations); diff != "" {
-		t.Errorf("mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(uc.expected, w.IndexedShapes()); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
