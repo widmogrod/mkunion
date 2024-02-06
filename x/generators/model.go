@@ -130,34 +130,5 @@ func TypeNameIfSupports(s shape.Shape) (string, bool) {
 }
 
 func TemplateHelperShapeVariantToName(x shape.Shape) string {
-	return shape.MatchShapeR1(
-		x,
-		func(x *shape.Any) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: %T not suported", x))
-		},
-		func(x *shape.RefName) string {
-			return x.Name
-		},
-		func(x *shape.PointerLike) string {
-			return TemplateHelperShapeVariantToName(x.Type)
-		},
-		func(x *shape.AliasLike) string {
-			return x.Name
-		},
-		func(x *shape.PrimitiveLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.ListLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.MapLike) string {
-			panic(fmt.Errorf("generators.TemplateHelperShapeVariantToName: expects only named shape: %#v", x))
-		},
-		func(x *shape.StructLike) string {
-			return x.Name
-		},
-		func(x *shape.UnionLike) string {
-			return x.Name
-		},
-	)
+	return shape.Name(x)
 }
