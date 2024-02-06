@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -v
+//go:generate go run ../../cmd/mkunion/main.go -v -type-registry
 
-//go:tag mkunion:"Data"
+//go:tag mkunion:"Data,noserde"
 type (
 	Record[A any] struct {
 		Key       string
@@ -496,7 +496,7 @@ func DoSink[A any](ctx PullOnly[A], f func(*Record[A]) error) error {
 	}
 }
 
-//go:tag mkunion:"Either"
+//go:tag mkunion:"Either,noserde"
 type (
 	Left[A, B any] struct {
 		Left A
