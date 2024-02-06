@@ -74,3 +74,11 @@ func (*_someStruct) Exec(*ListOf2[*L, time.Location]) {} // √ - found by FindI
 var (
 	_ = &ListOf2[ListOf[*bool], *ListOf2[Example, *time.Time]]{} // √ - found by FindInstantiationsOf x2
 )
+
+//go:tag mkunion:"Option"
+type (
+	Some[AZ ListOf2[*O, time.Location]] struct {
+		Data AZ
+	}
+	None[AZ ListOf2[*O, time.Location]] struct{}
+)
