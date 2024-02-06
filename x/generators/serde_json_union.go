@@ -250,7 +250,10 @@ func (g *SerdeJSONUnion) constructionf(x shape.Shape, template string) string {
 		if i > 0 {
 			typeName += ", "
 		}
-		typeName += fmt.Sprintf("%s %s", t.Name, shape.ToGoTypeName(t.Type))
+		paramType := shape.ToGoTypeName(t.Type,
+			shape.WithRootPackage(g.union.PkgName),
+		)
+		typeName += fmt.Sprintf("%s %s", t.Name, paramType)
 	}
 	typeName += "]"
 
