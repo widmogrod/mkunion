@@ -48,6 +48,10 @@ func main() {
 				Required: false,
 				Value:    false,
 			},
+			&cli.BoolFlag{
+				Name:  "type-registry",
+				Value: false,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if c.Bool("verbose") {
@@ -112,28 +116,30 @@ func main() {
 				}
 			}
 
-			for _, inferred := range packages {
-				dir := path.Dir(inferred.FileName())
+			if c.Bool("type-registry") {
+				for _, inferred := range packages {
+					dir := path.Dir(inferred.FileName())
 
-				// walk through all *.go files in the same directory
-				// and generate type registry for all inferred packages
-				// in the same directory
+					// walk through all *.go files in the same directory
+					// and generate type registry for all inferred packages
+					// in the same directory
 
-				indexed, err := shape.NewIndexTypeInDir(dir)
-				if err != nil {
-					return fmt.Errorf("mkunion: failed indexing types in directory %s: %w", dir, err)
-				}
-
-				if len(indexed.IndexedShapes()) > 0 {
-					contents, err := GenerateTypeRegistry(indexed)
+					indexed, err := shape.NewIndexTypeInDir(dir)
 					if err != nil {
-						return fmt.Errorf("mkunion: failed walking through directory %s: %w", dir, err)
+						return fmt.Errorf("mkunion: failed indexing types in directory %s: %w", dir, err)
 					}
 
-					regPath := path.Join(dir, "types.go")
-					err = SaveFile(contents, regPath, "reg_gen")
-					if err != nil {
-						return fmt.Errorf("mkunion: failed saving type registry in %s: %w", regPath, err)
+					if len(indexed.IndexedShapes()) > 0 {
+						contents, err := GenerateTypeRegistry(indexed)
+						if err != nil {
+							return fmt.Errorf("mkunion: failed walking through directory %s: %w", dir, err)
+						}
+
+						regPath := path.Join(dir, "types.go")
+						err = SaveFile(contents, regPath, "reg_gen")
+						if err != nil {
+							return fmt.Errorf("mkunion: failed saving type registry in %s: %w", regPath, err)
+						}
 					}
 				}
 			}
