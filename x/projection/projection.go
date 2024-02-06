@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go
+//go:generate go run ../../cmd/mkunion/main.go -v
 
 //go:tag mkunion:"Data"
 type (

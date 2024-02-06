@@ -14,6 +14,13 @@ import (
 	"time"
 )
 
+// mkunion(fix): this is for generated code, because Watermark is not a explicit type,
+// and is created at runtime, it's hard to infer it at compile time
+var (
+	_ = &Watermark[Either[int, float64]]{}
+	_ = &Watermark[string]{}
+)
+
 func TestProjection_HappyPath(t *testing.T) {
 	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTime)
 	stream1 := stream.NewTypedStreamTopic[Data[int]](dataStream, "topic-out-1")

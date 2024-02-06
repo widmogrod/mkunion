@@ -85,18 +85,9 @@ func MatchDataR0[A any](
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Data[int]", DataFromJSON[int], DataToJSON[int])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[int]", RecordFromJSON[int], RecordToJSON[int])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[float64]", RecordFromJSON[float64], RecordToJSON[float64])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[string]", RecordFromJSON[string], RecordToJSON[string])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[github.com/widmogrod/mkunion/x/projection.Either[int,float64]]", RecordFromJSON[Either[int, float64]], RecordToJSON[Either[int, float64]])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[Either[int,float64]]", RecordFromJSON[Either[int, float64]], RecordToJSON[Either[int, float64]])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Left[int,float64]", LeftFromJSON[int, float64], LeftToJSON[int, float64])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Right[int,float64]", RightFromJSON[int, float64], RightToJSON[int, float64])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[int]", WatermarkFromJSON[int], WatermarkToJSON[int])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[float64]", WatermarkFromJSON[float64], WatermarkToJSON[float64])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[string]", WatermarkFromJSON[string], WatermarkToJSON[string])
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[Either[int,float64]]", WatermarkFromJSON[Either[int, float64]], WatermarkToJSON[Either[int, float64]])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Data[any]", DataFromJSON[any], DataToJSON[any])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Record[any]", RecordFromJSON[any], RecordToJSON[any])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Watermark[any]", WatermarkFromJSON[any], WatermarkToJSON[any])
 }
 
 type DataUnionJSON[A any] struct {
