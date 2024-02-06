@@ -395,7 +395,7 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 						yreflect = yreflect.Elem()
 					}
 
-					variantShort := shape.ToGoTypeName(s)
+					variantShort := shape.Name(s)
 					return MkMap(
 						MkField(
 							"$type",
@@ -644,7 +644,7 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 			}
 
 			for _, variant := range x.Variant {
-				variantName := shape.ToGoTypeName(variant)
+				variantName := shape.Name(variant)
 				_, found := (*data)[variantName]
 				if found {
 					// zreflect is interface, so we need to find the actual type
@@ -655,6 +655,7 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 					}
 
 					typR := reflect.TypeOf(typ)
+					typR = reflect.PtrTo(typR)
 
 					return ToGoReflect(variant, (*data)[variantName], typR)
 				}
