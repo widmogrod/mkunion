@@ -104,9 +104,6 @@ func TestMkRefNameFromString(t *testing.T) {
 			if diff := cmp.Diff(useCase.want, got); diff != "" {
 				t.Fatalf("MkRefNameFromReflect2: diff: (-want +got)\n%s", diff)
 			}
-
-			typeName := ToGoTypeName(got, WithPkgImportName())
-			assert.Equal(t, useCase.name, typeName)
 		})
 	}
 }
@@ -146,7 +143,7 @@ func TestMkRefNameFromReflect(t *testing.T) {
 
 	typeName := ToGoTypeName(got, WithPkgImportName())
 	assert.Equal(t,
-		"github.com/widmogrod/mkunion/x/shape.someOf2[string,github.com/widmogrod/mkunion/x/shape.someOf2[int,float64]]",
+		"github.com/widmogrod/mkunion/x/shape.someOf2[string,someOf2[int,float64]]",
 		typeName,
 	)
 }

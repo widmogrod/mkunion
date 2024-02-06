@@ -72,60 +72,42 @@ func ToGoPkgImportName(x Shape) string {
 	)
 }
 
-type ToGoTypeNameOption string
+type ToGoTypeNameOptionFunc func(o *toGoOption)
 
-func WithInstantiation() ToGoTypeNameOption {
-	return "instantiate"
+func WithInstantiation() ToGoTypeNameOptionFunc {
+	return func(o *toGoOption) {
+		o.shouldInstantiate = true
+	}
 }
 
-func WithPkgImportName() ToGoTypeNameOption {
-	return usePkgImportName
+func WithPkgImportName() ToGoTypeNameOptionFunc {
+	return func(o *toGoOption) {
+		o.usePkgImportName = true
+	}
 }
 
-const (
-	rootPackage      = "root-package:"
-	usePkgImportName = "usePkgImportName"
-)
-
-func WithRootPackage(pkgName string) ToGoTypeNameOption {
-	result := rootPackage + pkgName
-	return ToGoTypeNameOption(result)
+func WithRootPackage(pkgName string) ToGoTypeNameOptionFunc {
+	return func(o *toGoOption) {
+		o.rootPkgName = pkgName
+		o.removeRootPkgName = true
+	}
 }
 
-func packageWrap(options []ToGoTypeNameOption, pkgName, pkgImportName, value string) string {
+func packageWrap(options *toGoOption, pkgName, pkgImportName, value string) string {
 	if pkgName == "" {
 		return value
 	}
 
-	useImportName := false
-	for _, option := range options {
-		if option == usePkgImportName {
-			useImportName = true
-		}
-		if !strings.HasPrefix(string(option), rootPackage) {
-			continue
-		}
-
-		rootPkgName := string(option)[len(rootPackage):]
-		if pkgName == rootPkgName {
-			return value
-		}
+	if options.removeRootPkgName &&
+		pkgName == options.rootPkgName {
+		return value
 	}
 
-	if useImportName {
+	if options.usePkgImportName {
 		return fmt.Sprintf("%s.%s", pkgImportName, value)
 	}
 
 	return fmt.Sprintf("%s.%s", pkgName, value)
-}
-
-func shouldInstantiate(options []ToGoTypeNameOption) bool {
-	for _, x := range options {
-		if x == "instantiate" {
-			return true
-		}
-	}
-	return false
 }
 
 // ToGoFullTypeNameFromReflect returns full type name with package name
@@ -146,7 +128,33 @@ func ToGoFullTypeNameFromReflect(x reflect.Type) string {
 	return fmt.Sprintf("%s.%s", x.PkgPath(), x.Name())
 }
 
-func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
+type toGoOption struct {
+	usePkgImportName  bool
+	removeRootPkgName bool
+	shouldInstantiate bool
+
+	rootPkgName       string
+	rootPkgImportName string
+}
+
+func ToGoTypeName(x Shape, options ...ToGoTypeNameOptionFunc) string {
+	o := &toGoOption{
+		rootPkgName:       ToGoPkgName(x),
+		rootPkgImportName: ToGoPkgImportName(x),
+
+		usePkgImportName:  false,
+		removeRootPkgName: false,
+		shouldInstantiate: false,
+	}
+
+	for _, option := range options {
+		option(o)
+	}
+
+	return toGoTypeName(x, o)
+}
+
+func toGoTypeName(x Shape, options *toGoOption) string {
 	return MatchShapeR1(
 		x,
 		func(x *Any) string {
@@ -160,10 +168,13 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 
 			result := packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 			if len(x.Indexed) > 0 {
+				back := options.removeRootPkgName
+				options.removeRootPkgName = true
 				names := make([]string, 0)
 				for _, name := range x.Indexed {
-					names = append(names, ToGoTypeName(name, options...))
+					names = append(names, toGoTypeName(name, options))
 				}
+				options.removeRootPkgName = back
 
 				result = fmt.Sprintf("%s[%s]", result, strings.Join(names, ","))
 			}
@@ -171,10 +182,10 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 			return result
 		},
 		func(x *PointerLike) string {
-			return fmt.Sprintf("*%s", ToGoTypeName(x.Type, options...))
+			return fmt.Sprintf("*%s", toGoTypeName(x.Type, options))
 		},
 		func(x *AliasLike) string {
-			result := toGoNameWithTypeParams(x, options...)
+			result := toGoNameWithTypeParams(x, options)
 			if result != "" {
 				return result
 			}
@@ -202,17 +213,17 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 			}
 			return fmt.Sprintf("%s%s",
 				prefix,
-				ToGoTypeName(x.Element, options...),
+				toGoTypeName(x.Element, options),
 			)
 		},
 		func(x *MapLike) string {
 			return fmt.Sprintf("map[%s]%s",
-				ToGoTypeName(x.Key, options...),
-				ToGoTypeName(x.Val, options...),
+				toGoTypeName(x.Key, options),
+				toGoTypeName(x.Val, options),
 			)
 		},
 		func(x *StructLike) string {
-			result := toGoNameWithTypeParams(x, options...)
+			result := toGoNameWithTypeParams(x, options)
 			if result != "" {
 				return result
 			}
@@ -220,7 +231,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 			return packageWrap(options, x.PkgName, x.PkgImportName, x.Name)
 		},
 		func(x *UnionLike) string {
-			result := toGoNameWithTypeParams(x, options...)
+			result := toGoNameWithTypeParams(x, options)
 			if result != "" {
 				return result
 			}
@@ -230,7 +241,7 @@ func ToGoTypeName(x Shape, options ...ToGoTypeNameOption) string {
 	)
 }
 
-func toGoNameWithTypeParams(x Shape, options ...ToGoTypeNameOption) string {
+func toGoNameWithTypeParams(x Shape, options *toGoOption) string {
 	var typeName string
 	var pkgName string
 	var pkgImportName string
@@ -255,13 +266,16 @@ func toGoNameWithTypeParams(x Shape, options ...ToGoTypeNameOption) string {
 		return ""
 	}
 
-	if shouldInstantiate(options) {
+	if options.shouldInstantiate {
 		typeParams := ToGoTypeParamsTypes(x)
 		if len(typeParams) > 0 {
+			back := options.removeRootPkgName
+			options.removeRootPkgName = true
 			instantiatedTypeParams := make([]string, len(typeParams))
 			for i, y := range typeParams {
-				instantiatedTypeParams[i] = ToGoTypeName(y, options...)
+				instantiatedTypeParams[i] = toGoTypeName(y, options)
 			}
+			options.removeRootPkgName = back
 
 			result := fmt.Sprintf("%s[%s]",
 				typeName,
@@ -269,6 +283,7 @@ func toGoNameWithTypeParams(x Shape, options ...ToGoTypeNameOption) string {
 			)
 
 			result = packageWrap(options, pkgName, pkgImportName, result)
+
 			return result
 		}
 	} else {
@@ -280,6 +295,7 @@ func toGoNameWithTypeParams(x Shape, options ...ToGoTypeNameOption) string {
 			)
 
 			result = packageWrap(options, pkgName, pkgImportName, result)
+
 			return result
 		}
 	}
@@ -373,6 +389,39 @@ func ToGoTypeParamsTypes(x Shape) []Shape {
 				typeParamsNames[i] = y.Type
 			}
 			return typeParamsNames
+		},
+	)
+}
+
+func ExtractIndexedTypes(x Shape) []Shape {
+	return MatchShapeR1(
+		x,
+		func(x *Any) []Shape {
+			return nil
+		},
+		func(x *RefName) []Shape {
+			return x.Indexed
+		},
+		func(x *PointerLike) []Shape {
+			return ExtractIndexedTypes(x.Type)
+		},
+		func(x *AliasLike) []Shape {
+			return ExtractIndexedTypes(x.Type)
+		},
+		func(x *PrimitiveLike) []Shape {
+			return nil
+		},
+		func(x *ListLike) []Shape {
+			return nil
+		},
+		func(x *MapLike) []Shape {
+			return nil
+		},
+		func(x *StructLike) []Shape {
+			return nil
+		},
+		func(x *UnionLike) []Shape {
+			return nil
 		},
 	)
 }
