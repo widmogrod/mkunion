@@ -61,7 +61,7 @@ func TestNewTypedStream(t *testing.T) {
 			Key:       "1",
 			Data:      schema.MkInt(1),
 			EventTime: MkEventTimeFromInt(10),
-			Offset:    MkOffsetFromInt(0),
+			Offset:    mkInMemoryOffsetFromInt(0),
 		}
 
 		if diff := cmp.Diff(expected, item); diff != "" {
@@ -86,7 +86,7 @@ func TestNewTypedStream(t *testing.T) {
 			Key:       "1",
 			Data:      schema.MkString("hello"),
 			EventTime: MkEventTimeFromInt(10),
-			Offset:    MkOffsetFromInt(0),
+			Offset:    mkInMemoryOffsetFromInt(0),
 		}
 
 		if diff := cmp.Diff(expected, item); diff != "" {

@@ -1,6 +1,9 @@
 package stream
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 //go:generate go run ../../cmd/mkunion
 
@@ -52,28 +55,19 @@ type Stream[A any] interface {
 var (
 	ErrParsingOffsetEmptyOffset = fmt.Errorf("offset parsing empty value of offset")
 	ErrParsingOffsetParser      = fmt.Errorf("offset parser error")
+	ErrOffsetNotComparable      = fmt.Errorf("offset not comparable")
 )
-
-func MkOffsetFromInt(x int) *Offset {
-	result := Offset(fmt.Sprintf("%d", x))
-	return &result
-}
-
-func ParseOffsetAsInt(x *Offset) (int, error) {
-	if x == nil {
-		return 0, ErrParsingOffsetEmptyOffset
-	}
-
-	var result int
-
-	_, err := fmt.Sscanf(string(*x), "%d", &result)
-	if err != nil {
-		return 0, fmt.Errorf("stream.ParseOffsetAsInt: %w; %w", err, ErrParsingOffsetParser)
-	}
-
-	return result, nil
-}
 
 func MkEventTimeFromInt(x int64) *EventTime {
 	return &x
+}
+
+func WithSystemTime() EventTime {
+	return time.Now().UnixNano()
+}
+
+func WithSystemTimeFixed(x EventTime) func() EventTime {
+	return func() EventTime {
+		return x
+	}
 }

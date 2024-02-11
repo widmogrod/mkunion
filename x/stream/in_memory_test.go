@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"testing"
 )
 
@@ -18,7 +19,7 @@ func TestNewInMemoryStream(t *testing.T) {
 	assert.Nil(t, value)
 
 	value, err = s.Pull(&FromOffset{
-		Offset: MkOffsetFromInt(1),
+		Offset: mkInMemoryOffsetFromInt(1),
 	})
 	assert.ErrorIs(t, err, ErrEmptyTopic)
 	assert.Nil(t, value)
@@ -31,7 +32,7 @@ func TestNewInMemoryStream(t *testing.T) {
 
 	item, err = s.Pull(&FromOffset{
 		Topic:  "not-exists",
-		Offset: MkOffsetFromInt(0),
+		Offset: mkInMemoryOffsetFromInt(0),
 	})
 	assert.ErrorIs(t, err, ErrNoTopicWithName)
 	assert.Nil(t, item)
@@ -43,7 +44,7 @@ func TestInMemoryStream_Push(t *testing.T) {
 		Topic:  "topic-1",
 		Key:    "asdf",
 		Data:   123,
-		Offset: MkOffsetFromInt(33),
+		Offset: mkInMemoryOffsetFromInt(33),
 	})
 	assert.ErrorIs(t, err, ErrOffsetSetOnPush)
 }
@@ -76,7 +77,7 @@ func TestInMemoryStream_HappyPath(t *testing.T) {
 	err = s.Push(&Item[int]{
 		Topic:  "topic-1",
 		Data:   3,
-		Offset: MkOffsetFromInt(123),
+		Offset: mkInMemoryOffsetFromInt(123),
 	})
 	assert.ErrorIs(t, err, ErrEmptyKey)
 
@@ -96,7 +97,7 @@ func TestInMemoryStream_HappyPath(t *testing.T) {
 		Key:       "key-1",
 		Data:      1,
 		EventTime: MkEventTimeFromInt(4513),
-		Offset:    MkOffsetFromInt(0),
+		Offset:    mkInMemoryOffsetFromInt(0),
 	}
 	if diff := cmp.Diff(expected, value); diff != "" {
 		t.Fatalf("Pull: diff: (-want +got)\n%s", diff)
@@ -118,7 +119,7 @@ func TestInMemoryStream_HappyPath(t *testing.T) {
 		Key:       "key-2",
 		Data:      2,
 		EventTime: MkEventTimeFromInt(4513),
-		Offset:    MkOffsetFromInt(1),
+		Offset:    mkInMemoryOffsetFromInt(1),
 	}
 	if diff := cmp.Diff(expected, value); diff != "" {
 		t.Fatalf("Pull: diff: (-want +got)\n%s", diff)
@@ -160,7 +161,7 @@ func TestInMemoryStream_TestPublishingOnTwoTopics(t *testing.T) {
 		Key:       "key-1",
 		Data:      1,
 		EventTime: MkEventTimeFromInt(4513),
-		Offset:    MkOffsetFromInt(0),
+		Offset:    mkInMemoryOffsetFromInt(0),
 	}
 	if diff := cmp.Diff(expected, value); diff != "" {
 		t.Fatalf("Pull: diff: (-want +got)\n%s", diff)
@@ -176,7 +177,7 @@ func TestInMemoryStream_TestPublishingOnTwoTopics(t *testing.T) {
 		Key:       "key-2",
 		Data:      2,
 		EventTime: MkEventTimeFromInt(4513),
-		Offset:    MkOffsetFromInt(0),
+		Offset:    mkInMemoryOffsetFromInt(0),
 	}
 	if diff := cmp.Diff(expected, value); diff != "" {
 		t.Fatalf("Pull: diff: (-want +got)\n%s", diff)
@@ -214,4 +215,11 @@ func TestInMemoryStream_SimulateRuntimeProblem(t *testing.T) {
 	t.Log(err.Error())
 	assert.ErrorIs(t, err, ErrSimulatedError)
 	assert.ErrorIs(t, err, customerError2)
+}
+
+func TestStreamHappyPathSpec(t *testing.T) {
+	s := NewInMemoryStream[int](WithSystemTimeFixed(10))
+	HappyPathSpec(t, s, func() int {
+		return rand.Int()
+	})
 }

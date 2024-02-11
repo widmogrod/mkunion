@@ -3,17 +3,10 @@ package stream
 import (
 	"fmt"
 	"math/rand"
-	"time"
 )
 
-func WithSystemTime() EventTime {
-	return time.Now().UnixNano()
-}
-
-func WithSystemTimeFixed(x EventTime) func() EventTime {
-	return func() EventTime {
-		return x
-	}
+func init() {
+	RegisterOffsetCompare("i", InMemoryOffsetCompare)
 }
 
 func NewInMemoryStream[A any](systemTime func() EventTime) *InMemoryStream[A] {
@@ -29,7 +22,7 @@ type InMemoryStream[A any] struct {
 	simulate   *SimulateProblem
 }
 
-var _ Stream[int] = (*InMemoryStream[int])(nil)
+var _ Stream[any] = (*InMemoryStream[any])(nil)
 
 func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 	if i.simulate != nil && i.simulate.ErrorOnPush != nil {
@@ -57,7 +50,7 @@ func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 		Key:       x.Key,
 		Data:      x.Data,
 		EventTime: i.ensureEventTime(x.EventTime),
-		Offset:    MkOffsetFromInt(len(i.values[x.Topic])),
+		Offset:    mkInMemoryOffsetFromInt(len(i.values[x.Topic])),
 	})
 	return nil
 }
@@ -95,7 +88,7 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 				return nil, ErrEmptyTopic
 			}
 
-			offset, err := ParseOffsetAsInt(x.Offset)
+			offset, err := parseInMemoryOffsetAsInt(x.Offset)
 			if err != nil {
 				return nil, fmt.Errorf("stream.InMemoryStream: Pull %+#v: %w", x, err)
 			}
@@ -136,4 +129,34 @@ type SimulateProblem struct {
 
 func (i *InMemoryStream[A]) SimulateRuntimeProblem(x *SimulateProblem) {
 	i.simulate = x
+}
+
+func InMemoryOffsetCompare(a Offset, b Offset) (int8, error) {
+	var resultA, resultB int
+	_, err := fmt.Sscanf(string(a), "i:%d", &resultA)
+	if err != nil {
+		return 0, fmt.Errorf("stream.InMemoryOffsetCompare: left side; %w; %w", err, ErrParsingOffsetParser)
+	}
+
+	_, err = fmt.Sscanf(string(b), "i:%d", &resultB)
+	if err != nil {
+		return 0, fmt.Errorf("stream.InMemoryOffsetCompare: right side; %w; %w", err, ErrParsingOffsetParser)
+	}
+
+	return int8(resultA - resultB), nil
+}
+
+func mkInMemoryOffsetFromInt(x int) *Offset {
+	result := Offset(fmt.Sprintf("i:%d", x))
+	return &result
+}
+
+func parseInMemoryOffsetAsInt(x *Offset) (int, error) {
+	var result int
+	_, err := fmt.Sscanf(string(*x), "i:%d", &result)
+	if err != nil {
+		return 0, fmt.Errorf("stream.parseInMemoryOffsetAsInt: %w; %w", err, ErrParsingOffsetParser)
+	}
+
+	return result, nil
 }
