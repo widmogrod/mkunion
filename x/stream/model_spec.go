@@ -8,6 +8,7 @@ import (
 )
 
 // HappyPathSpec is a helper function to test the happy path of a stream
+// assumption: all keys land in the same partition, so Pulling will result in the same order as Pushing
 func HappyPathSpec[A any](t *testing.T, s Stream[A], gen func() A) {
 	t.Run("Push to stream single value", func(t *testing.T) {
 		topicName := fmt.Sprintf("topic-%d", rand.Int63())
