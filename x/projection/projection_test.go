@@ -264,13 +264,14 @@ func TestProjection_Recovery(t *testing.T) {
 		func(ctx1 *PushAndPullInMemoryContext[any, int]) error {
 			state := ctx1.CurrentState()
 			startValue := 0
-			if x, ok := state.(*PullPushContextState); ok {
-				if x.Offset.IsSet() {
-					if off, err := stream.ParseOffsetAsInt(x.Offset); err == nil {
-						startValue = off
-					}
+			off := state.(*PullPushContextState).Offset
+			if off.IsSet() {
+				_, err := fmt.Sscanf(string(*off), "%d", &startValue)
+				if err != nil {
+					return fmt.Errorf("projection.Load: parse offset: %w", err)
 				}
 			}
+
 			for i := startValue; i < 10; i++ {
 				time.Sleep(50 * time.Millisecond)
 				et := 50 * time.Millisecond
@@ -284,8 +285,9 @@ func TestProjection_Recovery(t *testing.T) {
 					return fmt.Errorf("projection.Range: push: %w", err)
 				}
 
+				off := stream.Offset(fmt.Sprintf("%d", i+1))
 				err = recovery.Snapshot(&PullPushContextState{
-					Offset:    stream.MkOffsetFromInt(i + 1),
+					Offset:    &off,
 					PullTopic: "",
 					PushTopic: stream1.TopicName(),
 				})
@@ -329,7 +331,7 @@ func TestProjection_Recovery(t *testing.T) {
 
 	//TODO:
 	// - [ ] ctx.Ack(item) for consistent asynchronous snapshots
-	// - [ ] mkunion generate type registry for parametrised interface types like Record[int] or Record[float64]
+	// - [√] mkunion generate type registry for parametrised interface types like Record[int] or Record[float64]
 	// - [ ] DoWindow state should catch also last watermark with last offset, so that windowStore keys that have windows closed, can be deleted
 
 	windowStore := NewWindowInMemoryStore[float64]("window-store")
