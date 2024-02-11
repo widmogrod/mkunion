@@ -38,7 +38,7 @@ type WindowRecord[A any] struct {
 	Key    WindowKey
 	Window *Window
 	Record A
-	Offset string
+	Offset stream.Offset
 	//Count  uint64 // How many items were added to this window, this is useful for AtCount TriggerDescription
 }
 
@@ -211,9 +211,9 @@ func DoWindow[A, B any](
 				for _, w := range MkWindow(x.EventTime, wd) {
 					windowID := MkWindowID(x.Key, w)
 					windowRecord, err := store.Load(windowID)
-					offset := "0"
+					var offset stream.Offset
 					if ctx.(*PushAndPullInMemoryContext[A, B]).nextOffset != nil {
-						offset = string(*ctx.(*PushAndPullInMemoryContext[A, B]).nextOffset)
+						offset = *ctx.(*PushAndPullInMemoryContext[A, B]).nextOffset
 					}
 					if err != nil {
 						if errors.Is(err, ErrWindowNotFound) {
@@ -238,7 +238,7 @@ func DoWindow[A, B any](
 
 						return fmt.Errorf("projection.DoWindow: load key=%s window=%s: %w", dataKey, windowID, err)
 					} else {
-						cmp, err := CompareOffset(offset, windowRecord.Offset)
+						cmp, err := stream.OffsetCompare(offset, windowRecord.Offset)
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: compare offset key=%s window=%s: %w", dataKey, windowID, err)
 						}
@@ -304,30 +304,6 @@ func DoWindow[A, B any](
 		}
 
 	}
-}
-
-func CompareOffset(a, b string) (int8, error) {
-	a1 := stream.Offset(a)
-	o1, err := stream.ParseOffsetAsInt(&a1)
-	if err != nil {
-		return 0, fmt.Errorf("projection.CompareOffset: parse a: %w", err)
-	}
-
-	b1 := stream.Offset(b)
-	o2, err := stream.ParseOffsetAsInt(&b1)
-	if err != nil {
-		return 0, fmt.Errorf("projection.CompareOffset: parse b: %w", err)
-	}
-
-	if o1 > o2 {
-		return 1, nil
-	}
-
-	if o1 < o2 {
-		return -1, nil
-	}
-
-	return 0, nil
 }
 
 func NewWindowInMemoryStore[A any](recordType string) *WindowInMemoryStore[A] {
