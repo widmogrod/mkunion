@@ -103,7 +103,7 @@ func tryToFindPkgName(pkgImportName, defaultPkgName string) string {
 	// open any go file (except _test.go) in the package and extract package name
 	// this is a hack, but it works
 
-	var result string
+	result := defaultPkgName
 	err = filepath.WalkDir(
 		pkgPath,
 		func(path string, d os.DirEntry, err error) error {
@@ -114,12 +114,9 @@ func tryToFindPkgName(pkgImportName, defaultPkgName string) string {
 			}
 
 			if d.IsDir() {
-				// if is hidden directory, skip it
-				if strings.HasPrefix(d.Name(), ".") ||
-					strings.HasPrefix(d.Name(), "_") {
+				if pkgPath != path {
 					return filepath.SkipDir
 				}
-
 				return nil
 			}
 
@@ -1006,14 +1003,17 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 
 	fset := token.NewFileSet()
 
-	err := filepath.Walk(dir,
-		func(path string, info fs.FileInfo, err error) error {
+	err := filepath.WalkDir(dir,
+		func(path string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
 
 			if info.IsDir() {
-				return nil
+				if path == dir {
+					return nil
+				}
+				return filepath.SkipDir
 			}
 
 			if !strings.HasSuffix(path, ".go") {
@@ -1143,12 +1143,13 @@ func (walker *IndexedTypeWalker) Visit(n ast.Node) ast.Visitor {
 		walker.packageNameToPackageImport[walker.pkgName] = walker.pkgImportName
 
 		for _, imp := range t.Imports {
+			pkgImportName := strings.Trim(imp.Path.Value, "\"")
 			if imp.Name != nil {
-				walker.packageNameToPackageImport[imp.Name.String()] = strings.Trim(imp.Path.Value, "\"")
+				walker.packageNameToPackageImport[imp.Name.String()] = pkgImportName
 			} else {
-				defaultPkgName := path.Base(strings.Trim(imp.Path.Value, "\""))
-				pkgName := tryToFindPkgName(strings.Trim(imp.Path.Value, "\""), defaultPkgName)
-				walker.packageNameToPackageImport[pkgName] = strings.Trim(imp.Path.Value, "\"")
+				defaultPkgName := path.Base(pkgImportName)
+				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
+				walker.packageNameToPackageImport[pkgName] = pkgImportName
 			}
 		}
 

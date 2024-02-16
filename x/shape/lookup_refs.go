@@ -83,6 +83,9 @@ func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 			}
 
 			if d.IsDir() {
+				if path != pkgPath {
+					return filepath.SkipDir
+				}
 				return nil
 			}
 
@@ -141,9 +144,7 @@ func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
 			}
 
 			if d.IsDir() {
-				// skip hidden directories
-				if strings.HasPrefix(d.Name(), ".") ||
-					strings.HasPrefix(d.Name(), "_") {
+				if path != pkgPath {
 					return filepath.SkipDir
 				}
 
