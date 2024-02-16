@@ -422,15 +422,13 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			f.pkgName: f.pkgImportName,
 		}
 		for _, imp := range t.Imports {
+			pkgImportName := strings.Trim(imp.Path.Value, "\"")
 			if imp.Name != nil {
-				f.packageNameToPackageImport[imp.Name.String()] = strings.Trim(imp.Path.Value, "\"")
+				f.packageNameToPackageImport[imp.Name.String()] = pkgImportName
 			} else {
-				defaultPkgName := path.Base(strings.Trim(imp.Path.Value, "\""))
-				pkgName := tryToFindPkgName(strings.Trim(imp.Path.Value, "\""), defaultPkgName)
-				log.Debugf("shape.InferFromFile: defaultPkgName %s", defaultPkgName)
-				log.Debugf("shape.InferFromFile: pkgName %s", pkgName)
-				f.packageNameToPackageImport[pkgName] = strings.Trim(imp.Path.Value, "\"")
-				log.Debugf("shape.InferFromFile: importName %s", f.packageNameToPackageImport[pkgName])
+				defaultPkgName := path.Base(pkgImportName)
+				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
+				f.packageNameToPackageImport[pkgName] = pkgImportName
 			}
 		}
 
