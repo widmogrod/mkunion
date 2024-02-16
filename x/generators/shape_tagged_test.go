@@ -173,13 +173,13 @@ func ListOfAliasAnyShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 		IsAlias: true,
 		Type: &shape.RefName{
-				Name: "ListOf",
-				PkgName: "testutils",
-				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-				Indexed: []shape.Shape{
-					&shape.Any{},
-				},
+			Name: "ListOf",
+			PkgName: "testutils",
+			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+			Indexed: []shape.Shape{
+				&shape.Any{},
 			},
+		},
 	}
 }
 `, result)
@@ -252,6 +252,11 @@ func ItemShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Record",
+			},
+		},
 	}
 }
 
@@ -266,18 +271,23 @@ func OtherShape() shape.Shape {
 				Type: &shape.Any{},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Record",
+			},
+		},
 		Type: &shape.RefName{
-				Name: "Some",
-				PkgName: "testutils",
-				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-				Indexed: []shape.Shape{
-					&shape.RefName{
-						Name: "A",
-						PkgName: "testutils",
-						PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-					},
+			Name: "Some",
+			PkgName: "testutils",
+			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+			Indexed: []shape.Shape{
+				&shape.RefName{
+					Name: "A",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 				},
 			},
+		},
 	}
 }
 `, result)

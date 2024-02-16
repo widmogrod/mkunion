@@ -255,7 +255,7 @@ func ShapeToString(x shape.Shape) string {
 			if x.IsAlias {
 				fmt.Fprintf(result, "\tIsAlias: %v,\n", x.IsAlias)
 			}
-			fmt.Fprintf(result, "\tType: %s,\n", padLeftTabs2(2, ShapeToString(x.Type)))
+			fmt.Fprintf(result, "\tType: %s,\n", padLeftTabs2(1, ShapeToString(x.Type)))
 			fmt.Fprintf(result, "}")
 
 			return result.String()
