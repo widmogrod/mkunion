@@ -92,6 +92,11 @@ func RunShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Command",
+			},
+		},
 	}
 }
 
@@ -114,6 +119,11 @@ func CallbackShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Command",
+			},
+		},
 	}
 }
 
@@ -126,6 +136,11 @@ func TryRecoverShape() shape.Shape {
 			{
 				Name: "RunID",
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Command",
 			},
 		},
 	}
@@ -142,6 +157,11 @@ func StopScheduleShape() shape.Shape {
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Command",
+			},
+		},
 	}
 }
 
@@ -154,6 +174,11 @@ func ResumeScheduleShape() shape.Shape {
 			{
 				Name: "ParentRunID",
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Command",
 			},
 		},
 	}
@@ -198,6 +223,11 @@ func FlowShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Workflow",
+			},
+		},
 	}
 }
 
@@ -210,6 +240,11 @@ func FlowRefShape() shape.Shape {
 			{
 				Name: "FlowID",
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Workflow",
 			},
 		},
 	}
@@ -244,6 +279,11 @@ func ScheduleRunShape() shape.Shape {
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "RunOption",
+			},
+		},
 	}
 }
 
@@ -260,6 +300,11 @@ func DelayRunShape() shape.Shape {
 						Kind: &shape.Int64{},
 					},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "RunOption",
 			},
 		},
 	}
@@ -300,6 +345,11 @@ func EndShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Expr",
+			},
+		},
 	}
 }
 
@@ -328,6 +378,11 @@ func AssignShape() shape.Shape {
 					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Expr",
 			},
 		},
 	}
@@ -366,6 +421,11 @@ func ApplyShape() shape.Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 					},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Expr",
 			},
 		},
 	}
@@ -410,6 +470,11 @@ func ChooseShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Expr",
+			},
+		},
 	}
 }
 
@@ -438,6 +503,11 @@ func GetValueShape() shape.Shape {
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Reshaper",
+			},
+		},
 	}
 }
 
@@ -454,6 +524,11 @@ func SetValueShape() shape.Shape {
 					PkgName:       "schema",
 					PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Reshaper",
 			},
 		},
 	}
@@ -516,6 +591,11 @@ func AndShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Predicate",
+			},
+		},
 	}
 }
 
@@ -536,6 +616,11 @@ func OrShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Predicate",
+			},
+		},
 	}
 }
 
@@ -552,6 +637,11 @@ func NotShape() shape.Shape {
 					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Predicate",
 			},
 		},
 	}
@@ -582,6 +672,11 @@ func CompareShape() shape.Shape {
 					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Predicate",
 			},
 		},
 	}
@@ -628,6 +723,11 @@ func NextOperationShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "State",
+			},
+		},
 	}
 }
 
@@ -652,6 +752,11 @@ func DoneShape() shape.Shape {
 					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "State",
 			},
 		},
 	}
@@ -688,6 +793,11 @@ func ErrorShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "State",
+			},
+		},
 	}
 }
 
@@ -718,6 +828,11 @@ func AwaitShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "State",
+			},
+		},
 	}
 }
 
@@ -744,6 +859,11 @@ func ScheduledShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "State",
+			},
+		},
 	}
 }
 
@@ -760,6 +880,11 @@ func ScheduleStoppedShape() shape.Shape {
 					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "State",
 			},
 		},
 	}

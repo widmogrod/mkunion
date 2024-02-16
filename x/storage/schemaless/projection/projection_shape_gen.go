@@ -63,6 +63,11 @@ func DoWindowShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Node",
+			},
+		},
 	}
 }
 
@@ -99,6 +104,11 @@ func DoMapShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Node",
+			},
+		},
 	}
 }
 
@@ -125,6 +135,11 @@ func DoLoadShape() shape.Shape {
 					PkgName:       "projection",
 					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Node",
 			},
 		},
 	}
@@ -155,6 +170,11 @@ func DoJoinShape() shape.Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 					},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Node",
 			},
 		},
 	}

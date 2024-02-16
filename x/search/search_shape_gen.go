@@ -44,6 +44,11 @@ func TermShape() shape.Shape {
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "SearchCMD",
+			},
+		},
 	}
 }
 
@@ -56,6 +61,11 @@ func FulltextShape() shape.Shape {
 			{
 				Name: "Query",
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "SearchCMD",
 			},
 		},
 	}

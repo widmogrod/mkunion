@@ -44,6 +44,11 @@ func FromBeginningShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "PullCMD",
+			},
+		},
 	}
 }
 
@@ -70,6 +75,11 @@ func FromOffsetShape() shape.Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/stream",
 					},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "PullCMD",
 			},
 		},
 	}

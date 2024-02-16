@@ -38,6 +38,11 @@ func LocationFieldShape() shape.Shape {
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Location",
+			},
+		},
 	}
 }
 
@@ -56,6 +61,11 @@ func LocationIndexShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Location",
+			},
+		},
 	}
 }
 
@@ -64,5 +74,10 @@ func LocationAnythingShape() shape.Shape {
 		Name:          "LocationAnything",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Location",
+			},
+		},
 	}
 }
