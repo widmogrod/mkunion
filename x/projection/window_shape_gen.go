@@ -47,6 +47,11 @@ func SessionWindowShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "WindowDescription",
+			},
+		},
 	}
 }
 
@@ -73,6 +78,11 @@ func SlidingWindowShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "WindowDescription",
+			},
+		},
 	}
 }
 
@@ -89,6 +99,11 @@ func FixedWindowShape() shape.Shape {
 					PkgName:       "time",
 					PkgImportName: "time",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "WindowDescription",
 			},
 		},
 	}
@@ -199,7 +214,11 @@ func WindowRecordShape() shape.Shape {
 			},
 			{
 				Name: "Offset",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "Offset",
+					PkgName:       "stream",
+					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+				},
 			},
 		},
 	}

@@ -70,6 +70,11 @@ func RecordShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Data",
+			},
+		},
 	}
 }
 
@@ -96,6 +101,11 @@ func WatermarkShape() shape.Shape {
 					PkgName:       "projection",
 					PkgImportName: "github.com/widmogrod/mkunion/x/projection",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Data",
 			},
 		},
 	}
@@ -165,6 +175,11 @@ func LeftShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Either",
+			},
+		},
 	}
 }
 
@@ -191,6 +206,11 @@ func RightShape() shape.Shape {
 					PkgName:       "",
 					PkgImportName: "",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Either",
 			},
 		},
 	}

@@ -58,6 +58,11 @@ func PullPushContextStateShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "SnapshotState",
+			},
+		},
 	}
 }
 
@@ -110,6 +115,11 @@ func JoinContextStateShape() shape.Shape {
 					PkgName:       "stream",
 					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "SnapshotState",
 			},
 		},
 	}

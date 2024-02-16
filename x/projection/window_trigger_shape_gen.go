@@ -28,5 +28,10 @@ func AtWatermarkShape() shape.Shape {
 		Name:          "AtWatermark",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerDescription",
+			},
+		},
 	}
 }
