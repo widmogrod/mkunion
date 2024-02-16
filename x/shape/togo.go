@@ -541,6 +541,82 @@ func ExtractPkgImportNames(x Shape) map[string]string {
 	)
 }
 
+// ExtractPkgImportNamesForTypeInitialisation returns map of package name to package import name
+// ignores field names, since type initialisation doesn't need them
+// ignores type parameters, since type initialisation doesn't need them
+func ExtractPkgImportNamesForTypeInitialisation(x Shape) map[string]string {
+	return MatchShapeR1(
+		x,
+		func(y *Any) map[string]string {
+			return nil
+		},
+		func(y *RefName) map[string]string {
+			result := make(map[string]string)
+			if y.PkgName != "" {
+				result[y.PkgName] = y.PkgImportName
+			}
+
+			for _, x := range y.Indexed {
+				result = joinMaps(result, ExtractPkgImportNames(x))
+			}
+
+			return result
+		},
+		func(x *PointerLike) map[string]string {
+			result := make(map[string]string)
+			result = joinMaps(result, ExtractPkgImportNames(x.Type))
+			return result
+		},
+		func(x *AliasLike) map[string]string {
+			result := make(map[string]string)
+			if x.PkgName != "" {
+				result[x.PkgName] = x.PkgImportName
+			}
+
+			result = joinMaps(result, ExtractPkgImportNames(x.Type))
+			for _, y := range x.TypeParams {
+				result = joinMaps(result, ExtractPkgImportNames(y.Type))
+			}
+
+			return result
+		},
+		func(x *PrimitiveLike) map[string]string {
+			return nil
+		},
+		func(x *ListLike) map[string]string {
+			result := make(map[string]string)
+			result = joinMaps(result, ExtractPkgImportNames(x.Element))
+			return result
+		},
+		func(x *MapLike) map[string]string {
+			result := make(map[string]string)
+			result = joinMaps(result, ExtractPkgImportNames(x.Key))
+			result = joinMaps(result, ExtractPkgImportNames(x.Val))
+			return result
+		},
+		func(x *StructLike) map[string]string {
+			result := make(map[string]string)
+			if x.PkgName != "" {
+				result[x.PkgName] = x.PkgImportName
+			}
+
+			return result
+		},
+		func(x *UnionLike) map[string]string {
+			result := make(map[string]string)
+			if x.PkgName != "" {
+				result[x.PkgName] = x.PkgImportName
+			}
+
+			for _, y := range x.Variant {
+				result = joinMaps(result, ExtractPkgImportNames(y))
+			}
+
+			return result
+		},
+	)
+}
+
 func joinMaps(x map[string]string, maps ...map[string]string) map[string]string {
 	for _, m := range maps {
 		for k, v := range m {

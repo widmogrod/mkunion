@@ -20,65 +20,7 @@ func Register(x Shape) {
 }
 
 func shapeFullName(x Shape) string {
-	return MatchShapeR1(
-		x,
-		func(x *Any) string {
-			return "any"
-		},
-		func(x *RefName) string {
-			if x.PkgName == "" {
-				return x.Name
-			}
-
-			// intentionaly skip indexing
-
-			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
-		},
-		func(x *PointerLike) string {
-			return fmt.Sprintf("*%s", shapeFullName(x.Type))
-		},
-		func(x *AliasLike) string {
-			if x.PkgName == "" {
-				return x.Name
-			}
-
-			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
-		},
-		func(x *PrimitiveLike) string {
-			return MatchPrimitiveKindR1(
-				x.Kind,
-				func(x *BooleanLike) string {
-					return "bool"
-				},
-				func(x *StringLike) string {
-					return "string"
-				},
-				func(x *NumberLike) string {
-					return "number"
-				},
-			)
-		},
-		func(x *ListLike) string {
-			return fmt.Sprintf("[]%s", shapeFullName(x.Element))
-		},
-		func(x *MapLike) string {
-			return fmt.Sprintf("map[%s]%s", shapeFullName(x.Key), shapeFullName(x.Val))
-		},
-		func(x *StructLike) string {
-			if x.PkgName == "" {
-				return x.Name
-			}
-
-			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
-		},
-		func(x *UnionLike) string {
-			if x.PkgName == "" {
-				return x.Name
-			}
-
-			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
-		},
-	)
+	return fmt.Sprintf("%s.%s", ToGoPkgImportName(x), Name(x))
 }
 
 func LookupShapeReflectAndIndex[A any]() (Shape, bool) {

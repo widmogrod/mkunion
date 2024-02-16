@@ -181,6 +181,10 @@ type FieldLike struct {
 	Tags  map[string]Tag
 }
 
+const (
+	TagUnionName = "mkunion_union_name"
+)
+
 type Tag struct {
 	Value   string
 	Options []string
@@ -265,6 +269,61 @@ func ConcatGuard(a, b Guard) Guard {
 	return &AndGuard{
 		L: append(result.L, b),
 	}
+}
+
+func injectTag(x Shape, tag string, value string, options ...string) Shape {
+	return MatchShapeR1(
+		x,
+		func(x *Any) Shape {
+			return x
+		},
+		func(x *RefName) Shape {
+			return x
+		},
+		func(x *PointerLike) Shape {
+			return x
+		},
+		func(x *AliasLike) Shape {
+			if x.Tags == nil {
+				x.Tags = make(map[string]Tag)
+			}
+			x.Tags[tag] = Tag{
+				Value:   value,
+				Options: options,
+			}
+			return x
+		},
+		func(x *PrimitiveLike) Shape {
+			return x
+		},
+		func(x *ListLike) Shape {
+			return x
+		},
+		func(x *MapLike) Shape {
+			return x
+		},
+		func(x *StructLike) Shape {
+			if x.Tags == nil {
+				x.Tags = make(map[string]Tag)
+			}
+			x.Tags[tag] = Tag{
+				Value:   value,
+				Options: options,
+			}
+			return x
+		},
+		func(x *UnionLike) Shape {
+			if x.Tags == nil {
+				x.Tags = make(map[string]Tag)
+			}
+			x.Tags[tag] = Tag{
+				Value:   value,
+				Options: options,
+			}
+
+			return x
+		},
+	)
 }
 
 func Tags(x Shape) map[string]Tag {
@@ -463,4 +522,43 @@ func ExtractRefs(x Shape) []*RefName {
 			return result
 		},
 	)
+}
+
+func IsUnion(x Shape) bool {
+	_, isUnion := x.(*UnionLike)
+	return isUnion
+}
+
+func RetrieveIndexed(x Shape) []Shape {
+	ref, ok := x.(*RefName)
+	if !ok {
+		return nil
+	}
+
+	if len(ref.Indexed) == 0 {
+		return nil
+	}
+
+	result := make([]Shape, len(ref.Indexed))
+	copy(result, ref.Indexed)
+	return result
+}
+
+func RetrieveVariantTypeRef(x Shape) *RefName {
+	if IsUnion(x) {
+		return nil
+	}
+
+	tags := Tags(x)
+	unionName := TagGetValue(tags, TagUnionName, "")
+	if unionName == "" {
+		return nil
+	}
+
+	return &RefName{
+		Name:          unionName,
+		PkgName:       ToGoPkgName(x),
+		PkgImportName: ToGoPkgImportName(x),
+		Indexed:       RetrieveIndexed(x),
+	}
 }

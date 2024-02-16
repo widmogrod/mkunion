@@ -215,8 +215,10 @@ func (f *InferredInfo) RetrieveStruct(name string) *StructLike {
 
 func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 	var variants []Shape
-	for _, variant := range f.possibleVariantTypes[name] {
-		variants = append(variants, f.shapes[variant])
+	for _, variantName := range f.possibleVariantTypes[name] {
+		variant := f.shapes[variantName]
+		injectTag(variant, TagUnionName, name)
+		variants = append(variants, variant)
 	}
 
 	if len(variants) == 0 {
@@ -1083,6 +1085,52 @@ func (walker *IndexedTypeWalker) SetPkgImportName(pkgImportName string) {
 
 func (walker *IndexedTypeWalker) IndexedShapes() map[string]Shape {
 	return walker.indexedShapes
+}
+
+func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
+	// find if given shape is variant, of an union or union
+	// if is variant, then append to list other variants of the union, and index them by the same type
+	// if is union, then append to list all variants of the union, and index them by the same type
+	result := make(map[string]Shape, len(walker.indexedShapes))
+
+	for name, shape := range walker.IndexedShapes() {
+		result[name] = shape
+
+		ref, ok := shape.(*RefName)
+		if !ok {
+			continue
+		}
+
+		newShape, found := LookupShapeOnDisk(ref)
+		if !found {
+			log.Debugf("shape.ExpandedShapes: not found during ref lookup: %s", name)
+			continue
+		}
+
+		union, ok := newShape.(*UnionLike)
+		if !ok {
+			if unionRef := RetrieveVariantTypeRef(newShape); unionRef != nil {
+				foundShape, _ := LookupShapeOnDisk(unionRef)
+				union, _ = foundShape.(*UnionLike)
+			}
+		}
+
+		if union == nil {
+			continue
+		}
+
+		for _, variant := range union.Variant {
+			if IsWeekAlias(variant) {
+				continue
+			}
+
+			newVariant := IndexWith(variant, ref)
+			name := ToGoTypeName(newVariant)
+			result[name] = newVariant
+		}
+	}
+
+	return result
 }
 
 func (walker *IndexedTypeWalker) Visit(n ast.Node) ast.Visitor {
