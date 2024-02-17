@@ -5,14 +5,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
-	. "github.com/widmogrod/mkunion/x/storage/schemaless"
+	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
 
 func NewTypedRepoWithAggregator[T, C any](
-	store Repository[schema.Schema],
-	aggregator func() Aggregator[T, C],
+	store schemaless.Repository[schema.Schema],
+	aggregator func() schemaless.Aggregator[T, C],
 ) *TypedRepoWithAggregator[T, C] {
-	location, err := schema.NewTypedLocation[Record[T]]()
+	location, err := schema.NewTypedLocation[schemaless.Record[T]]()
 	if err != nil {
 		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
 	}
@@ -24,33 +24,33 @@ func NewTypedRepoWithAggregator[T, C any](
 	}
 }
 
-var _ Repository[any] = &TypedRepoWithAggregator[any, any]{}
+var _ schemaless.Repository[any] = &TypedRepoWithAggregator[any, any]{}
 
 type TypedRepoWithAggregator[T any, C any] struct {
 	loc        *schema.TypedLocation
-	store      Repository[schema.Schema]
-	aggregator func() Aggregator[T, C]
+	store      schemaless.Repository[schema.Schema]
+	aggregator func() schemaless.Aggregator[T, C]
 }
 
-func (repo *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType RecordType) (Record[T], error) {
+func (repo *TypedRepoWithAggregator[T, C]) Get(recordID string, recordType schemaless.RecordType) (schemaless.Record[T], error) {
 	v, err := repo.store.Get(recordID, recordType)
 	if err != nil {
-		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema store error ID=%s Type=%s. %w", recordID, recordType, err)
+		return schemaless.Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema store error ID=%s Type=%s. %w", recordID, recordType, err)
 	}
 
-	typed, err := RecordAs[T](v)
+	typed, err := schemaless.RecordAs[T](v)
 	if err != nil {
-		return Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema type assertion error ID=%s Type=%s. %w", recordID, recordType, err)
+		return schemaless.Record[T]{}, fmt.Errorf("store.TypedRepoWithAggregator.GetSchema type assertion error ID=%s Type=%s. %w", recordID, recordType, err)
 	}
 
 	return typed, nil
 }
 
-func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[T]]) (*UpdateRecordsResult[Record[T]], error) {
-	schemas := UpdateRecords[Record[schema.Schema]]{
+func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s schemaless.UpdateRecords[schemaless.Record[T]]) (*schemaless.UpdateRecordsResult[schemaless.Record[T]], error) {
+	schemas := schemaless.UpdateRecords[schemaless.Record[schema.Schema]]{
 		UpdatingPolicy: s.UpdatingPolicy,
-		Saving:         make(map[string]Record[schema.Schema]),
-		Deleting:       make(map[string]Record[schema.Schema]),
+		Saving:         make(map[string]schemaless.Record[schema.Schema]),
+		Deleting:       make(map[string]schemaless.Record[schema.Schema]),
 	}
 
 	// This is fix to in memory aggregator
@@ -63,7 +63,7 @@ func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[
 		}
 
 		schemed := schema.FromGo(record.Data)
-		schemas.Saving[id] = Record[schema.Schema]{
+		schemas.Saving[id] = schemaless.Record[schema.Schema]{
 			ID:      record.ID,
 			Type:    record.Type,
 			Data:    schemed,
@@ -73,7 +73,7 @@ func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[
 
 	// TODO: add deletion support in aggregate!
 	for id, record := range s.Deleting {
-		schemas.Deleting[id] = Record[schema.Schema]{
+		schemas.Deleting[id] = schemaless.Record[schema.Schema]{
 			ID:      record.ID,
 			Type:    record.Type,
 			Data:    schema.FromGo(record.Data),
@@ -91,13 +91,13 @@ func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[
 		return nil, fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords schemas store err %w", err)
 	}
 
-	result := &UpdateRecordsResult[Record[T]]{
-		Saved:   make(map[string]Record[T]),
-		Deleted: make(map[string]Record[T]),
+	result := &schemaless.UpdateRecordsResult[schemaless.Record[T]]{
+		Saved:   make(map[string]schemaless.Record[T]),
+		Deleted: make(map[string]schemaless.Record[T]),
 	}
 
 	for id, record := range updated.Saved {
-		typed, err := RecordAs[T](record)
+		typed, err := schemaless.RecordAs[T](record)
 		if err != nil {
 			return nil, fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords RecordAs error id=%s %w", id, err)
 		}
@@ -106,7 +106,7 @@ func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[
 	}
 
 	for id, record := range updated.Deleted {
-		typed, err := RecordAs[T](record)
+		typed, err := schemaless.RecordAs[T](record)
 		if err != nil {
 			return nil, fmt.Errorf("store.TypedRepoWithAggregator.UpdateRecords RecordAs error id=%s %w", id, err)
 		}
@@ -117,7 +117,7 @@ func (repo *TypedRepoWithAggregator[T, C]) UpdateRecords(s UpdateRecords[Record[
 	return result, nil
 }
 
-func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error) {
+func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.FindingRecords[schemaless.Record[T]]) (schemaless.PageResult[schemaless.Record[T]], error) {
 	// Typed version of FindingRecords should work with different form of where and sort fields
 	// Typed version suggest that data stored in storage is typed,
 	// but in fact it stored as schema.Schema
@@ -137,11 +137,11 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 		var err error
 		query.Sort[i].Field, err = repo.loc.WrapLocationStr(sort.Field)
 		if err != nil {
-			return PageResult[Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords wrapLocation in sort; %w", err)
+			return schemaless.PageResult[schemaless.Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords wrapLocation in sort; %w", err)
 		}
 	}
 
-	found, err := repo.store.FindingRecords(FindingRecords[Record[schema.Schema]]{
+	found, err := repo.store.FindingRecords(schemaless.FindingRecords[schemaless.Record[schema.Schema]]{
 		RecordType: query.RecordType,
 		Where:      query.Where,
 		Sort:       query.Sort,
@@ -150,16 +150,16 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 		Before:     query.Before,
 	})
 	if err != nil {
-		return PageResult[Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords store error %w", err)
+		return schemaless.PageResult[schemaless.Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords store error %w", err)
 	}
 
-	result := PageResult[Record[T]]{
+	result := schemaless.PageResult[schemaless.Record[T]]{
 		Items: nil,
 		Next:  nil,
 	}
 
 	if found.HasNext() {
-		result.Next = &FindingRecords[Record[T]]{
+		result.Next = &schemaless.FindingRecords[schemaless.Record[T]]{
 			RecordType: query.RecordType,
 			Where:      query.Where,
 			Sort:       query.Sort,
@@ -170,7 +170,7 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 	}
 
 	if found.HasPrev() {
-		result.Prev = &FindingRecords[Record[T]]{
+		result.Prev = &schemaless.FindingRecords[schemaless.Record[T]]{
 			RecordType: query.RecordType,
 			Where:      query.Where,
 			Sort:       query.Sort,
@@ -181,9 +181,9 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query FindingRecords[R
 	}
 
 	for _, item := range found.Items {
-		typed, err := RecordAs[T](item)
+		typed, err := schemaless.RecordAs[T](item)
 		if err != nil {
-			return PageResult[Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords RecordAs error id=%s %w", item.ID, err)
+			return schemaless.PageResult[schemaless.Record[T]]{}, fmt.Errorf("store.TypedRepoWithAggregator.FindingRecords RecordAs error id=%s %w", item.ID, err)
 		}
 
 		result.Items = append(result.Items, typed)
