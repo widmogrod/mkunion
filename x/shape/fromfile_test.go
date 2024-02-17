@@ -632,7 +632,7 @@ func init() {
 				},
 			},
 		},
-		"contrastive example, where nothing should be extracted": {
+		"contrastive example, commented code is not initialised": {
 			body: `package projection
 
 func init () {
@@ -651,6 +651,15 @@ type (
 	//	AllowLateArrival time.Duration
 	//}
 )
+`,
+			expected: make(map[string]Shape),
+		},
+		"contrastive example, pointer to type parameter is not initialisation": {
+			body: `package projection
+
+type Storage[T any] interface {
+	GetAs(id string, x *T) error
+}
 `,
 			expected: make(map[string]Shape),
 		},

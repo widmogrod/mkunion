@@ -529,21 +529,6 @@ func IsUnion(x Shape) bool {
 	return isUnion
 }
 
-func RetrieveIndexed(x Shape) []Shape {
-	ref, ok := x.(*RefName)
-	if !ok {
-		return nil
-	}
-
-	if len(ref.Indexed) == 0 {
-		return nil
-	}
-
-	result := make([]Shape, len(ref.Indexed))
-	copy(result, ref.Indexed)
-	return result
-}
-
 func RetrieveVariantTypeRef(x Shape) *RefName {
 	if IsUnion(x) {
 		return nil
@@ -559,6 +544,6 @@ func RetrieveVariantTypeRef(x Shape) *RefName {
 		Name:          unionName,
 		PkgName:       ToGoPkgName(x),
 		PkgImportName: ToGoPkgImportName(x),
-		Indexed:       RetrieveIndexed(x),
+		Indexed:       ExtractIndexedTypes(x),
 	}
 }

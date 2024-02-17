@@ -1386,7 +1386,13 @@ func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 		}
 
 		if len(walker.filterGenericTypes) > 0 {
+			indexedName := Name(indexed)
 			for _, name := range walker.filterGenericTypes {
+				if name == indexedName {
+					// we extracted type parameter, not interested in it
+					return
+				}
+
 				typeParams := ExtractIndexedTypes(indexed)
 				for {
 					if len(typeParams) == 0 {
@@ -1396,6 +1402,7 @@ func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 					tp := typeParams[0]
 					typeParams = typeParams[1:]
 					if Name(tp) == name {
+						// we extracted type parameter, not interested in it
 						return
 					}
 
