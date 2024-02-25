@@ -10,6 +10,7 @@ import (
 type (
 	PullPushContextState struct {
 		Offset    *stream.Offset
+		Watermark *stream.EventTime
 		PullTopic stream.Topic
 		PushTopic stream.Topic
 	}

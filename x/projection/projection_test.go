@@ -39,14 +39,11 @@ func TestProjection_HappyPath(t *testing.T) {
 				return fmt.Errorf("projection.Range: push: %w", err)
 			}
 		}
-		for i := 0; i < 2; i++ {
-			err := push(&Watermark[int]{
-				Key:       fmt.Sprintf("key-%d", i),
-				EventTime: math.MaxInt64,
-			})
-			if err != nil {
-				return fmt.Errorf("projection.Range: push: %w", err)
-			}
+		err := push(&Watermark[int]{
+			EventTime: math.MaxInt64,
+		})
+		if err != nil {
+			return fmt.Errorf("projection.Range: push: %w", err)
 		}
 		return nil
 	})
@@ -289,14 +286,11 @@ func TestProjection_Recovery(t *testing.T) {
 				}
 			}
 
-			for i := 0; i < 2; i++ {
-				err := ctx1.PushOut(&Watermark[int]{
-					Key:       fmt.Sprintf("key-%d", i),
-					EventTime: math.MaxInt64,
-				})
-				if err != nil {
-					return fmt.Errorf("projection.Range: push: %w", err)
-				}
+			err := ctx1.PushOut(&Watermark[int]{
+				EventTime: math.MaxInt64,
+			})
+			if err != nil {
+				return fmt.Errorf("projection.Range: push: %w", err)
 			}
 
 			return nil
@@ -323,9 +317,10 @@ func TestProjection_Recovery(t *testing.T) {
 			WithAutoSnapshot(false)
 
 	//TODO:
-	// - [ ] ctx.Ack(item) for consistent asynchronous snapshots
+	// - [√] Data should have offset field, otherwise we can't recover from the last offset
+	// - [√] ctx.AckOffset(item) for consistent asynchronous snapshots
 	// - [√] mkunion generate type registry for parametrised interface types like Record[int] or Record[float64]
-	// - [ ] DoWindow state should catch also last watermark with last offset, so that windowStore keys that have windows closed, can be deleted
+	// - [√] DoWindow state should catch also last watermark with last offset, so that windowStore keys that have windows closed, can be deleted
 
 	windowStore := NewWindowInMemoryStore[float64]("window-store")
 
@@ -346,7 +341,6 @@ func TestProjection_Recovery(t *testing.T) {
 			fm := &Discard{}
 			td := &AtWatermark{}
 			return DoWindow[int, float64](ctx, recovery, windowStore, wd, fm, td, 0, func(x int, agg float64) (float64, error) {
-				time.Sleep(50 * time.Millisecond)
 				return float64(x) + agg, nil
 			})
 		},
@@ -402,7 +396,7 @@ func TestProjection_Recovery(t *testing.T) {
 					log.Debugf("projection.DoSink: pull value: %#v", val)
 
 					err = MatchDataR1(
-						val,
+						val.Data,
 						func(x *Record[float64]) error {
 							time.Sleep(50 * time.Millisecond)
 
@@ -412,13 +406,17 @@ func TestProjection_Recovery(t *testing.T) {
 							}
 							orderOfUniquer[entry] = struct{}{}
 							orderOfEvents = append(orderOfEvents, entry)
+
+							err = ctx.AckOffset(val.Offset)
+							if err != nil {
+								return fmt.Errorf("projection.DoSink: ack offset: %w", err)
+							}
 							return nil
 						},
 						func(x *Watermark[float64]) error {
-							// TODO do snapshot
-							err := recovery.SnapshotFrom(ctx)
+							err := ctx.AckWatermark(&x.EventTime)
 							if err != nil {
-								return fmt.Errorf("projection.DoSink: snapshot: %w", err)
+								return fmt.Errorf("projection.DoSink: ack watermark: %w", err)
 							}
 
 							return nil
@@ -435,10 +433,10 @@ func TestProjection_Recovery(t *testing.T) {
 
 	expectedOrder := []string{
 		"record-key-0:2.000000",
-		"record-key-0:10.000000",
-		"record-key-0:8.000000",
 		"record-key-1:4.000000",
+		"record-key-0:10.000000",
 		"record-key-1:12.000000",
+		"record-key-0:8.000000",
 		"record-key-1:9.000000",
 	}
 

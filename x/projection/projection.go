@@ -11,6 +11,15 @@ import (
 
 //go:generate go run ../../cmd/mkunion/main.go -v -type-registry
 
+var (
+	ErrStateAckNilOffset    = errors.New("cannot acknowledge nil offset")
+	ErrStateAckNilWatermark = errors.New("cannot acknowledge nil watermark")
+)
+
+const (
+	KeySystemWatermark = "watermark"
+)
+
 //go:tag mkunion:"Data,noserde"
 type (
 	Record[A any] struct {
@@ -20,15 +29,14 @@ type (
 	}
 
 	Watermark[A any] struct {
-		Key       string
 		EventTime EventTime
 	}
 )
 
 type EventTime = int64
 
-func IsWatermarkMarksEndOfStream[A any](x *Watermark[A]) bool {
-	if x.EventTime == math.MaxInt64 {
+func IsWatermarkMarksEndOfStream(x EventTime) bool {
+	if x == math.MaxInt64 {
 		return true
 	}
 
@@ -43,31 +51,32 @@ func EventTimeToStreamEventTime(x EventTime) *stream.EventTime {
 	return &x
 }
 
-func RecordToStreamItem[A any](topic string, x Data[A]) *stream.Item[Data[A]] {
-	return MatchDataR1[A, *stream.Item[Data[A]]](x,
-		func(x *Record[A]) *stream.Item[Data[A]] {
+func RecordToStreamItem[A any](topic string, x Data[A]) (*stream.Item[Data[A]], error) {
+	return MatchDataR2[A, *stream.Item[Data[A]]](
+		x,
+		func(x *Record[A]) (*stream.Item[Data[A]], error) {
+			if x.Key == KeySystemWatermark {
+				return nil, fmt.Errorf("projection.RecordToStreamItem: key %s is reserved", KeySystemWatermark)
+			}
+
 			return &stream.Item[Data[A]]{
 				Topic:     topic,
 				Key:       x.Key,
 				Data:      x,
 				EventTime: EventTimeToStreamEventTime(x.EventTime),
 				Offset:    nil,
-			}
+			}, nil
 		},
-		func(x *Watermark[A]) *stream.Item[Data[A]] {
+		func(x *Watermark[A]) (*stream.Item[Data[A]], error) {
 			return &stream.Item[Data[A]]{
 				Topic:     topic,
-				Key:       x.Key,
+				Key:       KeySystemWatermark,
 				Data:      x,
 				EventTime: EventTimeToStreamEventTime(x.EventTime),
 				Offset:    nil,
-			}
+			}, nil
 		},
 	)
-}
-
-func StreamItemToRecord[A any](x *stream.Item[Data[A]]) Data[A] {
-	return x.Data
 }
 
 type (
@@ -77,15 +86,18 @@ type (
 		SnapshotContext
 	}
 	PullOnly[A any] interface {
-		PullIn() (Data[A], error)
+		PullIn() (*stream.Item[Data[A]], error)
+		AckOffset(offset *stream.Offset) error
 		SnapshotContext
 	}
 	PushOnly[A any] interface {
 		PushOut(Data[A]) error
+		AckWatermark(watermark *stream.EventTime) error
 		SnapshotContext
 	}
 	SnapshotContext interface {
 		CurrentState() SnapshotState
+		LastWatermark() EventTime
 	}
 )
 
@@ -123,7 +135,7 @@ type PushAndPullInMemoryContext[A, B any] struct {
 	simulate *SimulateProblem
 }
 
-func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
+func (c *PushAndPullInMemoryContext[A, B]) PullIn() (*stream.Item[Data[A]], error) {
 	if c.simulate != nil && c.simulate.ErrorOnPullIn != nil {
 		if rand.Float64() < c.simulate.ErrorOnPullInProbability {
 			return nil, c.simulate.ErrorOnPullIn
@@ -136,6 +148,12 @@ func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
 		return nil, fmt.Errorf("projection.PushAndPullInMemoryContext: PullIn: %w", err)
 	}
 
+	if item.Key == KeySystemWatermark {
+		item.Data = &Watermark[A]{
+			EventTime: *item.EventTime,
+		}
+	}
+
 	if c.nextOffset != nil {
 		// save to state only previous offset
 		c.state.Offset = c.nextOffset
@@ -143,8 +161,16 @@ func (c *PushAndPullInMemoryContext[A, B]) PullIn() (Data[A], error) {
 
 	c.nextOffset = item.Offset
 
-	result := StreamItemToRecord(item)
-	return result, nil
+	return item, nil
+}
+
+func (c *PushAndPullInMemoryContext[A, B]) AckOffset(offset *stream.Offset) error {
+	if offset == nil {
+		return fmt.Errorf("projection.PushAndPullInMemoryContext: AckOffset:  %w", ErrStateAckNilOffset)
+	}
+
+	c.state.Offset = offset
+	return nil
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Data[B]) error {
@@ -154,17 +180,35 @@ func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Data[B]) error {
 		}
 	}
 
-	item := RecordToStreamItem(c.state.PushTopic, x)
+	item, err := RecordToStreamItem(c.state.PushTopic, x)
+	if err != nil {
+		return fmt.Errorf("projection.PushAndPullInMemoryContext: PushOut: %w", err)
+	}
 
-	err := c.output.Push(item)
+	err = c.output.Push(item)
 	if err != nil {
 		return fmt.Errorf("projection.PushAndPullInMemoryContext: PushOut: %w", err)
 	}
 	return nil
 }
 
+func (c *PushAndPullInMemoryContext[A, B]) AckWatermark(watermark *stream.EventTime) error {
+	if watermark == nil {
+		return fmt.Errorf("projection.PushAndPullInMemoryContext: AckWatermark: %w", ErrStateAckNilWatermark)
+	}
+	c.state.Watermark = watermark
+	return nil
+}
+
 func (c *PushAndPullInMemoryContext[A, B]) CurrentState() SnapshotState {
 	return c.state
+}
+func (c *PushAndPullInMemoryContext[A, B]) LastWatermark() EventTime {
+	if c.state.Watermark == nil {
+		return 0
+	}
+
+	return *c.state.Watermark
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) pullCommand(x *PullPushContextState, next *stream.Offset) stream.PullCMD {
@@ -213,9 +257,6 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 	timer := time.NewTimer(1 * time.Second)
 	defer timer.Stop()
 
-	keyToKeysJoin := make(map[string]map[string]struct{})
-	joinedWatermark := make(map[string]int64)
-
 	for {
 		select {
 		case <-timer.C:
@@ -230,44 +271,38 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 			}
 
 			err = MatchDataR1(
-				val,
+				val.Data,
 				func(x *Record[A]) error {
 					y := f(x)
-
-					keys, ok := keyToKeysJoin[y.Key]
-					if !ok {
-						keys = make(map[string]struct{})
-						keyToKeysJoin[y.Key] = keys
-					}
 
 					err = ctx.PushOut(y)
 					if err != nil {
 						return fmt.Errorf("projection.DoMap: push: %w", err)
 					}
 
-					keys[y.Key] = struct{}{}
+					err = ctx.AckOffset(val.Offset)
+					if err != nil {
+						return fmt.Errorf("projection.DoMap: ack offset: %w", err)
+					}
 
 					return nil
 				},
 				func(x *Watermark[A]) error {
-					for key := range keyToKeysJoin[x.Key] {
-						if _, ok := joinedWatermark[key]; !ok {
-							joinedWatermark[key] = 0
-						}
+					if ctx.LastWatermark() >= x.EventTime {
+						// we already processed this watermark
+						return nil
+					}
 
-						if joinedWatermark[key] >= x.EventTime {
-							return nil
-						}
+					err := ctx.PushOut(&Watermark[B]{
+						EventTime: x.EventTime,
+					})
+					if err != nil {
+						return fmt.Errorf("projection.DoMap: push wattermark  %w", err)
+					}
 
-						joinedWatermark[key] = x.EventTime
-
-						err := ctx.PushOut(&Watermark[B]{
-							Key:       key,
-							EventTime: x.EventTime,
-						})
-						if err != nil {
-							return fmt.Errorf("projection.DoMap: push wattermark for key %s: %w", key, err)
-						}
+					err = ctx.AckWatermark(&x.EventTime)
+					if err != nil {
+						return fmt.Errorf("projection.DoMap: ack watermark: %w", err)
 					}
 
 					return nil
@@ -290,82 +325,10 @@ func DoJoin[A, B, C any](
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 
-	leftKeyToKeysJoin := make(map[string]map[string]struct{})
-	rightKeyToKeysJoin := make(map[string]map[string]struct{})
-	leftKeyWatermark := make(map[string]int64)
-	rightKeyWatermark := make(map[string]int64)
 	leftOrRight := true
 
-	flushWatermarks := func(
-		eventKey string,
-		eventTime EventTime,
-		keysToJoin map[string]map[string]struct{},
-		leftKeyWatermark map[string]int64,
-		rightKeyWatermark map[string]int64,
-	) error {
-		var watermarksToPush map[string]*Watermark[C]
-		var clean []func()
-		for key := range keysToJoin[eventKey] {
-			// no watermark for keys recorded, then init
-			if _, ok := leftKeyWatermark[key]; !ok {
-				leftKeyWatermark[key] = 0
-			}
-
-			// has bigger watermark, then skip
-			if leftKeyWatermark[key] < eventTime {
-				leftKeyWatermark[key] = eventTime
-			}
-
-			// other side has no watermark for key, then skip
-			if _, ok := rightKeyWatermark[key]; !ok {
-				continue
-			}
-
-			// all conditions for publishing watermark are met
-			if watermarksToPush == nil {
-				watermarksToPush = make(map[string]*Watermark[C])
-			}
-
-			if _, ok := watermarksToPush[key]; ok {
-				continue
-			}
-
-			watermarksToPush[key] = &Watermark[C]{
-				Key:       key,
-				EventTime: min(leftKeyWatermark[key], rightKeyWatermark[key]),
-			}
-
-			// publish smallest watermark
-			if leftKeyWatermark[key] <= rightKeyWatermark[key] {
-				// remove smallest watermark
-				clean = append(clean, func() {
-					delete(leftKeyWatermark, key)
-				})
-			} else if leftKeyWatermark[key] > rightKeyWatermark[key] {
-				// remove smallest watermark
-				clean = append(clean, func() {
-					delete(rightKeyWatermark, key)
-				})
-			}
-		}
-
-		// publish watermarks
-		for _, watermark := range watermarksToPush {
-			// output stream in ctxA and ctxB is the same
-			// so we push only once
-			err := ctxA.PushOut(watermark)
-			if err != nil {
-				return fmt.Errorf("push wattermark for key %s: %w", watermark.Key, err)
-			}
-		}
-
-		// clean up lowest watermarks
-		for _, c := range clean {
-			c()
-		}
-
-		return nil
-	}
+	watermarkA := ctxA.LastWatermark()
+	watermarkB := ctxB.LastWatermark()
 
 	for {
 		select {
@@ -382,32 +345,41 @@ func DoJoin[A, B, C any](
 				}
 
 				err = MatchDataR1(
-					val,
+					val.Data,
 					func(x *Record[A]) error {
 						y := f(&Left[*Record[A], *Record[B]]{
 							Left: x,
 						})
-
-						keys, ok := leftKeyToKeysJoin[y.Key]
-						if !ok {
-							keys = make(map[string]struct{})
-							leftKeyToKeysJoin[y.Key] = keys
-						}
 
 						err = ctxA.PushOut(y)
 						if err != nil {
 							return fmt.Errorf("projection.DoJoin: push left: %w", err)
 						}
 
-						keys[y.Key] = struct{}{}
+						err = ctxA.AckOffset(val.Offset)
+						if err != nil {
+							return fmt.Errorf("projection.DoJoin: ack left offset: %w", err)
+						}
 
 						return nil
 					},
 					func(x *Watermark[A]) error {
-						err := flushWatermarks(x.Key, x.EventTime, leftKeyToKeysJoin,
-							leftKeyWatermark, rightKeyWatermark)
+						watermarkA = x.EventTime
+						minWatermark := min(watermarkA, watermarkB)
+						if ctxA.LastWatermark() >= minWatermark {
+							// we already processed this watermarks
+							return nil
+						}
+
+						err := ctxA.PushOut(&Watermark[C]{
+							EventTime: minWatermark,
+						})
 						if err != nil {
-							return fmt.Errorf("projection.DoJoin: flush watermarks left side: %w", err)
+							return fmt.Errorf("projection.DoJoin: push left wattermark  %w", err)
+						}
+						err = ctxA.AckWatermark(&minWatermark)
+						if err != nil {
+							return fmt.Errorf("projection.DoJoin: ack left watermarks: %w", err)
 						}
 
 						return nil
@@ -427,32 +399,41 @@ func DoJoin[A, B, C any](
 				}
 
 				err = MatchDataR1(
-					val,
+					val.Data,
 					func(x *Record[B]) error {
 						y := f(&Right[*Record[A], *Record[B]]{
 							Right: x,
 						})
 
-						keys, ok := rightKeyToKeysJoin[y.Key]
-						if !ok {
-							keys = make(map[string]struct{})
-							rightKeyToKeysJoin[y.Key] = keys
-						}
-
-						err = ctxA.PushOut(y)
+						err = ctxB.PushOut(y)
 						if err != nil {
 							return fmt.Errorf("projection.DoJoin: push right: %w", err)
 						}
 
-						keys[y.Key] = struct{}{}
+						err = ctxB.AckOffset(val.Offset)
+						if err != nil {
+							return fmt.Errorf("projection.DoJoin: ack right offset: %w", err)
+						}
 
 						return nil
 					},
 					func(x *Watermark[B]) error {
-						err := flushWatermarks(x.Key, x.EventTime, rightKeyToKeysJoin,
-							rightKeyWatermark, leftKeyWatermark)
+						watermarkB = x.EventTime
+						minWatermark := min(watermarkA, watermarkB)
+						if ctxB.LastWatermark() >= minWatermark {
+							// we already processed this watermarks
+							return nil
+						}
+
+						err := ctxB.PushOut(&Watermark[C]{
+							EventTime: minWatermark,
+						})
 						if err != nil {
-							return fmt.Errorf("projection.DoJoin: flush watermarks right side: %w", err)
+							return fmt.Errorf("projection.DoJoin: push right wattermark  %w", err)
+						}
+						err = ctxB.AckWatermark(&minWatermark)
+						if err != nil {
+							return fmt.Errorf("projection.DoJoin: ack right watermarks: %w", err)
 						}
 
 						return nil
@@ -481,7 +462,7 @@ func DoSink[A any](ctx PullOnly[A], f func(*Record[A]) error) error {
 		}
 
 		err = MatchDataR1(
-			val,
+			val.Data,
 			func(x *Record[A]) error {
 				return f(x)
 			},

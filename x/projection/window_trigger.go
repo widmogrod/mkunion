@@ -30,10 +30,10 @@ func TriggerDescriptionToWhere(trigger TriggerDescription) (*predicate.WherePred
 		trigger,
 		func(x *AtWatermark) (*predicate.WherePredicates, error) {
 			return predicate.Where(
-				"Data.Key = :key AND Data.Window.End <= :watermark",
+				"Data.Window.End <= :watermark",
 				predicate.ParamBinds{
 					// Placeholder for watermark
-					":key":       schema.MkString(":key"),
+					//":key":       schema.MkString(":key"),
 					":watermark": schema.MkInt(math.MaxInt64),
 				},
 			)

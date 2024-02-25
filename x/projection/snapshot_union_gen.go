@@ -193,6 +193,14 @@ func (r *PullPushContextState) _marshalJSONPullPushContextState(x PullPushContex
 	if fieldOffset != nil {
 		partial["Offset"] = fieldOffset
 	}
+	var fieldWatermark []byte
+	fieldWatermark, err = r._marshalJSONPtrstream_EventTime(x.Watermark)
+	if err != nil {
+		return nil, fmt.Errorf("projection: PullPushContextState._marshalJSONPullPushContextState: field name Watermark; %w", err)
+	}
+	if fieldWatermark != nil {
+		partial["Watermark"] = fieldWatermark
+	}
 	var fieldPullTopic []byte
 	fieldPullTopic, err = r._marshalJSONstream_Topic(x.PullTopic)
 	if err != nil {
@@ -224,6 +232,19 @@ func (r *PullPushContextState) _marshalJSONstream_Offset(x stream.Offset) ([]byt
 	}
 	return result, nil
 }
+func (r *PullPushContextState) _marshalJSONPtrstream_EventTime(x *stream.EventTime) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONstream_EventTime(*x)
+}
+func (r *PullPushContextState) _marshalJSONstream_EventTime(x stream.EventTime) ([]byte, error) {
+	result, err := shared.JSONMarshal[stream.EventTime](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: PullPushContextState._marshalJSONstream_EventTime:; %w", err)
+	}
+	return result, nil
+}
 func (r *PullPushContextState) _marshalJSONstream_Topic(x stream.Topic) ([]byte, error) {
 	result, err := shared.JSONMarshal[stream.Topic](x)
 	if err != nil {
@@ -250,6 +271,12 @@ func (r *PullPushContextState) _unmarshalJSONPullPushContextState(data []byte) (
 		result.Offset, err = r._unmarshalJSONPtrstream_Offset(fieldOffset)
 		if err != nil {
 			return result, fmt.Errorf("projection: PullPushContextState._unmarshalJSONPullPushContextState: field Offset; %w", err)
+		}
+	}
+	if fieldWatermark, ok := partial["Watermark"]; ok {
+		result.Watermark, err = r._unmarshalJSONPtrstream_EventTime(fieldWatermark)
+		if err != nil {
+			return result, fmt.Errorf("projection: PullPushContextState._unmarshalJSONPullPushContextState: field Watermark; %w", err)
 		}
 	}
 	if fieldPullTopic, ok := partial["PullTopic"]; ok {
@@ -283,6 +310,26 @@ func (r *PullPushContextState) _unmarshalJSONstream_Offset(data []byte) (stream.
 	result, err := shared.JSONUnmarshal[stream.Offset](data)
 	if err != nil {
 		return result, fmt.Errorf("projection: PullPushContextState._unmarshalJSONstream_Offset: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *PullPushContextState) _unmarshalJSONPtrstream_EventTime(data []byte) (*stream.EventTime, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONstream_EventTime(data)
+	if err != nil {
+		return nil, fmt.Errorf("projection: PullPushContextState._unmarshalJSONPtrstream_EventTime: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *PullPushContextState) _unmarshalJSONstream_EventTime(data []byte) (stream.EventTime, error) {
+	result, err := shared.JSONUnmarshal[stream.EventTime](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: PullPushContextState._unmarshalJSONstream_EventTime: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

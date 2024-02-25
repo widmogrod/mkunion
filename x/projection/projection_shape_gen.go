@@ -91,10 +91,6 @@ func WatermarkShape() shape.Shape {
 		},
 		Fields: []*shape.FieldLike{
 			{
-				Name: "Key",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
-			},
-			{
 				Name: "EventTime",
 				Type: &shape.RefName{
 					Name:          "EventTime",

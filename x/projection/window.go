@@ -113,7 +113,6 @@ func DoWindow[A, B any](
 	init B,
 	merge func(x A, agg B) (B, error),
 ) error {
-	keysToFlush := map[string]struct{}{}
 	// recovery from failure:
 	// to avoid any double processing of data process should work only on data from last snapshot
 	// load all windows after last snapshot and before last watermark to memory
@@ -129,7 +128,7 @@ func DoWindow[A, B any](
 					return fmt.Errorf("projection.DoWindow: flush trigger description to whare: %w", err)
 				}
 
-				where.Params[":key"] = schema.MkString(watermark.Key)
+				//where.Params[":key"] = schema.MkString(watermark.Key)
 				where.Params[":watermark"] = schema.MkInt(watermark.EventTime)
 
 				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
@@ -189,7 +188,7 @@ func DoWindow[A, B any](
 				//FIXME: this is not correct, we close stream, only when we know we reached end of stream
 				// this mostly happens when we work with batch of data, and we know that there is no more data to process
 				// so if we have stream that is not closed, process will wait for more data to come
-				if len(keysToFlush) == 0 {
+				if IsWatermarkMarksEndOfStream(ctx.LastWatermark()) {
 					log.Debugf("projection.DoWindow: pull: no more data in stream for all keys (exit)")
 					return nil
 				}
@@ -203,18 +202,15 @@ func DoWindow[A, B any](
 		log.Debugf("projection.DoWindow: pull: %#v", item)
 
 		err = MatchDataR1(
-			item,
+			item.Data,
 			func(x *Record[A]) error {
-				keysToFlush[x.Key] = struct{}{}
-
 				dataKey := x.Key
+				offset := *item.Offset
+
 				for _, w := range MkWindow(x.EventTime, wd) {
 					windowID := MkWindowID(x.Key, w)
 					windowRecord, err := store.Load(windowID)
-					var offset stream.Offset
-					if ctx.(*PushAndPullInMemoryContext[A, B]).nextOffset != nil {
-						offset = *ctx.(*PushAndPullInMemoryContext[A, B]).nextOffset
-					}
+
 					if err != nil {
 						if errors.Is(err, ErrWindowNotFound) {
 							result, err := merge(x.Data, init)
@@ -231,6 +227,11 @@ func DoWindow[A, B any](
 
 							if err != nil {
 								return fmt.Errorf("projection.DoWindow: save key=%s window=%s: %w", dataKey, windowID, err)
+							}
+
+							err = ctx.AckOffset(item.Offset)
+							if err != nil {
+								return fmt.Errorf("projection.DoWindow: ack key=%s window=%s: %w", dataKey, windowID, err)
 							}
 
 							continue
@@ -263,6 +264,11 @@ func DoWindow[A, B any](
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: save key=%s window=%s: %w", dataKey, windowID, err)
 						}
+
+						err = ctx.AckOffset(item.Offset)
+						if err != nil {
+							return fmt.Errorf("projection.DoWindow: ack key=%s window=%s: %w", dataKey, windowID, err)
+						}
 					}
 				}
 
@@ -275,16 +281,15 @@ func DoWindow[A, B any](
 				}
 
 				err = ctx.PushOut(&Watermark[B]{
-					Key:       x.Key,
 					EventTime: x.EventTime,
 				})
 				if err != nil {
 					return fmt.Errorf("projection.DoWindow: push watermark: %w", err)
 				}
 
-				if IsWatermarkMarksEndOfStream(x) {
-					// this mean that we reached end of stream
-					delete(keysToFlush, x.Key)
+				err = ctx.AckWatermark(&x.EventTime)
+				if err != nil {
+					return fmt.Errorf("projection.DoWindow: ack watermark: %w", err)
 				}
 
 				return nil

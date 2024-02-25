@@ -42,6 +42,16 @@ func PullPushContextStateShape() shape.Shape {
 				},
 			},
 			{
+				Name: "Watermark",
+				Type: &shape.PointerLike{
+					Type: &shape.RefName{
+						Name:          "EventTime",
+						PkgName:       "stream",
+						PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+					},
+				},
+			},
+			{
 				Name: "PullTopic",
 				Type: &shape.RefName{
 					Name:          "Topic",
