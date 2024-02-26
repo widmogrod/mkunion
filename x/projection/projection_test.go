@@ -303,12 +303,6 @@ func TestProjection_Recovery(t *testing.T) {
 			WithMaxRecoveryAttempts(recoveryAttempts).
 			WithAutoSnapshot(true)
 
-	//TODO:
-	// - [√] Data should have offset field, otherwise we can't recover from the last offset
-	// - [√] ctx.AckOffset(item) for consistent asynchronous snapshots
-	// - [√] mkunion generate type registry for parametrised interface types like Record[int] or Record[float64]
-	// - [√] DoWindow state should catch also last watermark with last offset, so that windowStore keys that have windows closed, can be deleted
-
 	windowStore := NewWindowInMemoryStore[float64]("window-store")
 
 	err = Recovery(
