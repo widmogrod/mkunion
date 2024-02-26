@@ -3,6 +3,7 @@ package projection
 import (
 	"errors"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/stream"
 	"math"
 	"math/rand"
@@ -81,57 +82,30 @@ func RecordToStreamItem[A any](topic string, x Data[A]) (*stream.Item[Data[A]], 
 
 type (
 	PushAndPull[A, B any] interface {
-		PullOnly[A]
-		PushOnly[B]
-		SnapshotContext
-	}
-	PullOnly[A any] interface {
 		PullIn() (*stream.Item[Data[A]], error)
 		AckOffset(offset *stream.Offset) error
-		SnapshotContext
-	}
-	PushOnly[A any] interface {
-		PushOut(Data[A]) error
+
+		PushOut(Data[B]) error
 		AckWatermark(watermark *stream.EventTime) error
-		SnapshotContext
+		LastWatermark() EventTime
 	}
 	SnapshotContext interface {
 		CurrentState() SnapshotState
-		LastWatermark() EventTime
 	}
 )
 
-func NewPushAndPullInMemoryContext[A, B any](state *PullPushContextState, in stream.Stream[Data[A]], out stream.Stream[Data[B]]) *PushAndPullInMemoryContext[A, B] {
+func NewPushAndPullInMemoryContext[A, B any](state *PullPushContextState, stream stream.Stream[schema.Schema]) *PushAndPullInMemoryContext[A, B] {
 	return &PushAndPullInMemoryContext[A, B]{
 		state:  state,
-		input:  in,
-		output: out,
-	}
-}
-
-func NewPushOnlyInMemoryContext[A any](state *PullPushContextState, out stream.Stream[Data[A]]) PushOnly[A] {
-	return &PushAndPullInMemoryContext[any, A]{
-		state:  state,
-		output: out,
-	}
-}
-
-func NewPullOnlyInMemoryContext[A any](state *PullPushContextState, in stream.Stream[Data[A]]) PullOnly[A] {
-	return &PushAndPullInMemoryContext[A, any]{
-		state: state,
-		input: in,
+		stream: stream,
 	}
 }
 
 var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 
 type PushAndPullInMemoryContext[A, B any] struct {
-	state *PullPushContextState
-
-	nextOffset *stream.Offset
-
-	input    stream.Stream[Data[A]]
-	output   stream.Stream[Data[B]]
+	state    *PullPushContextState
+	stream   stream.Stream[schema.Schema]
 	simulate *SimulateProblem
 }
 
@@ -142,24 +116,15 @@ func (c *PushAndPullInMemoryContext[A, B]) PullIn() (*stream.Item[Data[A]], erro
 		}
 	}
 
-	pull := c.pullCommand(c.state, c.nextOffset)
-	item, err := c.input.Pull(pull)
+	result, err := pullFrom(c.stream, c.state)
 	if err != nil {
 		return nil, fmt.Errorf("projection.PushAndPullInMemoryContext: PullIn: %w", err)
 	}
 
-	if item.Key == KeySystemWatermark {
-		item.Data = &Watermark[A]{
-			EventTime: *item.EventTime,
-		}
+	item, err := itemToTyped[A](result)
+	if err != nil {
+		return nil, fmt.Errorf("projection.PushAndPullInMemoryContext: PullIn: type conversion; %w", err)
 	}
-
-	if c.nextOffset != nil {
-		// save to state only previous offset
-		c.state.Offset = c.nextOffset
-	}
-
-	c.nextOffset = item.Offset
 
 	return item, nil
 }
@@ -180,15 +145,11 @@ func (c *PushAndPullInMemoryContext[A, B]) PushOut(x Data[B]) error {
 		}
 	}
 
-	item, err := RecordToStreamItem(c.state.PushTopic, x)
+	err := pushOut[B](c.stream, c.state, x)
 	if err != nil {
 		return fmt.Errorf("projection.PushAndPullInMemoryContext: PushOut: %w", err)
 	}
 
-	err = c.output.Push(item)
-	if err != nil {
-		return fmt.Errorf("projection.PushAndPullInMemoryContext: PushOut: %w", err)
-	}
 	return nil
 }
 
@@ -209,6 +170,122 @@ func (c *PushAndPullInMemoryContext[A, B]) LastWatermark() EventTime {
 	}
 
 	return *c.state.Watermark
+}
+
+func pullFrom(s stream.Stream[schema.Schema], state SnapshotState) (*stream.Item[schema.Schema], error) {
+	return MatchSnapshotStateR2(
+		state,
+		func(x *PullPushContextState) (*stream.Item[schema.Schema], error) {
+			var cmd stream.PullCMD
+			if x.Offset == nil {
+				cmd = &stream.FromBeginning{
+					Topic: x.PullTopic,
+				}
+			} else {
+				cmd = &stream.FromOffset{
+					Topic:  x.PullTopic,
+					Offset: x.Offset,
+				}
+			}
+
+			result, err := s.Pull(cmd)
+			if err != nil {
+				return nil, fmt.Errorf("projection.PullFrom: %w", err)
+			}
+
+			return result, nil
+		},
+		func(x *JoinContextState) (*stream.Item[schema.Schema], error) {
+			var cmd stream.PullCMD
+
+			var offset *stream.Offset
+			var pullTopic string
+
+			if x.LeftOrRight {
+				offset = x.Offset1
+				pullTopic = x.PullTopic1
+			} else {
+				offset = x.Offset2
+				pullTopic = x.PullTopic2
+			}
+
+			if offset != nil {
+				cmd = &stream.FromOffset{
+					Topic:  pullTopic,
+					Offset: offset,
+				}
+			} else {
+				cmd = &stream.FromBeginning{
+					Topic: pullTopic,
+				}
+			}
+
+			result, err := s.Pull(cmd)
+			if err != nil {
+				return nil, fmt.Errorf("projection.PullFrom: %w", err)
+			}
+
+			return result, nil
+		},
+	)
+}
+
+func pushOut[A any](s stream.Stream[schema.Schema], state SnapshotState, data Data[A]) error {
+	return MatchSnapshotStateR1(
+		state,
+		func(x *PullPushContextState) error {
+			result, err := RecordToStreamItem(x.PushTopic, data)
+			if err != nil {
+				return fmt.Errorf("projection.pushOut: %w", err)
+			}
+
+			item := &stream.Item[schema.Schema]{
+				Topic:     result.Topic,
+				Key:       result.Key,
+				Data:      schema.FromGo(result.Data),
+				EventTime: result.EventTime,
+				Offset:    result.Offset,
+			}
+
+			return s.Push(item)
+		},
+		func(x *JoinContextState) error {
+			result, err := RecordToStreamItem(x.PushTopic, data)
+			if err != nil {
+				return fmt.Errorf("projection.pushOut: %w", err)
+			}
+
+			item := &stream.Item[schema.Schema]{
+				Topic:     result.Topic,
+				Key:       result.Key,
+				Data:      schema.FromGo(result.Data),
+				EventTime: result.EventTime,
+				Offset:    result.Offset,
+			}
+
+			return s.Push(item)
+		},
+	)
+}
+
+func itemToTyped[A any](item *stream.Item[schema.Schema]) (*stream.Item[Data[A]], error) {
+	data := schema.ToGo[Data[A]](item.Data)
+
+	result := &stream.Item[Data[A]]{
+		Topic:     item.Topic,
+		Key:       item.Key,
+		Data:      data,
+		EventTime: item.EventTime,
+		Offset:    item.Offset,
+	}
+
+	if result.Key == KeySystemWatermark {
+		result.Data = &Watermark[A]{
+			EventTime: *item.EventTime,
+		}
+	}
+
+	return result, nil
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) pullCommand(x *PullPushContextState, next *stream.Offset) stream.PullCMD {
@@ -243,7 +320,7 @@ func (c *PushAndPullInMemoryContext[A, B]) SimulateRuntimeProblem(x *SimulatePro
 	c.simulate = x
 }
 
-func DoLoad[A any](ctx PushOnly[A], f func(push func(record Data[A]) error) error) error {
+func DoLoad[A any](ctx PushAndPull[any, A], f func(push func(record Data[A]) error) error) error {
 	err := f(func(record Data[A]) error {
 		return ctx.PushOut(record)
 	})
@@ -262,6 +339,10 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 		case <-timer.C:
 			return fmt.Errorf("projection.DoMap: timeout; %w", stream.ErrNoMoreNewDataInStream)
 		default:
+			if IsWatermarkMarksEndOfStream(ctx.LastWatermark()) {
+				return nil
+			}
+
 			val, err := ctx.PullIn()
 			if err != nil {
 				if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
@@ -278,11 +359,6 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 					err = ctx.PushOut(y)
 					if err != nil {
 						return fmt.Errorf("projection.DoMap: push: %w", err)
-					}
-
-					err = ctx.AckOffset(val.Offset)
-					if err != nil {
-						return fmt.Errorf("projection.DoMap: ack offset: %w", err)
 					}
 
 					return nil
@@ -312,36 +388,48 @@ func DoMap[A, B any](ctx PushAndPull[A, B], f func(*Record[A]) *Record[B]) error
 			if err != nil {
 				return fmt.Errorf("projection.DoMap: map: %w", err)
 			}
+
+			err = ctx.AckOffset(val.Offset)
+			if err != nil {
+				return fmt.Errorf("projection.DoMap: ack offset: %w", err)
+			}
 		}
 	}
 }
 
 func DoJoin[A, B, C any](
-	ctxA PushAndPull[A, C],
-	ctxB PushAndPull[B, C],
+	dataStream stream.Stream[schema.Schema],
+	state *JoinContextState,
 	f func(x Either[*Record[A], *Record[B]]) *Record[C],
 ) error {
 	delay := 1 * time.Second
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 
-	leftOrRight := true
-
-	watermarkA := ctxA.LastWatermark()
-	watermarkB := ctxB.LastWatermark()
+	watermarkA := state.Watermark
+	watermarkB := state.Watermark
 
 	for {
 		select {
 		case <-timer.C:
 			return fmt.Errorf("projection.DoJoin: timeout; %w", stream.ErrNoMoreNewDataInStream)
 		default:
-			if leftOrRight {
-				val, err := ctxA.PullIn()
+			if IsWatermarkMarksEndOfStream(state.Watermark) {
+				return nil
+			}
+
+			item, err := pullFrom(dataStream, state)
+			if err != nil {
+				if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
+					return nil
+				}
+				return fmt.Errorf("projection.DoJoin: pull; %w", err)
+			}
+
+			if state.LeftOrRight {
+				val, err := itemToTyped[A](item)
 				if err != nil {
-					if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
-						return nil
-					}
-					return fmt.Errorf("projection.DoJoin: pull left: %w", err)
+					return fmt.Errorf("projection.DoJoin: covnert left; %w", err)
 				}
 
 				err = MatchDataR1(
@@ -351,14 +439,9 @@ func DoJoin[A, B, C any](
 							Left: x,
 						})
 
-						err = ctxA.PushOut(y)
+						err := pushOut[C](dataStream, state, y)
 						if err != nil {
 							return fmt.Errorf("projection.DoJoin: push left: %w", err)
-						}
-
-						err = ctxA.AckOffset(val.Offset)
-						if err != nil {
-							return fmt.Errorf("projection.DoJoin: ack left offset: %w", err)
 						}
 
 						return nil
@@ -366,21 +449,18 @@ func DoJoin[A, B, C any](
 					func(x *Watermark[A]) error {
 						watermarkA = x.EventTime
 						minWatermark := min(watermarkA, watermarkB)
-						if ctxA.LastWatermark() >= minWatermark {
+						if state.Watermark >= minWatermark {
 							// we already processed this watermarks
 							return nil
 						}
-
-						err := ctxA.PushOut(&Watermark[C]{
+						err := pushOut[C](dataStream, state, &Watermark[C]{
 							EventTime: minWatermark,
 						})
 						if err != nil {
 							return fmt.Errorf("projection.DoJoin: push left wattermark  %w", err)
 						}
-						err = ctxA.AckWatermark(&minWatermark)
-						if err != nil {
-							return fmt.Errorf("projection.DoJoin: ack left watermarks: %w", err)
-						}
+
+						state.Watermark = minWatermark
 
 						return nil
 					},
@@ -389,13 +469,12 @@ func DoJoin[A, B, C any](
 				if err != nil {
 					return fmt.Errorf("projection.DoJoin: left; %w", err)
 				}
+
+				state.Offset1 = val.Offset
 			} else {
-				val, err := ctxB.PullIn()
+				val, err := itemToTyped[B](item)
 				if err != nil {
-					if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
-						return nil
-					}
-					return fmt.Errorf("projection.DoJoin: pull right: %w", err)
+					return fmt.Errorf("projection.DoJoin: covnert right; %w", err)
 				}
 
 				err = MatchDataR1(
@@ -405,54 +484,54 @@ func DoJoin[A, B, C any](
 							Right: x,
 						})
 
-						err = ctxB.PushOut(y)
+						err := pushOut[C](dataStream, state, y)
 						if err != nil {
 							return fmt.Errorf("projection.DoJoin: push right: %w", err)
-						}
-
-						err = ctxB.AckOffset(val.Offset)
-						if err != nil {
-							return fmt.Errorf("projection.DoJoin: ack right offset: %w", err)
 						}
 
 						return nil
 					},
 					func(x *Watermark[B]) error {
 						watermarkB = x.EventTime
+
 						minWatermark := min(watermarkA, watermarkB)
-						if ctxB.LastWatermark() >= minWatermark {
+						if state.Watermark >= minWatermark {
 							// we already processed this watermarks
 							return nil
 						}
-
-						err := ctxB.PushOut(&Watermark[C]{
+						err := pushOut[C](dataStream, state, &Watermark[C]{
 							EventTime: minWatermark,
 						})
 						if err != nil {
 							return fmt.Errorf("projection.DoJoin: push right wattermark  %w", err)
 						}
-						err = ctxB.AckWatermark(&minWatermark)
-						if err != nil {
-							return fmt.Errorf("projection.DoJoin: ack right watermarks: %w", err)
-						}
+
+						state.Watermark = minWatermark
 
 						return nil
 					},
 				)
 
 				if err != nil {
-					return fmt.Errorf("projection.DoJoin: right; %w", err)
+					return fmt.Errorf("projection.DoJoin: left; %w", err)
 				}
+
+				state.Offset2 = val.Offset
 			}
+
+			state.LeftOrRight = !state.LeftOrRight
 		}
 
-		leftOrRight = !leftOrRight
 		timer.Reset(delay)
 	}
 }
 
-func DoSink[A any](ctx PullOnly[A], f func(*Record[A]) error) error {
+func DoSink[A any](ctx PushAndPull[A, any], f func(*Record[A]) error) error {
 	for {
+		if IsWatermarkMarksEndOfStream(ctx.LastWatermark()) {
+			return nil
+		}
+
 		val, err := ctx.PullIn()
 		if err != nil {
 			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
@@ -467,12 +546,15 @@ func DoSink[A any](ctx PullOnly[A], f func(*Record[A]) error) error {
 				return f(x)
 			},
 			func(x *Watermark[A]) error {
-				// TODO do snapshot
-				return nil
+				return ctx.AckWatermark(&x.EventTime)
 			},
 		)
 		if err != nil {
 			return fmt.Errorf("projection.DoSink: sink: %w", err)
+		}
+		err = ctx.AckOffset(val.Offset)
+		if err != nil {
+			return fmt.Errorf("projection.DoSink: ack offset: %w", err)
 		}
 	}
 }

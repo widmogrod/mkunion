@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
@@ -52,6 +53,8 @@ func init() {
 	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[SnapshotState]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[Record[github.com/widmogrod/mkunion/x/projection.SnapshotState]]")
 	shared.TypeRegistryStore[schemaless.Repository[SnapshotState]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/projection.SnapshotState]")
 	shared.TypeRegistryStore[stream.EventTime]("github.com/widmogrod/mkunion/x/stream.EventTime")
+	shared.TypeRegistryStore[stream.Item[schema.Schema]]("github.com/widmogrod/mkunion/x/stream.Item[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[stream.Offset]("github.com/widmogrod/mkunion/x/stream.Offset")
+	shared.TypeRegistryStore[stream.Stream[schema.Schema]]("github.com/widmogrod/mkunion/x/stream.Stream[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 }

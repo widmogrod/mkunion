@@ -396,12 +396,24 @@ func (r *JoinContextState) _marshalJSONJoinContextState(x JoinContextState) ([]b
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name PullTopic2; %w", err)
 	}
 	partial["PullTopic2"] = fieldPullTopic2
+	var fieldLeftOrRight []byte
+	fieldLeftOrRight, err = r._marshalJSONbool(x.LeftOrRight)
+	if err != nil {
+		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name LeftOrRight; %w", err)
+	}
+	partial["LeftOrRight"] = fieldLeftOrRight
 	var fieldPushTopic []byte
 	fieldPushTopic, err = r._marshalJSONstream_Topic(x.PushTopic)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name PushTopic; %w", err)
 	}
 	partial["PushTopic"] = fieldPushTopic
+	var fieldWatermark []byte
+	fieldWatermark, err = r._marshalJSONstream_EventTime(x.Watermark)
+	if err != nil {
+		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name Watermark; %w", err)
+	}
+	partial["Watermark"] = fieldWatermark
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: struct; %w", err)
@@ -425,6 +437,20 @@ func (r *JoinContextState) _marshalJSONstream_Topic(x stream.Topic) ([]byte, err
 	result, err := shared.JSONMarshal[stream.Topic](x)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONstream_Topic:; %w", err)
+	}
+	return result, nil
+}
+func (r *JoinContextState) _marshalJSONbool(x bool) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONbool:; %w", err)
+	}
+	return result, nil
+}
+func (r *JoinContextState) _marshalJSONstream_EventTime(x stream.EventTime) ([]byte, error) {
+	result, err := shared.JSONMarshal[stream.EventTime](x)
+	if err != nil {
+		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONstream_EventTime:; %w", err)
 	}
 	return result, nil
 }
@@ -467,10 +493,22 @@ func (r *JoinContextState) _unmarshalJSONJoinContextState(data []byte) (JoinCont
 			return result, fmt.Errorf("projection: JoinContextState._unmarshalJSONJoinContextState: field PullTopic2; %w", err)
 		}
 	}
+	if fieldLeftOrRight, ok := partial["LeftOrRight"]; ok {
+		result.LeftOrRight, err = r._unmarshalJSONbool(fieldLeftOrRight)
+		if err != nil {
+			return result, fmt.Errorf("projection: JoinContextState._unmarshalJSONJoinContextState: field LeftOrRight; %w", err)
+		}
+	}
 	if fieldPushTopic, ok := partial["PushTopic"]; ok {
 		result.PushTopic, err = r._unmarshalJSONstream_Topic(fieldPushTopic)
 		if err != nil {
 			return result, fmt.Errorf("projection: JoinContextState._unmarshalJSONJoinContextState: field PushTopic; %w", err)
+		}
+	}
+	if fieldWatermark, ok := partial["Watermark"]; ok {
+		result.Watermark, err = r._unmarshalJSONstream_EventTime(fieldWatermark)
+		if err != nil {
+			return result, fmt.Errorf("projection: JoinContextState._unmarshalJSONJoinContextState: field Watermark; %w", err)
 		}
 	}
 	return result, nil
@@ -499,6 +537,21 @@ func (r *JoinContextState) _unmarshalJSONstream_Topic(data []byte) (stream.Topic
 	result, err := shared.JSONUnmarshal[stream.Topic](data)
 	if err != nil {
 		return result, fmt.Errorf("projection: JoinContextState._unmarshalJSONstream_Topic: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *JoinContextState) _unmarshalJSONbool(data []byte) (bool, error) {
+	var result bool
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("projection: JoinContextState._unmarshalJSONbool: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *JoinContextState) _unmarshalJSONstream_EventTime(data []byte) (stream.EventTime, error) {
+	result, err := shared.JSONUnmarshal[stream.EventTime](data)
+	if err != nil {
+		return result, fmt.Errorf("projection: JoinContextState._unmarshalJSONstream_EventTime: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

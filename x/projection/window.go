@@ -105,7 +105,6 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 
 func DoWindow[A, B any](
 	ctx PushAndPull[A, B],
-	recovery *RecoveryOptions[SnapshotState],
 	store *WindowInMemoryStore[B],
 	wd WindowDescription,
 	fm WindowFlushMode,
@@ -182,17 +181,14 @@ func DoWindow[A, B any](
 	)
 
 	for {
+		if IsWatermarkMarksEndOfStream(ctx.LastWatermark()) {
+			log.Debugf("projection.DoWindow: pull: no more data in stream for all keys (exit)")
+			return nil
+		}
+
 		item, err := ctx.PullIn()
 		if err != nil {
 			if errors.Is(err, stream.ErrNoMoreNewDataInStream) {
-				//FIXME: this is not correct, we close stream, only when we know we reached end of stream
-				// this mostly happens when we work with batch of data, and we know that there is no more data to process
-				// so if we have stream that is not closed, process will wait for more data to come
-				if IsWatermarkMarksEndOfStream(ctx.LastWatermark()) {
-					log.Debugf("projection.DoWindow: pull: no more data in stream for all keys (exit)")
-					return nil
-				}
-
 				log.Debugf("projection.DoWindow: pull: no more data in stream")
 				continue
 			}
@@ -229,11 +225,6 @@ func DoWindow[A, B any](
 								return fmt.Errorf("projection.DoWindow: save key=%s window=%s: %w", dataKey, windowID, err)
 							}
 
-							err = ctx.AckOffset(item.Offset)
-							if err != nil {
-								return fmt.Errorf("projection.DoWindow: ack key=%s window=%s: %w", dataKey, windowID, err)
-							}
-
 							continue
 						}
 
@@ -263,11 +254,6 @@ func DoWindow[A, B any](
 						})
 						if err != nil {
 							return fmt.Errorf("projection.DoWindow: save key=%s window=%s: %w", dataKey, windowID, err)
-						}
-
-						err = ctx.AckOffset(item.Offset)
-						if err != nil {
-							return fmt.Errorf("projection.DoWindow: ack key=%s window=%s: %w", dataKey, windowID, err)
 						}
 					}
 				}
@@ -300,14 +286,10 @@ func DoWindow[A, B any](
 			return fmt.Errorf("projection.DoWindow: merge data %T: %w", item, err)
 		}
 
-		if recovery != nil {
-			err := recovery.Snapshot(ctx.CurrentState())
-			if err != nil {
-				log.Warnf("projection.DoWindow: save snapshot failed (continue): %s", err)
-				//return fmt.Errorf("projection.DoWindow: save snapshot: %w", err)
-			}
+		err = ctx.AckOffset(item.Offset)
+		if err != nil {
+			return fmt.Errorf("projection.DoWindow: ack; %w ", err)
 		}
-
 	}
 }
 

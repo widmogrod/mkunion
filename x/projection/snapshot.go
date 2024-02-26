@@ -22,6 +22,9 @@ type (
 		Offset2    *stream.Offset
 		PullTopic2 stream.Topic
 
+		LeftOrRight bool
+
 		PushTopic stream.Topic
+		Watermark stream.EventTime
 	}
 )

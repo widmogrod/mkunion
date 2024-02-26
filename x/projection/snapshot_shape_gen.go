@@ -119,9 +119,21 @@ func JoinContextStateShape() shape.Shape {
 				},
 			},
 			{
+				Name: "LeftOrRight",
+				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
+			},
+			{
 				Name: "PushTopic",
 				Type: &shape.RefName{
 					Name:          "Topic",
+					PkgName:       "stream",
+					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
+				},
+			},
+			{
+				Name: "Watermark",
+				Type: &shape.RefName{
+					Name:          "EventTime",
 					PkgName:       "stream",
 					PkgImportName: "github.com/widmogrod/mkunion/x/stream",
 				},
