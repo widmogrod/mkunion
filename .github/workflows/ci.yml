@@ -29,7 +29,7 @@ jobs:
           set -e
           retries=3
           until [ $retries -le 0 ]; do
-            if go test -v ./...; then
+            if go test  -race -coverprofile=coverage.out -covermode=atomic -v ./...; then
               break
             fi
             echo "Retrying Go tests ($retries retries left)..."
@@ -39,3 +39,9 @@ jobs:
             echo "Go tests failed after all retries."
             exit 1
           fi
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: widmogrod/mkunion
