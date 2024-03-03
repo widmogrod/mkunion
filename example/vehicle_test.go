@@ -3,6 +3,7 @@ package example
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/shared"
 	"testing"
 )
 
@@ -23,4 +24,21 @@ func TestGeneratedVisitor(t *testing.T) {
 	assert.Equal(t, "Car", car.AcceptVehicle(visitor))
 	assert.Equal(t, "Plane", plane.AcceptVehicle(visitor))
 	assert.Equal(t, "Boat", boat.AcceptVehicle(visitor))
+}
+
+func ExampleVehicleToJSON() {
+	var vehicle Vehicle = &Car{
+		Color:  "black",
+		Wheels: 4,
+	}
+	result, _ := shared.JSONMarshal[Vehicle](vehicle)
+	fmt.Println(string(result))
+	// Output: {"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}
+}
+
+func ExampleVehicleFromJSON() {
+	input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
+	vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
+	fmt.Printf("%#v", vehicle)
+	// Output: &example.Car{Color:"black", Wheels:4}
 }
