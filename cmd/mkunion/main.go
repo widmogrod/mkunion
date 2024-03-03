@@ -27,7 +27,7 @@ func main() {
 	var app *cli.App
 	app = &cli.App{
 		Name:                   shared.Program,
-		Description:            "VisitorGenerator union type and visitor pattern gor golang",
+		Description:            "Strongly typed union type in golang.",
 		EnableBashCompletion:   true,
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
@@ -148,7 +148,8 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name: "match",
+				Name:        "match",
+				Description: "Generate custom pattern matching function",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "name",
@@ -195,7 +196,8 @@ func main() {
 				},
 			},
 			{
-				Name: "shape-export",
+				Name:        "shape-export",
+				Description: "Generate typescript types from golang types, and enable end-to-end type safety.",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:        "language",
