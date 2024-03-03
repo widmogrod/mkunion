@@ -7,6 +7,459 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
+type GuardVisitor interface {
+	VisitEnum(v *Enum) any
+	VisitRequired(v *Required) any
+	VisitAndGuard(v *AndGuard) any
+}
+
+type Guard interface {
+	AcceptGuard(g GuardVisitor) any
+}
+
+var (
+	_ Guard = (*Enum)(nil)
+	_ Guard = (*Required)(nil)
+	_ Guard = (*AndGuard)(nil)
+)
+
+func (r *Enum) AcceptGuard(v GuardVisitor) any     { return v.VisitEnum(r) }
+func (r *Required) AcceptGuard(v GuardVisitor) any { return v.VisitRequired(r) }
+func (r *AndGuard) AcceptGuard(v GuardVisitor) any { return v.VisitAndGuard(r) }
+
+func MatchGuardR3[T0, T1, T2 any](
+	x Guard,
+	f1 func(x *Enum) (T0, T1, T2),
+	f2 func(x *Required) (T0, T1, T2),
+	f3 func(x *AndGuard) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *Enum:
+		return f1(v)
+	case *Required:
+		return f2(v)
+	case *AndGuard:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchGuardR2[T0, T1 any](
+	x Guard,
+	f1 func(x *Enum) (T0, T1),
+	f2 func(x *Required) (T0, T1),
+	f3 func(x *AndGuard) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *Enum:
+		return f1(v)
+	case *Required:
+		return f2(v)
+	case *AndGuard:
+		return f3(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchGuardR1[T0 any](
+	x Guard,
+	f1 func(x *Enum) T0,
+	f2 func(x *Required) T0,
+	f3 func(x *AndGuard) T0,
+) T0 {
+	switch v := x.(type) {
+	case *Enum:
+		return f1(v)
+	case *Required:
+		return f2(v)
+	case *AndGuard:
+		return f3(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchGuardR0(
+	x Guard,
+	f1 func(x *Enum),
+	f2 func(x *Required),
+	f3 func(x *AndGuard),
+) {
+	switch v := x.(type) {
+	case *Enum:
+		f1(v)
+	case *Required:
+		f2(v)
+	case *AndGuard:
+		f3(v)
+	}
+}
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AndGuard", AndGuardFromJSON, AndGuardToJSON)
+}
+
+type GuardUnionJSON struct {
+	Type     string          `json:"$type,omitempty"`
+	Enum     json.RawMessage `json:"shape.Enum,omitempty"`
+	Required json.RawMessage `json:"shape.Required,omitempty"`
+	AndGuard json.RawMessage `json:"shape.AndGuard,omitempty"`
+}
+
+func GuardFromJSON(x []byte) (Guard, error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+
+	var data GuardUnionJSON
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	switch data.Type {
+	case "shape.Enum":
+		return EnumFromJSON(data.Enum)
+	case "shape.Required":
+		return RequiredFromJSON(data.Required)
+	case "shape.AndGuard":
+		return AndGuardFromJSON(data.AndGuard)
+	}
+
+	if data.Enum != nil {
+		return EnumFromJSON(data.Enum)
+	} else if data.Required != nil {
+		return RequiredFromJSON(data.Required)
+	} else if data.AndGuard != nil {
+		return AndGuardFromJSON(data.AndGuard)
+	}
+
+	return nil, fmt.Errorf("shape.Guard: unknown type %s", data.Type)
+}
+
+func GuardToJSON(x Guard) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return MatchGuardR2(
+		x,
+		func(x *Enum) ([]byte, error) {
+			body, err := EnumToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type: "shape.Enum",
+				Enum: body,
+			})
+		},
+		func(x *Required) ([]byte, error) {
+			body, err := RequiredToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type:     "shape.Required",
+				Required: body,
+			})
+		},
+		func(x *AndGuard) ([]byte, error) {
+			body, err := AndGuardToJSON(x)
+			if err != nil {
+				return nil, err
+			}
+
+			return json.Marshal(GuardUnionJSON{
+				Type:     "shape.AndGuard",
+				AndGuard: body,
+			})
+		},
+	)
+}
+
+func EnumFromJSON(x []byte) (*Enum, error) {
+	result := new(Enum)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func EnumToJSON(x *Enum) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Enum)(nil)
+	_ json.Marshaler   = (*Enum)(nil)
+)
+
+func (r *Enum) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONEnum(*r)
+}
+func (r *Enum) _marshalJSONEnum(x Enum) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldVal []byte
+	fieldVal, err = r._marshalJSONSlicestring(x.Val)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: field name Val; %w", err)
+	}
+	partial["Val"] = fieldVal
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Enum) _marshalJSONSlicestring(x []string) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONstring(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Enum) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Enum._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Enum) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONEnum(data)
+	if err != nil {
+		return fmt.Errorf("shape: Enum.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Enum) _unmarshalJSONEnum(data []byte) (Enum, error) {
+	result := Enum{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: native struct unwrap; %w", err)
+	}
+	if fieldVal, ok := partial["Val"]; ok {
+		result.Val, err = r._unmarshalJSONSlicestring(fieldVal)
+		if err != nil {
+			return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: field Val; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Enum) _unmarshalJSONSlicestring(data []byte) ([]string, error) {
+	result := make([]string, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONstring(v)
+		if err != nil {
+			return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *Enum) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("shape: Enum._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func RequiredFromJSON(x []byte) (*Required, error) {
+	result := new(Required)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func RequiredToJSON(x *Required) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Required)(nil)
+	_ json.Marshaler   = (*Required)(nil)
+)
+
+func (r *Required) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONRequired(*r)
+}
+func (r *Required) _marshalJSONRequired(x Required) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: Required._marshalJSONRequired: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Required) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONRequired(data)
+	if err != nil {
+		return fmt.Errorf("shape: Required.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Required) _unmarshalJSONRequired(data []byte) (Required, error) {
+	result := Required{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: Required._unmarshalJSONRequired: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func AndGuardFromJSON(x []byte) (*AndGuard, error) {
+	result := new(AndGuard)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func AndGuardToJSON(x *AndGuard) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*AndGuard)(nil)
+	_ json.Marshaler   = (*AndGuard)(nil)
+)
+
+func (r *AndGuard) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONAndGuard(*r)
+}
+func (r *AndGuard) _marshalJSONAndGuard(x AndGuard) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldL []byte
+	fieldL, err = r._marshalJSONSliceGuard(x.L)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: field name L; %w", err)
+	}
+	partial["L"] = fieldL
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *AndGuard) _marshalJSONSliceGuard(x []Guard) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONGuard(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard:; %w", err)
+	}
+	return result, nil
+}
+func (r *AndGuard) _marshalJSONGuard(x Guard) ([]byte, error) {
+	result, err := shared.JSONMarshal[Guard](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AndGuard._marshalJSONGuard:; %w", err)
+	}
+	return result, nil
+}
+func (r *AndGuard) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONAndGuard(data)
+	if err != nil {
+		return fmt.Errorf("shape: AndGuard.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *AndGuard) _unmarshalJSONAndGuard(data []byte) (AndGuard, error) {
+	result := AndGuard{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: native struct unwrap; %w", err)
+	}
+	if fieldL, ok := partial["L"]; ok {
+		result.L, err = r._unmarshalJSONSliceGuard(fieldL)
+		if err != nil {
+			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: field L; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *AndGuard) _unmarshalJSONSliceGuard(data []byte) ([]Guard, error) {
+	result := make([]Guard, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONGuard(v)
+		if err != nil {
+			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *AndGuard) _unmarshalJSONGuard(data []byte) (Guard, error) {
+	result, err := shared.JSONUnmarshal[Guard](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONGuard: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
 type NumberKindVisitor interface {
 	VisitUInt(v *UInt) any
 	VisitUInt8(v *UInt8) any
@@ -1101,38 +1554,38 @@ func (r *Float64) _unmarshalJSONFloat64(data []byte) (Float64, error) {
 	return result, nil
 }
 
-type GuardVisitor interface {
-	VisitEnum(v *Enum) any
-	VisitRequired(v *Required) any
-	VisitAndGuard(v *AndGuard) any
+type PrimitiveKindVisitor interface {
+	VisitBooleanLike(v *BooleanLike) any
+	VisitStringLike(v *StringLike) any
+	VisitNumberLike(v *NumberLike) any
 }
 
-type Guard interface {
-	AcceptGuard(g GuardVisitor) any
+type PrimitiveKind interface {
+	AcceptPrimitiveKind(g PrimitiveKindVisitor) any
 }
 
 var (
-	_ Guard = (*Enum)(nil)
-	_ Guard = (*Required)(nil)
-	_ Guard = (*AndGuard)(nil)
+	_ PrimitiveKind = (*BooleanLike)(nil)
+	_ PrimitiveKind = (*StringLike)(nil)
+	_ PrimitiveKind = (*NumberLike)(nil)
 )
 
-func (r *Enum) AcceptGuard(v GuardVisitor) any     { return v.VisitEnum(r) }
-func (r *Required) AcceptGuard(v GuardVisitor) any { return v.VisitRequired(r) }
-func (r *AndGuard) AcceptGuard(v GuardVisitor) any { return v.VisitAndGuard(r) }
+func (r *BooleanLike) AcceptPrimitiveKind(v PrimitiveKindVisitor) any { return v.VisitBooleanLike(r) }
+func (r *StringLike) AcceptPrimitiveKind(v PrimitiveKindVisitor) any  { return v.VisitStringLike(r) }
+func (r *NumberLike) AcceptPrimitiveKind(v PrimitiveKindVisitor) any  { return v.VisitNumberLike(r) }
 
-func MatchGuardR3[T0, T1, T2 any](
-	x Guard,
-	f1 func(x *Enum) (T0, T1, T2),
-	f2 func(x *Required) (T0, T1, T2),
-	f3 func(x *AndGuard) (T0, T1, T2),
+func MatchPrimitiveKindR3[T0, T1, T2 any](
+	x PrimitiveKind,
+	f1 func(x *BooleanLike) (T0, T1, T2),
+	f2 func(x *StringLike) (T0, T1, T2),
+	f3 func(x *NumberLike) (T0, T1, T2),
 ) (T0, T1, T2) {
 	switch v := x.(type) {
-	case *Enum:
+	case *BooleanLike:
 		return f1(v)
-	case *Required:
+	case *StringLike:
 		return f2(v)
-	case *AndGuard:
+	case *NumberLike:
 		return f3(v)
 	}
 	var result1 T0
@@ -1141,18 +1594,18 @@ func MatchGuardR3[T0, T1, T2 any](
 	return result1, result2, result3
 }
 
-func MatchGuardR2[T0, T1 any](
-	x Guard,
-	f1 func(x *Enum) (T0, T1),
-	f2 func(x *Required) (T0, T1),
-	f3 func(x *AndGuard) (T0, T1),
+func MatchPrimitiveKindR2[T0, T1 any](
+	x PrimitiveKind,
+	f1 func(x *BooleanLike) (T0, T1),
+	f2 func(x *StringLike) (T0, T1),
+	f3 func(x *NumberLike) (T0, T1),
 ) (T0, T1) {
 	switch v := x.(type) {
-	case *Enum:
+	case *BooleanLike:
 		return f1(v)
-	case *Required:
+	case *StringLike:
 		return f2(v)
-	case *AndGuard:
+	case *NumberLike:
 		return f3(v)
 	}
 	var result1 T0
@@ -1160,54 +1613,54 @@ func MatchGuardR2[T0, T1 any](
 	return result1, result2
 }
 
-func MatchGuardR1[T0 any](
-	x Guard,
-	f1 func(x *Enum) T0,
-	f2 func(x *Required) T0,
-	f3 func(x *AndGuard) T0,
+func MatchPrimitiveKindR1[T0 any](
+	x PrimitiveKind,
+	f1 func(x *BooleanLike) T0,
+	f2 func(x *StringLike) T0,
+	f3 func(x *NumberLike) T0,
 ) T0 {
 	switch v := x.(type) {
-	case *Enum:
+	case *BooleanLike:
 		return f1(v)
-	case *Required:
+	case *StringLike:
 		return f2(v)
-	case *AndGuard:
+	case *NumberLike:
 		return f3(v)
 	}
 	var result1 T0
 	return result1
 }
 
-func MatchGuardR0(
-	x Guard,
-	f1 func(x *Enum),
-	f2 func(x *Required),
-	f3 func(x *AndGuard),
+func MatchPrimitiveKindR0(
+	x PrimitiveKind,
+	f1 func(x *BooleanLike),
+	f2 func(x *StringLike),
+	f3 func(x *NumberLike),
 ) {
 	switch v := x.(type) {
-	case *Enum:
+	case *BooleanLike:
 		f1(v)
-	case *Required:
+	case *StringLike:
 		f2(v)
-	case *AndGuard:
+	case *NumberLike:
 		f3(v)
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AndGuard", AndGuardFromJSON, AndGuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveKind", PrimitiveKindFromJSON, PrimitiveKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.BooleanLike", BooleanLikeFromJSON, BooleanLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StringLike", StringLikeFromJSON, StringLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberLike", NumberLikeFromJSON, NumberLikeToJSON)
 }
 
-type GuardUnionJSON struct {
-	Type     string          `json:"$type,omitempty"`
-	Enum     json.RawMessage `json:"shape.Enum,omitempty"`
-	Required json.RawMessage `json:"shape.Required,omitempty"`
-	AndGuard json.RawMessage `json:"shape.AndGuard,omitempty"`
+type PrimitiveKindUnionJSON struct {
+	Type        string          `json:"$type,omitempty"`
+	BooleanLike json.RawMessage `json:"shape.BooleanLike,omitempty"`
+	StringLike  json.RawMessage `json:"shape.StringLike,omitempty"`
+	NumberLike  json.RawMessage `json:"shape.NumberLike,omitempty"`
 }
 
-func GuardFromJSON(x []byte) (Guard, error) {
+func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
 	if x == nil || len(x) == 0 {
 		return nil, nil
 	}
@@ -1215,76 +1668,76 @@ func GuardFromJSON(x []byte) (Guard, error) {
 		return nil, nil
 	}
 
-	var data GuardUnionJSON
+	var data PrimitiveKindUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
 		return nil, err
 	}
 
 	switch data.Type {
-	case "shape.Enum":
-		return EnumFromJSON(data.Enum)
-	case "shape.Required":
-		return RequiredFromJSON(data.Required)
-	case "shape.AndGuard":
-		return AndGuardFromJSON(data.AndGuard)
+	case "shape.BooleanLike":
+		return BooleanLikeFromJSON(data.BooleanLike)
+	case "shape.StringLike":
+		return StringLikeFromJSON(data.StringLike)
+	case "shape.NumberLike":
+		return NumberLikeFromJSON(data.NumberLike)
 	}
 
-	if data.Enum != nil {
-		return EnumFromJSON(data.Enum)
-	} else if data.Required != nil {
-		return RequiredFromJSON(data.Required)
-	} else if data.AndGuard != nil {
-		return AndGuardFromJSON(data.AndGuard)
+	if data.BooleanLike != nil {
+		return BooleanLikeFromJSON(data.BooleanLike)
+	} else if data.StringLike != nil {
+		return StringLikeFromJSON(data.StringLike)
+	} else if data.NumberLike != nil {
+		return NumberLikeFromJSON(data.NumberLike)
 	}
 
-	return nil, fmt.Errorf("shape.Guard: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.PrimitiveKind: unknown type %s", data.Type)
 }
 
-func GuardToJSON(x Guard) ([]byte, error) {
+func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 	if x == nil {
 		return nil, nil
 	}
-	return MatchGuardR2(
+	return MatchPrimitiveKindR2(
 		x,
-		func(x *Enum) ([]byte, error) {
-			body, err := EnumToJSON(x)
+		func(x *BooleanLike) ([]byte, error) {
+			body, err := BooleanLikeToJSON(x)
 			if err != nil {
 				return nil, err
 			}
 
-			return json.Marshal(GuardUnionJSON{
-				Type: "shape.Enum",
-				Enum: body,
+			return json.Marshal(PrimitiveKindUnionJSON{
+				Type:        "shape.BooleanLike",
+				BooleanLike: body,
 			})
 		},
-		func(x *Required) ([]byte, error) {
-			body, err := RequiredToJSON(x)
+		func(x *StringLike) ([]byte, error) {
+			body, err := StringLikeToJSON(x)
 			if err != nil {
 				return nil, err
 			}
 
-			return json.Marshal(GuardUnionJSON{
-				Type:     "shape.Required",
-				Required: body,
+			return json.Marshal(PrimitiveKindUnionJSON{
+				Type:       "shape.StringLike",
+				StringLike: body,
 			})
 		},
-		func(x *AndGuard) ([]byte, error) {
-			body, err := AndGuardToJSON(x)
+		func(x *NumberLike) ([]byte, error) {
+			body, err := NumberLikeToJSON(x)
 			if err != nil {
 				return nil, err
 			}
 
-			return json.Marshal(GuardUnionJSON{
-				Type:     "shape.AndGuard",
-				AndGuard: body,
+			return json.Marshal(PrimitiveKindUnionJSON{
+				Type:       "shape.NumberLike",
+				NumberLike: body,
 			})
 		},
 	)
 }
 
-func EnumFromJSON(x []byte) (*Enum, error) {
-	result := new(Enum)
+func BooleanLikeFromJSON(x []byte) (*BooleanLike, error) {
+	result := new(BooleanLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
 		return nil, err
@@ -1293,108 +1746,50 @@ func EnumFromJSON(x []byte) (*Enum, error) {
 	return result, nil
 }
 
-func EnumToJSON(x *Enum) ([]byte, error) {
+func BooleanLikeToJSON(x *BooleanLike) ([]byte, error) {
 	return x.MarshalJSON()
 }
 
 var (
-	_ json.Unmarshaler = (*Enum)(nil)
-	_ json.Marshaler   = (*Enum)(nil)
+	_ json.Unmarshaler = (*BooleanLike)(nil)
+	_ json.Marshaler   = (*BooleanLike)(nil)
 )
 
-func (r *Enum) MarshalJSON() ([]byte, error) {
+func (r *BooleanLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return nil, nil
 	}
-	return r._marshalJSONEnum(*r)
+	return r._marshalJSONBooleanLike(*r)
 }
-func (r *Enum) _marshalJSONEnum(x Enum) ([]byte, error) {
+func (r *BooleanLike) _marshalJSONBooleanLike(x BooleanLike) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
-	var fieldVal []byte
-	fieldVal, err = r._marshalJSONSlicestring(x.Val)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: field name Val; %w", err)
-	}
-	partial["Val"] = fieldVal
 	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: struct; %w", err)
+		return nil, fmt.Errorf("shape: BooleanLike._marshalJSONBooleanLike: struct; %w", err)
 	}
 	return result, nil
 }
-func (r *Enum) _marshalJSONSlicestring(x []string) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONstring(v)
-		if err != nil {
-			return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
+func (r *BooleanLike) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONBooleanLike(data)
 	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONSlicestring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Enum) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONstring:; %w", err)
-	}
-	return result, nil
-}
-func (r *Enum) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONEnum(data)
-	if err != nil {
-		return fmt.Errorf("shape: Enum.UnmarshalJSON: %w", err)
+		return fmt.Errorf("shape: BooleanLike.UnmarshalJSON: %w", err)
 	}
 	*r = result
 	return nil
 }
-func (r *Enum) _unmarshalJSONEnum(data []byte) (Enum, error) {
-	result := Enum{}
+func (r *BooleanLike) _unmarshalJSONBooleanLike(data []byte) (BooleanLike, error) {
+	result := BooleanLike{}
 	var partial map[string]json.RawMessage
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
-		return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: native struct unwrap; %w", err)
-	}
-	if fieldVal, ok := partial["Val"]; ok {
-		result.Val, err = r._unmarshalJSONSlicestring(fieldVal)
-		if err != nil {
-			return result, fmt.Errorf("shape: Enum._unmarshalJSONEnum: field Val; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *Enum) _unmarshalJSONSlicestring(data []byte) ([]string, error) {
-	result := make([]string, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONstring(v)
-		if err != nil {
-			return result, fmt.Errorf("shape: Enum._unmarshalJSONSlicestring: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *Enum) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
-	if err != nil {
-		return result, fmt.Errorf("shape: Enum._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("shape: BooleanLike._unmarshalJSONBooleanLike: native struct unwrap; %w", err)
 	}
 	return result, nil
 }
 
-func RequiredFromJSON(x []byte) (*Required, error) {
-	result := new(Required)
+func StringLikeFromJSON(x []byte) (*StringLike, error) {
+	result := new(StringLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
 		return nil, err
@@ -1403,50 +1798,50 @@ func RequiredFromJSON(x []byte) (*Required, error) {
 	return result, nil
 }
 
-func RequiredToJSON(x *Required) ([]byte, error) {
+func StringLikeToJSON(x *StringLike) ([]byte, error) {
 	return x.MarshalJSON()
 }
 
 var (
-	_ json.Unmarshaler = (*Required)(nil)
-	_ json.Marshaler   = (*Required)(nil)
+	_ json.Unmarshaler = (*StringLike)(nil)
+	_ json.Marshaler   = (*StringLike)(nil)
 )
 
-func (r *Required) MarshalJSON() ([]byte, error) {
+func (r *StringLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return nil, nil
 	}
-	return r._marshalJSONRequired(*r)
+	return r._marshalJSONStringLike(*r)
 }
-func (r *Required) _marshalJSONRequired(x Required) ([]byte, error) {
+func (r *StringLike) _marshalJSONStringLike(x StringLike) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
 	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("shape: Required._marshalJSONRequired: struct; %w", err)
+		return nil, fmt.Errorf("shape: StringLike._marshalJSONStringLike: struct; %w", err)
 	}
 	return result, nil
 }
-func (r *Required) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONRequired(data)
+func (r *StringLike) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONStringLike(data)
 	if err != nil {
-		return fmt.Errorf("shape: Required.UnmarshalJSON: %w", err)
+		return fmt.Errorf("shape: StringLike.UnmarshalJSON: %w", err)
 	}
 	*r = result
 	return nil
 }
-func (r *Required) _unmarshalJSONRequired(data []byte) (Required, error) {
-	result := Required{}
+func (r *StringLike) _unmarshalJSONStringLike(data []byte) (StringLike, error) {
+	result := StringLike{}
 	var partial map[string]json.RawMessage
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
-		return result, fmt.Errorf("shape: Required._unmarshalJSONRequired: native struct unwrap; %w", err)
+		return result, fmt.Errorf("shape: StringLike._unmarshalJSONStringLike: native struct unwrap; %w", err)
 	}
 	return result, nil
 }
 
-func AndGuardFromJSON(x []byte) (*AndGuard, error) {
-	result := new(AndGuard)
+func NumberLikeFromJSON(x []byte) (*NumberLike, error) {
+	result := new(NumberLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
 		return nil, err
@@ -1455,101 +1850,70 @@ func AndGuardFromJSON(x []byte) (*AndGuard, error) {
 	return result, nil
 }
 
-func AndGuardToJSON(x *AndGuard) ([]byte, error) {
+func NumberLikeToJSON(x *NumberLike) ([]byte, error) {
 	return x.MarshalJSON()
 }
 
 var (
-	_ json.Unmarshaler = (*AndGuard)(nil)
-	_ json.Marshaler   = (*AndGuard)(nil)
+	_ json.Unmarshaler = (*NumberLike)(nil)
+	_ json.Marshaler   = (*NumberLike)(nil)
 )
 
-func (r *AndGuard) MarshalJSON() ([]byte, error) {
+func (r *NumberLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return nil, nil
 	}
-	return r._marshalJSONAndGuard(*r)
+	return r._marshalJSONNumberLike(*r)
 }
-func (r *AndGuard) _marshalJSONAndGuard(x AndGuard) ([]byte, error) {
+func (r *NumberLike) _marshalJSONNumberLike(x NumberLike) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
-	var fieldL []byte
-	fieldL, err = r._marshalJSONSliceGuard(x.L)
+	var fieldKind []byte
+	fieldKind, err = r._marshalJSONNumberKind(x.Kind)
 	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: field name L; %w", err)
+		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberLike: field name Kind; %w", err)
 	}
-	partial["L"] = fieldL
+	partial["Kind"] = fieldKind
 	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: struct; %w", err)
+		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberLike: struct; %w", err)
 	}
 	return result, nil
 }
-func (r *AndGuard) _marshalJSONSliceGuard(x []Guard) ([]byte, error) {
-	partial := make([]json.RawMessage, len(x))
-	for i, v := range x {
-		item, err := r._marshalJSONGuard(v)
-		if err != nil {
-			return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard: at index %d; %w", i, err)
-		}
-		partial[i] = item
-	}
-	result, err := json.Marshal(partial)
+func (r *NumberLike) _marshalJSONNumberKind(x NumberKind) ([]byte, error) {
+	result, err := shared.JSONMarshal[NumberKind](x)
 	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONSliceGuard:; %w", err)
+		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberKind:; %w", err)
 	}
 	return result, nil
 }
-func (r *AndGuard) _marshalJSONGuard(x Guard) ([]byte, error) {
-	result, err := shared.JSONMarshal[Guard](x)
+func (r *NumberLike) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONNumberLike(data)
 	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONGuard:; %w", err)
-	}
-	return result, nil
-}
-func (r *AndGuard) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONAndGuard(data)
-	if err != nil {
-		return fmt.Errorf("shape: AndGuard.UnmarshalJSON: %w", err)
+		return fmt.Errorf("shape: NumberLike.UnmarshalJSON: %w", err)
 	}
 	*r = result
 	return nil
 }
-func (r *AndGuard) _unmarshalJSONAndGuard(data []byte) (AndGuard, error) {
-	result := AndGuard{}
+func (r *NumberLike) _unmarshalJSONNumberLike(data []byte) (NumberLike, error) {
+	result := NumberLike{}
 	var partial map[string]json.RawMessage
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
-		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: native struct unwrap; %w", err)
+		return result, fmt.Errorf("shape: NumberLike._unmarshalJSONNumberLike: native struct unwrap; %w", err)
 	}
-	if fieldL, ok := partial["L"]; ok {
-		result.L, err = r._unmarshalJSONSliceGuard(fieldL)
+	if fieldKind, ok := partial["Kind"]; ok {
+		result.Kind, err = r._unmarshalJSONNumberKind(fieldKind)
 		if err != nil {
-			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONAndGuard: field L; %w", err)
+			return result, fmt.Errorf("shape: NumberLike._unmarshalJSONNumberLike: field Kind; %w", err)
 		}
 	}
 	return result, nil
 }
-func (r *AndGuard) _unmarshalJSONSliceGuard(data []byte) ([]Guard, error) {
-	result := make([]Guard, 0)
-	var partial []json.RawMessage
-	err := json.Unmarshal(data, &partial)
+func (r *NumberLike) _unmarshalJSONNumberKind(data []byte) (NumberKind, error) {
+	result, err := shared.JSONUnmarshal[NumberKind](data)
 	if err != nil {
-		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: native list unwrap; %w", err)
-	}
-	for i, v := range partial {
-		item, err := r._unmarshalJSONGuard(v)
-		if err != nil {
-			return result, fmt.Errorf("shape: AndGuard._unmarshalJSONSliceGuard: at index %d; %w", i, err)
-		}
-		result = append(result, item)
-	}
-	return result, nil
-}
-func (r *AndGuard) _unmarshalJSONGuard(data []byte) (Guard, error) {
-	result, err := shared.JSONUnmarshal[Guard](data)
-	if err != nil {
-		return result, fmt.Errorf("shape: AndGuard._unmarshalJSONGuard: native ref unwrap; %w", err)
+		return result, fmt.Errorf("shape: NumberLike._unmarshalJSONNumberKind: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -2264,6 +2628,12 @@ func (r *AliasLike) _marshalJSONAliasLike(x AliasLike) ([]byte, error) {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name PkgImportName; %w", err)
 	}
 	partial["PkgImportName"] = fieldPkgImportName
+	var fieldTypeParams []byte
+	fieldTypeParams, err = r._marshalJSONSliceTypeParam(x.TypeParams)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name TypeParams; %w", err)
+	}
+	partial["TypeParams"] = fieldTypeParams
 	var fieldIsAlias []byte
 	fieldIsAlias, err = r._marshalJSONbool(x.IsAlias)
 	if err != nil {
@@ -2292,6 +2662,28 @@ func (r *AliasLike) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *AliasLike) _marshalJSONSliceTypeParam(x []TypeParam) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONTypeParam(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: AliasLike._marshalJSONSliceTypeParam: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AliasLike._marshalJSONSliceTypeParam:; %w", err)
+	}
+	return result, nil
+}
+func (r *AliasLike) _marshalJSONTypeParam(x TypeParam) ([]byte, error) {
+	result, err := shared.JSONMarshal[TypeParam](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: AliasLike._marshalJSONTypeParam:; %w", err)
 	}
 	return result, nil
 }
@@ -2365,6 +2757,12 @@ func (r *AliasLike) _unmarshalJSONAliasLike(data []byte) (AliasLike, error) {
 			return result, fmt.Errorf("shape: AliasLike._unmarshalJSONAliasLike: field PkgImportName; %w", err)
 		}
 	}
+	if fieldTypeParams, ok := partial["TypeParams"]; ok {
+		result.TypeParams, err = r._unmarshalJSONSliceTypeParam(fieldTypeParams)
+		if err != nil {
+			return result, fmt.Errorf("shape: AliasLike._unmarshalJSONAliasLike: field TypeParams; %w", err)
+		}
+	}
 	if fieldIsAlias, ok := partial["IsAlias"]; ok {
 		result.IsAlias, err = r._unmarshalJSONbool(fieldIsAlias)
 		if err != nil {
@@ -2390,6 +2788,29 @@ func (r *AliasLike) _unmarshalJSONstring(data []byte) (string, error) {
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return result, fmt.Errorf("shape: AliasLike._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *AliasLike) _unmarshalJSONSliceTypeParam(data []byte) ([]TypeParam, error) {
+	result := make([]TypeParam, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: AliasLike._unmarshalJSONSliceTypeParam: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONTypeParam(v)
+		if err != nil {
+			return result, fmt.Errorf("shape: AliasLike._unmarshalJSONSliceTypeParam: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *AliasLike) _unmarshalJSONTypeParam(data []byte) (TypeParam, error) {
+	result, err := shared.JSONUnmarshal[TypeParam](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: AliasLike._unmarshalJSONTypeParam: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -3068,6 +3489,12 @@ func (r *UnionLike) _marshalJSONUnionLike(x UnionLike) ([]byte, error) {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name PkgImportName; %w", err)
 	}
 	partial["PkgImportName"] = fieldPkgImportName
+	var fieldTypeParams []byte
+	fieldTypeParams, err = r._marshalJSONSliceTypeParam(x.TypeParams)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name TypeParams; %w", err)
+	}
+	partial["TypeParams"] = fieldTypeParams
 	var fieldVariant []byte
 	fieldVariant, err = r._marshalJSONSliceShape(x.Variant)
 	if err != nil {
@@ -3090,6 +3517,28 @@ func (r *UnionLike) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
 	if err != nil {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *UnionLike) _marshalJSONSliceTypeParam(x []TypeParam) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONTypeParam(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: UnionLike._marshalJSONSliceTypeParam: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UnionLike._marshalJSONSliceTypeParam:; %w", err)
+	}
+	return result, nil
+}
+func (r *UnionLike) _marshalJSONTypeParam(x TypeParam) ([]byte, error) {
+	result, err := shared.JSONMarshal[TypeParam](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: UnionLike._marshalJSONTypeParam:; %w", err)
 	}
 	return result, nil
 }
@@ -3171,6 +3620,12 @@ func (r *UnionLike) _unmarshalJSONUnionLike(data []byte) (UnionLike, error) {
 			return result, fmt.Errorf("shape: UnionLike._unmarshalJSONUnionLike: field PkgImportName; %w", err)
 		}
 	}
+	if fieldTypeParams, ok := partial["TypeParams"]; ok {
+		result.TypeParams, err = r._unmarshalJSONSliceTypeParam(fieldTypeParams)
+		if err != nil {
+			return result, fmt.Errorf("shape: UnionLike._unmarshalJSONUnionLike: field TypeParams; %w", err)
+		}
+	}
 	if fieldVariant, ok := partial["Variant"]; ok {
 		result.Variant, err = r._unmarshalJSONSliceShape(fieldVariant)
 		if err != nil {
@@ -3190,6 +3645,29 @@ func (r *UnionLike) _unmarshalJSONstring(data []byte) (string, error) {
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return result, fmt.Errorf("shape: UnionLike._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *UnionLike) _unmarshalJSONSliceTypeParam(data []byte) ([]TypeParam, error) {
+	result := make([]TypeParam, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: UnionLike._unmarshalJSONSliceTypeParam: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONTypeParam(v)
+		if err != nil {
+			return result, fmt.Errorf("shape: UnionLike._unmarshalJSONSliceTypeParam: at index %d; %w", i, err)
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+func (r *UnionLike) _unmarshalJSONTypeParam(data []byte) (TypeParam, error) {
+	result, err := shared.JSONUnmarshal[TypeParam](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: UnionLike._unmarshalJSONTypeParam: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -3237,370 +3715,6 @@ func (r *UnionLike) _unmarshalJSONTag(data []byte) (Tag, error) {
 	result, err := shared.JSONUnmarshal[Tag](data)
 	if err != nil {
 		return result, fmt.Errorf("shape: UnionLike._unmarshalJSONTag: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-type PrimitiveKindVisitor interface {
-	VisitBooleanLike(v *BooleanLike) any
-	VisitStringLike(v *StringLike) any
-	VisitNumberLike(v *NumberLike) any
-}
-
-type PrimitiveKind interface {
-	AcceptPrimitiveKind(g PrimitiveKindVisitor) any
-}
-
-var (
-	_ PrimitiveKind = (*BooleanLike)(nil)
-	_ PrimitiveKind = (*StringLike)(nil)
-	_ PrimitiveKind = (*NumberLike)(nil)
-)
-
-func (r *BooleanLike) AcceptPrimitiveKind(v PrimitiveKindVisitor) any { return v.VisitBooleanLike(r) }
-func (r *StringLike) AcceptPrimitiveKind(v PrimitiveKindVisitor) any  { return v.VisitStringLike(r) }
-func (r *NumberLike) AcceptPrimitiveKind(v PrimitiveKindVisitor) any  { return v.VisitNumberLike(r) }
-
-func MatchPrimitiveKindR3[T0, T1, T2 any](
-	x PrimitiveKind,
-	f1 func(x *BooleanLike) (T0, T1, T2),
-	f2 func(x *StringLike) (T0, T1, T2),
-	f3 func(x *NumberLike) (T0, T1, T2),
-) (T0, T1, T2) {
-	switch v := x.(type) {
-	case *BooleanLike:
-		return f1(v)
-	case *StringLike:
-		return f2(v)
-	case *NumberLike:
-		return f3(v)
-	}
-	var result1 T0
-	var result2 T1
-	var result3 T2
-	return result1, result2, result3
-}
-
-func MatchPrimitiveKindR2[T0, T1 any](
-	x PrimitiveKind,
-	f1 func(x *BooleanLike) (T0, T1),
-	f2 func(x *StringLike) (T0, T1),
-	f3 func(x *NumberLike) (T0, T1),
-) (T0, T1) {
-	switch v := x.(type) {
-	case *BooleanLike:
-		return f1(v)
-	case *StringLike:
-		return f2(v)
-	case *NumberLike:
-		return f3(v)
-	}
-	var result1 T0
-	var result2 T1
-	return result1, result2
-}
-
-func MatchPrimitiveKindR1[T0 any](
-	x PrimitiveKind,
-	f1 func(x *BooleanLike) T0,
-	f2 func(x *StringLike) T0,
-	f3 func(x *NumberLike) T0,
-) T0 {
-	switch v := x.(type) {
-	case *BooleanLike:
-		return f1(v)
-	case *StringLike:
-		return f2(v)
-	case *NumberLike:
-		return f3(v)
-	}
-	var result1 T0
-	return result1
-}
-
-func MatchPrimitiveKindR0(
-	x PrimitiveKind,
-	f1 func(x *BooleanLike),
-	f2 func(x *StringLike),
-	f3 func(x *NumberLike),
-) {
-	switch v := x.(type) {
-	case *BooleanLike:
-		f1(v)
-	case *StringLike:
-		f2(v)
-	case *NumberLike:
-		f3(v)
-	}
-}
-func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveKind", PrimitiveKindFromJSON, PrimitiveKindToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.BooleanLike", BooleanLikeFromJSON, BooleanLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StringLike", StringLikeFromJSON, StringLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberLike", NumberLikeFromJSON, NumberLikeToJSON)
-}
-
-type PrimitiveKindUnionJSON struct {
-	Type        string          `json:"$type,omitempty"`
-	BooleanLike json.RawMessage `json:"shape.BooleanLike,omitempty"`
-	StringLike  json.RawMessage `json:"shape.StringLike,omitempty"`
-	NumberLike  json.RawMessage `json:"shape.NumberLike,omitempty"`
-}
-
-func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
-	if x == nil || len(x) == 0 {
-		return nil, nil
-	}
-	if string(x[:4]) == "null" {
-		return nil, nil
-	}
-
-	var data PrimitiveKindUnionJSON
-	err := json.Unmarshal(x, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	switch data.Type {
-	case "shape.BooleanLike":
-		return BooleanLikeFromJSON(data.BooleanLike)
-	case "shape.StringLike":
-		return StringLikeFromJSON(data.StringLike)
-	case "shape.NumberLike":
-		return NumberLikeFromJSON(data.NumberLike)
-	}
-
-	if data.BooleanLike != nil {
-		return BooleanLikeFromJSON(data.BooleanLike)
-	} else if data.StringLike != nil {
-		return StringLikeFromJSON(data.StringLike)
-	} else if data.NumberLike != nil {
-		return NumberLikeFromJSON(data.NumberLike)
-	}
-
-	return nil, fmt.Errorf("shape.PrimitiveKind: unknown type %s", data.Type)
-}
-
-func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
-	if x == nil {
-		return nil, nil
-	}
-	return MatchPrimitiveKindR2(
-		x,
-		func(x *BooleanLike) ([]byte, error) {
-			body, err := BooleanLikeToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(PrimitiveKindUnionJSON{
-				Type:        "shape.BooleanLike",
-				BooleanLike: body,
-			})
-		},
-		func(x *StringLike) ([]byte, error) {
-			body, err := StringLikeToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(PrimitiveKindUnionJSON{
-				Type:       "shape.StringLike",
-				StringLike: body,
-			})
-		},
-		func(x *NumberLike) ([]byte, error) {
-			body, err := NumberLikeToJSON(x)
-			if err != nil {
-				return nil, err
-			}
-
-			return json.Marshal(PrimitiveKindUnionJSON{
-				Type:       "shape.NumberLike",
-				NumberLike: body,
-			})
-		},
-	)
-}
-
-func BooleanLikeFromJSON(x []byte) (*BooleanLike, error) {
-	result := new(BooleanLike)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func BooleanLikeToJSON(x *BooleanLike) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*BooleanLike)(nil)
-	_ json.Marshaler   = (*BooleanLike)(nil)
-)
-
-func (r *BooleanLike) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONBooleanLike(*r)
-}
-func (r *BooleanLike) _marshalJSONBooleanLike(x BooleanLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: BooleanLike._marshalJSONBooleanLike: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *BooleanLike) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONBooleanLike(data)
-	if err != nil {
-		return fmt.Errorf("shape: BooleanLike.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *BooleanLike) _unmarshalJSONBooleanLike(data []byte) (BooleanLike, error) {
-	result := BooleanLike{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: BooleanLike._unmarshalJSONBooleanLike: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func StringLikeFromJSON(x []byte) (*StringLike, error) {
-	result := new(StringLike)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func StringLikeToJSON(x *StringLike) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*StringLike)(nil)
-	_ json.Marshaler   = (*StringLike)(nil)
-)
-
-func (r *StringLike) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONStringLike(*r)
-}
-func (r *StringLike) _marshalJSONStringLike(x StringLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: StringLike._marshalJSONStringLike: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *StringLike) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONStringLike(data)
-	if err != nil {
-		return fmt.Errorf("shape: StringLike.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *StringLike) _unmarshalJSONStringLike(data []byte) (StringLike, error) {
-	result := StringLike{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: StringLike._unmarshalJSONStringLike: native struct unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func NumberLikeFromJSON(x []byte) (*NumberLike, error) {
-	result := new(NumberLike)
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func NumberLikeToJSON(x *NumberLike) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*NumberLike)(nil)
-	_ json.Marshaler   = (*NumberLike)(nil)
-)
-
-func (r *NumberLike) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONNumberLike(*r)
-}
-func (r *NumberLike) _marshalJSONNumberLike(x NumberLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	var fieldKind []byte
-	fieldKind, err = r._marshalJSONNumberKind(x.Kind)
-	if err != nil {
-		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberLike: field name Kind; %w", err)
-	}
-	partial["Kind"] = fieldKind
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberLike: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *NumberLike) _marshalJSONNumberKind(x NumberKind) ([]byte, error) {
-	result, err := shared.JSONMarshal[NumberKind](x)
-	if err != nil {
-		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberKind:; %w", err)
-	}
-	return result, nil
-}
-func (r *NumberLike) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONNumberLike(data)
-	if err != nil {
-		return fmt.Errorf("shape: NumberLike.UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *NumberLike) _unmarshalJSONNumberLike(data []byte) (NumberLike, error) {
-	result := NumberLike{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("shape: NumberLike._unmarshalJSONNumberLike: native struct unwrap; %w", err)
-	}
-	if fieldKind, ok := partial["Kind"]; ok {
-		result.Kind, err = r._unmarshalJSONNumberKind(fieldKind)
-		if err != nil {
-			return result, fmt.Errorf("shape: NumberLike._unmarshalJSONNumberLike: field Kind; %w", err)
-		}
-	}
-	return result, nil
-}
-func (r *NumberLike) _unmarshalJSONNumberKind(data []byte) (NumberKind, error) {
-	result, err := shared.JSONUnmarshal[NumberKind](data)
-	if err != nil {
-		return result, fmt.Errorf("shape: NumberLike._unmarshalJSONNumberKind: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

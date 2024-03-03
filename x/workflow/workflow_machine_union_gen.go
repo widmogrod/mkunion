@@ -131,12 +131,12 @@ func MatchCommandR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Command", CommandFromJSON, CommandToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Run", RunFromJSON, RunToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Callback", CallbackFromJSON, CallbackToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.TryRecover", TryRecoverFromJSON, TryRecoverToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.StopSchedule", StopScheduleFromJSON, StopScheduleToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Command", CommandFromJSON, CommandToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.ResumeSchedule", ResumeScheduleFromJSON, ResumeScheduleToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Run", RunFromJSON, RunToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.StopSchedule", StopScheduleFromJSON, StopScheduleToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.TryRecover", TryRecoverFromJSON, TryRecoverToJSON)
 }
 
 type CommandUnionJSON struct {
@@ -155,11 +155,10 @@ func CommandFromJSON(x []byte) (Command, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data CommandUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.CommandFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -186,66 +185,60 @@ func CommandFromJSON(x []byte) (Command, error) {
 	} else if data.ResumeSchedule != nil {
 		return ResumeScheduleFromJSON(data.ResumeSchedule)
 	}
-
-	return nil, fmt.Errorf("workflow.Command: unknown type %s", data.Type)
+	return nil, fmt.Errorf("workflow.CommandFromJSON: unknown type: %s", data.Type)
 }
 
 func CommandToJSON(x Command) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchCommandR2(
 		x,
-		func(x *Run) ([]byte, error) {
-			body, err := RunToJSON(x)
+		func(y *Run) ([]byte, error) {
+			body, err := RunToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
 			}
-
 			return json.Marshal(CommandUnionJSON{
 				Type: "workflow.Run",
 				Run:  body,
 			})
 		},
-		func(x *Callback) ([]byte, error) {
-			body, err := CallbackToJSON(x)
+		func(y *Callback) ([]byte, error) {
+			body, err := CallbackToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
 			}
-
 			return json.Marshal(CommandUnionJSON{
 				Type:     "workflow.Callback",
 				Callback: body,
 			})
 		},
-		func(x *TryRecover) ([]byte, error) {
-			body, err := TryRecoverToJSON(x)
+		func(y *TryRecover) ([]byte, error) {
+			body, err := TryRecoverToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
 			}
-
 			return json.Marshal(CommandUnionJSON{
 				Type:       "workflow.TryRecover",
 				TryRecover: body,
 			})
 		},
-		func(x *StopSchedule) ([]byte, error) {
-			body, err := StopScheduleToJSON(x)
+		func(y *StopSchedule) ([]byte, error) {
+			body, err := StopScheduleToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
 			}
-
 			return json.Marshal(CommandUnionJSON{
 				Type:         "workflow.StopSchedule",
 				StopSchedule: body,
 			})
 		},
-		func(x *ResumeSchedule) ([]byte, error) {
-			body, err := ResumeScheduleToJSON(x)
+		func(y *ResumeSchedule) ([]byte, error) {
+			body, err := ResumeScheduleToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
 			}
-
 			return json.Marshal(CommandUnionJSON{
 				Type:           "workflow.ResumeSchedule",
 				ResumeSchedule: body,
@@ -258,9 +251,8 @@ func RunFromJSON(x []byte) (*Run, error) {
 	result := new(Run)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.RunFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -388,9 +380,8 @@ func CallbackFromJSON(x []byte) (*Callback, error) {
 	result := new(Callback)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.CallbackFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -493,9 +484,8 @@ func TryRecoverFromJSON(x []byte) (*TryRecover, error) {
 	result := new(TryRecover)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.TryRecoverFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -572,9 +562,8 @@ func StopScheduleFromJSON(x []byte) (*StopSchedule, error) {
 	result := new(StopSchedule)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.StopScheduleFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -651,9 +640,8 @@ func ResumeScheduleFromJSON(x []byte) (*ResumeSchedule, error) {
 	result := new(ResumeSchedule)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ResumeScheduleFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -834,11 +822,11 @@ func MatchExprR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Expr", ExprFromJSON, ExprToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.End", EndFromJSON, EndToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Assign", AssignFromJSON, AssignToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Apply", ApplyFromJSON, ApplyToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Assign", AssignFromJSON, AssignToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Choose", ChooseFromJSON, ChooseToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.End", EndFromJSON, EndToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Expr", ExprFromJSON, ExprToJSON)
 }
 
 type ExprUnionJSON struct {
@@ -856,11 +844,10 @@ func ExprFromJSON(x []byte) (Expr, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data ExprUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ExprFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -883,55 +870,50 @@ func ExprFromJSON(x []byte) (Expr, error) {
 	} else if data.Choose != nil {
 		return ChooseFromJSON(data.Choose)
 	}
-
-	return nil, fmt.Errorf("workflow.Expr: unknown type %s", data.Type)
+	return nil, fmt.Errorf("workflow.ExprFromJSON: unknown type: %s", data.Type)
 }
 
 func ExprToJSON(x Expr) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchExprR2(
 		x,
-		func(x *End) ([]byte, error) {
-			body, err := EndToJSON(x)
+		func(y *End) ([]byte, error) {
+			body, err := EndToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
 			}
-
 			return json.Marshal(ExprUnionJSON{
 				Type: "workflow.End",
 				End:  body,
 			})
 		},
-		func(x *Assign) ([]byte, error) {
-			body, err := AssignToJSON(x)
+		func(y *Assign) ([]byte, error) {
+			body, err := AssignToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
 			}
-
 			return json.Marshal(ExprUnionJSON{
 				Type:   "workflow.Assign",
 				Assign: body,
 			})
 		},
-		func(x *Apply) ([]byte, error) {
-			body, err := ApplyToJSON(x)
+		func(y *Apply) ([]byte, error) {
+			body, err := ApplyToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
 			}
-
 			return json.Marshal(ExprUnionJSON{
 				Type:  "workflow.Apply",
 				Apply: body,
 			})
 		},
-		func(x *Choose) ([]byte, error) {
-			body, err := ChooseToJSON(x)
+		func(y *Choose) ([]byte, error) {
+			body, err := ChooseToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
 			}
-
 			return json.Marshal(ExprUnionJSON{
 				Type:   "workflow.Choose",
 				Choose: body,
@@ -944,9 +926,8 @@ func EndFromJSON(x []byte) (*End, error) {
 	result := new(End)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.EndFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1049,9 +1030,8 @@ func AssignFromJSON(x []byte) (*Assign, error) {
 	result := new(Assign)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.AssignFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1178,9 +1158,8 @@ func ApplyFromJSON(x []byte) (*Apply, error) {
 	result := new(Apply)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ApplyFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1373,9 +1352,8 @@ func ChooseFromJSON(x []byte) (*Choose, error) {
 	result := new(Choose)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ChooseFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1651,11 +1629,11 @@ func MatchPredicateR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Predicate", PredicateFromJSON, PredicateToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.And", AndFromJSON, AndToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Or", OrFromJSON, OrToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Not", NotFromJSON, NotToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Compare", CompareFromJSON, CompareToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Not", NotFromJSON, NotToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Or", OrFromJSON, OrToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Predicate", PredicateFromJSON, PredicateToJSON)
 }
 
 type PredicateUnionJSON struct {
@@ -1673,11 +1651,10 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data PredicateUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.PredicateFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -1700,55 +1677,50 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 	} else if data.Compare != nil {
 		return CompareFromJSON(data.Compare)
 	}
-
-	return nil, fmt.Errorf("workflow.Predicate: unknown type %s", data.Type)
+	return nil, fmt.Errorf("workflow.PredicateFromJSON: unknown type: %s", data.Type)
 }
 
 func PredicateToJSON(x Predicate) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchPredicateR2(
 		x,
-		func(x *And) ([]byte, error) {
-			body, err := AndToJSON(x)
+		func(y *And) ([]byte, error) {
+			body, err := AndToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type: "workflow.And",
 				And:  body,
 			})
 		},
-		func(x *Or) ([]byte, error) {
-			body, err := OrToJSON(x)
+		func(y *Or) ([]byte, error) {
+			body, err := OrToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type: "workflow.Or",
 				Or:   body,
 			})
 		},
-		func(x *Not) ([]byte, error) {
-			body, err := NotToJSON(x)
+		func(y *Not) ([]byte, error) {
+			body, err := NotToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type: "workflow.Not",
 				Not:  body,
 			})
 		},
-		func(x *Compare) ([]byte, error) {
-			body, err := CompareToJSON(x)
+		func(y *Compare) ([]byte, error) {
+			body, err := CompareToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type:    "workflow.Compare",
 				Compare: body,
@@ -1761,9 +1733,8 @@ func AndFromJSON(x []byte) (*And, error) {
 	result := new(And)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.AndFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1870,9 +1841,8 @@ func OrFromJSON(x []byte) (*Or, error) {
 	result := new(Or)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.OrFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1979,9 +1949,8 @@ func NotFromJSON(x []byte) (*Not, error) {
 	result := new(Not)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.NotFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2057,9 +2026,8 @@ func CompareFromJSON(x []byte) (*Compare, error) {
 	result := new(Compare)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.CompareFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2248,8 +2216,8 @@ func MatchReshaperR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Reshaper", ReshaperFromJSON, ReshaperToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.GetValue", GetValueFromJSON, GetValueToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Reshaper", ReshaperFromJSON, ReshaperToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.SetValue", SetValueFromJSON, SetValueToJSON)
 }
 
@@ -2266,11 +2234,10 @@ func ReshaperFromJSON(x []byte) (Reshaper, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data ReshaperUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ReshaperFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -2285,33 +2252,30 @@ func ReshaperFromJSON(x []byte) (Reshaper, error) {
 	} else if data.SetValue != nil {
 		return SetValueFromJSON(data.SetValue)
 	}
-
-	return nil, fmt.Errorf("workflow.Reshaper: unknown type %s", data.Type)
+	return nil, fmt.Errorf("workflow.ReshaperFromJSON: unknown type: %s", data.Type)
 }
 
 func ReshaperToJSON(x Reshaper) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchReshaperR2(
 		x,
-		func(x *GetValue) ([]byte, error) {
-			body, err := GetValueToJSON(x)
+		func(y *GetValue) ([]byte, error) {
+			body, err := GetValueToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.ReshaperToJSON: %w", err)
 			}
-
 			return json.Marshal(ReshaperUnionJSON{
 				Type:     "workflow.GetValue",
 				GetValue: body,
 			})
 		},
-		func(x *SetValue) ([]byte, error) {
-			body, err := SetValueToJSON(x)
+		func(y *SetValue) ([]byte, error) {
+			body, err := SetValueToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.ReshaperToJSON: %w", err)
 			}
-
 			return json.Marshal(ReshaperUnionJSON{
 				Type:     "workflow.SetValue",
 				SetValue: body,
@@ -2324,9 +2288,8 @@ func GetValueFromJSON(x []byte) (*GetValue, error) {
 	result := new(GetValue)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.GetValueFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2403,9 +2366,8 @@ func SetValueFromJSON(x []byte) (*SetValue, error) {
 	result := new(SetValue)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.SetValueFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2555,9 +2517,9 @@ func MatchRunOptionR0(
 	}
 }
 func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.DelayRun", DelayRunFromJSON, DelayRunToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.RunOption", RunOptionFromJSON, RunOptionToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.ScheduleRun", ScheduleRunFromJSON, ScheduleRunToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.DelayRun", DelayRunFromJSON, DelayRunToJSON)
 }
 
 type RunOptionUnionJSON struct {
@@ -2573,11 +2535,10 @@ func RunOptionFromJSON(x []byte) (RunOption, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data RunOptionUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.RunOptionFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -2592,33 +2553,30 @@ func RunOptionFromJSON(x []byte) (RunOption, error) {
 	} else if data.DelayRun != nil {
 		return DelayRunFromJSON(data.DelayRun)
 	}
-
-	return nil, fmt.Errorf("workflow.RunOption: unknown type %s", data.Type)
+	return nil, fmt.Errorf("workflow.RunOptionFromJSON: unknown type: %s", data.Type)
 }
 
 func RunOptionToJSON(x RunOption) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchRunOptionR2(
 		x,
-		func(x *ScheduleRun) ([]byte, error) {
-			body, err := ScheduleRunToJSON(x)
+		func(y *ScheduleRun) ([]byte, error) {
+			body, err := ScheduleRunToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.RunOptionToJSON: %w", err)
 			}
-
 			return json.Marshal(RunOptionUnionJSON{
 				Type:        "workflow.ScheduleRun",
 				ScheduleRun: body,
 			})
 		},
-		func(x *DelayRun) ([]byte, error) {
-			body, err := DelayRunToJSON(x)
+		func(y *DelayRun) ([]byte, error) {
+			body, err := DelayRunToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.RunOptionToJSON: %w", err)
 			}
-
 			return json.Marshal(RunOptionUnionJSON{
 				Type:     "workflow.DelayRun",
 				DelayRun: body,
@@ -2631,9 +2589,8 @@ func ScheduleRunFromJSON(x []byte) (*ScheduleRun, error) {
 	result := new(ScheduleRun)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ScheduleRunFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2722,9 +2679,8 @@ func DelayRunFromJSON(x []byte) (*DelayRun, error) {
 	result := new(DelayRun)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.DelayRunFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2935,13 +2891,13 @@ func MatchStateR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.State", StateFromJSON, StateToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.NextOperation", NextOperationFromJSON, NextOperationToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Await", AwaitFromJSON, AwaitToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Done", DoneFromJSON, DoneToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Error", ErrorFromJSON, ErrorToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Await", AwaitFromJSON, AwaitToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Scheduled", ScheduledFromJSON, ScheduledToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.NextOperation", NextOperationFromJSON, NextOperationToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.ScheduleStopped", ScheduleStoppedFromJSON, ScheduleStoppedToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Scheduled", ScheduledFromJSON, ScheduledToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.State", StateFromJSON, StateToJSON)
 }
 
 type StateUnionJSON struct {
@@ -2961,11 +2917,10 @@ func StateFromJSON(x []byte) (State, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data StateUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.StateFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -2996,77 +2951,70 @@ func StateFromJSON(x []byte) (State, error) {
 	} else if data.ScheduleStopped != nil {
 		return ScheduleStoppedFromJSON(data.ScheduleStopped)
 	}
-
-	return nil, fmt.Errorf("workflow.State: unknown type %s", data.Type)
+	return nil, fmt.Errorf("workflow.StateFromJSON: unknown type: %s", data.Type)
 }
 
 func StateToJSON(x State) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchStateR2(
 		x,
-		func(x *NextOperation) ([]byte, error) {
-			body, err := NextOperationToJSON(x)
+		func(y *NextOperation) ([]byte, error) {
+			body, err := NextOperationToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
 			}
-
 			return json.Marshal(StateUnionJSON{
 				Type:          "workflow.NextOperation",
 				NextOperation: body,
 			})
 		},
-		func(x *Done) ([]byte, error) {
-			body, err := DoneToJSON(x)
+		func(y *Done) ([]byte, error) {
+			body, err := DoneToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
 			}
-
 			return json.Marshal(StateUnionJSON{
 				Type: "workflow.Done",
 				Done: body,
 			})
 		},
-		func(x *Error) ([]byte, error) {
-			body, err := ErrorToJSON(x)
+		func(y *Error) ([]byte, error) {
+			body, err := ErrorToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
 			}
-
 			return json.Marshal(StateUnionJSON{
 				Type:  "workflow.Error",
 				Error: body,
 			})
 		},
-		func(x *Await) ([]byte, error) {
-			body, err := AwaitToJSON(x)
+		func(y *Await) ([]byte, error) {
+			body, err := AwaitToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
 			}
-
 			return json.Marshal(StateUnionJSON{
 				Type:  "workflow.Await",
 				Await: body,
 			})
 		},
-		func(x *Scheduled) ([]byte, error) {
-			body, err := ScheduledToJSON(x)
+		func(y *Scheduled) ([]byte, error) {
+			body, err := ScheduledToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
 			}
-
 			return json.Marshal(StateUnionJSON{
 				Type:      "workflow.Scheduled",
 				Scheduled: body,
 			})
 		},
-		func(x *ScheduleStopped) ([]byte, error) {
-			body, err := ScheduleStoppedToJSON(x)
+		func(y *ScheduleStopped) ([]byte, error) {
+			body, err := ScheduleStoppedToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
 			}
-
 			return json.Marshal(StateUnionJSON{
 				Type:            "workflow.ScheduleStopped",
 				ScheduleStopped: body,
@@ -3079,9 +3027,8 @@ func NextOperationFromJSON(x []byte) (*NextOperation, error) {
 	result := new(NextOperation)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.NextOperationFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3183,9 +3130,8 @@ func DoneFromJSON(x []byte) (*Done, error) {
 	result := new(Done)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.DoneFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3287,9 +3233,8 @@ func ErrorFromJSON(x []byte) (*Error, error) {
 	result := new(Error)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ErrorFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3431,9 +3376,8 @@ func AwaitFromJSON(x []byte) (*Await, error) {
 	result := new(Await)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.AwaitFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3563,9 +3507,8 @@ func ScheduledFromJSON(x []byte) (*Scheduled, error) {
 	result := new(Scheduled)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ScheduledFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3668,9 +3611,8 @@ func ScheduleStoppedFromJSON(x []byte) (*ScheduleStopped, error) {
 	result := new(ScheduleStopped)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.ScheduleStoppedFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3820,9 +3762,9 @@ func MatchWorkflowR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Workflow", WorkflowFromJSON, WorkflowToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Flow", FlowFromJSON, FlowToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.FlowRef", FlowRefFromJSON, FlowRefToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Workflow", WorkflowFromJSON, WorkflowToJSON)
 }
 
 type WorkflowUnionJSON struct {
@@ -3838,11 +3780,10 @@ func WorkflowFromJSON(x []byte) (Workflow, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data WorkflowUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.WorkflowFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -3857,33 +3798,30 @@ func WorkflowFromJSON(x []byte) (Workflow, error) {
 	} else if data.FlowRef != nil {
 		return FlowRefFromJSON(data.FlowRef)
 	}
-
-	return nil, fmt.Errorf("workflow.Workflow: unknown type %s", data.Type)
+	return nil, fmt.Errorf("workflow.WorkflowFromJSON: unknown type: %s", data.Type)
 }
 
 func WorkflowToJSON(x Workflow) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchWorkflowR2(
 		x,
-		func(x *Flow) ([]byte, error) {
-			body, err := FlowToJSON(x)
+		func(y *Flow) ([]byte, error) {
+			body, err := FlowToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.WorkflowToJSON: %w", err)
 			}
-
 			return json.Marshal(WorkflowUnionJSON{
 				Type: "workflow.Flow",
 				Flow: body,
 			})
 		},
-		func(x *FlowRef) ([]byte, error) {
-			body, err := FlowRefToJSON(x)
+		func(y *FlowRef) ([]byte, error) {
+			body, err := FlowRefToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("workflow.WorkflowToJSON: %w", err)
 			}
-
 			return json.Marshal(WorkflowUnionJSON{
 				Type:    "workflow.FlowRef",
 				FlowRef: body,
@@ -3896,9 +3834,8 @@ func FlowFromJSON(x []byte) (*Flow, error) {
 	result := new(Flow)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.FlowFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -4044,9 +3981,8 @@ func FlowRefFromJSON(x []byte) (*FlowRef, error) {
 	result := new(FlowRef)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("workflow.FlowRefFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

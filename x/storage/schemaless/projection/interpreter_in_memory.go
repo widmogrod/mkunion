@@ -443,7 +443,7 @@ type PubSubForInterpreter[T comparable] interface {
 //}
 //
 //func (i *InMemoryInterpreter) StatsSnapshotAndReset() Stats {
-//	return i.stats.Snapshot()
+//	return i.stats.SnapshotFrom()
 //}
 
 //func ToStrMessage(msg Message) string {

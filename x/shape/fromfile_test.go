@@ -42,6 +42,7 @@ func TestInferFromFile(t *testing.T) {
 						},
 					},
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&StructLike{
 				Name:          "B",
@@ -88,12 +89,14 @@ func TestInferFromFile(t *testing.T) {
 						Tags:  nil,
 					},
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "C",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				Type:          &PrimitiveLike{Kind: &StringLike{}},
+				Tags:          map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "D",
@@ -102,6 +105,7 @@ func TestInferFromFile(t *testing.T) {
 				Type: &PrimitiveLike{Kind: &NumberLike{
 					Kind: &Int64{},
 				}},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "E",
@@ -110,12 +114,14 @@ func TestInferFromFile(t *testing.T) {
 				Type: &PrimitiveLike{Kind: &NumberLike{
 					Kind: &Float64{},
 				}},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "F",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				Type:          &PrimitiveLike{Kind: &BooleanLike{}},
+				Tags:          map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 
 			&AliasLike{
@@ -131,6 +137,7 @@ func TestInferFromFile(t *testing.T) {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 					},
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 
 			&AliasLike{
@@ -145,6 +152,7 @@ func TestInferFromFile(t *testing.T) {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 					},
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "J",
@@ -155,6 +163,7 @@ func TestInferFromFile(t *testing.T) {
 					Element:  &PrimitiveLike{Kind: &StringLike{}},
 					ArrayLen: ptr(2),
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "K",
@@ -166,6 +175,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "L",
@@ -177,6 +187,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "M",
@@ -196,6 +207,9 @@ func TestInferFromFile(t *testing.T) {
 							"omitempty",
 						},
 					},
+					"mkunion_union_name": {
+						Value: "Example",
+					},
 				},
 			},
 			&AliasLike{
@@ -208,6 +222,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "time",
 					PkgImportName: "time",
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "O",
@@ -226,6 +241,7 @@ func TestInferFromFile(t *testing.T) {
 						},
 					},
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "P",
@@ -268,6 +284,7 @@ func TestInferFromFile(t *testing.T) {
 						},
 					},
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
 			},
 		},
 		Tags: map[string]Tag{
@@ -358,6 +375,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "AliasExample"}},
 			},
 			&AliasLike{
 				Name:          "B2",
@@ -369,6 +387,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
+				Tags: map[string]Tag{"mkunion_union_name": {Value: "AliasExample"}},
 			},
 		},
 		Tags: map[string]Tag{
@@ -380,5 +399,287 @@ func TestInferFromFile(t *testing.T) {
 
 	if diff := cmp.Diff(expected3, alias); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+
+	t.Run("variant types should be marked as union", func(t *testing.T) {
+		for _, v := range union.Variant {
+			unionRef := RetrieveVariantTypeRef(v)
+			assert.Equal(t, "Example", unionRef.Name)
+		}
+	})
+}
+
+func TestIndexedTypeWalker_ExpandedShapes(t *testing.T) {
+	inferred, err := NewIndexTypeInDir("testasset")
+	assert.NoError(t, err)
+	assert.NotNil(t, inferred)
+
+	indexed := inferred.IndexedShapes()
+	expanded := inferred.ExpandedShapes()
+
+	t.Run("should detect union type", func(t *testing.T) {
+		_, okI1 := indexed["testasset.Option[ListOf2[*O,time.Location]]"]
+		_, okE1 := expanded["testasset.Option[ListOf2[*O,time.Location]]"]
+		assert.True(t, okI1)
+		assert.True(t, okE1)
+	})
+	t.Run("expanded should have variant of a union", func(t *testing.T) {
+		_, okI2 := indexed["testasset.Some[ListOf2[*O,time.Location]]"]
+		_, okE2 := expanded["testasset.Some[ListOf2[*O,time.Location]]"]
+		assert.False(t, okI2)
+		assert.True(t, okE2)
+
+		_, okI3 := indexed["testasset.None[ListOf2[*O,time.Location]]"]
+		_, okE3 := expanded["testasset.None[ListOf2[*O,time.Location]]"]
+		assert.False(t, okI3)
+		assert.True(t, okE3)
+	})
+}
+
+func TestIndexedTypeWalker_Visit(t *testing.T) {
+	useCases := map[string]struct {
+		body     string
+		expected map[string]Shape
+	}{
+		"from interface declaration": {
+			body: `package test_package
+
+import "time"
+
+type OptionVisitor[T1 ListOf2[*O,time.Location]] interface {
+	VisitSome(v *Some[T1]) any 		// should be ignored
+	VisitNone(v *None[T1]) any 		// should be ignored
+}`,
+			expected: map[string]Shape{
+				"test_package.ListOf2[*O,time.Location]": &RefName{
+					Name:          "ListOf2",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PointerLike{
+							Type: &RefName{
+								Name:          "O",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+						&RefName{
+							Name:          "Location",
+							PkgName:       "time",
+							PkgImportName: "time",
+						},
+					},
+				},
+			},
+		},
+		"from variables top level": {
+			body: `package test_package
+import "time"
+
+var (
+	_ Option[ListOf2[*O,time.Location]] = (*Some[ListOf2[*O,time.Location]])(nil)
+	_ Option[ListOf2[*O,time.Location]] = (*None[ListOf2[*O,time.Location]])(nil)
+)
+`,
+			expected: map[string]Shape{
+				"test_package.Option[ListOf2[*O,time.Location]]": &RefName{
+					Name:          "Option",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&RefName{
+							Name:          "ListOf2",
+							PkgName:       "test_package",
+							PkgImportName: "github.com/test_package",
+							Indexed: []Shape{
+								&PointerLike{
+									Type: &RefName{
+										Name:          "O",
+										PkgName:       "test_package",
+										PkgImportName: "github.com/test_package",
+									},
+								},
+								&RefName{
+									Name:          "Location",
+									PkgName:       "time",
+									PkgImportName: "time",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"from function declaration": {
+			body: `package test_package
+
+import "time"
+
+func OptionToJSON[T1 ListOf2[*O,time.Location]](x Option[T1]) ([]byte, error) {
+	return MatchOptionR2(
+		x,
+		func (y *Some[T1]) ([]byte, error) {
+			body, err := SomeToJSON[T1](y)
+			if err != nil {
+				return nil, fmt.Errorf("testasset.OptionToJSON[T1]: %w", err)
+			}
+			return json.Marshal(OptionUnionJSON[T1]{
+				Type: "testasset.Some",
+				Some: body,
+			})
+		},
+		func (y *None[int]) ([]byte, error) {
+			body, err := NoneToJSON[int](y)
+			if err != nil {
+				return nil, fmt.Errorf("testasset.OptionToJSON[T1]: %w", err)
+			}
+			return json.Marshal(OptionUnionJSON[T1]{
+				Type: "testasset.None",
+				None: body,
+			})
+		},
+	)
+}
+`,
+			expected: map[string]Shape{
+				"test_package.ListOf2[*O,time.Location]": &RefName{
+					Name:          "ListOf2",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PointerLike{
+							Type: &RefName{
+								Name:          "O",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+						&RefName{
+							Name:          "Location",
+							PkgName:       "time",
+							PkgImportName: "time",
+						},
+					},
+				},
+				"test_package.None[int]": &RefName{
+					Name:          "None",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PrimitiveLike{Kind: &NumberLike{Kind: &Int{}}},
+					},
+				},
+			},
+		},
+		"from function receiver": {
+			body: `package test_package
+
+func (r *Some[T1]) _unmarshalJSONSomeLb_T1_bL(data []byte) (Some[T1], error) {
+	result := Some[int]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("testasset: Some[T1]._unmarshalJSONSomeLb_T1_bL: native struct unwrap; %w", err)
+	}
+	if fieldData, ok := partial["Data"]; ok {
+		result.Data, err = r._unmarshalJSONT1(fieldData)
+		if err != nil {
+			return result, fmt.Errorf("testasset: Some[T1]._unmarshalJSONSomeLb_T1_bL: field Data; %w", err)
+		}
+	}
+	return result, nil
+}
+`,
+			expected: map[string]Shape{
+				"test_package.Some[int]": &RefName{
+					Name:          "Some",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PrimitiveLike{Kind: &NumberLike{Kind: &Int{}}},
+					},
+				},
+			},
+		},
+		"from init function with embeded function": {
+			body: `package test_package
+
+import "time"
+
+func init() {
+	shared.JSONMarshallerRegister[T1]("github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*.O,time.Location]]", ListOf2[*O,time.Location]{}, &ListOf2[*O,time.Location]{})
+	shared.JSONMarshallerRegister[T1]("github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*.O,time.Location]]", NoneFromJSON[ListOf2[*O,time.Location]], NoneToJSON[ListOf2[*O,time.Location]])
+}`,
+			expected: map[string]Shape{
+				"test_package.ListOf2[*O,time.Location]": &RefName{
+					Name:          "ListOf2",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+					Indexed: []Shape{
+						&PointerLike{
+							Type: &RefName{
+								Name:          "O",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+						&RefName{
+							Name:          "Location",
+							PkgName:       "time",
+							PkgImportName: "time",
+						},
+					},
+				},
+			},
+		},
+		"contrastive example, commented code is not initialised": {
+			body: `package projection
+
+func init () {
+	delay := 1 * time.Second
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+}
+
+//go:tag mkunion:"WindowFlushMode"
+type (
+	//Accumulate struct {
+	//	AllowLateArrival time.Duration
+	//}
+	Discard struct{}
+	//AccumulatingAndRetracting struct {
+	//	AllowLateArrival time.Duration
+	//}
+)
+`,
+			expected: make(map[string]Shape),
+		},
+		"contrastive example, pointer to type parameter is not initialisation": {
+			body: `package projection
+
+type Storage[T any] interface {
+	GetAs(id string, x *T) error
+}
+`,
+			expected: make(map[string]Shape),
+		},
+	}
+	for name, uc := range useCases {
+		t.Run(name, func(t *testing.T) {
+			w := newIndexedTypeWalkerWithContentBody(
+				uc.body,
+				func(x *IndexedTypeWalker) {
+					x.SetPkgImportName("github.com/test_package")
+				},
+			)
+			assert.NotNil(t, w)
+			for _, i := range w.ExpandedShapes() {
+				t.Log(ToGoTypeName(i, WithInstantiation()))
+			}
+
+			if diff := cmp.Diff(uc.expected, w.ExpandedShapes()); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }

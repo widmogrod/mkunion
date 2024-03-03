@@ -59,6 +59,11 @@ func AtPeriodShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerDescription",
+			},
+		},
 	}
 }
 
@@ -77,6 +82,11 @@ func AtWindowItemSizeShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerDescription",
+			},
+		},
 	}
 }
 
@@ -93,6 +103,11 @@ func AtWatermarkShape() shape.Shape {
 						Kind: &shape.Int64{},
 					},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerDescription",
 			},
 		},
 	}
@@ -115,6 +130,11 @@ func AnyOfShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerDescription",
+			},
+		},
 	}
 }
 
@@ -133,6 +153,11 @@ func AllOfShape() shape.Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 					},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerDescription",
 			},
 		},
 	}
@@ -158,7 +183,12 @@ func AtPeriod1Shape() shape.Shape {
 		Name:          "AtPeriod1",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		IsAlias:       true,
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerType",
+			},
+		},
+		IsAlias: true,
 		Type: &shape.RefName{
 			Name:          "AtPeriod",
 			PkgName:       "projection",
@@ -172,7 +202,12 @@ func AtWindowItemSize1Shape() shape.Shape {
 		Name:          "AtWindowItemSize1",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		IsAlias:       true,
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerType",
+			},
+		},
+		IsAlias: true,
 		Type: &shape.RefName{
 			Name:          "AtWindowItemSize",
 			PkgName:       "projection",
@@ -186,7 +221,12 @@ func AtWatermark1Shape() shape.Shape {
 		Name:          "AtWatermark1",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
-		IsAlias:       true,
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "TriggerType",
+			},
+		},
+		IsAlias: true,
 		Type: &shape.RefName{
 			Name:          "AtWatermark",
 			PkgName:       "projection",
@@ -225,6 +265,11 @@ func AccumulateShape() shape.Shape {
 				},
 			},
 		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "WindowFlushMode",
+			},
+		},
 	}
 }
 
@@ -233,6 +278,11 @@ func DiscardShape() shape.Shape {
 		Name:          "Discard",
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "WindowFlushMode",
+			},
+		},
 	}
 }
 
@@ -249,6 +299,11 @@ func AccumulatingAndRetractingShape() shape.Shape {
 					PkgName:       "time",
 					PkgImportName: "time",
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "WindowFlushMode",
 			},
 		},
 	}

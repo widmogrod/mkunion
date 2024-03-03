@@ -42,17 +42,21 @@ func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], err
 	return result.Items[0], nil
 }
 
-func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) error {
+func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*UpdateRecordsResult[Record[A]], error) {
 	if x.IsEmpty() {
-		return fmt.Errorf("store.InMemoryRepository.UpdateRecords: empty command %w", ErrEmptyCommand)
+		return nil, fmt.Errorf("store.InMemoryRepository.UpdateRecords: empty command %w", ErrEmptyCommand)
 	}
 
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
+	result := &UpdateRecordsResult[Record[A]]{
+		Saved:   make(map[string]Record[A]),
+		Deleted: make(map[string]Record[A]),
+	}
 	newLog := NewAppendLog[A]()
 
-	for _, record := range x.Saving {
+	for key, record := range x.Saving {
 		stored, ok := s.store[s.toKey(record)]
 		if !ok {
 			// new record, should have version 1
@@ -62,16 +66,16 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) error 
 			continue
 		}
 
-		//storedVersion := schema.AsDefault[uint16](schema.GetSchema(stored, "Version"), 0)
 		storedVersion := stored.Version
 
 		if x.UpdatingPolicy == PolicyIfServerNotChanged {
 			if storedVersion != record.Version {
-				return fmt.Errorf("store.InMemoryRepository.UpdateRecords ID=%s Type=%s %d != %d %w",
+				return nil, fmt.Errorf("store.InMemoryRepository.UpdateRecords ID=%s Type=%s %d != %d %w",
 					record.ID, record.Type, storedVersion, record.Version, ErrVersionConflict)
 			}
 		} else if x.UpdatingPolicy == PolicyOverwriteServerChanges {
 			record.Version = storedVersion
+			x.Saving[key] = record
 		}
 	}
 
@@ -93,6 +97,8 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) error 
 		if err != nil {
 			panic(fmt.Errorf("store.InMemoryRepository.UpdateRecords: append log failed (1) %s %w", err, ErrInternalError))
 		}
+
+		result.Saved[s.toKey(record)] = record
 	}
 
 	for _, record := range x.Deleting {
@@ -103,12 +109,13 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) error 
 			}
 		}
 
+		result.Deleted[s.toKey(record)] = record
 		delete(s.store, s.toKey(record))
 	}
 
 	s.appendLog.Append(newLog)
 
-	return nil
+	return result, nil
 }
 
 func (s *InMemoryRepository[A]) toKey(record Record[A]) string {

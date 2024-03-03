@@ -39,3 +39,18 @@ func TestSerdeJSONUnion_Generate_Forest(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, string(reference), string(result))
 }
+
+func TestSerdeJSONUnion_Generate_Generic(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
+	inferred, err := shape.InferFromFile("testutils/generic.go")
+	assert.NoError(t, err)
+
+	g := NewSerdeJSONUnion(inferred.RetrieveUnion("Record"))
+
+	result, err := g.Generate()
+	assert.NoError(t, err)
+
+	reference, err := os.ReadFile("serde_json_union_generic_test.go.asset")
+	assert.NoError(t, err)
+	assert.Equal(t, string(reference), string(result))
+}

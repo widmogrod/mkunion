@@ -8,14 +8,14 @@ import (
 )
 
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Tree", TreeFromJSON, TreeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Branch", BranchFromJSON, BranchToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Leaf", LeafFromJSON, LeafToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.K", KFromJSON, KToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.P", PFromJSON, PToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Ma", MaFromJSON, MaToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.La", LaFromJSON, LaToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Ka", KaFromJSON, KaToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.La", LaFromJSON, LaToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Leaf", LeafFromJSON, LeafToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Ma", MaFromJSON, MaToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.P", PFromJSON, PToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Tree", TreeFromJSON, TreeToJSON)
 }
 
 type TreeUnionJSON struct {
@@ -36,11 +36,10 @@ func TreeFromJSON(x []byte) (Tree, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data TreeUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.TreeFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -75,88 +74,80 @@ func TreeFromJSON(x []byte) (Tree, error) {
 	} else if data.Ka != nil {
 		return KaFromJSON(data.Ka)
 	}
-
-	return nil, fmt.Errorf("testutils.Tree: unknown type %s", data.Type)
+	return nil, fmt.Errorf("testutils.TreeFromJSON: unknown type: %s", data.Type)
 }
 
 func TreeToJSON(x Tree) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchTreeR2(
 		x,
-		func(x *Branch) ([]byte, error) {
-			body, err := BranchToJSON(x)
+		func (y *Branch) ([]byte, error) {
+			body, err := BranchToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
 			}
-
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.Branch",
 				Branch: body,
 			})
 		},
-		func(x *Leaf) ([]byte, error) {
-			body, err := LeafToJSON(x)
+		func (y *Leaf) ([]byte, error) {
+			body, err := LeafToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
 			}
-
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.Leaf",
 				Leaf: body,
 			})
 		},
-		func(x *K) ([]byte, error) {
-			body, err := KToJSON(x)
+		func (y *K) ([]byte, error) {
+			body, err := KToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
 			}
-
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.K",
 				K: body,
 			})
 		},
-		func(x *P) ([]byte, error) {
-			body, err := PToJSON(x)
+		func (y *P) ([]byte, error) {
+			body, err := PToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
 			}
-
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.P",
 				P: body,
 			})
 		},
-		func(x *Ma) ([]byte, error) {
-			body, err := MaToJSON(x)
+		func (y *Ma) ([]byte, error) {
+			body, err := MaToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
 			}
-
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.Ma",
 				Ma: body,
 			})
 		},
-		func(x *La) ([]byte, error) {
-			body, err := LaToJSON(x)
+		func (y *La) ([]byte, error) {
+			body, err := LaToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
 			}
-
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.La",
 				La: body,
 			})
 		},
-		func(x *Ka) ([]byte, error) {
-			body, err := KaToJSON(x)
+		func (y *Ka) ([]byte, error) {
+			body, err := KaToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
 			}
-
 			return json.Marshal(TreeUnionJSON{
 				Type: "testutils.Ka",
 				Ka: body,
@@ -169,9 +160,8 @@ func BranchFromJSON(x []byte) (*Branch, error) {
 	result := new(Branch)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.BranchFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -531,14 +521,12 @@ func (r *Branch) _unmarshalJSONint64(data []byte) (int64, error) {
 	return result, nil
 }
 
-
 func LeafFromJSON(x []byte) (*Leaf, error) {
 	result := new(Leaf)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.LeafFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -611,14 +599,12 @@ func (r *Leaf) _unmarshalJSONint64(data []byte) (int64, error) {
 	return result, nil
 }
 
-
 func KFromJSON(x []byte) (*K, error) {
 	result := new(K)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.KFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -673,14 +659,12 @@ func (r *K) _unmarshalJSONstring(data []byte) (string, error) {
 	return result, nil
 }
 
-
 func PFromJSON(x []byte) (*P, error) {
 	result := new(P)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.PFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -734,14 +718,12 @@ func (r *P) _unmarshalJSONListOf2Lb_ListOfLb_any_bLCommaPtrListOf2Lb_int64CommaP
 	return result, nil
 }
 
-
 func MaFromJSON(x []byte) (*Ma, error) {
 	result := new(Ma)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.MaFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -843,14 +825,12 @@ func (r *Ma) _unmarshalJSONTree(data []byte) (Tree, error) {
 	return result, nil
 }
 
-
 func LaFromJSON(x []byte) (*La, error) {
 	result := new(La)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.LaFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -935,14 +915,12 @@ func (r *La) _unmarshalJSONTree(data []byte) (Tree, error) {
 	return result, nil
 }
 
-
 func KaFromJSON(x []byte) (*Ka, error) {
 	result := new(Ka)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.KaFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

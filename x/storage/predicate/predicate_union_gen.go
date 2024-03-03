@@ -101,8 +101,8 @@ func MatchBindableR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Bindable", BindableFromJSON, BindableToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.BindValue", BindValueFromJSON, BindValueToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Bindable", BindableFromJSON, BindableToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Literal", LiteralFromJSON, LiteralToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Locatable", LocatableFromJSON, LocatableToJSON)
 }
@@ -121,11 +121,10 @@ func BindableFromJSON(x []byte) (Bindable, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data BindableUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.BindableFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -144,44 +143,40 @@ func BindableFromJSON(x []byte) (Bindable, error) {
 	} else if data.Locatable != nil {
 		return LocatableFromJSON(data.Locatable)
 	}
-
-	return nil, fmt.Errorf("predicate.Bindable: unknown type %s", data.Type)
+	return nil, fmt.Errorf("predicate.BindableFromJSON: unknown type: %s", data.Type)
 }
 
 func BindableToJSON(x Bindable) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchBindableR2(
 		x,
-		func(x *BindValue) ([]byte, error) {
-			body, err := BindValueToJSON(x)
+		func(y *BindValue) ([]byte, error) {
+			body, err := BindValueToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("predicate.BindableToJSON: %w", err)
 			}
-
 			return json.Marshal(BindableUnionJSON{
 				Type:      "predicate.BindValue",
 				BindValue: body,
 			})
 		},
-		func(x *Literal) ([]byte, error) {
-			body, err := LiteralToJSON(x)
+		func(y *Literal) ([]byte, error) {
+			body, err := LiteralToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("predicate.BindableToJSON: %w", err)
 			}
-
 			return json.Marshal(BindableUnionJSON{
 				Type:    "predicate.Literal",
 				Literal: body,
 			})
 		},
-		func(x *Locatable) ([]byte, error) {
-			body, err := LocatableToJSON(x)
+		func(y *Locatable) ([]byte, error) {
+			body, err := LocatableToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("predicate.BindableToJSON: %w", err)
 			}
-
 			return json.Marshal(BindableUnionJSON{
 				Type:      "predicate.Locatable",
 				Locatable: body,
@@ -194,9 +189,8 @@ func BindValueFromJSON(x []byte) (*BindValue, error) {
 	result := new(BindValue)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.BindValueFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -272,9 +266,8 @@ func LiteralFromJSON(x []byte) (*Literal, error) {
 	result := new(Literal)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.LiteralFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -350,9 +343,8 @@ func LocatableFromJSON(x []byte) (*Locatable, error) {
 	result := new(Locatable)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.LocatableFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -533,11 +525,11 @@ func MatchPredicateR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Predicate", PredicateFromJSON, PredicateToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.And", AndFromJSON, AndToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Or", OrFromJSON, OrToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Not", NotFromJSON, NotToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Compare", CompareFromJSON, CompareToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Not", NotFromJSON, NotToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Or", OrFromJSON, OrToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/predicate.Predicate", PredicateFromJSON, PredicateToJSON)
 }
 
 type PredicateUnionJSON struct {
@@ -555,11 +547,10 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data PredicateUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.PredicateFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -582,55 +573,50 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 	} else if data.Compare != nil {
 		return CompareFromJSON(data.Compare)
 	}
-
-	return nil, fmt.Errorf("predicate.Predicate: unknown type %s", data.Type)
+	return nil, fmt.Errorf("predicate.PredicateFromJSON: unknown type: %s", data.Type)
 }
 
 func PredicateToJSON(x Predicate) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchPredicateR2(
 		x,
-		func(x *And) ([]byte, error) {
-			body, err := AndToJSON(x)
+		func(y *And) ([]byte, error) {
+			body, err := AndToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type: "predicate.And",
 				And:  body,
 			})
 		},
-		func(x *Or) ([]byte, error) {
-			body, err := OrToJSON(x)
+		func(y *Or) ([]byte, error) {
+			body, err := OrToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type: "predicate.Or",
 				Or:   body,
 			})
 		},
-		func(x *Not) ([]byte, error) {
-			body, err := NotToJSON(x)
+		func(y *Not) ([]byte, error) {
+			body, err := NotToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type: "predicate.Not",
 				Not:  body,
 			})
 		},
-		func(x *Compare) ([]byte, error) {
-			body, err := CompareToJSON(x)
+		func(y *Compare) ([]byte, error) {
+			body, err := CompareToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
 			}
-
 			return json.Marshal(PredicateUnionJSON{
 				Type:    "predicate.Compare",
 				Compare: body,
@@ -643,9 +629,8 @@ func AndFromJSON(x []byte) (*And, error) {
 	result := new(And)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.AndFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -752,9 +737,8 @@ func OrFromJSON(x []byte) (*Or, error) {
 	result := new(Or)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.OrFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -861,9 +845,8 @@ func NotFromJSON(x []byte) (*Not, error) {
 	result := new(Not)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.NotFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -939,9 +922,8 @@ func CompareFromJSON(x []byte) (*Compare, error) {
 	result := new(Compare)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("predicate.CompareFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

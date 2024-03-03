@@ -18,6 +18,7 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
+		TypeParams    []TypeParam
 		IsAlias       bool
 		Type          Shape
 		Tags          map[string]Tag
@@ -50,6 +51,7 @@ type (
 		Name          string
 		PkgName       string
 		PkgImportName string
+		TypeParams    []TypeParam
 		Variant       []Shape
 		Tags          map[string]Tag
 	}
@@ -179,6 +181,10 @@ type FieldLike struct {
 	Tags  map[string]Tag
 }
 
+const (
+	TagUnionName = "mkunion_union_name"
+)
+
 type Tag struct {
 	Value   string
 	Options []string
@@ -199,6 +205,25 @@ func TagGetValue(x map[string]Tag, tag, defaults string) string {
 	}
 
 	return t.Value
+}
+
+func TagHasOption(x map[string]Tag, tag, option string) bool {
+	if x == nil {
+		return false
+	}
+
+	t, ok := x[tag]
+	if !ok {
+		return false
+	}
+
+	for _, v := range t.Options {
+		if v == option {
+			return true
+		}
+	}
+
+	return false
 }
 
 //go:tag mkunion:"Guard"
@@ -244,6 +269,61 @@ func ConcatGuard(a, b Guard) Guard {
 	return &AndGuard{
 		L: append(result.L, b),
 	}
+}
+
+func injectTag(x Shape, tag string, value string, options ...string) Shape {
+	return MatchShapeR1(
+		x,
+		func(x *Any) Shape {
+			return x
+		},
+		func(x *RefName) Shape {
+			return x
+		},
+		func(x *PointerLike) Shape {
+			return x
+		},
+		func(x *AliasLike) Shape {
+			if x.Tags == nil {
+				x.Tags = make(map[string]Tag)
+			}
+			x.Tags[tag] = Tag{
+				Value:   value,
+				Options: options,
+			}
+			return x
+		},
+		func(x *PrimitiveLike) Shape {
+			return x
+		},
+		func(x *ListLike) Shape {
+			return x
+		},
+		func(x *MapLike) Shape {
+			return x
+		},
+		func(x *StructLike) Shape {
+			if x.Tags == nil {
+				x.Tags = make(map[string]Tag)
+			}
+			x.Tags[tag] = Tag{
+				Value:   value,
+				Options: options,
+			}
+			return x
+		},
+		func(x *UnionLike) Shape {
+			if x.Tags == nil {
+				x.Tags = make(map[string]Tag)
+			}
+			x.Tags[tag] = Tag{
+				Value:   value,
+				Options: options,
+			}
+
+			return x
+		},
+	)
 }
 
 func Tags(x Shape) map[string]Tag {
@@ -373,6 +453,10 @@ func ExtractRefs(x Shape) []*RefName {
 				PkgImportName: x.PkgImportName,
 			})
 
+			for _, param := range x.TypeParams {
+				result = append(result, ExtractRefs(param.Type)...)
+			}
+
 			result = append(result, ExtractRefs(x.Type)...)
 			return result
 		},
@@ -429,10 +513,37 @@ func ExtractRefs(x Shape) []*RefName {
 				PkgImportName: x.PkgImportName,
 			})
 
+			for _, param := range x.TypeParams {
+				result = append(result, ExtractRefs(param.Type)...)
+			}
 			for _, variant := range x.Variant {
 				result = append(result, ExtractRefs(variant)...)
 			}
 			return result
 		},
 	)
+}
+
+func IsUnion(x Shape) bool {
+	_, isUnion := x.(*UnionLike)
+	return isUnion
+}
+
+func RetrieveVariantTypeRef(x Shape) *RefName {
+	if IsUnion(x) {
+		return nil
+	}
+
+	tags := Tags(x)
+	unionName := TagGetValue(tags, TagUnionName, "")
+	if unionName == "" {
+		return nil
+	}
+
+	return &RefName{
+		Name:          unionName,
+		PkgName:       ToGoPkgName(x),
+		PkgImportName: ToGoPkgImportName(x),
+		Indexed:       ExtractIndexedTypes(x),
+	}
 }

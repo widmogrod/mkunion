@@ -95,6 +95,16 @@ func TestFromGoo(t *testing.T) {
 								{Name: "Name", Type: &PrimitiveLike{Kind: &StringLike{}}},
 								{Name: "PkgName", Type: &PrimitiveLike{Kind: &StringLike{}}},
 								{Name: "PkgImportName", Type: &PrimitiveLike{Kind: &StringLike{}}},
+								{
+									Name: "TypeParams",
+									Type: &ListLike{
+										Element: &RefName{
+											Name:          "TypeParam",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
+									},
+								},
 								{Name: "IsAlias", Type: &PrimitiveLike{Kind: &BooleanLike{}}},
 								{Name: "Type", Type: &RefName{
 									Name:          "Shape",
@@ -236,6 +246,16 @@ func TestFromGoo(t *testing.T) {
 								{
 									Name: "PkgImportName",
 									Type: &PrimitiveLike{Kind: &StringLike{}},
+								},
+								{
+									Name: "TypeParams",
+									Type: &ListLike{
+										Element: &RefName{
+											Name:          "TypeParam",
+											PkgName:       "shape",
+											PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+										},
+									},
 								},
 								{
 									Name: "Variant",

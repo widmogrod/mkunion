@@ -395,6 +395,13 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						}
 					}
 
+				case *shape.PointerLike:
+					return &locres{
+						data:  data,
+						loc:   append([]Location{x}, locations...),
+						shape: y.Type,
+					}
+
 				default:
 					panic(fmt.Errorf("schema.GetShapeSchemaLocation: unknown field access %s with shape %#v", x.Name, s))
 				}

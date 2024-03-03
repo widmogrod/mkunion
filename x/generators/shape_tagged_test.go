@@ -173,13 +173,121 @@ func ListOfAliasAnyShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
 		IsAlias: true,
 		Type: &shape.RefName{
-				Name: "ListOf",
-				PkgName: "testutils",
-				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
-				Indexed: []shape.Shape{
-					&shape.Any{},
+			Name: "ListOf",
+			PkgName: "testutils",
+			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+			Indexed: []shape.Shape{
+				&shape.Any{},
+			},
+		},
+	}
+}
+`, result)
+}
+func TestShapeTagged_ListOfAliasAny_Generic(t *testing.T) {
+	inferred, err := shape.InferFromFile("testutils/generic.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	generator := NewShapeTagged(
+		inferred.RetrieveUnion("Record"),
+	)
+
+	result, err := generator.Generate()
+	assert.NoError(t, err)
+	assert.Equal(t, `package testutils
+
+import (
+	"github.com/widmogrod/mkunion/x/shape"
+)
+
+func init() {
+	shape.Register(ItemShape())
+	shape.Register(OtherShape())
+	shape.Register(RecordShape())
+}
+
+
+func RecordShape() shape.Shape {
+	return &shape.UnionLike{
+		Name: "Record",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Variant: []shape.Shape{
+			ItemShape(),
+			OtherShape(),
+		},
+	}
+}
+
+func ItemShape() shape.Shape {
+	return &shape.StructLike{
+		Name: "Item",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Key",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Data",
+				Type: &shape.RefName{
+					Name: "A",
+					PkgName: "",
+					PkgImportName: "",
 				},
 			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Record",
+			},
+		},
+	}
+}
+
+func OtherShape() shape.Shape {
+	return &shape.AliasLike{
+		Name: "Other",
+		PkgName: "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Record",
+			},
+		},
+		Type: &shape.RefName{
+			Name: "Some",
+			PkgName: "testutils",
+			PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+			Indexed: []shape.Shape{
+				&shape.RefName{
+					Name: "A",
+					PkgName: "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				},
+			},
+		},
 	}
 }
 `, result)

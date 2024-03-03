@@ -115,11 +115,11 @@ func MatchNodeR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.Node", NodeFromJSON, NodeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.DoWindow", DoWindowFromJSON, DoWindowToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.DoMap", DoMapFromJSON, DoMapToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.DoLoad", DoLoadFromJSON, DoLoadToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.DoJoin", DoJoinFromJSON, DoJoinToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.DoLoad", DoLoadFromJSON, DoLoadToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.DoMap", DoMapFromJSON, DoMapToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.DoWindow", DoWindowFromJSON, DoWindowToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/storage/schemaless/projection.Node", NodeFromJSON, NodeToJSON)
 }
 
 type NodeUnionJSON struct {
@@ -137,11 +137,10 @@ func NodeFromJSON(x []byte) (Node, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data NodeUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.NodeFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -164,55 +163,50 @@ func NodeFromJSON(x []byte) (Node, error) {
 	} else if data.DoJoin != nil {
 		return DoJoinFromJSON(data.DoJoin)
 	}
-
-	return nil, fmt.Errorf("projection.Node: unknown type %s", data.Type)
+	return nil, fmt.Errorf("projection.NodeFromJSON: unknown type: %s", data.Type)
 }
 
 func NodeToJSON(x Node) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchNodeR2(
 		x,
-		func(x *DoWindow) ([]byte, error) {
-			body, err := DoWindowToJSON(x)
+		func(y *DoWindow) ([]byte, error) {
+			body, err := DoWindowToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
 			}
-
 			return json.Marshal(NodeUnionJSON{
 				Type:     "projection.DoWindow",
 				DoWindow: body,
 			})
 		},
-		func(x *DoMap) ([]byte, error) {
-			body, err := DoMapToJSON(x)
+		func(y *DoMap) ([]byte, error) {
+			body, err := DoMapToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
 			}
-
 			return json.Marshal(NodeUnionJSON{
 				Type:  "projection.DoMap",
 				DoMap: body,
 			})
 		},
-		func(x *DoLoad) ([]byte, error) {
-			body, err := DoLoadToJSON(x)
+		func(y *DoLoad) ([]byte, error) {
+			body, err := DoLoadToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
 			}
-
 			return json.Marshal(NodeUnionJSON{
 				Type:   "projection.DoLoad",
 				DoLoad: body,
 			})
 		},
-		func(x *DoJoin) ([]byte, error) {
-			body, err := DoJoinToJSON(x)
+		func(y *DoJoin) ([]byte, error) {
+			body, err := DoJoinToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
 			}
-
 			return json.Marshal(NodeUnionJSON{
 				Type:   "projection.DoJoin",
 				DoJoin: body,
@@ -225,9 +219,8 @@ func DoWindowFromJSON(x []byte) (*DoWindow, error) {
 	result := new(DoWindow)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.DoWindowFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -350,9 +343,8 @@ func DoMapFromJSON(x []byte) (*DoMap, error) {
 	result := new(DoMap)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.DoMapFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -501,9 +493,8 @@ func DoLoadFromJSON(x []byte) (*DoLoad, error) {
 	result := new(DoLoad)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.DoLoadFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -626,9 +617,8 @@ func DoJoinFromJSON(x []byte) (*DoJoin, error) {
 	result := new(DoJoin)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projection.DoJoinFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

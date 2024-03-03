@@ -36,9 +36,13 @@ echo "export AWS_ENDPOINT_URL=http://localhost:4566" >> $envrc_file
 echo "export OPENSEARCH_ADDRESS=http://localhost:9200" >> $envrc_file
 echo "export OPENSEARCH_USERNAME=admin" >> $envrc_file
 echo "export AWS_SQS_QUEUE_URL=$queue_url" >> $envrc_file
+echo "export KAFKA_SERVERS=localhost:9092" >> $envrc_file
 
 echo "Localstack is UI is at port"
 echo "http://localhost:8080"
+
+echo "Kafka UI is at port"
+echo "http://localhost:9088"
 
 ## check if it should stream logs, or just end
 ## don't trigger trap on exit

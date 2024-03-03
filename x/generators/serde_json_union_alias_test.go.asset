@@ -8,8 +8,8 @@ import (
 
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Forest", ForestFromJSON, ForestToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Tree2", Tree2FromJSON, Tree2ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Leaf2", Leaf2FromJSON, Leaf2ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Tree2", Tree2FromJSON, Tree2ToJSON)
 }
 
 type ForestUnionJSON struct {
@@ -25,11 +25,10 @@ func ForestFromJSON(x []byte) (Forest, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data ForestUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.ForestFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -44,33 +43,30 @@ func ForestFromJSON(x []byte) (Forest, error) {
 	} else if data.Leaf2 != nil {
 		return Leaf2FromJSON(data.Leaf2)
 	}
-
-	return nil, fmt.Errorf("testutils.Forest: unknown type %s", data.Type)
+	return nil, fmt.Errorf("testutils.ForestFromJSON: unknown type: %s", data.Type)
 }
 
 func ForestToJSON(x Forest) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchForestR2(
 		x,
-		func(x *Tree2) ([]byte, error) {
-			body, err := Tree2ToJSON(x)
+		func (y *Tree2) ([]byte, error) {
+			body, err := Tree2ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.ForestToJSON: %w", err)
 			}
-
 			return json.Marshal(ForestUnionJSON{
 				Type: "testutils.Tree2",
 				Tree2: body,
 			})
 		},
-		func(x *Leaf2) ([]byte, error) {
-			body, err := Leaf2ToJSON(x)
+		func (y *Leaf2) ([]byte, error) {
+			body, err := Leaf2ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("testutils.ForestToJSON: %w", err)
 			}
-
 			return json.Marshal(ForestUnionJSON{
 				Type: "testutils.Leaf2",
 				Leaf2: body,
@@ -83,9 +79,8 @@ func Tree2FromJSON(x []byte) (*Tree2, error) {
 	result := new(Tree2)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.Tree2FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -99,14 +94,12 @@ var (
 )
 
 
-
 func Leaf2FromJSON(x []byte) (*Leaf2, error) {
 	result := new(Leaf2)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("testutils.Leaf2FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

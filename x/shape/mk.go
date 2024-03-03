@@ -30,6 +30,7 @@ func MkRefNameFromString(x string) *RefName {
 
 	name := x
 	// example "some.Type2[int, some.Type[int]]"
+	// example "some.Type2[some.Type[int, some.Type[float64]]"
 	if index := strings.Index(x, "["); index != -1 {
 		// example: some.Type2
 		name = x[:index]
@@ -40,10 +41,24 @@ func MkRefNameFromString(x string) *RefName {
 		rest = rest[1 : len(rest)-1]
 
 		// scan for "," and split
-		// example: "int, some.Type[int]
-		if index := strings.Index(rest, ","); index != -1 {
-			first := rest[:index]
-			rest = rest[index+1:]
+		commaIndex := strings.Index(rest, ",")
+
+		// scan for "["
+		leftBracketIndex := strings.Index(rest, "[")
+
+		// example: "int, some.Type[int]"
+		hasComma := commaIndex != -1
+
+		// example: "int, some.Type[int]"
+		// 	hasTypeParam == true
+		// example: "some.Type[int, some.Type[float64]]"
+		//	hasTypeParam == false
+		hasTypeParam := leftBracketIndex != -1
+		isTypeParamFirst := commaIndex > leftBracketIndex
+
+		if hasComma && !(hasTypeParam && isTypeParamFirst) {
+			first := rest[:commaIndex]
+			rest := rest[commaIndex+1:]
 
 			result.Indexed = append(result.Indexed, MkRefNameFromString(first))
 			result.Indexed = append(result.Indexed, MkRefNameFromString(rest))

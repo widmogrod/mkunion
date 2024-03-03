@@ -12,6 +12,7 @@ func init() {
 	shape.Register(RecordShape())
 	shape.Register(RecordTypeShape())
 	shape.Register(SortFieldShape())
+	shape.Register(UpdateRecordsResultShape())
 	shape.Register(UpdateRecordsShape())
 	shape.Register(UpdatingPolicyShape())
 }
@@ -299,6 +300,45 @@ func UpdatingPolicyShape() shape.Shape {
 		Type: &shape.PrimitiveLike{
 			Kind: &shape.NumberLike{
 				Kind: &shape.UInt{},
+			},
+		},
+	}
+}
+
+//shape:shape
+func UpdateRecordsResultShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "UpdateRecordsResult",
+		PkgName:       "schemaless",
+		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "T",
+				Type: &shape.Any{},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Saved",
+				Type: &shape.MapLike{
+					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+					Val: &shape.RefName{
+						Name:          "T",
+						PkgName:       "",
+						PkgImportName: "",
+					},
+				},
+			},
+			{
+				Name: "Deleted",
+				Type: &shape.MapLike{
+					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+					Val: &shape.RefName{
+						Name:          "T",
+						PkgName:       "",
+						PkgImportName: "",
+					},
+				},
 			},
 		},
 	}

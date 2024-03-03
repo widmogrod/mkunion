@@ -91,7 +91,7 @@ func (s *RepositorySink) flush() error {
 		return nil
 	}
 
-	err := s.store.UpdateRecords(schemaless.UpdateRecords[schemaless.Record[schema.Schema]]{
+	_, err := s.store.UpdateRecords(schemaless.UpdateRecords[schemaless.Record[schema.Schema]]{
 		UpdatingPolicy: schemaless.PolicyOverwriteServerChanges,
 		Saving:         s.bufferSaving,
 		Deleting:       s.bufferDeleting,

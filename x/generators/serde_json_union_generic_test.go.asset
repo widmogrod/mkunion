@@ -1,0 +1,240 @@
+package testutils
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
+)
+
+func init() {
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Item[any]", ItemFromJSON[any], ItemToJSON[any])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Other[any]", OtherFromJSON[any], OtherToJSON[any])
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Record[any]", RecordFromJSON[any], RecordToJSON[any])
+}
+
+type RecordUnionJSON[A any] struct {
+	Type string `json:"$type,omitempty"`
+	Item json.RawMessage `json:"testutils.Item,omitempty"`
+	Other json.RawMessage `json:"testutils.Other,omitempty"`
+}
+
+func RecordFromJSON[A any](x []byte) (Record[A], error) {
+	if x == nil || len(x) == 0 {
+		return nil, nil
+	}
+	if string(x[:4]) == "null" {
+		return nil, nil
+	}
+	var data RecordUnionJSON[A]
+	err := json.Unmarshal(x, &data)
+	if err != nil {
+		return nil, fmt.Errorf("testutils.RecordFromJSON[A]: %w", err)
+	}
+
+	switch data.Type {
+	case "testutils.Item":
+		return ItemFromJSON[A](data.Item)
+	case "testutils.Other":
+		return OtherFromJSON[A](data.Other)
+	}
+
+	if data.Item != nil {
+		return ItemFromJSON[A](data.Item)
+	} else if data.Other != nil {
+		return OtherFromJSON[A](data.Other)
+	}
+	return nil, fmt.Errorf("testutils.RecordFromJSON[A]: unknown type: %s", data.Type)
+}
+
+func RecordToJSON[A any](x Record[A]) ([]byte, error) {
+	if x == nil {
+		return []byte(`null`), nil
+	}
+	return MatchRecordR2(
+		x,
+		func (y *Item[A]) ([]byte, error) {
+			body, err := ItemToJSON[A](y)
+			if err != nil {
+				return nil, fmt.Errorf("testutils.RecordToJSON[A]: %w", err)
+			}
+			return json.Marshal(RecordUnionJSON[A]{
+				Type: "testutils.Item",
+				Item: body,
+			})
+		},
+		func (y *Other[A]) ([]byte, error) {
+			body, err := OtherToJSON[A](y)
+			if err != nil {
+				return nil, fmt.Errorf("testutils.RecordToJSON[A]: %w", err)
+			}
+			return json.Marshal(RecordUnionJSON[A]{
+				Type: "testutils.Other",
+				Other: body,
+			})
+		},
+	)
+}
+
+func ItemFromJSON[A any](x []byte) (*Item[A], error) {
+	result := new(Item[A])
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, fmt.Errorf("testutils.ItemFromJSON[A]: %w", err)
+	}
+	return result, nil
+}
+
+func ItemToJSON[A any](x *Item[A]) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Item[any])(nil)
+	_ json.Marshaler   = (*Item[any])(nil)
+)
+
+func (r *Item[A]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONItemLb_A_bL(*r)
+}
+func (r *Item[A]) _marshalJSONItemLb_A_bL(x Item[A]) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldKey []byte
+	fieldKey, err = r._marshalJSONstring(x.Key)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Item[A]._marshalJSONItemLb_A_bL: field name Key; %w", err)
+	}
+	partial["Key"] = fieldKey
+	var fieldData []byte
+	fieldData, err = r._marshalJSONA(x.Data)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Item[A]._marshalJSONItemLb_A_bL: field name Data; %w", err)
+	}
+	partial["Data"] = fieldData
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Item[A]._marshalJSONItemLb_A_bL: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Item[A]) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Item[A]._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Item[A]) _marshalJSONA(x A) ([]byte, error) {
+	result, err := shared.JSONMarshal[A](x)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Item[A]._marshalJSONA:; %w", err)
+	}
+	return result, nil
+}
+func (r *Item[A]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONItemLb_A_bL(data)
+	if err != nil {
+		return fmt.Errorf("testutils: Item[A].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Item[A]) _unmarshalJSONItemLb_A_bL(data []byte) (Item[A], error) {
+	result := Item[A]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Item[A]._unmarshalJSONItemLb_A_bL: native struct unwrap; %w", err)
+	}
+	if fieldKey, ok := partial["Key"]; ok {
+		result.Key, err = r._unmarshalJSONstring(fieldKey)
+		if err != nil {
+			return result, fmt.Errorf("testutils: Item[A]._unmarshalJSONItemLb_A_bL: field Key; %w", err)
+		}
+	}
+	if fieldData, ok := partial["Data"]; ok {
+		result.Data, err = r._unmarshalJSONA(fieldData)
+		if err != nil {
+			return result, fmt.Errorf("testutils: Item[A]._unmarshalJSONItemLb_A_bL: field Data; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Item[A]) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Item[A]._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Item[A]) _unmarshalJSONA(data []byte) (A, error) {
+	result, err := shared.JSONUnmarshal[A](data)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Item[A]._unmarshalJSONA: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func OtherFromJSON[A any](x []byte) (*Other[A], error) {
+	result := new(Other[A])
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, fmt.Errorf("testutils.OtherFromJSON[A]: %w", err)
+	}
+	return result, nil
+}
+
+func OtherToJSON[A any](x *Other[A]) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*Other[any])(nil)
+	_ json.Marshaler   = (*Other[any])(nil)
+)
+
+func (r *Other[A]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONOtherLb_A_bL(*r)
+}
+func (r *Other[A]) _marshalJSONOtherLb_A_bL(x Other[A]) ([]byte, error) {
+	return r._marshalJSONSomeLb_A_bL(Some[A](x))
+}
+func (r *Other[A]) _marshalJSONSomeLb_A_bL(x Some[A]) ([]byte, error) {
+	result, err := shared.JSONMarshal[Some[A]](x)
+	if err != nil {
+		return nil, fmt.Errorf("testutils: Other[A]._marshalJSONSomeLb_A_bL:; %w", err)
+	}
+	return result, nil
+}
+func (r *Other[A]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONOtherLb_A_bL(data)
+	if err != nil {
+		return fmt.Errorf("testutils: Other[A].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Other[A]) _unmarshalJSONOtherLb_A_bL(data []byte) (Other[A], error) {
+	var result Other[A]
+	intermidiary, err := r._unmarshalJSONSomeLb_A_bL(data)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Other[A]._unmarshalJSONOtherLb_A_bL: alias; %w", err)
+	}
+	result = Other[A](intermidiary)
+	return result, nil
+}
+func (r *Other[A]) _unmarshalJSONSomeLb_A_bL(data []byte) (Some[A], error) {
+	result, err := shared.JSONUnmarshal[Some[A]](data)
+	if err != nil {
+		return result, fmt.Errorf("testutils: Other[A]._unmarshalJSONSomeLb_A_bL: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+

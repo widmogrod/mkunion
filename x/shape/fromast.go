@@ -11,39 +11,26 @@ type FromASTOption func(x Shape)
 func FromAST(x any, fx ...FromASTOption) Shape {
 	switch y := x.(type) {
 	case *ast.Ident:
-		switch y.Name {
-		case "any":
-			return &Any{}
-		case "string":
-			return &PrimitiveLike{Kind: &StringLike{}}
-
-		case "bool":
-			return &PrimitiveLike{Kind: &BooleanLike{}}
-		case "int", "int8", "int16", "int32", "int64",
-			"uint", "uint8", "uint16", "uint32", "uint64",
-			"float64", "float32", "byte", "rune":
-			return &PrimitiveLike{Kind: &NumberLike{
-				Kind: TypeStringToNumberKindMap[y.Name],
-			}}
-		default:
-			if !y.IsExported() {
-				log.Infof("formast: skipping non exported type %s", y.Name)
-				return &Any{}
-			}
-
-			result := &RefName{
-				Name:          y.String(),
-				PkgName:       "",
-				PkgImportName: "",
-				Indexed:       nil,
-			}
-
-			for _, f := range fx {
-				f(result)
-			}
-
-			return result
+		if primitive := NameToPrimitiveShape(y.Name); primitive != nil {
+			return primitive
 		}
+		if !y.IsExported() {
+			log.Infof("shape.FromAST: Ident, skipping non exported type %s", y.Name)
+			return &Any{}
+		}
+
+		result := &RefName{
+			Name:          y.Name,
+			PkgName:       "",
+			PkgImportName: "",
+			Indexed:       nil,
+		}
+
+		for _, f := range fx {
+			f(result)
+		}
+
+		return result
 
 	case *ast.IndexExpr:
 		result := FromAST(y.X, fx...)
@@ -53,7 +40,8 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 			return z
 		}
 
-		panic(fmt.Errorf("shape.FromAST: unsupported IndexExpr: %#v", y))
+		log.Warnf("shape.FromAST: unsupported IndexExpr: %#v, most likely unexported type", y)
+		return result
 
 	case *ast.IndexListExpr:
 		result := FromAST(y.X, fx...)
@@ -78,6 +66,12 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 		}
 
 	case *ast.SelectorExpr:
+		// check if type is exported
+		if !y.Sel.IsExported() {
+			log.Infof("shape.FromAST: SelectorExpr, skipping non exported type %s", y.Sel.Name)
+			return &Any{}
+		}
+
 		switch z := y.X.(type) {
 		case *ast.Ident:
 			var result Shape
@@ -97,9 +91,18 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 			}
 
 			return result
-		}
 
-		panic(fmt.Errorf("shape.FromAST: unsupported SelectorExpr: %#v", y))
+		case *ast.SelectorExpr:
+			return FromAST(z, fx...)
+
+		default:
+			//// print go ast
+			//ast.Print(token.NewFileSet(), y)
+			// print go ast as go code
+			//fmt.Println(printer.Fprint(os.Stdout, token.NewFileSet(), y))
+
+			panic(fmt.Errorf("shape.FromAST: unsupported SelectorExpr: %#v", z))
+		}
 
 	case *ast.StarExpr:
 		result := FromAST(y.X, fx...)
@@ -109,11 +112,6 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 	}
 
 	return &Any{}
-}
-
-func IsStarExpr(x ast.Expr) bool {
-	_, ok := x.(*ast.StarExpr)
-	return ok
 }
 
 func InjectPkgImportName(pkgNameToImportName map[string]string) func(x Shape) {

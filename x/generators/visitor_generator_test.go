@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestVisitorGenerator(t *testing.T) {
+func TestVisitorGenerator_Tree(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	inferred, err := shape.InferFromFile("testutils/tree.go")
 	assert.NoError(t, err)
@@ -115,14 +115,14 @@ func MatchTreeR2[T0, T1 any](
 
 func MatchTreeR1[T0 any](
 	x Tree,
-	f1 func(x *Branch) (T0),
-	f2 func(x *Leaf) (T0),
-	f3 func(x *K) (T0),
-	f4 func(x *P) (T0),
-	f5 func(x *Ma) (T0),
-	f6 func(x *La) (T0),
-	f7 func(x *Ka) (T0),
-) (T0) {
+	f1 func(x *Branch) T0,
+	f2 func(x *Leaf) T0,
+	f3 func(x *K) T0,
+	f4 func(x *P) T0,
+	f5 func(x *Ma) T0,
+	f6 func(x *La) T0,
+	f7 func(x *Ka) T0,
+) T0 {
 	switch v := x.(type) {
 	case *Branch:
 		return f1(v)
@@ -168,6 +168,97 @@ func MatchTreeR0(
 		f6(v)
 	case *Ka:
 		f7(v)
+	}
+}
+`, string(result))
+}
+
+func TestVisitorGenerator_Generic(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
+	inferred, err := shape.InferFromFile("testutils/generic.go")
+	assert.NoError(t, err)
+
+	g := NewVisitorGenerator(inferred.RetrieveUnion("Record"))
+
+	result, err := g.Generate()
+	assert.NoError(t, err)
+	assert.Equal(t, `package testutils
+
+type RecordVisitor[A any] interface {
+	VisitItem(v *Item[A]) any
+	VisitOther(v *Other[A]) any
+}
+
+type Record[A any] interface {
+	AcceptRecord(g RecordVisitor[A]) any
+}
+
+var (
+	_ Record[any] = (*Item[any])(nil)
+	_ Record[any] = (*Other[any])(nil)
+)
+
+func (r *Item[A]) AcceptRecord(v RecordVisitor[A]) any { return v.VisitItem(r) }
+func (r *Other[A]) AcceptRecord(v RecordVisitor[A]) any { return v.VisitOther(r) }
+
+func MatchRecordR3[A any, T0, T1, T2 any](
+	x Record[A],
+	f1 func(x *Item[A]) (T0, T1, T2),
+	f2 func(x *Other[A]) (T0, T1, T2),
+) (T0, T1, T2) {
+	switch v := x.(type) {
+	case *Item[A]:
+		return f1(v)
+	case *Other[A]:
+		return f2(v)
+	}
+	var result1 T0
+	var result2 T1
+	var result3 T2
+	return result1, result2, result3
+}
+
+func MatchRecordR2[A any, T0, T1 any](
+	x Record[A],
+	f1 func(x *Item[A]) (T0, T1),
+	f2 func(x *Other[A]) (T0, T1),
+) (T0, T1) {
+	switch v := x.(type) {
+	case *Item[A]:
+		return f1(v)
+	case *Other[A]:
+		return f2(v)
+	}
+	var result1 T0
+	var result2 T1
+	return result1, result2
+}
+
+func MatchRecordR1[A any, T0 any](
+	x Record[A],
+	f1 func(x *Item[A]) T0,
+	f2 func(x *Other[A]) T0,
+) T0 {
+	switch v := x.(type) {
+	case *Item[A]:
+		return f1(v)
+	case *Other[A]:
+		return f2(v)
+	}
+	var result1 T0
+	return result1
+}
+
+func MatchRecordR0[A any](
+	x Record[A],
+	f1 func(x *Item[A]),
+	f2 func(x *Other[A]),
+) {
+	switch v := x.(type) {
+	case *Item[A]:
+		f1(v)
+	case *Other[A]:
+		f2(v)
 	}
 }
 `, string(result))

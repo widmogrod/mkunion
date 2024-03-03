@@ -2,85 +2,95 @@
 package shape
 
 func init() {
-	Register(PrimitiveKindShape())
+	Register(AliasLikeShape())
+	Register(AndGuardShape())
+	Register(AnyShape())
 	Register(BooleanLikeShape())
-	Register(StringLikeShape())
-	Register(NumberLikeShape())
-	Register(NumberKindShape())
-	Register(UIntShape())
-	Register(UInt8Shape())
-	Register(UInt16Shape())
-	Register(UInt32Shape())
-	Register(UInt64Shape())
-	Register(IntShape())
-	Register(Int8Shape())
-	Register(Int16Shape())
-	Register(Int32Shape())
-	Register(Int64Shape())
+	Register(EnumShape())
+	Register(FieldLikeShape())
 	Register(Float32Shape())
 	Register(Float64Shape())
 	Register(GuardShape())
-	Register(EnumShape())
-	Register(RequiredShape())
-	Register(AndGuardShape())
-	Register(ShapeShape())
-	Register(AnyShape())
-	Register(RefNameShape())
-	Register(PointerLikeShape())
-	Register(AliasLikeShape())
-	Register(PrimitiveLikeShape())
+	Register(Int16Shape())
+	Register(Int32Shape())
+	Register(Int64Shape())
+	Register(Int8Shape())
+	Register(IntShape())
 	Register(ListLikeShape())
 	Register(MapLikeShape())
+	Register(NumberKindShape())
+	Register(NumberLikeShape())
+	Register(PointerLikeShape())
+	Register(PrimitiveKindShape())
+	Register(PrimitiveLikeShape())
+	Register(RefNameShape())
+	Register(RequiredShape())
+	Register(ShapeShape())
+	Register(StringLikeShape())
 	Register(StructLikeShape())
-	Register(UnionLikeShape())
 	Register(TagShape())
 	Register(TypeParamShape())
-	Register(FieldLikeShape())
+	Register(UInt16Shape())
+	Register(UInt32Shape())
+	Register(UInt64Shape())
+	Register(UInt8Shape())
+	Register(UIntShape())
+	Register(UnionLikeShape())
 }
 
 //shape:shape
 
-func PrimitiveKindShape() Shape {
+func GuardShape() Shape {
 	return &UnionLike{
-		Name:          "PrimitiveKind",
+		Name:          "Guard",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 		Variant: []Shape{
-			BooleanLikeShape(),
-			StringLikeShape(),
-			NumberLikeShape(),
+			EnumShape(),
+			RequiredShape(),
+			AndGuardShape(),
 		},
 	}
 }
 
-func BooleanLikeShape() Shape {
+func EnumShape() Shape {
 	return &StructLike{
-		Name:          "BooleanLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func StringLikeShape() Shape {
-	return &StructLike{
-		Name:          "StringLike",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
-}
-
-func NumberLikeShape() Shape {
-	return &StructLike{
-		Name:          "NumberLike",
+		Name:          "Enum",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 		Fields: []*FieldLike{
 			{
-				Name: "Kind",
-				Type: &RefName{
-					Name:          "NumberKind",
-					PkgName:       "shape",
-					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+				Name: "Val",
+				Type: &ListLike{
+					Element: &PrimitiveLike{Kind: &StringLike{}},
+				},
+			},
+		},
+	}
+}
+
+func RequiredShape() Shape {
+	return &StructLike{
+		Name:          "Required",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+	}
+}
+
+func AndGuardShape() Shape {
+	return &StructLike{
+		Name:          "AndGuard",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Fields: []*FieldLike{
+			{
+				Name: "L",
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "Guard",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					},
 				},
 			},
 		},
@@ -209,57 +219,47 @@ func Float64Shape() Shape {
 
 //shape:shape
 
-func GuardShape() Shape {
+func PrimitiveKindShape() Shape {
 	return &UnionLike{
-		Name:          "Guard",
+		Name:          "PrimitiveKind",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 		Variant: []Shape{
-			EnumShape(),
-			RequiredShape(),
-			AndGuardShape(),
+			BooleanLikeShape(),
+			StringLikeShape(),
+			NumberLikeShape(),
 		},
 	}
 }
 
-func EnumShape() Shape {
+func BooleanLikeShape() Shape {
 	return &StructLike{
-		Name:          "Enum",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Val",
-				Type: &ListLike{
-					Element: &PrimitiveLike{Kind: &StringLike{}},
-				},
-			},
-		},
-	}
-}
-
-func RequiredShape() Shape {
-	return &StructLike{
-		Name:          "Required",
+		Name:          "BooleanLike",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 	}
 }
 
-func AndGuardShape() Shape {
+func StringLikeShape() Shape {
 	return &StructLike{
-		Name:          "AndGuard",
+		Name:          "StringLike",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+	}
+}
+
+func NumberLikeShape() Shape {
+	return &StructLike{
+		Name:          "NumberLike",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 		Fields: []*FieldLike{
 			{
-				Name: "L",
-				Type: &ListLike{
-					Element: &RefName{
-						Name:          "Guard",
-						PkgName:       "shape",
-						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-					},
+				Name: "Kind",
+				Type: &RefName{
+					Name:          "NumberKind",
+					PkgName:       "shape",
+					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 				},
 			},
 		},
@@ -362,6 +362,16 @@ func AliasLikeShape() Shape {
 			{
 				Name: "PkgImportName",
 				Type: &PrimitiveLike{Kind: &StringLike{}},
+			},
+			{
+				Name: "TypeParams",
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "TypeParam",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					},
+				},
 			},
 			{
 				Name: "IsAlias",
@@ -536,6 +546,16 @@ func UnionLikeShape() Shape {
 				Type: &PrimitiveLike{Kind: &StringLike{}},
 			},
 			{
+				Name: "TypeParams",
+				Type: &ListLike{
+					Element: &RefName{
+						Name:          "TypeParam",
+						PkgName:       "shape",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+					},
+				},
+			},
+			{
 				Name: "Variant",
 				Type: &ListLike{
 					Element: &RefName{
@@ -554,27 +574,6 @@ func UnionLikeShape() Shape {
 						PkgName:       "shape",
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 					},
-				},
-			},
-		},
-	}
-}
-
-//shape:shape
-func TagShape() Shape {
-	return &StructLike{
-		Name:          "Tag",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		Fields: []*FieldLike{
-			{
-				Name: "Value",
-				Type: &PrimitiveLike{Kind: &StringLike{}},
-			},
-			{
-				Name: "Options",
-				Type: &ListLike{
-					Element: &PrimitiveLike{Kind: &StringLike{}},
 				},
 			},
 		},
@@ -604,6 +603,27 @@ func TypeParamShape() Shape {
 		Tags: map[string]Tag{
 			"serde": {
 				Value: "json",
+			},
+		},
+	}
+}
+
+//shape:shape
+func TagShape() Shape {
+	return &StructLike{
+		Name:          "Tag",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Fields: []*FieldLike{
+			{
+				Name: "Value",
+				Type: &PrimitiveLike{Kind: &StringLike{}},
+			},
+			{
+				Name: "Options",
+				Type: &ListLike{
+					Element: &PrimitiveLike{Kind: &StringLike{}},
+				},
 			},
 		},
 	}

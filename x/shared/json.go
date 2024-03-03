@@ -22,12 +22,9 @@ func TypeRegistryLoad(typeFullName string) (any, bool) {
 	return registerType.Load(typeFullName)
 }
 
-func TypeRegistryLoadFromReflect(x reflect.Type) (any, bool) {
-	if x.Kind() == reflect.Ptr {
-		x = x.Elem()
-	}
-
-	return TypeRegistryLoad(FullTypeName(x))
+func TypeRegistryStore[A any](typeFullName string) {
+	destinationTypePtr := new(A)
+	registerType.Store(typeFullName, *destinationTypePtr)
 }
 
 func FullTypeName(x reflect.Type) string {
@@ -48,8 +45,7 @@ func JSONMarshallerRegister[A any](
 	from func([]byte) (A, error),
 	to func(A) ([]byte, error),
 ) {
-	destinationTypePtr := new(A)
-	registerType.Store(fullName, *destinationTypePtr)
+	TypeRegistryStore[A](fullName)
 
 	registerJSONMarshaller.Store(fullName, serde[any]{
 		from: func(bytes []byte) (any, error) {
@@ -115,7 +111,8 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 	return result.(A), nil
 }
 
-func JSONMarshal[A any](x any) ([]byte, error) {
+func JSONMarshal[A any](in A) ([]byte, error) {
+	x := any(in)
 	if x == nil {
 		return nil, nil
 	}
@@ -206,50 +203,4 @@ func JSONIsNativePath(x any) bool {
 	}
 
 	return false
-}
-
-func JSONMarshalMap[T1, T2 any](k T1, v T2) (string, json.RawMessage, error) {
-	var key any
-	var value json.RawMessage
-	var err error
-	var ok bool
-
-	key, ok = any(k).(string)
-	if !ok {
-		key, err = JSONMarshal[T1](k)
-		if err != nil {
-			return "", nil, fmt.Errorf("shared.JSONMarshalMap: [%v:%v] key decoding; %w", k, v, err)
-		}
-		key = string(key.([]byte))
-	}
-
-	value, err = JSONMarshal[T2](v)
-	if err != nil {
-		return "", nil, fmt.Errorf("shared.JSONMarshalMap: [%v:%v] value decoding; %w", k, v, err)
-	}
-
-	return key.(string), value, nil
-}
-
-func JSONUnmarshalMap[T1, T2 any](key string, value json.RawMessage) (T1, T2, error) {
-	var k T1
-	var v T2
-	var err error
-
-	_, isString := any(k).(string)
-	if isString {
-		k = any(key).(T1)
-	} else {
-		k, err = JSONUnmarshal[T1]([]byte(key))
-		if err != nil {
-			return k, v, fmt.Errorf("shared.JSONUnmarshalMap: [%v:%v] key encoding; %w", key, value, err)
-		}
-	}
-
-	v, err = JSONUnmarshal[T2](value)
-	if err != nil {
-		return k, v, fmt.Errorf("shared.JSONUnmarshalMap: [%v:%v] value encoding; %w", key, value, err)
-	}
-
-	return k, v, nil
 }

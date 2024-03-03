@@ -82,7 +82,7 @@ func TestExecution(t *testing.T) {
 	assert.NoError(t, err)
 
 	newState := work.State()
-	err = repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
+	_, err = repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
 		ID:   "1",
 		Type: "workflow",
 		Data: newState,
@@ -112,7 +112,7 @@ func TestExecution(t *testing.T) {
 		Flow:  &FlowRef{FlowID: "hello_world_flow"},
 		Input: schema.MkString("world"),
 	})
-	assert.ErrorAs(t, err, &ErrStateReachEnd)
+	assert.ErrorIs(t, err, ErrStateReachEnd)
 }
 
 func TestMachine(t *testing.T) {
@@ -425,7 +425,7 @@ func TestMachine(t *testing.T) {
 				Flow:  &FlowRef{FlowID: "hello_world_flow_non_existing"},
 				Input: schema.MkString("world"),
 			}).
-			ThenStateAndError(nil, fmt.Errorf("flow hello_world_flow_non_existing not found"))
+			ThenStateAndError(nil, ErrFlowNotFound)
 	})
 	suite.Case("start execution fails on function retrival", func(c *machine.Case[Command, State]) {
 		c.

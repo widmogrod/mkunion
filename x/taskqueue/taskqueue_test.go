@@ -140,7 +140,7 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 				})
 			}
 
-			err = repo.UpdateRecords(schemaless.Save(saving...))
+			_, err = repo.UpdateRecords(schemaless.Save(saving...))
 			if err != nil {
 				if errors.Is(err, schemaless.ErrVersionConflict) {
 					// make it configurable, but by default we should
@@ -217,7 +217,7 @@ To run this test, please set AWS_SQS_QUEUE_URL to the address of your AWS SQS in
 
 	newState := work.State()
 	fmt.Printf("newState: %#v\n", newState)
-	err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
+	_, err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
 		ID:   workflow.GetRunID(newState),
 		Type: "process",
 		Data: newState,

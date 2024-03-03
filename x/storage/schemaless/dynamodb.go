@@ -67,9 +67,9 @@ func (d *DynamoDBRepository[A]) Get(key, recordType string) (Record[A], error) {
 	return *typed, nil
 }
 
-func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) error {
+func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) (*UpdateRecordsResult[Record[A]], error) {
 	if command.IsEmpty() {
-		return fmt.Errorf("DynamoDBRepository.UpdateRecords: empty command %w", ErrEmptyCommand)
+		return nil, fmt.Errorf("DynamoDBRepository.UpdateRecords: empty command %w", ErrEmptyCommand)
 	}
 
 	var transact []types.TransactWriteItem
@@ -79,12 +79,12 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 		sch := schema.FromGo[Record[A]](value)
 		item := schema.ToDynamoDB(sch)
 		if _, ok := item.(*types.AttributeValueMemberM); !ok {
-			return fmt.Errorf("DynamoDBRepository.UpdateRecords: unsupported type: %T", item)
+			return nil, fmt.Errorf("DynamoDBRepository.UpdateRecords: unsupported type: %T", item)
 		}
 
 		final, ok := item.(*types.AttributeValueMemberM)
 		if !ok {
-			return fmt.Errorf("DynamoDBRepository.UpdateRecords: expected map as item. %w", ErrInternalError)
+			return nil, fmt.Errorf("DynamoDBRepository.UpdateRecords: expected map as item. %w", ErrInternalError)
 		}
 
 		transact = append(transact, types.TransactWriteItem{
@@ -128,15 +128,31 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 			if errors.As(respErr.ResponseError.Err, &conditional) {
 				for _, reason := range conditional.CancellationReasons {
 					if *reason.Code == "ConditionalCheckFailed" {
-						return fmt.Errorf("store.DynamoDBRepository.UpdateRecords: %w", ErrVersionConflict)
+						return nil, fmt.Errorf("store.DynamoDBRepository.UpdateRecords: %w", ErrVersionConflict)
 					}
 				}
 			}
 		}
-		return err
+		return nil, err
 	}
 
-	return nil
+	//TODO: SavingPolicy check
+
+	result := &UpdateRecordsResult[Record[A]]{
+		Saved:   make(map[string]Record[A]),
+		Deleted: make(map[string]Record[A]),
+	}
+
+	for _, value := range command.Saving {
+		value.Version++
+		result.Saved[value.ID] = value
+	}
+
+	for _, value := range command.Deleting {
+		result.Deleted[value.ID] = value
+	}
+
+	return result, nil
 }
 
 func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {

@@ -41,6 +41,11 @@ func NoneShape() shape.Shape {
 		Name:          "None",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Schema",
+			},
+		},
 	}
 }
 
@@ -49,7 +54,12 @@ func BoolShape() shape.Shape {
 		Name:          "Bool",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Type:          &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Schema",
+			},
+		},
+		Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
 	}
 }
 
@@ -58,6 +68,11 @@ func NumberShape() shape.Shape {
 		Name:          "Number",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Schema",
+			},
+		},
 		Type: &shape.PrimitiveLike{
 			Kind: &shape.NumberLike{
 				Kind: &shape.Float64{},
@@ -71,7 +86,12 @@ func StringShape() shape.Shape {
 		Name:          "String",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
-		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Schema",
+			},
+		},
+		Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 
@@ -80,6 +100,11 @@ func BinaryShape() shape.Shape {
 		Name:          "Binary",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Schema",
+			},
+		},
 		Type: &shape.ListLike{
 			Element: &shape.PrimitiveLike{
 				Kind: &shape.NumberLike{
@@ -95,6 +120,11 @@ func ListShape() shape.Shape {
 		Name:          "List",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Schema",
+			},
+		},
 		Type: &shape.ListLike{
 			Element: &shape.RefName{
 				Name:          "Schema",
@@ -110,6 +140,11 @@ func MapShape() shape.Shape {
 		Name:          "Map",
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
+		Tags: map[string]shape.Tag{
+			"mkunion_union_name": {
+				Value: "Schema",
+			},
+		},
 		Type: &shape.MapLike{
 			Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			Val: &shape.RefName{

@@ -11,8 +11,10 @@ func TestNewRepository2WithSchema(t *testing.T) {
 	repo := NewInMemoryRepository[ExampleRecord]()
 	assert.NotNil(t, repo)
 
-	err := repo.UpdateRecords(exampleUpdateRecords)
+	updated, err := repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err)
+	assert.Len(t, updated.Saved, 5, "should have 5 saved records")
+	assert.Len(t, updated.Deleted, 0, "should have 0 deleted records")
 
 	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
 		Where: predicate.MustWhere(
@@ -60,8 +62,11 @@ func TestRepositoryWithSchema_UpdateRecords_Deletion(t *testing.T) {
 	repo := NewInMemoryRepository[ExampleRecord]()
 	assert.NotNil(t, repo)
 
-	err := repo.UpdateRecords(exampleUpdateRecords)
+	updated, err := repo.UpdateRecords(exampleUpdateRecords)
 	assert.NoError(t, err)
+
+	assert.Len(t, updated.Saved, 5, "should have 5 saved records")
+	assert.Len(t, updated.Deleted, 0, "should have 0 deleted records")
 
 	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{})
 	assert.NoError(t, err)
@@ -73,9 +78,13 @@ func TestRepositoryWithSchema_UpdateRecords_Deletion(t *testing.T) {
 		deleting[item.ID] = item
 	}
 
-	err = repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
+	updated, err = repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
 		Deleting: deleting,
 	})
+
+	assert.NoError(t, err)
+	assert.Len(t, updated.Saved, 0, "should have 0 saved records")
+	assert.Len(t, updated.Deleted, 5, "should have 5 deleted records")
 
 	result, err = repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{})
 	assert.NoError(t, err)
