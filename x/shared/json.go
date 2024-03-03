@@ -111,7 +111,8 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 	return result.(A), nil
 }
 
-func JSONMarshal[A any](x any) ([]byte, error) {
+func JSONMarshal[A any](in A) ([]byte, error) {
+	x := any(in)
 	if x == nil {
 		return nil, nil
 	}
