@@ -148,4 +148,4 @@ func ExampleVehicleToJSON() {
 You can notice that it has opinionated way of marshalling and unmarshalling your union type.
 It uses `$type` field to store type information, and then store actual data in separate field, with corresponding name.
 
-You can read more about it in [Marshaling union in JSON](example/json.md) section.
+You can read more about it in [Marshaling union in JSON](./example/json.md) section.
