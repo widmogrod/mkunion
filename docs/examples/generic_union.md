@@ -110,3 +110,48 @@ func ExampleTreeCustomReduction() {
 	// 10
 }
 ```
+
+## Either & Option types
+
+For educational purposes, let's create two most popular union types in functional languages: `Option` and `Either` with corresponding `Map` functions.
+
+- Either type is used to represent one of two possible values. Many times left value holds success value, and right value holds error value.
+- Option type is used to represent a value that may or may not be present. Replaces nulls in some languages.
+
+```go title="f/datas.go"
+//go:tag mkunion:"Either"
+type (
+	Left[A, B any]  struct{ Value A }
+	Right[A, B any] struct{ Value B }
+)
+
+//go:tag mkunion:"Option"
+type (
+	Some[A any] struct{ Value A }
+	None[A any] struct{}
+)
+
+func MapEither[A, B, C any](x Either[A, B], f func(A) C) Either[C, B] {
+	return MatchEitherR1(
+		x,
+		func(x *Left[A, B]) Either[C, B] {
+			return &Left[C, B]{Value: f(x.Value)}
+		},
+		func(x *Right[A, B]) Either[C, B] {
+			return &Right[C, B]{Value: x.Value}
+		},
+	)
+}
+
+func MapOption[A, B any](x Option[A], f func(A) B) Option[B] {
+	return MatchOptionR1(
+		x,
+		func(x *Some[A]) Option[B] {
+			return &Some[B]{Value: f(x.Value)}
+		},
+		func(x *None[A]) Option[B] {
+			return &None[B]{}
+		},
+	)
+}
+```
