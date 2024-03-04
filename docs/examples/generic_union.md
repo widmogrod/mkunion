@@ -78,11 +78,7 @@ func ExampleTreeSumValues() {
 
 You can also reduce tree to complex structure, for example to keep track of order of values in the tree, along with sum of all values in the tree.
 
-```go title="example/tree.go"
-
 ```go title="example/tree_test.go"
-
-```go
 func ExampleTreeCustomReduction() {
 	tree := &Branch[int]{
 		L: &Leaf[int]{Value: 1},
