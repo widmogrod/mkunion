@@ -6,6 +6,7 @@ project_root=$(dirname "$cwd")
 envrc_file=$project_root/.envrc
 
 echo "Check if necessary tools are installed"
+command -v go >/dev/null 2>&1 || { echo >&2 "golang is not installed. Aborting."; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo >&2 "docker is not installed. Aborting."; exit 1; }
 command -v docker-compose >/dev/null 2>&1 || { echo >&2 "docker-compose is not installed. Aborting."; exit 1; }
 command -v awslocal >/dev/null 2>&1 || { echo >&2 "awslocal is not installed. Aborting. Please run
@@ -13,6 +14,9 @@ command -v awslocal >/dev/null 2>&1 || { echo >&2 "awslocal is not installed. Ab
 
 echo "Creating volume directory"
 mkdir -p $cwd/_volume
+
+echo "Install moq"
+go get github.com/matryer/moq@latest
 
 echo "Starting localstack"
 docker compose -f $cwd/compose.yml up -d
