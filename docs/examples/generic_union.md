@@ -27,7 +27,7 @@ type (
 )
 ```
 
-After you run generation (as described in [getting started](/getting_started.md)), 
+After you run generation (as described in [getting started](../getting_started.md)), 
 you have access to the same features as with non-generic unions.
 
 ## Matching function

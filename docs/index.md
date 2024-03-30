@@ -9,10 +9,10 @@ title: Introduction
 
 
 ## About
-Strongly typed **union type** in golang.
+Strongly typed **union type** in golang that supports generics*
 
-* with full _pattern matching_ support
-* with full _json marshalling_ support
+* with exhaustive _pattern matching_ support
+* with _json marshalling_ including generics
 * and as a bonus, can generate compatible typescript types for end-to-end type safety in your application
 
 ## Why
@@ -23,7 +23,7 @@ Visitor pattern requires a lot of boiler plate code and hand crafting of the `Ac
 
 On top of that, any data marshalling like to/from JSON requires additional, hand crafted code, to make it work.
 
-MkUnion solves all of those problems, by generating opinionated and strongly typed mindful code for you.
+MkUnion solves all of those problems, by generating opinionated and strongly typed meaningful code for you.
 
 ## Example
 
@@ -86,5 +86,5 @@ func ExampleFromJSON() {
 
 ## Next
 
-- Read [getting started](docs/getting_started.md)  to learn more.
-- Or to understand better concepts jump and read [value proposition](docs/value_proposition.md)
+- Read [getting started](./getting_started.md)  to learn more.
+- Or to understand better concepts jump and read [value proposition](./value_proposition.md)

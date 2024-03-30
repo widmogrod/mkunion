@@ -77,7 +77,7 @@ In feature we plan to add `mkununion watch ./...` command that will watch for ch
 This will allow you to remove `//go:generate` directive from your code, and have faster feedback loop.
 
 ### Match over union type
-When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](..%2Fexample%2Fvehicle_union_gen.go))
+When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](../example/vehicle_union_gen.go))
 
 You can use those function to do exhaustive matching on your union type.
 
@@ -148,4 +148,4 @@ func ExampleVehicleToJSON() {
 You can notice that it has opinionated way of marshalling and unmarshalling your union type.
 It uses `$type` field to store type information, and then store actual data in separate field, with corresponding name.
 
-You can read more about it in [Marshaling union in JSON](./example/json.md) section.
+You can read more about it in [Marshaling union in JSON](./examples/json.md) section.
