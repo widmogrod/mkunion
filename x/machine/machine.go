@@ -1,24 +1,36 @@
 package machine
 
-func NewSimpleMachine[C, S any](f func(C, S) (S, error)) *Machine[C, S] {
-	var s S
-	return NewSimpleMachineWithState(f, s)
-}
-
-func NewSimpleMachineWithState[C, S any](f func(C, S) (S, error), state S) *Machine[C, S] {
-	return &Machine[C, S]{
+func NewMachine[D, C, S any](d D, f func(D, C, S) (S, error), state S) *Machine[D, C, S] {
+	return &Machine[D, C, S]{
+		di:     d,
 		handle: f,
 		state:  state,
 	}
 }
 
-type Machine[C, S any] struct {
-	state  S
-	handle func(C, S) (S, error)
+func NewSimpleMachine[C, S any](f func(C, S) (S, error)) *Machine[any, C, S] {
+	var s S
+	return NewSimpleMachineWithState(f, s)
 }
 
-func (o *Machine[C, S]) Handle(cmd C) error {
-	state, err := o.handle(cmd, o.state)
+func NewSimpleMachineWithState[C, S any](f func(C, S) (S, error), state S) *Machine[any, C, S] {
+	return &Machine[any, C, S]{
+		di: nil,
+		handle: func(a any, c C, s S) (S, error) {
+			return f(c, s)
+		},
+		state: state,
+	}
+}
+
+type Machine[D, C, S any] struct {
+	di     D
+	state  S
+	handle func(D, C, S) (S, error)
+}
+
+func (o *Machine[D, C, S]) Handle(cmd C) error {
+	state, err := o.handle(o.di, cmd, o.state)
 	if err != nil {
 		return err
 	}
@@ -27,6 +39,10 @@ func (o *Machine[C, S]) Handle(cmd C) error {
 	return nil
 }
 
-func (o *Machine[C, S]) State() S {
+func (o *Machine[D, C, S]) State() S {
 	return o.state
+}
+
+func (o *Machine[D, C, S]) Dep() D {
+	return o.di
 }
