@@ -221,17 +221,15 @@ func TestMachine(t *testing.T) {
 		MockTimeNow: &timeNow,
 	}
 
-	suite := machine.NewTestSuite(func() *machine.Machine[Command, State] {
-		return NewMachine(di, nil)
-	})
+	suite := machine.NewTestSuite[Dependency](di, NewMachine)
 
-	suite.Case("start execution", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "start execution", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow"},
 				Input: schema.MkString("world"),
 			}).
-			ThenState(&Done{
+			ThenState(t, &Done{
 				Result: schema.MkString("hello world"),
 				BaseState: BaseState{
 					RunID:  runID,
@@ -246,7 +244,7 @@ func TestMachine(t *testing.T) {
 				},
 			})
 	})
-	suite.Case("start scheduled execution delay 10s", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "start scheduled execution delay 10s", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow"},
@@ -255,7 +253,7 @@ func TestMachine(t *testing.T) {
 					DelayBySeconds: 10,
 				},
 			}).
-			ThenState(&Scheduled{
+			ThenState(t, &Scheduled{
 				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 				BaseState: BaseState{
 					RunID:  runID,
@@ -271,10 +269,10 @@ func TestMachine(t *testing.T) {
 					},
 				},
 			}).
-			ForkCase("resume execution", func(c *machine.Case[Command, State]) {
+			ForkCase(t, "resume execution", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&Run{}).
-					ThenState(&Done{
+					ThenState(t, &Done{
 						Result: schema.MkString("hello world"),
 						BaseState: BaseState{
 							RunID:  runID,
@@ -292,12 +290,12 @@ func TestMachine(t *testing.T) {
 						},
 					})
 			}).
-			ForkCase("stop execution", func(c *machine.Case[Command, State]) {
+			ForkCase(t, "stop execution", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&StopSchedule{
 						ParentRunID: runID,
 					}).
-					ThenState(&ScheduleStopped{
+					ThenState(t, &ScheduleStopped{
 						BaseState: BaseState{
 							RunID:  runID,
 							StepID: "",
@@ -315,7 +313,7 @@ func TestMachine(t *testing.T) {
 					GivenCommand(&ResumeSchedule{
 						ParentRunID: runID,
 					}).
-					ThenState(&Scheduled{
+					ThenState(t, &Scheduled{
 						ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(10) * time.Second).Unix(),
 						BaseState: BaseState{
 							RunID:  runID,
@@ -333,13 +331,13 @@ func TestMachine(t *testing.T) {
 					})
 			})
 	})
-	suite.Case("start execution that awaits for callback", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "start execution that awaits for callback", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow_await"},
 				Input: schema.MkString("world"),
 			}).
-			ThenState(&Await{
+			ThenState(t, &Await{
 				Timeout:    int64(10 * time.Second),
 				CallbackID: callbackID,
 				BaseState: BaseState{
@@ -353,14 +351,14 @@ func TestMachine(t *testing.T) {
 					DefaultMaxRetries: 3,
 				},
 			}).
-			ForkCase("callback received", func(c *machine.Case[Command, State]) {
+			ForkCase(t, "callback received", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				// Assuming that callback is received before timeout.
 				c.
 					GivenCommand(&Callback{
 						CallbackID: callbackID,
 						Result:     schema.MkString("hello + world"),
 					}).
-					ThenState(&Done{
+					ThenState(t, &Done{
 						Result: schema.MkString("hello + world"),
 						BaseState: BaseState{
 							RunID:  runID,
@@ -377,13 +375,13 @@ func TestMachine(t *testing.T) {
 						},
 					})
 			}).
-			ForkCase("received invalid callbackID", func(c *machine.Case[Command, State]) {
+			ForkCase(t, "received invalid callbackID", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&Callback{
 						CallbackID: "invalid_callback_id",
 						Result:     schema.MkString("hello + world"),
 					}).
-					ThenStateAndError(&Await{
+					ThenStateAndError(t, &Await{
 						Timeout:    int64(10 * time.Second),
 						CallbackID: callbackID,
 						BaseState: BaseState{
@@ -399,12 +397,12 @@ func TestMachine(t *testing.T) {
 					}, ErrCallbackNotMatch)
 			})
 	})
-	suite.Case("start execution no input variable", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "start execution no input variable", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow: &FlowRef{FlowID: "hello_world_flow"},
 			}).
-			ThenState(&Error{
+			ThenState(t, &Error{
 				Code:   "function-execution",
 				Reason: "function concat() returned error: expected string, got <nil>",
 				BaseState: BaseState{
@@ -419,33 +417,35 @@ func TestMachine(t *testing.T) {
 				},
 			})
 	})
-	suite.Case("start execution fails on non existing flowID", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "start execution fails on non existing flowID", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow_non_existing"},
 				Input: schema.MkString("world"),
 			}).
-			ThenStateAndError(nil, ErrFlowNotFound)
+			ThenStateAndError(t, nil, ErrFlowNotFound)
 	})
-	suite.Case("start execution fails on function retrival", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "start execution fails on function retrival", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow"},
 				Input: schema.MkString("world"),
-			}, machine.WithBefore(func() {
-				di.FindFunctionF = func(funcID string) (Function, error) {
+			}).
+			BeforeCommand(func(t testing.TB, di Dependency) {
+				di.(*DI).FindFunctionF = func(funcID string) (Function, error) {
 					return nil, fmt.Errorf("function funcID='%s' not found", funcID)
 				}
-			}), machine.WithAfter(func() {
-				di.FindFunctionF = func(funcID string) (Function, error) {
+			}).
+			AfterCommand(func(t testing.TB, di Dependency) {
+				di.(*DI).FindFunctionF = func(funcID string) (Function, error) {
 					if fn, ok := functions[funcID]; ok {
 						return fn, nil
 					}
 
 					return nil, fmt.Errorf("function %s not found", funcID)
 				}
-			})).
-			ThenState(&Error{
+			}).
+			ThenState(t, &Error{
 				Code:   "function-missing",
 				Reason: "function concat() not found, details: function funcID='concat' not found",
 				BaseState: BaseState{
@@ -459,26 +459,26 @@ func TestMachine(t *testing.T) {
 					DefaultMaxRetries: 3,
 				},
 			}).
-			ForkCase("retry execution", func(c *machine.Case[Command, State]) {
+			ForkCase(t, "retry execution", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&TryRecover{
 						RunID: runID,
-					},
-						machine.WithBefore(func() {
-							di.FindFunctionF = func(funcID string) (Function, error) {
-								return nil, fmt.Errorf("function funcID='%s' not found", funcID)
+					}).
+					BeforeCommand(func(t testing.TB, di Dependency) {
+						di.(*DI).FindFunctionF = func(funcID string) (Function, error) {
+							return nil, fmt.Errorf("function funcID='%s' not found", funcID)
+						}
+					}).
+					AfterCommand(func(t testing.TB, di Dependency) {
+						di.(*DI).FindFunctionF = func(funcID string) (Function, error) {
+							if fn, ok := functions[funcID]; ok {
+								return fn, nil
 							}
-						}), machine.WithAfter(func() {
-							di.FindFunctionF = func(funcID string) (Function, error) {
-								if fn, ok := functions[funcID]; ok {
-									return fn, nil
-								}
 
-								return nil, fmt.Errorf("function %s not found", funcID)
-							}
-						}),
-					).
-					ThenState(&Error{
+							return nil, fmt.Errorf("function %s not found", funcID)
+						}
+					}).
+					ThenState(t, &Error{
 						Code:    "function-missing",
 						Reason:  "function concat() not found, details: function funcID='concat' not found",
 						Retried: 1,
@@ -495,13 +495,13 @@ func TestMachine(t *testing.T) {
 					})
 			})
 	})
-	suite.Case("execute function with if statement", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "execute function with if statement", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow_if"},
 				Input: schema.MkString("El Mundo"),
 			}).
-			ThenState(&Done{
+			ThenState(t, &Done{
 				Result: schema.MkString("only Spanish will work!"),
 				BaseState: BaseState{
 					RunID:  runID,
@@ -516,7 +516,7 @@ func TestMachine(t *testing.T) {
 				},
 			})
 	})
-	suite.Case("scheduled run", func(c *machine.Case[Command, State]) {
+	suite.Case(t, "scheduled run", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 		c.
 			GivenCommand(&Run{
 				Flow:  &FlowRef{FlowID: "hello_world_flow_if"},
@@ -525,7 +525,7 @@ func TestMachine(t *testing.T) {
 					Interval: "@every 1s",
 				},
 			}).
-			ThenState(&Scheduled{
+			ThenState(t, &Scheduled{
 				ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
 				BaseState: BaseState{
 					RunID:  runID,
@@ -542,10 +542,10 @@ func TestMachine(t *testing.T) {
 					},
 				},
 			}).
-			ForkCase("run scheduled run", func(c *machine.Case[Command, State]) {
+			ForkCase(t, "run scheduled run", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&Run{}).
-					ThenState(&Done{
+					ThenState(t, &Done{
 						Result: schema.MkString("only Spanish will work!"),
 						BaseState: BaseState{
 							RunID:  runID,
@@ -564,12 +564,12 @@ func TestMachine(t *testing.T) {
 						},
 					})
 			}).
-			ForkCase("stop scheduled run", func(c *machine.Case[Command, State]) {
+			ForkCase(t, "stop scheduled run", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&StopSchedule{
 						ParentRunID: runID,
 					}).
-					ThenState(&ScheduleStopped{
+					ThenState(t, &ScheduleStopped{
 						BaseState: BaseState{
 							RunID:  runID,
 							StepID: "",
@@ -585,10 +585,10 @@ func TestMachine(t *testing.T) {
 							},
 						},
 					}).
-					ForkCase("run stopped", func(c *machine.Case[Command, State]) {
+					ForkCase(t, "run stopped", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 						c.
 							GivenCommand(&Run{}).
-							ThenStateAndError(&ScheduleStopped{
+							ThenStateAndError(t, &ScheduleStopped{
 								BaseState: BaseState{
 									RunID:  runID,
 									StepID: "",
@@ -605,12 +605,12 @@ func TestMachine(t *testing.T) {
 								},
 							}, ErrInvalidStateTransition)
 					}).
-					ForkCase("resume scheduled run", func(c *machine.Case[Command, State]) {
+					ForkCase(t, "resume scheduled run", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 						c.
 							GivenCommand(&ResumeSchedule{
 								ParentRunID: runID,
 							}).
-							ThenState(&Scheduled{
+							ThenState(t, &Scheduled{
 								ExpectedRunTimestamp: di.TimeNow().Add(time.Duration(1) * time.Second).Unix(),
 								BaseState: BaseState{
 									RunID:  runID,
@@ -628,14 +628,10 @@ func TestMachine(t *testing.T) {
 								},
 							})
 					})
-
 			})
 	})
 
-	suite.Run(t)
-	suite.Fuzzy(t)
-
-	if true || suite.AssertSelfDocumentStateDiagram(t, "machine") {
+	if suite.AssertSelfDocumentStateDiagram(t, "machine") {
 		suite.SelfDocumentStateDiagram(t, "machine")
 	}
 }
