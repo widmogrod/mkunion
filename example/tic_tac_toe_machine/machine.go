@@ -146,12 +146,8 @@ func Transition(cmd Command, state State) (State, error) {
 	)
 }
 
-func NewMachine() *machine.Machine[Command, State] {
+func NewMachine() *machine.Machine[any, Command, State] {
 	return machine.NewSimpleMachine(Transition)
-}
-
-func NewMachineWithState(s State) *machine.Machine[Command, State] {
-	return machine.NewSimpleMachineWithState(Transition, s)
 }
 
 func ParsePosition(position Move, boardRows int, boardCols int) (Move, error) {
