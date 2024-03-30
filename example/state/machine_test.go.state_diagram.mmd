@@ -1,0 +1,7 @@
+stateDiagram
+	"*state.OrderProcessing" --> "*state.OrderCancelled": "*state.CancelOrderCMD"
+	[*] --> "*state.OrderPending": "*state.CreateOrderCMD"
+	"*state.OrderPending" --> "*state.OrderProcessing": "*state.MarkAsProcessingCMD"
+	"*state.OrderProcessing" --> "*state.OrderCompleted": "*state.MarkOrderCompleteCMD"
+	"*state.OrderProcessing" --> "*state.OrderError": "*state.MarkOrderCompleteCMD"
+	"*state.OrderError" --> "*state.OrderCompleted": "*state.TryRecoverErrorCMD"

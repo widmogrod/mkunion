@@ -1,0 +1,57 @@
+stateDiagram
+ %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.CancelOrderCMD"
+ %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.CancelOrderCMD"
+ %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	"*state.OrderError" --> "*state.OrderError": "❌*state.CancelOrderCMD"
+ %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	"*state.OrderPending" --> "*state.OrderPending": "❌*state.CancelOrderCMD"
+	"*state.OrderProcessing" --> "*state.OrderCancelled": "*state.CancelOrderCMD"
+ %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	[*] --> [*]: "❌*state.CancelOrderCMD"
+ %% error=cannot attemp order creation, order exists: invalid transition 
+	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.CreateOrderCMD"
+ %% error=cannot attemp order creation, order exists: invalid transition 
+	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.CreateOrderCMD"
+ %% error=cannot attemp order creation, order exists: invalid transition 
+	"*state.OrderError" --> "*state.OrderError": "❌*state.CreateOrderCMD"
+ %% error=cannot attemp order creation, order exists: invalid transition 
+	"*state.OrderPending" --> "*state.OrderPending": "❌*state.CreateOrderCMD"
+ %% error=cannot attemp order creation, order exists: invalid transition 
+	"*state.OrderProcessing" --> "*state.OrderProcessing": "❌*state.CreateOrderCMD"
+	[*] --> "*state.OrderPending": "*state.CreateOrderCMD"
+ %% error=invalid transition 
+	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.MarkAsProcessingCMD"
+ %% error=invalid transition 
+	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.MarkAsProcessingCMD"
+ %% error=invalid transition 
+	"*state.OrderError" --> "*state.OrderError": "❌*state.MarkAsProcessingCMD"
+	"*state.OrderPending" --> "*state.OrderProcessing": "*state.MarkAsProcessingCMD"
+ %% error=invalid transition 
+	"*state.OrderProcessing" --> "*state.OrderProcessing": "❌*state.MarkAsProcessingCMD"
+ %% error=invalid transition 
+	[*] --> [*]: "❌*state.MarkAsProcessingCMD"
+ %% error=cannot mark order as complete, order is not being process; invalid transition 
+	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.MarkOrderCompleteCMD"
+ %% error=cannot mark order as complete, order is not being process; invalid transition 
+	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.MarkOrderCompleteCMD"
+ %% error=cannot mark order as complete, order is not being process; invalid transition 
+	"*state.OrderError" --> "*state.OrderError": "❌*state.MarkOrderCompleteCMD"
+ %% error=cannot mark order as complete, order is not being process; invalid transition 
+	"*state.OrderPending" --> "*state.OrderPending": "❌*state.MarkOrderCompleteCMD"
+	"*state.OrderProcessing" --> "*state.OrderCompleted": "*state.MarkOrderCompleteCMD"
+	"*state.OrderProcessing" --> "*state.OrderError": "*state.MarkOrderCompleteCMD"
+ %% error=cannot mark order as complete, order is not being process; invalid transition 
+	[*] --> [*]: "❌*state.MarkOrderCompleteCMD"
+ %% error=cannot recover from non error state; invalid transition 
+	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.TryRecoverErrorCMD"
+ %% error=cannot recover from non error state; invalid transition 
+	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.TryRecoverErrorCMD"
+	"*state.OrderError" --> "*state.OrderCompleted": "*state.TryRecoverErrorCMD"
+ %% error=cannot recover from non error state; invalid transition 
+	"*state.OrderPending" --> "*state.OrderPending": "❌*state.TryRecoverErrorCMD"
+ %% error=cannot recover from non error state; invalid transition 
+	"*state.OrderProcessing" --> "*state.OrderProcessing": "❌*state.TryRecoverErrorCMD"
+ %% error=cannot recover from non error state; invalid transition 
+	[*] --> [*]: "❌*state.TryRecoverErrorCMD"
