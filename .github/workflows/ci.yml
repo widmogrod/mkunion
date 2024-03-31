@@ -17,7 +17,9 @@ jobs:
 
       - run: | 
           go get github.com/matryer/moq@latest
-          echo "${{ github.workspace }}/go/bin" >> $GITHUB_PATH
+
+      - name: Add $GOPATH/bin to $PATH
+        run: echo "${{ env.GOPATH }}/bin" >> $GITHUB_PATH
 
       - run: go get -v -t -d ./...
       - run: go generate ./...
