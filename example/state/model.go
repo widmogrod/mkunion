@@ -3,6 +3,7 @@ package state
 import "time"
 
 //go:generate go run ../../cmd/mkunion/main.go
+//go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
 
 type (
 	// OrderID Price, Quantity are placeholders for value objects, to ensure better data semantic and type safety

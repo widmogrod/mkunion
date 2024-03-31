@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-//go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
-
 func TestSuite(t *testing.T) {
 	now := time.Now()
 	var di Dependency = &DependencyMock{
