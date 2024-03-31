@@ -682,7 +682,7 @@ function App() {
                     </button>
                 </form>
 
-                <form className={"action-section"}>
+                <div className={"action-section"}>
                     <h2>Chat</h2>
 
                     <Chat
@@ -717,7 +717,7 @@ function App() {
                             }
                         }}
                     />
-                </form>
+                </div>
             </aside>
             <main>
                 <table>
@@ -1426,12 +1426,18 @@ function HelloWorldDemo() {
     }
 
 
-    return <div
+    return <form
         className={"action-section"}>
         <h2>Hello world demo</h2>
         <input type="text"
                placeholder="Enter your name"
                value={state.input}
+               onChange={(e) => {
+                   setState({
+                       ...state,
+                       input: e.currentTarget.value,
+                   })
+               }}
         />
         <button onClick={() => dispatch({type: "run_hello_world"})}>
             Run hello world workflow
@@ -1440,6 +1446,6 @@ function HelloWorldDemo() {
             Run hello world workflow with error
         </button>
         {state.loading && <div>Loading...</div>}
-    </div>
+    </form>
 }
 

@@ -63,12 +63,12 @@ type (
 //go:tag mkunion:"ChatResult"
 type (
 	SystemResponse struct {
-		//ID 	  string
+		//OrderID 	  string
 		Message   string
 		ToolCalls []openai.ToolCall
 	}
 	UserResponse struct {
-		//ID 	  string
+		//OrderID 	  string
 		Message string
 	}
 	ChatResponses struct {
@@ -154,10 +154,10 @@ func main() {
 
 	oaic := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
 
-	srv := NewService[workflow.Command, workflow.State](
+	srv := NewService[workflow.Dependency, workflow.Command, workflow.State](
 		"process",
 		statesRepo,
-		func(state workflow.State) *machine.Machine[workflow.Command, workflow.State] {
+		func(state workflow.State) *machine.Machine[workflow.Dependency, workflow.Command, workflow.State] {
 			return workflow.NewMachine(di, state)
 		},
 		func(cmd workflow.Command) (*predicate.WherePredicates, bool) {
@@ -271,7 +271,7 @@ func main() {
 						return nil, err
 					}
 
-					result, err := shared.JSONMarshal[schemaless.FindingRecords[schemaless.Record[workflow.State]]](records)
+					result, err := shared.JSONMarshal[schemaless.PageResult[schemaless.Record[workflow.State]]](records)
 					if err != nil {
 						log.Errorf("failed to convert to json: %v", err)
 						return nil, err
@@ -342,7 +342,7 @@ func main() {
 			return err
 		}
 
-		resultJSON, err := shared.JSONMarshal[workflow.FunctionOutput](result)
+		resultJSON, err := shared.JSONMarshal[*workflow.FunctionOutput](result)
 		if err != nil {
 			log.Errorf("failed to convert to json: %v", err)
 			return err
@@ -380,7 +380,7 @@ func main() {
 			return err
 		}
 
-		result, err := shared.JSONMarshal[workflow.Workflow](record.Data)
+		result, err := shared.JSONMarshal[workflow.Flow](record.Data)
 		if err != nil {
 			if errors.Is(err, schemaless.ErrNotFound) {
 				return c.JSONBlob(http.StatusNotFound, []byte(`{"error": "not found"}`))
@@ -725,14 +725,14 @@ func TypedJSONRequest[A, B any](handle func(x A) (B, error)) func(c echo.Context
 	}
 }
 
-func NewService[CMD any, State any](
+func NewService[Dep any, CMD any, State any](
 	recordType string,
 	statesRepo *typedful.TypedRepoWithAggregator[State, any],
-	newMachine func(state State) *machine.Machine[CMD, State],
+	newMachine func(state State) *machine.Machine[Dep, CMD, State],
 	extractWhere func(CMD) (*predicate.WherePredicates, bool),
 	extractIDFromState func(State) (string, bool),
-) *Service[CMD, State] {
-	return &Service[CMD, State]{
+) *Service[Dep, CMD, State] {
+	return &Service[Dep, CMD, State]{
 		repo:                     statesRepo,
 		extractWhereFromCommandF: extractWhere,
 		recordType:               recordType,
@@ -741,15 +741,15 @@ func NewService[CMD any, State any](
 	}
 }
 
-type Service[CMD any, State any] struct {
+type Service[Dep any, CMD any, State any] struct {
 	repo                     *typedful.TypedRepoWithAggregator[State, any]
 	extractWhereFromCommandF func(CMD) (*predicate.WherePredicates, bool)
 	extractIDFromStateF      func(State) (string, bool)
 	recordType               string
-	newMachine               func(state State) *machine.Machine[CMD, State]
+	newMachine               func(state State) *machine.Machine[Dep, CMD, State]
 }
 
-func (service *Service[CMD, State]) CreateOrUpdate(cmd CMD) (res State, err error) {
+func (service *Service[Dep, CMD, State]) CreateOrUpdate(cmd CMD) (res State, err error) {
 	version := uint16(0)
 	recordID := ""
 	where, foundAndUpdate := service.extractWhereFromCommandF(cmd)
