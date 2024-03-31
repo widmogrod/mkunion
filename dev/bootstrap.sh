@@ -12,11 +12,17 @@ command -v docker-compose >/dev/null 2>&1 || { echo >&2 "docker-compose is not i
 command -v awslocal >/dev/null 2>&1 || { echo >&2 "awslocal is not installed. Aborting. Please run
   pip install awscli-local  "; exit 1; }
 
+# check for moq
+command -v moq >/dev/null 2>&1 || { echo >&2 "moq is not installed. Aborting please run
+   go install github.com/matryer/moq@latest"; exit 1; }
+
 echo "Creating volume directory"
 mkdir -p $cwd/_volume
 
-echo "Install moq"
-go get github.com/matryer/moq@latest
+if [ "$1" == "-install-only" ]; then
+  trap - EXIT
+  exit 0
+fi
 
 echo "Starting localstack"
 docker compose -f $cwd/compose.yml up -d

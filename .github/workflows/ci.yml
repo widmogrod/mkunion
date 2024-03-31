@@ -12,26 +12,15 @@ jobs:
           go-version: ^1.21
         id: go
 
-      - name: Add $GOPATH/bin to $PATH
-        run: |
-          echo "${{ env.GOPATH }}/bin" >> $GITHUB_PATH
-          echo $GITHUB_PATH
-          echo "asd"
-          echo $(go env GOPATH)/bin
-
       - run: cd cmd/mkunion; go get -v -t -d ./...
       - run: cd cmd/mkunion; go build -o mkunion
 
-      - run: | 
-          go install github.com/matryer/moq@latest
-          which moq
+      - run: go install github.com/matryer/moq@latest
 
       - run: go get -v -t -d ./...
       - run: go generate ./...
 
-      # initiate docker-compose services
-      - run: |
-          pip install awscli-local
+      - run: pip install awscli-local
       - run: dev/bootstrap.sh -nologs
 
       # run tests
