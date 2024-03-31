@@ -14,8 +14,6 @@ jobs:
 
       - name: Add $GOPATH/bin to $PATH
         run: |
-          echo "${{ env.GOPATH }}/bin" >> $GITHUB_PATH
-          echo "${{ env.GOPATH }}/bin" >> $PATH
           export PATH=$PATH:$(go env GOPATH)/bin
 
       - run: cd cmd/mkunion; go get -v -t -d ./...
