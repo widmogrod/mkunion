@@ -14,13 +14,17 @@ jobs:
 
       - name: Add $GOPATH/bin to $PATH
         run: |
-          export PATH=$PATH:$(go env GOPATH)/bin
+          echo "${{ env.GOPATH }}/bin" >> $GITHUB_PATH
+          echo $GITHUB_PATH
+          echo "asd"
+          echo $(go env GOPATH)/bin
 
       - run: cd cmd/mkunion; go get -v -t -d ./...
       - run: cd cmd/mkunion; go build -o mkunion
 
       - run: | 
-          go get github.com/matryer/moq@latest
+          go install github.com/matryer/moq@latest
+          which moq
 
       - run: go get -v -t -d ./...
       - run: go generate ./...
