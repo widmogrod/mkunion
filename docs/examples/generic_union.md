@@ -32,13 +32,11 @@ you have access to the same features as with non-generic unions.
 
 ## Matching function
 
-Let's define higher order function `ReduceTree` that will travers leaves in tree and produce a single value.
+Let's define higher order function `ReduceTree` that will travers leaves in `Tree` and produce a single value.
 
 This function uses `MatchTreeR1` function that is generated automatically for you.
 
 ```go title="example/tree.go"
-
-```go
 func ReduceTree[A, B any](x Tree[A], f func(A, B) B, init B) B {
 	return MatchTreeR1(
 		x,
@@ -151,3 +149,10 @@ func MapOption[A, B any](x Option[A], f func(A) B) Option[B] {
 	)
 }
 ```
+
+In above example, we define `MapEither` and `MapOption` functions that will apply function `f` to value inside `Either` or `Option` type.
+
+It would be much better to have only one `Map` definition, but due to limitations of Go type system, we need to define separate functions for each type.
+
+I'm considering adding code generation for such behaviours in the future. Not yet due to focus on validating core concepts.
+
