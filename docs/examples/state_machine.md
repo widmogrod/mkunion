@@ -3,7 +3,7 @@ title: State machines and unions
 ---
 # MkUnion and state machines in golang
 
-This document will show how to use `mkunion` to manage application state on example of an order service. 
+This document will show how to use `mkunion` to manage application state on example of an Order Service. 
 You will learn:
 
 - how to model state machines in golang, and find similarities to "__clean architecture__"
@@ -14,7 +14,7 @@ You will learn:
 
 ## Working example
 
-As an driving example, we will use an order service that can be in one of the following states:
+As an driving example, we will use e-commerce inspired Order Service that can be in one of the following states:
 
 - `Pending` - order is created, and is waiting for someone to process it
 - `Processing` - order is being processed, an human is going to pick up items from warehouse and pack them
@@ -28,7 +28,7 @@ And we need to have also to trigger changes in state, like create order that pen
 Some of those rules could change in future, and we want to be able to change them without rewriting whole application.
 This also informs us that our design should be open for extensions.
 
-Site note, if you want go strait to final code product, then into [example/state/](example/state/) directory and have fun exploring.
+Side note, if you want go strait to final code product, then into [example/state/](example/state/) directory and have fun exploring.
 
 ## Modeling commands and states
 
@@ -38,18 +38,18 @@ Our example can be represented as state machine that looks like this:
 --8<-- "example/state/machine_test.go.state_diagram.mmd"
 ```
 
-In this diagram, we can see that we have 4 states, and 4 commands that can trigger transitions between states shown as arrows.
+In this diagram, we can see that we have 5 states, and 6 commands that can trigger transitions between states shown as arrows.
 
-Because this diagram is generated from code, it has names that represent types in golang that we use. 
+Because this diagram is generated from code, it has names that represent types in golang that we use in implementation. 
 
 For example `*state.CreateOrderCMD`:
 
 - `state` it's a package name
 - `CreateOrderCMD` is a struct name in that package.
-- `CMD` suffix it's naming convention, that it's optional, but I find it to make code more readable.
+- `CMD` suffix it's naming convention, that it's optional, but I find it makes code more readable.
 
 
-Below is a code snippet that demonstrate complete model of **state** and **commands** of order service, that we talked about.
+Below is a code snippet that demonstrate complete model of **state** and **commands** of Order Service, that we talked about.
 
 **Notice** that we use `mkunion` to group commands and states. (Look for `//go:tag mkunion:"Command"`)
 
@@ -63,21 +63,15 @@ Here interface that group those types is generated automatically.
 
 ## Modeling transitions
 One thing that is missing is implementation of transitions between states. 
-There are few ways to do it, today I will show you how to do it using functional approach.
+There are few ways to do it. I will show you how to do it using functional approach (think  `reduce` or `map` function).
 
-You can think about this function like a `reduce` or `map` function, that you may be familiar.
-
-
-Let's name this function `Transition` that has following signature (name is arbitrary, you can name it as you like):
-Our function takes current state and command, and returns new state, and as you can see it.
+Let's name function that we will build `Transition` and define it as:
 
 ```go
 func Transition(dep Dependencies, cmd Command, state State) (State, error)
 ```
 
-Let's break down this signature.
-
-Input arguments are:
+Our function has few arguments, let's break them down:
 
 - `dep` encapsulates dependencies like API clients, database connection, configuration, context etc.
    everything that is needed for complete production implementation.
@@ -87,10 +81,9 @@ Input arguments are:
    and it has `State` interface, that was generate similarly to `Command` interface.
 
 
-Output value is either new state, or error if something went wrong. This is very important assumption, 
-that will come very handy when we will talk about self-healing processes.
+Our function must return either new state, or error when something went wrong during transition, like network error, or validation error.
 
-Below is snippet of implementation of `Transition` function for our order service:
+Below is snippet of implementation of `Transition` function for our Order Service:
 
 ```go
 --8<-- "example/state/machine.go:30:81"
@@ -104,7 +97,7 @@ You can notice few patterns in this snippet:
 - `Dependency` interface help us to keep, well  dependencies - well defined, which helps greatly in testability and readability of the code. 
 - Use of generated function `MatchCommandR2` to exhaustively match all commands. 
   This is powerful, when new command is added, you can be sure that you will get compile time error, if you don't handle it.
-- Validation of commands in done in transition function. Current implementation is simple, but you can use go-validate or other libraries to make it more robust.
+- Validation of commands in done in transition function. Current implementation is simple, but you can use go-validate to make it more robust, or refactor code and introduce domain helper functions or methods to the types.
 - Each command check state to which is being applied using `switch` statement, it ignore states that it does not care about. 
   Which means as implementation you have to focus only on small bit of the picture, and not worry about rest of the states. 
   This is also example where non-exhaustive use of `switch` statement is welcome.
@@ -113,8 +106,11 @@ Simple, isn't it? Simplicity also comes from fact that we don't have to worry ab
 
 Note: Implementation for educational purposes is kept in one big function, 
 but for large projects it may be better to split it into smaller functions, 
-or use visitor pattern interface, that is also generated for you.
+or define OrderService struct that conforms to visitor pattern interface, that was also generated for you:
 
+```go
+--8<-- "example/state/model_union_gen.go:11:17"
+```
 
 ## Testing state machines & self-documenting
 Before we go further, let's talk about testing our implementation.
@@ -125,16 +121,16 @@ and discover transition that we didn't think about, that should or shouldn't be 
 Here is how you can test state machine, in declarative way, using `mkunion/x/machine` package:
 
 ```go
---8<-- "example/state/machine_test.go:12:86"
+--8<-- "example/state/machine_test.go:15:151"
 ```
 Few things to notice in this test:
 
-- We use of `moq` to generate mocks for dependencies
 - We use standard go testing
 - We use `machine.NewTestSuite` as an standard way to test state machines
 - We start with describing **happy path**, and use `suite.Case` to define test case.
-- But most importantly, we define test cases using `GivenCommand` and `ThenState` functions, that help in making test more readable.
+- But most importantly, we define test cases using `GivenCommand` and `ThenState` functions, that help in making test more readable, and hopefully self-documenting.
 - You can see use of `ForkCase` command, that allow you to take a definition of a state declared in `ThenState` command, and apply new command to it, and expect new state.
+- Less visible is use of `moq` to generate `DependencyMock` for dependencies, but still important to write more concise code.
 
 I know it's subjective, but I find it very readable, and easy to understand, even for non-programmers.
 
@@ -169,13 +165,42 @@ Second is a diagram that includes commands that resulted in an errors:
 
 Those diagrams are stored in the same directory as test file, and are prefixed with name used in `AssertSelfDocumentStateDiagram` function.
 ```
-machine_test.go
 machine_test.go.state_diagram.mmd
 machine_test.go.state_diagram_with_errors.mmd
 ```
 
+## State machines builder
+
+Now, since we have Transition function, and we have tests, let's standardize how it can be use in different parts of the application.
+
+```go
+--8<-- "example/state/machine.go:9:11"
+```
+
+Simple, isn't it?
+
+MkUnion also provide `*machine.Machine[Dependency, Command, State]` struct that wires Transition, and standardise how dependencies, and commands are applied.
+
+To see how to use it, let's move to the next section.
 
 ## Persisting state in database
+
+At this point of time, we have implemented and tested Order Service state machine.
+
+Next thing that we need to address in our road to the production is to persist state in database.
+
+MkUnion aims to support you in this task, by providing you `x/storage/schemaless` package that will take care of: 
+- mapping  golang objets to database representation and back.
+- handling optimistic concurrency conflicts
+- providing you with simple API to work with database
+- and more
+
+Below is test case that demonstrate complete example of initializing database, 
+building an state using `NewMachine` , and saving and loading state from database.
+
+```go
+--8<-- "example/state/machine_test.go:153:227"
+```
 
 ```mermaid
 sequenceDiagram
