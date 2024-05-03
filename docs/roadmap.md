@@ -12,3 +12,4 @@
 
 - [ ] **experiment**: generate other (de)serialization formats (e.g. grpc, sql, graphql)
 - [ ] **prototype**: http & gRPC client for end-to-end types. 
+- [ ] **experiment**: allow to derive behaviour for types, like derive(Map), would generated union type with Map() method  
