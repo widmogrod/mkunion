@@ -3,45 +3,6 @@ package state
 import "time"
 
 //go:generate go run ../../cmd/mkunion/main.go
-//go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
-
-type (
-	// OrderID Price, Quantity are placeholders for value objects, to ensure better data semantic and type safety
-	OrderID  = string
-	Price    = float64
-	Quantity = int
-
-	OrderAttr struct {
-		// placeholder for order attributes
-		// like customer name, address, etc.
-		// like product name, price, etc.
-		// for simplicity we only have Price and Quantity
-		Price    Price
-		Quantity Quantity
-	}
-
-	// WorkerID represent human that process the order
-	WorkerID = string
-
-	// Order everything we know about order
-	Order struct {
-		ID               OrderID
-		OrderAttr        OrderAttr
-		WorkerID         WorkerID
-		StockRemovedAt   *time.Time
-		PaymentChargedAt *time.Time
-		DeliveredAt      *time.Time
-		CancelledAt      *time.Time
-		CancelledReason  string
-	}
-)
-
-type ProblemCode int
-
-const (
-	ProblemWarehouseAPIUnreachable ProblemCode = iota
-	ProblemPaymentAPIUnreachable
-)
 
 //go:tag mkunion:"Command"
 type (
@@ -95,4 +56,43 @@ type (
 		ProblemCommand Command
 		ProblemState   State
 	}
+)
+
+//go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
+type (
+	// OrderID Price, Quantity are placeholders for value objects, to ensure better data semantic and type safety
+	OrderID  = string
+	Price    = float64
+	Quantity = int
+
+	OrderAttr struct {
+		// placeholder for order attributes
+		// like customer name, address, etc.
+		// like product name, price, etc.
+		// for simplicity we only have Price and Quantity
+		Price    Price
+		Quantity Quantity
+	}
+
+	// WorkerID represent human that process the order
+	WorkerID = string
+
+	// Order everything we know about order
+	Order struct {
+		ID               OrderID
+		OrderAttr        OrderAttr
+		WorkerID         WorkerID
+		StockRemovedAt   *time.Time
+		PaymentChargedAt *time.Time
+		DeliveredAt      *time.Time
+		CancelledAt      *time.Time
+		CancelledReason  string
+	}
+)
+
+type ProblemCode int
+
+const (
+	ProblemWarehouseAPIUnreachable ProblemCode = iota
+	ProblemPaymentAPIUnreachable
 )
