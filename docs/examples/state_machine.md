@@ -57,7 +57,7 @@ This is one example how union types can be used in golang.
 Historically in golang it would be very hard to achieve such thing, and it would require a lot of boilerplate code.
 Here interface that group those types is generated automatically.
 
-```go
+```go title="example/state/model.go"
 --8<-- "example/state/model.go"
 ```
 
@@ -85,7 +85,7 @@ Our function must return either new state, or error when something went wrong du
 
 Below is snippet of implementation of `Transition` function for our Order Service:
 
-```go
+```go title="example/state/machine.go"
 --8<-- "example/state/machine.go:30:81"
 // ...
 // rest remove for brevity 
@@ -108,7 +108,7 @@ Note: Implementation for educational purposes is kept in one big function,
 but for large projects it may be better to split it into smaller functions, 
 or define OrderService struct that conforms to visitor pattern interface, that was also generated for you:
 
-```go
+```go  title="example/state/model_union_gen.go"
 --8<-- "example/state/model_union_gen.go:11:17"
 ```
 
@@ -120,7 +120,7 @@ and discover transition that we didn't think about, that should or shouldn't be 
 
 Here is how you can test state machine, in declarative way, using `mkunion/x/machine` package:
 
-```go
+```go title="example/state/machine_test.go"
 --8<-- "example/state/machine_test.go:15:151"
 ```
 Few things to notice in this test:
@@ -137,7 +137,7 @@ I know it's subjective, but I find it very readable, and easy to understand, eve
 ## Generating state diagram from tests
 Last bit is this line at the bottom:
 
-```go
+```go title="example/state/machine_test.go"
 if suite.AssertSelfDocumentStateDiagram(t, "machine_test.go") {
    suite.SelfDocumentStateDiagram(t, "machine_test.go")
 }
@@ -154,12 +154,12 @@ There are two diagrams that are generated.
 
 One is a diagram of ONLY successful transitions, that you saw at the beginning of this post.
 
-```mermaid
+```mermaid 
 --8<-- "example/state/machine_test.go.state_diagram.mmd"
 ```
 
 Second is a diagram that includes commands that resulted in an errors:
-```mermaid
+```mermaid 
 --8<-- "example/state/machine_test.go.state_diagram_with_errors.mmd"
 ```
 
@@ -171,34 +171,40 @@ machine_test.go.state_diagram_with_errors.mmd
 
 ## State machines builder
 
-Now, since we have Transition function, and we have tests, let's standardize how it can be use in different parts of the application.
+MkUnion provide `*machine.Machine[Dependency, Command, State]` struct that wires Transition, dependencies and state together.
+It provide methods like:
 
-```go
+- `Handle(cmd C) error` that apply command to state, and return error if something went wrong during transition.
+- `State() S` that return current state of the machine
+- `Dep() D` that return dependencies that machine was build with.
+
+
+This standard helps build on top of it, for example testing library that we use in [Testing state machines & self-documenting](#testing-state-machines-self-documenting) leverage it.
+
+Another good practice is that every package that defines state machine in the way described here, 
+should provide `NewMachine` function that will return bootstrapped machine with package types, like so:
+
+```go title="example/state/machine.go"
 --8<-- "example/state/machine.go:9:11"
 ```
-
-Simple, isn't it?
-
-MkUnion also provide `*machine.Machine[Dependency, Command, State]` struct that wires Transition, and standardise how dependencies, and commands are applied.
-
-To see how to use it, let's move to the next section.
 
 ## Persisting state in database
 
 At this point of time, we have implemented and tested Order Service state machine.
 
-Next thing that we need to address in our road to the production is to persist state in database.
+Next thing that we need to address in our road to the production is to persist state in database and learn how to deal with runtime errors like network failure.
 
 MkUnion aims to support you in this task, by providing you `x/storage/schemaless` package that will take care of: 
-- mapping  golang objets to database representation and back.
-- handling optimistic concurrency conflicts
+
+- mapping  golang structs to database representation and back from database to struct.
+- leveraging optimistic concurrency control to resolve conflicts
 - providing you with simple API to work with database
 - and more
 
 Below is test case that demonstrate complete example of initializing database, 
 building an state using `NewMachine` , and saving and loading state from database.
 
-```go
+```go title="example/state/machine_test.go"
 --8<-- "example/state/machine_test.go:153:227"
 ```
 
