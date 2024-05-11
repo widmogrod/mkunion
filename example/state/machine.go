@@ -28,7 +28,7 @@ var (
 	ErrWorkerIDRequired = fmt.Errorf("worker ID required; %w", ErrValidationFailed)
 )
 
-//go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
+// go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
 type Dependency interface {
 	TimeNow() *time.Time
 	WarehouseRemoveStock(quantity Quantity) error

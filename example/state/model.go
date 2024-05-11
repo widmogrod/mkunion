@@ -95,3 +95,6 @@ const (
 	ProblemWarehouseAPIUnreachable ProblemCode = iota
 	ProblemPaymentAPIUnreachable
 )
+
+// moq must be run after union type is generated
+//go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
