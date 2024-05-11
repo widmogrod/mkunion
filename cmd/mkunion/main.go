@@ -563,7 +563,20 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 			shape.WithPkgImportName(),
 		)
 
+		// Register go type
 		contents.WriteString(fmt.Sprintf("\tshared.TypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
+
+		// Try to register type JSON marshaller
+		if ref, ok := inst.(*shape.RefName); ok {
+			some, found := shape.LookupShapeOnDisk(ref)
+			if !found {
+				continue
+			}
+			some = shape.IndexWith(some, ref)
+			if shape.IsUnion(some) {
+				contents.WriteString(fmt.Sprintf("\t%s\n", generators.StrRegisterUnionFuncName(shape.ToGoPkgName(some), some)))
+			}
+		}
 	}
 
 	contents.WriteString("}\n")
