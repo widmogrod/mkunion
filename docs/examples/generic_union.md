@@ -1,7 +1,7 @@
 ---
-title: Generic unions
+title: Union and generic types
 ---
-# Generic unions
+# Union and generic types
 MkUnion will generate generic unions for you.
 
 You only need to declare each variant type of the union with a type parameter,
