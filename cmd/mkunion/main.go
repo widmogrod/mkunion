@@ -50,7 +50,7 @@ func main() {
 			},
 			&cli.BoolFlag{
 				Name:  "type-registry",
-				Value: false,
+				Value: true,
 			},
 		},
 		Action: func(c *cli.Context) error {

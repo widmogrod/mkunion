@@ -1,6 +1,6 @@
 package example
 
-//go:generate go run ../cmd/mkunion/main.go --type-registry
+//go:generate go run ../cmd/mkunion/main.go
 
 //go:tag mkunion:"Tree"
 type (

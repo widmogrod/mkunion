@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go
+//go:generate go run ../../../cmd/mkunion/main.go --type-registry=false
 
 //go:tag mkunion:"Example"
 type (
