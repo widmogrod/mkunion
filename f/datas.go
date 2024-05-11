@@ -1,8 +1,8 @@
 package f
 
-//go:generate go run ../cmd/mkunion
+//go:generate go run ../cmd/mkunion --type-registry
 
-//go:tag mkunion:"Either"
+//go:tag mkunion:"Either,serde"
 type (
 	Left[A, B any]  struct{ Value A }
 	Right[A, B any] struct{ Value B }
