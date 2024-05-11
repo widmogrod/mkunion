@@ -99,7 +99,7 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 			t.Logf("data id: %s \n", task.Data.ID)
 			t.Logf("version: %d \n", task.Data.Version)
 			work := workflow.NewMachine(di, task.Data.Data)
-			err := work.Handle(&workflow.Run{})
+			err := work.Handle(nil, &workflow.Run{})
 			//err := work.Handle(&workflow.TryRecover{})
 			if err != nil {
 				t.Logf("err: %s", err)
@@ -123,7 +123,7 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 				//d, _ := schema.ToJSON(schema.FromPrimitiveGo(next))
 				//t.Logf("next: %s", string(d))
 				work := workflow.NewMachine(di, nil)
-				err := work.Handle(next)
+				err := work.Handle(nil, next)
 				if err != nil {
 					t.Logf("err: %s", err)
 					return
@@ -203,7 +203,7 @@ To run this test, please set AWS_SQS_QUEUE_URL to the address of your AWS SQS in
 	}()
 
 	work := workflow.NewMachine(di, nil)
-	err := work.Handle(&workflow.Run{
+	err := work.Handle(nil, &workflow.Run{
 		//RunOption: &workflow.DelayRun{
 		//	DelayBySeconds: int64(1 * time.Second),
 		//},
