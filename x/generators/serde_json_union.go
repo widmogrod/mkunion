@@ -172,11 +172,7 @@ func (g *SerdeJSONUnion) GenerateInitFunc(init []string) (string, error) {
 
 func (g *SerdeJSONUnion) ExtractImportFuncs(s shape.Shape) []string {
 	result := []string{
-		fmt.Sprintf("shared.JSONMarshallerRegister(%q, %s, %s)",
-			shape.ToGoTypeName(s, shape.WithPkgImportName(), shape.WithInstantiation()),
-			g.FuncNameFromJSONInstantiated(s),
-			g.FuncNameToSONInstantiated(s),
-		),
+		StrRegisterUnionFuncName(g.union.PkgName, s),
 	}
 
 	switch x := s.(type) {
@@ -189,15 +185,35 @@ func (g *SerdeJSONUnion) ExtractImportFuncs(s shape.Shape) []string {
 	return result
 }
 
-func (g *SerdeJSONUnion) FuncNameFromJSONInstantiated(x shape.Shape) string {
-	return g.instantiatef(x, "%sFromJSON")
+func StrRegisterUnionFuncName(rootPkgName string, x shape.Shape) string {
+	return fmt.Sprintf("shared.JSONMarshallerRegister(%q, %s, %s)",
+		shape.ToGoTypeName(x, shape.WithPkgImportName(), shape.WithInstantiation()),
+		StrFuncNameFromJSONInstantiated(rootPkgName, x),
+		StrFuncNameToJSONInstantiated(rootPkgName, x),
+	)
 }
 
-func (g *SerdeJSONUnion) FuncNameToSONInstantiated(x shape.Shape) string {
-	return g.instantiatef(x, "%sToJSON")
+func (g *SerdeJSONUnion) FuncNameFromJSONInstantiated(x shape.Shape) string {
+	return StrFuncNameFromJSONInstantiated(g.union.PkgName, x)
+}
+
+func (g *SerdeJSONUnion) FuncNameToJSONInstantiated(x shape.Shape) string {
+	return StrFuncNameToJSONInstantiated(g.union.PkgName, x)
 }
 
 func (g *SerdeJSONUnion) instantiatef(x shape.Shape, template string) string {
+	return StrInstantiatef(g.union.PkgName, x, template)
+}
+
+func StrFuncNameFromJSONInstantiated(rootPkgName string, x shape.Shape) string {
+	return StrInstantiatef(rootPkgName, x, "%sFromJSON")
+}
+
+func StrFuncNameToJSONInstantiated(rootPkgName string, x shape.Shape) string {
+	return StrInstantiatef(rootPkgName, x, "%sToJSON")
+}
+
+func StrInstantiatef(pkgName string, x shape.Shape, template string) string {
 	typeParamTypes := shape.ToGoTypeParamsTypes(x)
 	typeName := fmt.Sprintf(template, shape.Name(x))
 	if len(typeParamTypes) == 0 {
@@ -207,7 +223,7 @@ func (g *SerdeJSONUnion) instantiatef(x shape.Shape, template string) string {
 	instantiatedNames := make([]string, len(typeParamTypes))
 	for i, t := range typeParamTypes {
 		instantiatedNames[i] = shape.ToGoTypeName(t,
-			shape.WithRootPackage(g.union.PkgName),
+			shape.WithRootPackage(pkgName),
 			shape.WithInstantiation(),
 		)
 	}
