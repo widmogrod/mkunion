@@ -1,6 +1,8 @@
 package machine
 
-func NewMachine[D, C, S any](d D, f func(D, C, S) (S, error), state S) *Machine[D, C, S] {
+import "context"
+
+func NewMachine[D, C, S any](d D, f func(context.Context, D, C, S) (S, error), state S) *Machine[D, C, S] {
 	return &Machine[D, C, S]{
 		di:     d,
 		handle: f,
@@ -16,7 +18,7 @@ func NewSimpleMachine[C, S any](f func(C, S) (S, error)) *Machine[any, C, S] {
 func NewSimpleMachineWithState[C, S any](f func(C, S) (S, error), state S) *Machine[any, C, S] {
 	return &Machine[any, C, S]{
 		di: nil,
-		handle: func(a any, c C, s S) (S, error) {
+		handle: func(ctx context.Context, a any, c C, s S) (S, error) {
 			return f(c, s)
 		},
 		state: state,
@@ -26,11 +28,11 @@ func NewSimpleMachineWithState[C, S any](f func(C, S) (S, error), state S) *Mach
 type Machine[D, C, S any] struct {
 	di     D
 	state  S
-	handle func(D, C, S) (S, error)
+	handle func(context.Context, D, C, S) (S, error)
 }
 
-func (o *Machine[D, C, S]) Handle(cmd C) error {
-	state, err := o.handle(o.di, cmd, o.state)
+func (o *Machine[D, C, S]) Handle(ctx context.Context, cmd C) error {
+	state, err := o.handle(ctx, o.di, cmd, o.state)
 	if err != nil {
 		return err
 	}

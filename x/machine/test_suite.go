@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
@@ -111,7 +112,7 @@ func (suite *Suite[D, C, S]) fuzzy() {
 		if step.AfterCommand != nil {
 			step.AfterCommand(zeroT, suite.dep)
 		}
-		err := m.Handle(step.GivenCommand)
+		err := m.Handle(context.Background(), step.GivenCommand)
 		newState := m.State()
 		suite.infer.Record(step.GivenCommand, state, newState, err)
 	}
@@ -279,7 +280,7 @@ func (suitcase *Case[D, C, S]) run(t *testing.T) {
 		suitcase.step.BeforeCommand(t, suitcase.suit.dep)
 	}
 
-	err := machine.Handle(suitcase.step.GivenCommand)
+	err := machine.Handle(context.Background(), suitcase.step.GivenCommand)
 	suitcase.resultErr = err
 	suitcase.resultState = machine.State()
 
