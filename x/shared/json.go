@@ -61,6 +61,8 @@ func JSONMarshallerRegister[A any](
 	})
 }
 
+// JSONUnmarshal is a generic function to unmarshal json data into destination type
+// that supports union types and fallback to native json.Unmarshal when available.
 func JSONUnmarshal[A any](data []byte) (A, error) {
 	var destinationTypePtr *A = new(A)
 	var destinationType A = *destinationTypePtr
@@ -111,6 +113,8 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 	return result.(A), nil
 }
 
+// JSONMarshal is a generic function to marshal destination type into json data
+// that supports union types and fallback to native json.Marshal when available
 func JSONMarshal[A any](in A) ([]byte, error) {
 	x := any(in)
 	if x == nil {
