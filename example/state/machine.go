@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/machine"
 	"time"
@@ -27,13 +28,14 @@ var (
 	ErrWorkerIDRequired = fmt.Errorf("worker ID required; %w", ErrValidationFailed)
 )
 
+//go:generate moq -with-resets -stub -out machine_mock_test.go . Dependency
 type Dependency interface {
 	TimeNow() *time.Time
 	WarehouseRemoveStock(quantity Quantity) error
 	PaymentCharge(price Price) error
 }
 
-func Transition(di Dependency, cmd Command, state State) (State, error) {
+func Transition(ctx context.Context, di Dependency, cmd Command, state State) (State, error) {
 	return MatchCommandR2(
 		cmd,
 		func(x *CreateOrderCMD) (State, error) {
@@ -161,7 +163,7 @@ func Transition(di Dependency, cmd Command, state State) (State, error) {
 				case ProblemWarehouseAPIUnreachable,
 					ProblemPaymentAPIUnreachable:
 					// we can retry this operation
-					newState, err := Transition(di, s.ProblemCommand, s.ProblemState)
+					newState, err := Transition(ctx, di, s.ProblemCommand, s.ProblemState)
 					if err != nil {
 						return s, err
 					}

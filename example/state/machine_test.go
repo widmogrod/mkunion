@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -316,7 +317,7 @@ func AssertScenario[D, C, S any](
 				step.BeforeCommand(t, m.Dep())
 			}
 
-			err := m.Handle(step.GivenCommand)
+			err := m.Handle(context.TODO(), step.GivenCommand)
 
 			if step.AfterCommand != nil {
 				step.AfterCommand(t, m.Dep())
