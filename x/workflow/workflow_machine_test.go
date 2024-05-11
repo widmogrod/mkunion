@@ -75,7 +75,7 @@ func TestExecution(t *testing.T) {
 	assert.ErrorIs(t, err, schemaless.ErrNotFound)
 
 	work := NewMachine(di, state.Data)
-	err = work.Handle(&Run{
+	err = work.Handle(nil, &Run{
 		Flow:  &FlowRef{FlowID: "hello_world_flow"},
 		Input: schema.MkString("world"),
 	})
@@ -108,7 +108,7 @@ func TestExecution(t *testing.T) {
 	assert.NoError(t, err)
 
 	work = NewMachine(di, state.Data)
-	err = work.Handle(&Run{
+	err = work.Handle(nil, &Run{
 		Flow:  &FlowRef{FlowID: "hello_world_flow"},
 		Input: schema.MkString("world"),
 	})
