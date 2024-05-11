@@ -551,7 +551,7 @@ func main() {
 
 			// apply command
 			work := workflow.NewMachine(di, state.Data)
-			err = work.Handle(cmd)
+			err = work.Handle(context.TODO(), cmd)
 			if err != nil {
 				log.Errorf("failed to handle command: %v", err)
 				return nil, err
@@ -576,7 +576,7 @@ func main() {
 	proc := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
 			work := workflow.NewMachine(di, task.Data.Data)
-			err := work.Handle(&workflow.Run{})
+			err := work.Handle(context.TODO(), &workflow.Run{})
 			if err != nil {
 				log.Errorf("err: %s", err)
 				return
@@ -596,7 +596,7 @@ func main() {
 
 			if next := workflow.ScheduleNext(newState, di); next != nil {
 				work := workflow.NewMachine(di, nil)
-				err := work.Handle(next)
+				err := work.Handle(context.TODO(), next)
 				if err != nil {
 					log.Infof("err: %s", err)
 					return
@@ -773,7 +773,7 @@ func (service *Service[Dep, CMD, State]) CreateOrUpdate(cmd CMD) (res State, err
 	}
 
 	work := service.newMachine(res)
-	err = work.Handle(cmd)
+	err = work.Handle(context.TODO(), cmd)
 	if err != nil {
 		log.Errorf("failed to handle command: %v", err)
 		return res, err
