@@ -11,5 +11,6 @@
 ## Long tern experiments and prototypes
 
 - [ ] **experiment**: generate other (de)serialization formats (e.g. grpc, sql, graphql)
-- [ ] **prototype**: http & gRPC client for end-to-end types. 
-- [ ] **experiment**: allow to derive behaviour for types, like derive(Map), would generated union type with Map() method  
+- [ ] **prototype**: http & gRPC client for end-to-end types.
+- [ ] **experiment**: allow to derive behaviour for types, like derive(Map), would generated union type with Map() method
+- [ ] **experiment**: consider adding explicit discriminator type names like `example.Branch[int]` instead of `example.Branch`. This may complicate TypeScript codegen but it could increase end-to-end type safety.
