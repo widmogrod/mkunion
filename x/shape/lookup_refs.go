@@ -292,7 +292,14 @@ func checkPkgExistsInPaths(pkgImportName string) (string, error) {
 	gocache := os.Getenv("GOMODCACHE")
 	if gocache == "" {
 		gocache = os.Getenv("GOPATH")
-		if gocache != "" {
+		if gocache == "" {
+			gocache = os.Getenv("HOME")
+			if gocache != "" {
+				gocache = filepath.Join(gocache, "go")
+			}
+		}
+
+		if gocache == "" {
 			gocache = filepath.Join(os.Getenv("GOPATH"), "pkg/mod")
 		}
 	}
@@ -300,7 +307,8 @@ func checkPkgExistsInPaths(pkgImportName string) (string, error) {
 	log.Debugf("GOMODCACHE=%s", os.Getenv("GOMODCACHE"))
 	log.Debugf("GOPATH=%s", os.Getenv("GOPATH"))
 	log.Debugf("GOROOT=%s", os.Getenv("GOROOT"))
-	log.Debugf("GOROOT=%s", os.Getenv("PWD"))
+	log.Debugf("HOME=%s", os.Getenv("HOME"))
+	log.Debugf("gocache=%s", os.Getenv("gocache"))
 
 	paths := []string{}
 
