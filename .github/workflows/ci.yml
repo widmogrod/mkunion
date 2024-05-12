@@ -24,10 +24,12 @@ jobs:
       - run: dev/bootstrap.sh -nologs
 
       - run: |
-          find . -type f -name '*.go' -exec grep -H '""' {} + &2>/dev/null || true
+          find . -type f -name '*_gen.go' -exec grep -C 2 -H '""' {} + &2>/dev/null || true
 
       - run: |
-          go vet ./... || true
+          cat ./x/storage/schemaless/types_reg_gen.go
+          
+          go vet ./x/storage/schemaless/types_reg_gen.go || true
       # run tests
       - run: |
           export RUN_EXPERIMENTAL_TEST="false"
