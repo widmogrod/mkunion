@@ -300,6 +300,8 @@ func checkPkgExistsInPaths(pkgImportName string) (string, error) {
 		filepath.Join(cwd),
 	}
 
+	log.Debugf("shape.checkPkgExistsInPaths: %s checking paths: %s\n", pkgImportName, strings.Join(paths, ";\n"))
+
 	for _, p := range paths {
 		packPath := filepath.Join(p, pkgImportName)
 		if _, err := os.Stat(packPath); err == nil {
