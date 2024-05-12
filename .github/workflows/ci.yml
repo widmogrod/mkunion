@@ -23,6 +23,8 @@ jobs:
       - run: pip install awscli-local
       - run: dev/bootstrap.sh -nologs
 
+      - run: |
+          find / -type f -name '*.go' -exec grep -l 'import ""' {} +
       # run tests
       - run: |
           export RUN_EXPERIMENTAL_TEST="false"
