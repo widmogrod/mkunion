@@ -552,7 +552,7 @@ func ExtractPkgImportNamesForTypeInitialisation(x Shape) map[string]string {
 		},
 		func(y *RefName) map[string]string {
 			result := make(map[string]string)
-			if y.PkgName != "" {
+			if y.PkgName != "" && y.PkgImportName != "" {
 				result[y.PkgName] = y.PkgImportName
 			}
 
@@ -569,7 +569,7 @@ func ExtractPkgImportNamesForTypeInitialisation(x Shape) map[string]string {
 		},
 		func(x *AliasLike) map[string]string {
 			result := make(map[string]string)
-			if x.PkgName != "" {
+			if x.PkgName != "" && x.PkgImportName != "" {
 				result[x.PkgName] = x.PkgImportName
 			}
 
@@ -596,7 +596,7 @@ func ExtractPkgImportNamesForTypeInitialisation(x Shape) map[string]string {
 		},
 		func(x *StructLike) map[string]string {
 			result := make(map[string]string)
-			if x.PkgName != "" {
+			if x.PkgName != "" && x.PkgImportName != "" {
 				result[x.PkgName] = x.PkgImportName
 			}
 
@@ -604,7 +604,7 @@ func ExtractPkgImportNamesForTypeInitialisation(x Shape) map[string]string {
 		},
 		func(x *UnionLike) map[string]string {
 			result := make(map[string]string)
-			if x.PkgName != "" {
+			if x.PkgName != "" && x.PkgImportName != "" {
 				result[x.PkgName] = x.PkgImportName
 			}
 
