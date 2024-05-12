@@ -17,6 +17,7 @@ jobs:
 
       - run: go install github.com/matryer/moq@latest
 
+      - run: go mod download
       - run: go get -v -t -d ./...
       - run: go generate ./...
 
