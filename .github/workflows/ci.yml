@@ -24,7 +24,7 @@ jobs:
       - run: dev/bootstrap.sh -nologs
 
       - run: |
-          find / -type f -name '*.go' -exec grep -l 'import ""' {} + 2>/dev/null
+          find $GOROOT -type f -name '*.go' -exec grep -l 'import ""' {} + 2>/dev/null
       # run tests
       - run: |
           export RUN_EXPERIMENTAL_TEST="false"
