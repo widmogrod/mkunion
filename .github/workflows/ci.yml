@@ -24,10 +24,10 @@ jobs:
       - run: dev/bootstrap.sh -nologs
 
       - run: |
-          find . -type f -name '*.go' -exec grep -l 'import ()' {} + &2>/dev/null || true
-          find . -type f -name '*.go' -exec grep -l 'import ("")' {} + &2>/dev/null || true
-          find . -type f -name '*.go' -exec grep -l 'import ""' {} + &2>/dev/null || true
-          find . -type f -name '*.go' -exec grep -l 'import (' {} + &2>/dev/null || true
+          find . -type f -name '*.go' -exec grep -H 'import ()' {} + &2>/dev/null || true
+          find . -type f -name '*.go' -exec grep -H 'import ("")' {} + &2>/dev/null || true
+          find . -type f -name '*.go' -exec grep -H 'import ""' {} + &2>/dev/null || true
+          find . -type f -name '*.go' -exec grep -H 'import (' {} + &2>/dev/null || true
 
       - run: |
           go vet ./... || true
