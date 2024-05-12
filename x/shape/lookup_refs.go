@@ -299,7 +299,7 @@ func checkPkgExistsInPaths(pkgImportName string) (string, error) {
 			}
 		}
 
-		if gocache == "" {
+		if gocache != "" {
 			gocache = filepath.Join(os.Getenv("GOPATH"), "pkg/mod")
 		}
 	}
