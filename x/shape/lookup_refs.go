@@ -297,6 +297,11 @@ func checkPkgExistsInPaths(pkgImportName string) (string, error) {
 		}
 	}
 
+	log.Debugf("GOMODCACHE=%s", os.Getenv("GOMODCACHE"))
+	log.Debugf("GOPATH=%s", os.Getenv("GOPATH"))
+	log.Debugf("GOROOT=%s", os.Getenv("GOROOT"))
+	log.Debugf("GOROOT=%s", os.Getenv("PWD"))
+
 	paths := []string{}
 
 	if gocache != "" {
