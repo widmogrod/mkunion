@@ -17,7 +17,6 @@ jobs:
 
       - run: go install github.com/matryer/moq@latest
 
-      - run: go mod download
       - run: go get -v -t -d ./...
       - run: go generate ./...
 
@@ -26,6 +25,9 @@ jobs:
 
       - run: |
           find . -type f -name '*.go' -exec grep -C 2 -H 'github.com/opensearch-project/opensearch-go/v2' {} + &2>/dev/null || true
+
+      - run: |
+          find / -type d -name 'opensearch-go' &2>/dev/null || true
 
       - run: |
           cat x/storage/schemaless/types_reg_gen.go
