@@ -308,7 +308,7 @@ func checkPkgExistsInPaths(pkgImportName string) (string, error) {
 	log.Debugf("GOPATH=%s", os.Getenv("GOPATH"))
 	log.Debugf("GOROOT=%s", os.Getenv("GOROOT"))
 	log.Debugf("HOME=%s", os.Getenv("HOME"))
-	log.Debugf("gocache=%s", os.Getenv("gocache"))
+	log.Debugf("gocache=%s", gocache)
 
 	paths := []string{}
 
