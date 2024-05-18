@@ -198,37 +198,38 @@ func findPackagePath(pkgImportName string) (string, error) {
 	if cwd == "" {
 		cwd, _ = os.Getwd()
 	}
+	if cwd != "" {
+		// hack: to make sure code is simple, we start with the current directory
+		// add append nonsense to the path,
+		// because it will be stripped by path.Dir
+		cwd = path.Join(cwd, "nonsense")
+	}
 
 	// if path has "go.mod" and package name is the same as x.PkgName
 	// then we can assume that it's root of the package
 
-	// hack: to make sure code is simple, we start with the current directory
-	// add append nonsense to the path,
-	// because it will be stripped by path.Dir
-	cwd = path.Join(cwd, "nonsense")
 	for {
 		cwd = path.Dir(cwd)
-		if cwd == "." || cwd == "/" {
+		if cwd == "." || cwd == "/" || cwd == "" {
 			log.Debugf("shape.findPackagePath: %s could not find go.mod file in CWD or parent directories %s, continue with other paths", pkgImportName, cwd)
 			break
 		}
 
 		modpath := path.Join(cwd, "go.mod")
 		_, err := os.Stat(modpath)
-		log.Debugf("shape.findPackagePath: %s checking modpath %s; err=%s", pkgImportName, modpath, err)
+		//log.Debugf("shape.findPackagePath: %s checking modpath %s; err=%s", pkgImportName, modpath, err)
 		if err == nil {
 			f, err := os.Open(modpath)
 			if err != nil {
-				log.Debugf("shape.findPackagePath: %s could not open %s", pkgImportName, cwd)
+				//log.Debugf("shape.findPackagePath: %s could not open %s", pkgImportName, cwd)
 				continue
 			}
 			defer f.Close()
 
 			data, err := io.ReadAll(f)
 			if err != nil {
-				log.Debugf("shape.findPackagePath: %s could not read %s", pkgImportName, cwd)
+				log.Errorf("shape.findPackagePath: %s could not read go.mod in %s", pkgImportName, cwd)
 				continue
-				//return "", fmt.Errorf("shape.findPackagePath: could not read %s; %w", cwd, err)
 			} else {
 				parsed, err := modfile.Parse(modpath, data, nil)
 				if err != nil {
@@ -288,25 +289,36 @@ func findPackagePath(pkgImportName string) (string, error) {
 }
 
 func checkPkgExistsInPaths(pkgImportName string) (string, error) {
-	cwd := os.Getenv("PWD")
-	if cwd == "" {
-		cwd, _ = os.Getwd()
+	gocache := os.Getenv("GOMODCACHE")
+	if gocache == "" {
+		gocache = os.Getenv("GOPATH")
+		if gocache == "" {
+			gocache = os.Getenv("HOME")
+			if gocache != "" {
+				gocache = filepath.Join(gocache, "go")
+			}
+		}
+
+		if gocache != "" {
+			gocache = filepath.Join(gocache, "pkg/mod")
+		}
 	}
 
-	paths := []string{
-		filepath.Join(os.Getenv("GOPATH"), "pkg/mod"),
-		filepath.Join(cwd, "vendor"),
-		filepath.Join(os.Getenv("GOROOT"), "src"),
-		filepath.Join(cwd),
+	paths := []string{}
+
+	if gocache != "" {
+		paths = append(paths, gocache)
 	}
+
+	paths = append(paths, filepath.Join(os.Getenv("GOROOT"), "src"))
 
 	for _, p := range paths {
 		packPath := filepath.Join(p, pkgImportName)
 		if _, err := os.Stat(packPath); err == nil {
-			log.Infof("shape.checkPkgExistsInPaths: %s found package in fallback %s", pkgImportName, packPath)
+			log.Infof("shape.checkPkgExistsInPaths: '%s' found package in fallback %s", pkgImportName, packPath)
 			return packPath, nil
 		} else {
-			log.Debugf("shape.checkPkgExistsInPaths: %s could not find package in fallback path %s", pkgImportName, packPath)
+			log.Debugf("shape.checkPkgExistsInPaths: '%s' could not find package in fallback path %s", pkgImportName, packPath)
 		}
 	}
 

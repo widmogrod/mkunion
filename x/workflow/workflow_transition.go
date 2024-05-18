@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
@@ -31,13 +32,11 @@ type Dependency interface {
 	TimeNow() time.Time
 }
 
-func NewMachine(di Dependency, state State) *machine.Machine[Command, State] {
-	return machine.NewSimpleMachineWithState(func(cmd Command, state State) (State, error) {
-		return Transition(cmd, state, di)
-	}, state)
+func NewMachine(di Dependency, state State) *machine.Machine[Dependency, Command, State] {
+	return machine.NewMachine(di, Transition, state)
 }
 
-func Transition(cmd Command, state State, dep Dependency) (State, error) {
+func Transition(ctx context.Context, dep Dependency, cmd Command, state State) (State, error) {
 	switch state.(type) {
 	case *Done:
 		return nil, ErrStateReachEnd

@@ -3,6 +3,7 @@ package machine
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -71,6 +72,11 @@ func (t *InferTransition[Transition, State]) Record(tr Transition, prev, curr St
 		err = errAfterTransition.Error()
 	}
 
+	// map only transitions with names
+	if transitionName == "" {
+		return
+	}
+
 	tt := transition{
 		transitionName,
 		prevStateName,
@@ -78,6 +84,8 @@ func (t *InferTransition[Transition, State]) Record(tr Transition, prev, curr St
 		err,
 	}
 
+	name := tt.String()
+	_ = name
 	if t.exists[tt.String()] {
 		return
 	}
@@ -90,6 +98,12 @@ func (t *InferTransition[Transition, State]) Record(tr Transition, prev, curr St
 // https://mermaid-js.github.io/mermaid/#/stateDiagram
 func (t *InferTransition[Transition, State]) ToMermaid() string {
 	result := &strings.Builder{}
+
+	// sort transitions by name
+	sort.SliceStable(t.transitions, func(i, j int) bool {
+		return t.transitions[i].String() < t.transitions[j].String()
+	})
+
 	if t.name != "" {
 		fmt.Fprintf(result, "---\ntitle: %s\n---\n", t.name)
 	}
@@ -111,12 +125,12 @@ func (t *InferTransition[Transition, State]) ToMermaid() string {
 
 		name := tt.name()
 		if tt.err() != "" {
-			fmt.Fprintf(result, " %%%% error=%s \n", strings.TrimSpace(strings.ReplaceAll(tt.err(), "\n", " ")))
-			name = fmt.Sprintf("❌%s", name)
-		}
-
-		if tt.err() != "" && !t.showErrorTransitions {
-			continue
+			if t.showErrorTransitions {
+				fmt.Fprintf(result, " %%%% error=%s \n", strings.TrimSpace(strings.ReplaceAll(tt.err(), "\n", " ")))
+				name = fmt.Sprintf("❌%s", name)
+			} else {
+				continue
+			}
 		}
 
 		fmt.Fprintf(result, "\t"+`%s --> %s: "%s"`+"\n", prev, curr, name)

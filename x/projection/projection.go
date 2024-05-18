@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -v -type-registry
+//go:generate go run ../../cmd/mkunion/main.go -v
 
 var (
 	ErrStateAckNilOffset    = errors.New("cannot acknowledge nil offset")
@@ -21,7 +21,7 @@ const (
 	KeySystemWatermark = "watermark"
 )
 
-//go:tag mkunion:"Data,noserde"
+//go:tag mkunion:"Data"
 type (
 	Record[A any] struct {
 		Key       string
@@ -559,7 +559,7 @@ func DoSink[A any](ctx PushAndPull[A, any], f func(*Record[A]) error) error {
 	}
 }
 
-//go:tag mkunion:"Either,noserde"
+//go:tag mkunion:"Either"
 type (
 	Left[A, B any] struct {
 		Left A

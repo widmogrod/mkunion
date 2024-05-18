@@ -52,13 +52,13 @@ type User struct {
 
 Unfortunately Golang don't extend this feature to other parts of the language.
 
-MkUnion defines `//go:tag` comment, following other idiomatic definitions `go:generate`, `go:embed` to allow to add metadata to types.
-And use it heavily to offer way of adding new behaviour to go types.
+MkUnion defines `//go:tag` comment, following other idiomatic definitions `go:generate`, `go:embed` to allow to add metadata to struct type.
+And MkUnion use it heavily to offer way of adding new behaviour to go types.
 
-#### `type ()` convention
+#### `type (...)` convention
 
 Union type is defined as a set of types in a single type declaration. You can think of it as "one of" type.
-To make it more readable, as convention I decided to use `type ()` declaration block, instead of individual `type` declaration.
+To make it more readable, as convention I decided to use `type (...)` declaration block, instead of individual `type` declaration.
 
 ### Generate code
 In IDEs like Goland run `Option + Command + G` for fast code generation
@@ -73,11 +73,11 @@ Alternatively you can run `mkunion` command directly
 mkunion -i example/vehicle.go
 ```
 
-In feature we plan to add `mkununion watch ./...` command that will watch for changes in your code and automatically generate union types for you.
+In future I plan to add `mkununion watch ./...` command that will watch for changes in your code and automatically generate union types for you.
 This will allow you to remove `//go:generate` directive from your code, and have faster feedback loop.
 
 ### Match over union type
-When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](..%2Fexample%2Fvehicle_union_gen.go))
+When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](../example/vehicle_union_gen.go))
 
 You can use those function to do exhaustive matching on your union type.
 
@@ -148,4 +148,4 @@ func ExampleVehicleToJSON() {
 You can notice that it has opinionated way of marshalling and unmarshalling your union type.
 It uses `$type` field to store type information, and then store actual data in separate field, with corresponding name.
 
-You can read more about it in [Marshaling union in JSON](./example/json.md) section.
+You can read more about it in [Marshaling union in JSON](./examples/json.md) section.

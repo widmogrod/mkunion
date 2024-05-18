@@ -17,17 +17,15 @@ func TestSuite_Run(t *testing.T) {
 		}
 	}, 10)
 
-	suite := NewTestSuite(func() *Machine[string, int] { return m })
-	suite.Case("inc", func(c *Case[string, int]) {
-		c.GivenCommand("inc").ThenState(11)
-		c.GivenCommand("inc").ThenState(12)
-		c.GivenCommand("inc").ThenState(13)
+	suite := NewTestSuite(nil, func(dep any, init int) *Machine[any, string, int] {
+		return m
+	})
+	suite.Case(t, "inc", func(t *testing.T, c *Case[any, string, int]) {
+		c.GivenCommand("inc").ThenState(t, 11)
+		c.GivenCommand("inc").ThenState(t, 12)
+		c.GivenCommand("inc").ThenState(t, 13)
 	})
 
-	suite.Run(t)
-	suite.Fuzzy(t)
-
-	suite.SelfDocumentTitle("SimpleMachine")
 	if suite.AssertSelfDocumentStateDiagram(t, "test_suite_test.go") {
 		suite.SelfDocumentStateDiagram(t, "test_suite_test.go")
 	}

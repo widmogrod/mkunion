@@ -1,135 +1,120 @@
 package machine
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/shared"
 	"math/rand"
 	"os"
+	"reflect"
 	"testing"
 )
 
-func NewTestSuite[TCommand, TState any](mkMachine func() *Machine[TCommand, TState]) *Suite[TCommand, TState] {
-	infer := NewInferTransition[TCommand, TState]()
-	return &Suite[TCommand, TState]{
+func NewTestSuite[D, C, S any](dep D, mkMachine func(dep D, init S) *Machine[D, C, S]) *Suite[D, C, S] {
+	infer := NewInferTransition[C, S]()
+	return &Suite[D, C, S]{
+		dep:       dep,
 		mkMachine: mkMachine,
 		infer:     infer,
 	}
 }
 
-type Suite[TCommand, TState any] struct {
-	mkMachine func() *Machine[TCommand, TState]
-	infer     *InferTransition[TCommand, TState]
-	then      []*Case[TCommand, TState]
+type Suite[D, C, S any] struct {
+	dep       D
+	mkMachine func(dep D, init S) *Machine[D, C, S]
+	infer     *InferTransition[C, S]
+	cases     []*Case[D, C, S]
 }
 
-func (suite *Suite[TCommand, TState]) Case(name string, definition func(c *Case[TCommand, TState])) {
-	useCase := &Case[TCommand, TState]{
-		name: name,
-	}
-	definition(useCase)
-
-	suite.then = append(suite.then, useCase)
-}
-
-// Run runs all test then that describe state machine transitions
-func (suite *Suite[TCommand, TState]) Run(t *testing.T) {
+func (suite *Suite[D, C, S]) Case(t *testing.T, name string, f func(t *testing.T, c *Case[D, C, S])) *Suite[D, C, S] {
 	t.Helper()
-	for _, c := range suite.then {
-		m := suite.mkMachine()
-		suite.assert(t, c, m)
+	c := &Case[D, C, S]{
+		suit: suite,
+		step: Step[D, C, S]{
+			Name: name,
+		},
 	}
+	f(t, c)
+
+	suite.cases = append(suite.cases, c)
+	return suite
 }
 
-func (suite *Suite[TCommand, TState]) assert(t *testing.T, c *Case[TCommand, TState], m *Machine[TCommand, TState]) bool {
-	return t.Run(c.name, func(t *testing.T) {
-		for idx, cmd := range c.command {
-			state := m.State()
-			t.Run(fmt.Sprintf("Apply(cmd=%T, state=%T)", cmd, state), func(t *testing.T) {
-				c.commandOption[idx].before()
-				err := m.Handle(cmd)
-				c.commandOption[idx].after()
-
-				newState := m.State()
-
-				if c.err[idx] == nil {
-					assert.NoError(t, err)
-				} else {
-					assert.ErrorIs(t, err, c.err[idx])
-				}
-
-				assert.Equal(t, c.state[idx], newState)
-
-				suite.infer.Record(cmd, state, newState, err)
-
-				if len(c.then[idx]) > 0 {
-					for _, c2 := range c.then[idx] {
-						m2 := *m
-						suite.assert(t, c2, &m2)
-					}
-				}
-			})
-		}
-	})
-}
-
-// Fuzzy takes commands and states from recorded transitions and tries to find all possible combinations of commands and states.
-// This can help complete state diagrams with missing transitions, or find errors in state machine that haven't been tested yet.
-// It's useful when connected with AssertSelfDocumentStateDiagram, to automatically update state diagram.
-func (suite *Suite[TCommand, TState]) Fuzzy(t *testing.T) {
-	t.Helper()
-
+func (suite *Suite[D, C, S]) fuzzy() {
 	r := rand.New(rand.NewSource(0))
 
-	m := suite.mkMachine()
-	var states []TState
-	var commands []TCommand
-	var commandOptions []*caseOption
+	// Some commands or states can be more popular
+	// when we randomly select them, we can increase the chance of selecting them, and skip less popular ones, which is not desired
+	// we want to have a good coverage of all commands and states
+	// to achieve this, we will group commands and states, and randomly select group, and then randomly select command or state from this group
 
-	then := suite.then
-	for len(then) > 0 {
-		c := then[0]
-		then = then[1:]
+	states := make(map[string][]Step[D, C, S])
+	commands := make(map[string][]Step[D, C, S])
 
-		for _, opt := range c.commandOption {
-			commandOptions = append(commandOptions, opt)
+	for _, c := range suite.cases {
+		if any(c.step.ExpectedState) != nil {
+			stateName := reflect.TypeOf(c.step.ExpectedState).String()
+			states[stateName] = append(states[stateName], c.step)
 		}
-		for _, cmd := range c.command {
-			commands = append(commands, cmd)
+
+		if any(c.step.GivenCommand) != nil {
+			commandName := reflect.TypeOf(c.step.GivenCommand).String()
+			commands[commandName] = append(commands[commandName], c.step)
 		}
-		for _, state := range c.state {
-			states = append(states, state)
-		}
-		for _, t := range c.then {
-			for _, tt := range t {
-				then = append(then, tt)
-			}
+
+		if any(c.step.InitState) != nil {
+			stateName := reflect.TypeOf(c.step.InitState).String()
+			states[stateName] = append(states[stateName], c.step)
 		}
 	}
 
-	for _, seed := range rand.Perm(len(states) * len(commands) * 10) {
-		//r.Seed(int64(seed))
-		_ = seed
-		// randomly select command and state
-		idx := r.Intn(len(commands))
-		commandOptions[idx].before()
-		cmd := commands[idx]
-		commandOptions[idx].after()
+	for _, seed := range rand.Perm(len(suite.cases) * 100) {
+		r.Seed(int64(seed))
+
+		var step Step[D, C, S]
+		var state S
+
+		// randomly select step with command
+		for _, steps := range commands {
+			if r.Float64() < 0.1 {
+				step = steps[r.Intn(len(steps))]
+				break
+			}
+		}
+
+		// randomly select step with state
+		for _, steps := range states {
+			if r.Float64() < 0.1 {
+				state = steps[r.Intn(len(steps))].ExpectedState
+				break
+			}
+		}
 
 		// with some chance keep previous state, or randomly select new state
 		// this helps to generate new states, that can succeed after applying command
 		prob := r.Float64()
 		if prob < 0.3 {
-			m.state = states[r.Intn(len(states))]
+			state = suite.cases[r.Intn(len(suite.cases))].step.ExpectedState
 		} else if prob < 0.6 {
 			// explore also initial states
-			var zeroState TState
-			m.state = zeroState
+			var zeroState S
+			state = zeroState
 		}
 
-		state := m.State()
-		err := m.Handle(cmd)
+		m := suite.mkMachine(suite.dep, state)
+		// Before and After commands can have assertions, when we fuzzing we don't want to run them
+		if step.BeforeCommand != nil {
+			step.BeforeCommand(zeroT, suite.dep)
+		}
+		if step.AfterCommand != nil {
+			step.AfterCommand(zeroT, suite.dep)
+		}
+		err := m.Handle(context.Background(), step.GivenCommand)
 		newState := m.State()
-		suite.infer.Record(cmd, state, newState, err)
+		suite.infer.Record(step.GivenCommand, state, newState, err)
 	}
 }
 
@@ -140,10 +125,12 @@ func (suite *Suite[TCommand, TState]) Fuzzy(t *testing.T) {
 //
 // If file does not exist, function will return true, to indicate that file should be created.
 // For this purpose call SelfDocumentStateDiagram.
-func (suite *Suite[TCommand, TState]) AssertSelfDocumentStateDiagram(t *testing.T, baseFileName string) (shouldSelfDocument bool) {
+func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filename string) bool {
+	suite.fuzzy()
+
 	// extract fine name from file, if there is extension remove it
-	fileName := baseFileName + ".state_diagram.mmd"
-	fileNameWithErrorTransitions := baseFileName + ".state_diagram_with_errors.mmd"
+	fileName := filename + ".state_diagram.mmd"
+	fileNameWithErrorTransitions := filename + ".state_diagram_with_errors.mmd"
 
 	for _, f := range []struct {
 		filename  string
@@ -166,7 +153,10 @@ func (suite *Suite[TCommand, TState]) AssertSelfDocumentStateDiagram(t *testing.
 		}
 
 		// if stored content is not equal, fail assertion
-		assert.Equalf(t, string(date), mermaidDiagram, "state diagram is not equal to stored in file %s", f.filename)
+		if diff := cmp.Diff(string(date), mermaidDiagram); diff != "" {
+			t.Fatalf("unexpected state diagram (-want +got):\n%s", diff)
+			return false
+		}
 	}
 
 	return false
@@ -174,10 +164,12 @@ func (suite *Suite[TCommand, TState]) AssertSelfDocumentStateDiagram(t *testing.
 
 // SelfDocumentStateDiagram help to self document state machine transitions, just by running tests.
 // It will always overwrite stored state diagram files, useful in TDD loop, when tests are being written.
-func (suite *Suite[TCommand, TState]) SelfDocumentStateDiagram(t *testing.T, baseFileName string) {
+func (suite *Suite[D, C, S]) SelfDocumentStateDiagram(t *testing.T, filename string) {
+	suite.fuzzy()
+
 	// extract fine name from file, if there is extension remove it
-	fileName := baseFileName + ".state_diagram.mmd"
-	fileNameWithErrorTransitions := baseFileName + ".state_diagram_with_errors.mmd"
+	fileName := filename + ".state_diagram.mmd"
+	fileNameWithErrorTransitions := filename + ".state_diagram_with_errors.mmd"
 
 	for _, f := range []struct {
 		filename  string
@@ -195,94 +187,154 @@ func (suite *Suite[TCommand, TState]) SelfDocumentStateDiagram(t *testing.T, bas
 	}
 }
 
-func (suite *Suite[TCommand, TState]) SelfDocumentTitle(title string) {
-	suite.infer.WithTitle(title)
-}
+type Case[D, C, S any] struct {
+	suit *Suite[D, C, S]
 
-type caseOption struct {
-	before func()
-	after  func()
-}
+	step Step[D, C, S]
 
-var zeroCaseOption caseOption = caseOption{
-	before: func() {},
-	after:  func() {},
-}
-
-type InitCaseOptions func(o *caseOption)
-
-func WithBefore(f func()) InitCaseOptions {
-	return func(o *caseOption) {
-		o.before = f
-	}
-}
-
-func WithAfter(f func()) InitCaseOptions {
-	return func(o *caseOption) {
-		o.after = f
-	}
-}
-
-type Case[TCommand, TState any] struct {
-	name          string
-	command       []TCommand
-	commandOption []*caseOption
-	state         []TState
-	err           []error
-	then          [][]*Case[TCommand, TState]
-}
-
-func (c *Case[TCommand, TState]) next() {
-	var zeroCmd TCommand
-	var zeroState TState
-	var zeroErr error
-
-	c.commandOption = append(c.commandOption, &zeroCaseOption)
-	c.command = append(c.command, zeroCmd)
-	c.state = append(c.state, zeroState)
-	c.err = append(c.err, zeroErr)
-	c.then = append(c.then, nil)
-}
-
-func (c *Case[TCommand, TState]) index() int {
-	return len(c.command) - 1
+	process     bool
+	resultErr   error
+	resultState S
 }
 
 // GivenCommand starts building assertion that when command is applied to machine, it will result in given state or error.
-// Use this method always with ThenState or ThenStateAndError
-func (c *Case[TCommand, TState]) GivenCommand(cmd TCommand, opts ...InitCaseOptions) *Case[TCommand, TState] {
-	c.next()
+func (suitcase *Case[D, C, S]) GivenCommand(c C) *Case[D, C, S] {
+	suitcase.step.GivenCommand = c
+	return suitcase
+}
 
-	option := &caseOption{
-		before: func() {},
-		after:  func() {},
-	}
-	for _, o := range opts {
-		o(option)
-	}
+// BeforeCommand is optional, if provided it will be called before command is executed
+// useful when you want to prepare some data before command is executed,
+// like change dependency to return error, or change some state
+func (suitcase *Case[D, C, S]) BeforeCommand(f func(testing.TB, D)) *Case[D, C, S] {
+	suitcase.step.BeforeCommand = f
+	return suitcase
+}
 
-	c.commandOption[c.index()] = option
-	c.command[c.index()] = cmd
-	return c
+// AfterCommand is optional, if provided it will be called after command is executed
+// useful when you want to assert some data after command is executed,
+// like what function were called, and with what arguments
+func (suitcase *Case[D, C, S]) AfterCommand(f func(testing.TB, D)) *Case[D, C, S] {
+	suitcase.step.AfterCommand = f
+	return suitcase
 }
 
 // ThenState asserts that command applied to machine will result in given state
-func (c *Case[TCommand, TState]) ThenState(state TState) *Case[TCommand, TState] {
-	c.state[c.index()] = state
-	c.err[c.index()] = nil
-	return c
+// implicitly assumes that error is nil
+func (suitcase *Case[D, C, S]) ThenState(t *testing.T, o S) *Case[D, C, S] {
+	t.Helper()
+
+	suitcase.step.ExpectedState = o
+	suitcase.step.ExpectedErr = nil
+	suitcase.run(t)
+
+	return suitcase
+}
+
+// ThenStateAndError asserts that command applied to machine will result in given state and error
+// state is required because we want to know what is the expected state after command fails to be applied, and return error.
+// state most of the time shouldn't be modified, and explicit definition of state help to make this behaviour explicit.
+func (suitcase *Case[D, C, S]) ThenStateAndError(t *testing.T, state S, err error) *Case[D, C, S] {
+	t.Helper()
+	suitcase.step.ExpectedState = state
+	suitcase.step.ExpectedErr = err
+	suitcase.run(t)
+
+	return suitcase
 }
 
 // ForkCase takes previous state of machine and allows to apply another case from this point onward
-// there can be many forks from one state
-func (c *Case[TCommand, TState]) ForkCase(name string, definition func(c *Case[TCommand, TState])) *Case[TCommand, TState] {
-	useCase := &Case[TCommand, TState]{name: name}
-	definition(useCase)
-	c.then[c.index()] = append(c.then[c.index()], useCase)
-	return c
+// it's useful when you want to test multiple scenarios from one state
+func (suitcase *Case[D, C, S]) ForkCase(t *testing.T, name string, f func(t *testing.T, c *Case[D, C, S])) *Case[D, C, S] {
+	t.Helper()
+
+	// We have to run the current test case,
+	// if we want to have state to form from
+	suitcase.run(t)
+
+	newState := suitcase.deepCopy(suitcase.resultState)
+
+	newCase := &Case[D, C, S]{
+		suit: suitcase.suit,
+		step: Step[D, C, S]{
+			Name:      name,
+			InitState: newState,
+		},
+	}
+
+	f(t, newCase)
+
+	suitcase.suit.cases = append(suitcase.suit.cases, newCase)
+	return suitcase
 }
 
-func (c *Case[TCommand, TState]) ThenStateAndError(state TState, err error) {
-	c.state[c.index()] = state
-	c.err[c.index()] = err
+func (suitcase *Case[D, C, S]) run(t *testing.T) {
+	if suitcase.process {
+		return
+	}
+	suitcase.process = true
+
+	t.Helper()
+	machine := suitcase.suit.mkMachine(suitcase.suit.dep, suitcase.step.InitState)
+	if suitcase.step.BeforeCommand != nil {
+		suitcase.step.BeforeCommand(t, suitcase.suit.dep)
+	}
+
+	err := machine.Handle(context.Background(), suitcase.step.GivenCommand)
+	suitcase.resultErr = err
+	suitcase.resultState = machine.State()
+
+	if suitcase.step.AfterCommand != nil {
+		suitcase.step.AfterCommand(t, suitcase.suit.dep)
+	}
+
+	suitcase.suit.infer.Record(suitcase.step.GivenCommand, suitcase.step.InitState, suitcase.resultState, err)
+
+	if !errors.Is(err, suitcase.step.ExpectedErr) {
+		t.Fatalf("unexpected error \n  expect: %v \n     got: %v\n", suitcase.step.ExpectedErr, err)
+	}
+
+	if diff := cmp.Diff(suitcase.step.ExpectedState, suitcase.resultState); diff != "" {
+		t.Fatalf("unexpected state (-want +got):\n%suitcase", diff)
+	}
 }
+
+func (suitcase *Case[D, C, S]) deepCopy(state S) S {
+	data, err := shared.JSONMarshal[S](state)
+	if err != nil {
+		panic(fmt.Errorf("failed deep copying state %T, reason: %w", state, err))
+	}
+	result, err := shared.JSONUnmarshal[S](data)
+	if err != nil {
+		panic(fmt.Errorf("failed deep copying state %T, reason: %w", state, err))
+	}
+	return result
+}
+
+type TestingT interface {
+	Errorf(format string, args ...interface{})
+}
+
+// Step is a single test case that describe state machine transition
+type Step[D, C, S any] struct {
+	// Name human readable description of the test case. It's required
+	Name string
+
+	// InitState is optional, if not provided it will be nil
+	// and when step is part of sequence, then state will be inherited from previous step
+	InitState S
+
+	// GivenCommand is the command that will be applied to the machine. It's required
+	GivenCommand C
+	// BeforeCommand is optional, if provided it will be called before command is executed
+	BeforeCommand func(t testing.TB, x D)
+	// AfterCommand is optional, if provided it will be called after command is executed
+	AfterCommand func(t testing.TB, x D)
+
+	// ExpectedState is the expected state after command is executed. It's required, but can be nil
+	ExpectedState S
+	// ExpectedErr is the expected error after command is executed. It's required, but can be nil
+	ExpectedErr error
+}
+
+var zeroT testing.TB = &testing.T{}

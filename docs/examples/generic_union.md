@@ -1,7 +1,7 @@
 ---
-title: Generic unions
+title: Union and generic types
 ---
-# Generic unions
+# Union and generic types
 MkUnion will generate generic unions for you.
 
 You only need to declare each variant type of the union with a type parameter,
@@ -27,18 +27,16 @@ type (
 )
 ```
 
-After you run generation (as described in [getting started](/getting_started.md)), 
+After you run generation (as described in [getting started](../getting_started.md)), 
 you have access to the same features as with non-generic unions.
 
 ## Matching function
 
-Let's define higher order function `ReduceTree` that will travers leaves in tree and produce a single value.
+Let's define higher order function `ReduceTree` that will travers leaves in `Tree` and produce a single value.
 
 This function uses `MatchTreeR1` function that is generated automatically for you.
 
 ```go title="example/tree.go"
-
-```go
 func ReduceTree[A, B any](x Tree[A], f func(A, B) B, init B) B {
 	return MatchTreeR1(
 		x,
@@ -78,11 +76,7 @@ func ExampleTreeSumValues() {
 
 You can also reduce tree to complex structure, for example to keep track of order of values in the tree, along with sum of all values in the tree.
 
-```go title="example/tree.go"
-
 ```go title="example/tree_test.go"
-
-```go
 func ExampleTreeCustomReduction() {
 	tree := &Branch[int]{
 		L: &Leaf[int]{Value: 1},
@@ -155,3 +149,10 @@ func MapOption[A, B any](x Option[A], f func(A) B) Option[B] {
 	)
 }
 ```
+
+In above example, we define `MapEither` and `MapOption` functions that will apply function `f` to value inside `Either` or `Option` type.
+
+It would be much better to have only one `Map` definition, but due to limitations of Go type system, we need to define separate functions for each type.
+
+I'm considering adding code generation for such behaviours in the future. Not yet due to focus on validating core concepts.
+

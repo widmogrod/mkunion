@@ -75,19 +75,3 @@ func TestTreeSchema(t *testing.T) {
 	result := schema.ToGo[Tree[int]](sch)
 	assert.Equal(t, tree, result)
 }
-
-//func TestMyTriesMatchR0(t *testing.T) {
-//	MyTriesMatchR0(
-//		&Leaf{Value: 1}, &Leaf{Value: 3},
-//		func(x *Leaf, y *Leaf) {
-//			assert.Equal(t, x.Value, 1)
-//			assert.Equal(t, y.Value, 3)
-//		},
-//		func(x0 *Branch, x1 any) {
-//			assert.Fail(t, "should not match")
-//		},
-//		func(x0 any, x1 any) {
-//			assert.Fail(t, "should not match")
-//		},
-//	)
-//}

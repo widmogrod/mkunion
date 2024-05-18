@@ -1,6 +1,7 @@
 package tictacstatemachine
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -690,7 +691,7 @@ func TestNewMachine(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			m := NewMachine()
 			for i, cmd := range uc.commands {
-				err := m.Handle(cmd)
+				err := m.Handle(context.TODO(), cmd)
 				assert.Equal(t, uc.states[i], m.State(), "state at index: %d", i)
 				assert.ErrorIs(t, err, uc.err[i], "error at index: %d", i)
 			}

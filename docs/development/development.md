@@ -3,6 +3,12 @@ title: Contributing and development
 ---
 
 # Contributing and development
+## Contributing
+
+If you want to contribute to `mkunion` project, please open issue first to discuss your idea.
+
+I have opinions about how `mkunion` should work, how I want to evolve it, and I want to make sure that your idea fits into the project.
+
 ## Development
 
 Checkout repo and run:
@@ -28,8 +34,3 @@ To preview documentation run:
 ```
  ./dev/docs.sh run
 ```
-
-## Contributing
-
-If you want to contribute to `mkunion` project, please open issue first to discuss your idea.
-I have opinions about how `mkunion` should work, how I want to evolve it, and I want to make sure that your idea fits into the project.

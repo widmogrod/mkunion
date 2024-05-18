@@ -65,7 +65,7 @@ export type Reshaper = workflow.Reshaper
 
 export type Schema = schema.Schema
 
-export type Service<CMD, State> = {}
+export type Service<Dep, CMD, State> = {}
 
 export type State = workflow.State
 

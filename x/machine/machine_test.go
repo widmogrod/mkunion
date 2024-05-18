@@ -20,15 +20,15 @@ func TestMachine(t *testing.T) {
 
 	assert.Equal(t, 10, m.State())
 
-	err := m.Handle("inc")
+	err := m.Handle(nil, "inc")
 	assert.NoError(t, err)
 	assert.Equal(t, 11, m.State())
 
-	err = m.Handle("dec")
+	err = m.Handle(nil, "dec")
 	assert.NoError(t, err)
 	assert.Equal(t, 10, m.State())
 
-	err = m.Handle("unknown")
+	err = m.Handle(nil, "unknown")
 	assert.Error(t, err)
 	assert.Equal(t, 10, m.State())
 }
