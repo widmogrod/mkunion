@@ -77,7 +77,7 @@ In future I plan to add `mkununion watch ./...` command that will watch for chan
 This will allow you to remove `//go:generate` directive from your code, and have faster feedback loop.
 
 ### Match over union type
-When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](../example/vehicle_union_gen.go))
+When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go))
 
 You can use those function to do exhaustive matching on your union type.
 

@@ -23,17 +23,17 @@ As an driving example, we will use e-commerce inspired Order Service that can be
 
 Such states, have rules that govern **transitions**, like order cannot be cancelled if it's already completed, and so on.
 
-And we need to have also to trigger changes in state, like create order that pending for processing, or cancel order. We will call those triggers **commands**.
+We need to have a wayt to trigger changes in state, like create order that pending for processing, or cancel order. We will call those triggers **commands**.
 
 Some of those rules could change in future, and we want to be able to change them without rewriting whole application.
 This also informs us that our design should be open for extensions.
 
-Side note, if you want go strait to final code product, then into [example/state/](example/state/) directory and have fun exploring.
+Side note, if you want go strait to final code product, then into [example/state/](https://github.com/widmogrod/mkunion/tree/main/example/state) directory and have fun exploring.
 
 ## Modeling commands and states
 
 Our example can be represented as state machine that looks like this:
-[simple_machine_test.go.state_diagram.mmd](example/state/simple_machine_test.go.state_diagram.mmd)
+[simple_machine_test.go.state_diagram.mmd](https://github.com/widmogrod/mkunion/tree/main/example/state/simple_machine_test.go.state_diagram.mmd)
 ```mermaid
 --8<-- "example/state/machine_test.go.state_diagram.mmd"
 ```
@@ -46,7 +46,7 @@ For example `*state.CreateOrderCMD`:
 
 - `state` it's a package name
 - `CreateOrderCMD` is a struct name in that package.
-- `CMD` suffix it's naming convention, that it's optional, but I find it makes code more readable.
+- `CMD` suffix it's naming convention, that it's optional, but I find it makes code more readable, and easier to distinguish commands from states.
 
 
 Below is a code snippet that demonstrate complete model of **state** and **commands** of Order Service, that we talked about.
@@ -55,7 +55,7 @@ Below is a code snippet that demonstrate complete model of **state** and **comma
 
 This is one example how union types can be used in golang. 
 Historically in golang it would be very hard to achieve such thing, and it would require a lot of boilerplate code.
-Here interface that group those types is generated automatically.
+Here interface that group those types is generated automatically. You can focus on modeling your domain.
 
 ```go title="example/state/model.go"
 --8<-- "example/state/model.go"
@@ -136,7 +136,7 @@ Few things to notice in this test:
 I know it's subjective, but I find it very readable, and easy to understand, even for non-programmers.
 
 ## Generating state diagram from tests
-Last bit is this line at the bottom:
+Last bit is this line at the bottom of the test file:
 
 ```go title="example/state/machine_test.go"
 if suite.AssertSelfDocumentStateDiagram(t, "machine_test.go") {
@@ -186,7 +186,26 @@ Another good practice is that every package that defines state machine in the wa
 should provide `NewMachine` function that will return bootstrapped machine with package types, like so:
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:9:11"
+--8<-- "example/state/machine.go:9:12"
 ```
+
+## Conclusion
+
+Now we have all pieces in place, and we can start building our application.
+- We have NewMachine constructor that will give us object to use in our application.
+- We have tests that will ensure that our state machine is correct, fuzzy test help to discover edge cases, and lastly we get diagrams showing which path we tested and cover.
+- We saw how this approach focus on business logic, and keep it separate from other concerns like database, or API clients. Which is one of the principles of clean architecture.
+
+### Next steps
+
+To learn how to persist state in database, and how to handle concurrency conflicts, please read
+
+- [Persisting union in database](../examples/state_storage.md)
+
+To learn how to handle errors in state machines, and how to build self-healing systems, please read
+
+- [Handling errors in state machines](../examples/state_storage.md)
+
+
 
 
