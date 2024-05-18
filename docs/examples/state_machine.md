@@ -192,20 +192,15 @@ should provide `NewMachine` function that will return bootstrapped machine with 
 ## Conclusion
 
 Now we have all pieces in place, and we can start building our application.
+
 - We have NewMachine constructor that will give us object to use in our application.
 - We have tests that will ensure that our state machine is correct, fuzzy test help to discover edge cases, and lastly we get diagrams showing which path we tested and cover.
 - We saw how this approach focus on business logic, and keep it separate from other concerns like database, or API clients. Which is one of the principles of clean architecture.
 
-### Next steps
+## Next steps
 
-To learn how to persist state in database, and how to handle concurrency conflicts, please read
-
-- [Persisting union in database](../examples/state_storage.md)
-
-To learn how to handle errors in state machines, and how to build self-healing systems, please read
-
-- [Handling errors in state machines](../examples/state_storage.md)
-
+- **[Persisting union in database](../examples/state_storage.md)** will help answer question how to persist state in database, and how to handle concurrency conflicts
+- **[Handling errors in state machines](../examples/state_storage.md)** will help answer question how to handle errors in state machines, and how to build self-healing systems
 
 
 
