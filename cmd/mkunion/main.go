@@ -218,6 +218,7 @@ func main() {
 					},
 				},
 				Action: func(c *cli.Context) error {
+					log.SetLevel(log.InfoLevel)
 					if c.Bool("verbose") {
 						log.SetLevel(log.DebugLevel)
 					}
@@ -279,7 +280,7 @@ func main() {
 								log.SetLevel(prevLevel)
 
 								for _, x := range savedFiles {
-									log.Infof("   generated:\t%s", x)
+									log.Infof("re-generated:\t%s", x)
 									justGenerated[x] = true
 								}
 
@@ -314,9 +315,17 @@ func main() {
 					}
 
 					log.Printf("Initial generation for %d go files", len(sourcePaths))
-					_, err = GenerateMain(sourcePaths, c.Bool("type-registry"))
+
+					prevLevel := log.GetLevel()
+					log.SetLevel(log.ErrorLevel)
+					savedFiles, err := GenerateMain(sourcePaths, c.Bool("type-registry"))
+					log.SetLevel(prevLevel)
 					if err != nil {
 						return fmt.Errorf("initial generation: %w", err)
+					}
+
+					for _, x := range savedFiles {
+						log.Infof("   generated:\t%s", x)
 					}
 
 					log.Printf("Watching for changes ...")
