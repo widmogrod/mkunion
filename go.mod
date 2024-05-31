@@ -12,6 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/confluentinc/confluent-kafka-go/v2 v2.3.0
 	github.com/fatih/structtag v1.2.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/google/go-cmp v0.5.9
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	github.com/robfig/cron/v3 v3.0.1
