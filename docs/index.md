@@ -30,8 +30,6 @@ MkUnion solves all of those problems, by generating opinionated and strongly typ
 ```go title="example/vehicle.go"
 package example
 
-//go:generate mkunion
-
 // union declaration
 //go:tag mkunion:"Vehicle"
 type (
@@ -83,6 +81,13 @@ func ExampleFromJSON() {
 }
 ```
 
+Watch for changes in the file and generate code on the fly:
+```sh
+mkunion watch ./...
+
+# or use -g flag to generate code without watching
+mkunion watch -g ./...
+```
 
 ## Next
 

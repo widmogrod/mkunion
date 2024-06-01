@@ -12,8 +12,6 @@ But in a more complex example you may want to represent different states of your
 ```go title="example/vehicle.go"
 package example
 
-//go:generate mkunion
-
 //go:tag mkunion:"Vehicle"
 type (
 	Car struct {
@@ -33,11 +31,6 @@ type (
 
 In above example you can see a few important concepts:
 
-#### `//go:generate mkunion`
-
-Go generate directive runs `mkunion` command that you installed in previous step.
-It will generate union type and pattern matching functions for you.
-
 #### `//go:tag mkunion:"Vehicle"`
 
 Tag are powerful and flexible way to add metadata to your code.
@@ -45,9 +38,8 @@ You may be familiar with tags when you work with JSON in golang
 
 ```go
 type User struct {
-Name string `json:"name"`
+	Name string `json:"name"`
 }
-
 ```
 
 Unfortunately Golang don't extend this feature to other parts of the language.
@@ -64,7 +56,6 @@ And MkUnion use it heavily to offer way of adding new behaviour to go types.
 ```go
 //go:tag mkunion:",no-type-registry"
 package example
-
 ```
 
 #### `type (...)` convention
@@ -72,21 +63,22 @@ package example
 Union type is defined as a set of types in a single type declaration. You can think of it as "one of" type.
 To make it more readable, as convention I decided to use `type (...)` declaration block, instead of individual `type` declaration.
 
-### Generate code
-In IDEs like Goland run `Option + Command + G` for fast code generation
+### Generate code and watch for changes
 
-Or, run in your terminal
+Run in your terminal to generate union type for your code and watch for changes
 ```
-go generate ./...
+mkunion watch ./...
+```
+
+To generate unions without watching for changes, you can run
+```
+mkunion watch -g ./...
 ```
 
 Alternatively you can run `mkunion` command directly
 ```
 mkunion -i example/vehicle.go
 ```
-
-In future I plan to add `mkununion watch ./...` command that will watch for changes in your code and automatically generate union types for you.
-This will allow you to remove `//go:generate` directive from your code, and have faster feedback loop.
 
 ### Match over union type
 When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go))
