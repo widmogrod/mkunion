@@ -45,7 +45,7 @@ func TermShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "SearchCMD",
 			},
 		},
@@ -64,7 +64,7 @@ func FulltextShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "SearchCMD",
 			},
 		},

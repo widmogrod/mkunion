@@ -69,7 +69,7 @@ func PullPushContextStateShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "SnapshotState",
 			},
 		},
@@ -140,7 +140,7 @@ func JoinContextStateShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "SnapshotState",
 			},
 		},

@@ -184,6 +184,7 @@ func ListOfAliasAnyShape() shape.Shape {
 }
 `, result)
 }
+
 func TestShapeTagged_ListOfAliasAny_Generic(t *testing.T) {
 	inferred, err := shape.InferFromFile("testutils/generic.go")
 	if err != nil {
@@ -253,7 +254,7 @@ func ItemShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Record",
 			},
 		},
@@ -272,7 +273,7 @@ func OtherShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Record",
 			},
 		},

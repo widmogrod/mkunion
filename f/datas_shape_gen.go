@@ -67,7 +67,7 @@ func LeftShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Either",
 			},
 		},
@@ -100,7 +100,7 @@ func RightShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Either",
 			},
 		},
@@ -149,7 +149,7 @@ func SomeShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Option",
 			},
 		},
@@ -168,7 +168,7 @@ func NoneShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Option",
 			},
 		},
@@ -225,7 +225,7 @@ func OkShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Result",
 			},
 		},
@@ -258,7 +258,7 @@ func ErrShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Result",
 			},
 		},

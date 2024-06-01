@@ -93,7 +93,7 @@ func RunShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Command",
 			},
 		},
@@ -120,7 +120,7 @@ func CallbackShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Command",
 			},
 		},
@@ -139,7 +139,7 @@ func TryRecoverShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Command",
 			},
 		},
@@ -158,7 +158,7 @@ func StopScheduleShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Command",
 			},
 		},
@@ -177,7 +177,7 @@ func ResumeScheduleShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Command",
 			},
 		},
@@ -224,7 +224,7 @@ func FlowShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Workflow",
 			},
 		},
@@ -243,7 +243,7 @@ func FlowRefShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Workflow",
 			},
 		},
@@ -280,7 +280,7 @@ func ScheduleRunShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "RunOption",
 			},
 		},
@@ -303,7 +303,7 @@ func DelayRunShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "RunOption",
 			},
 		},
@@ -346,7 +346,7 @@ func EndShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Expr",
 			},
 		},
@@ -381,7 +381,7 @@ func AssignShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Expr",
 			},
 		},
@@ -424,7 +424,7 @@ func ApplyShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Expr",
 			},
 		},
@@ -471,7 +471,7 @@ func ChooseShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Expr",
 			},
 		},
@@ -504,7 +504,7 @@ func GetValueShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Reshaper",
 			},
 		},
@@ -527,7 +527,7 @@ func SetValueShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Reshaper",
 			},
 		},
@@ -592,7 +592,7 @@ func AndShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Predicate",
 			},
 		},
@@ -617,7 +617,7 @@ func OrShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Predicate",
 			},
 		},
@@ -640,7 +640,7 @@ func NotShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Predicate",
 			},
 		},
@@ -675,7 +675,7 @@ func CompareShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Predicate",
 			},
 		},
@@ -724,7 +724,7 @@ func NextOperationShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "State",
 			},
 		},
@@ -755,7 +755,7 @@ func DoneShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "State",
 			},
 		},
@@ -794,7 +794,7 @@ func ErrorShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "State",
 			},
 		},
@@ -829,7 +829,7 @@ func AwaitShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "State",
 			},
 		},
@@ -860,7 +860,7 @@ func ScheduledShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "State",
 			},
 		},
@@ -883,7 +883,7 @@ func ScheduleStoppedShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "State",
 			},
 		},

@@ -60,7 +60,7 @@ func AtPeriodShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerDescription",
 			},
 		},
@@ -83,7 +83,7 @@ func AtWindowItemSizeShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerDescription",
 			},
 		},
@@ -106,7 +106,7 @@ func AtWatermarkShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerDescription",
 			},
 		},
@@ -131,7 +131,7 @@ func AnyOfShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerDescription",
 			},
 		},
@@ -156,7 +156,7 @@ func AllOfShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerDescription",
 			},
 		},
@@ -184,7 +184,7 @@ func AtPeriod1Shape() shape.Shape {
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerType",
 			},
 		},
@@ -203,7 +203,7 @@ func AtWindowItemSize1Shape() shape.Shape {
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerType",
 			},
 		},
@@ -222,7 +222,7 @@ func AtWatermark1Shape() shape.Shape {
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "TriggerType",
 			},
 		},
@@ -266,7 +266,7 @@ func AccumulateShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "WindowFlushMode",
 			},
 		},
@@ -279,7 +279,7 @@ func DiscardShape() shape.Shape {
 		PkgName:       "projection",
 		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/projection",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "WindowFlushMode",
 			},
 		},
@@ -302,7 +302,7 @@ func AccumulatingAndRetractingShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "WindowFlushMode",
 			},
 		},

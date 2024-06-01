@@ -39,7 +39,7 @@ func LocationFieldShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Location",
 			},
 		},
@@ -62,7 +62,7 @@ func LocationIndexShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Location",
 			},
 		},
@@ -75,7 +75,7 @@ func LocationAnythingShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Location",
 			},
 		},

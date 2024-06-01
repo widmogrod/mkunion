@@ -13,6 +13,7 @@ var (
 	registerType           = sync.Map{}
 )
 
+//go:tag shape:"-"
 type serde[A any] struct {
 	from func([]byte) (A, error)
 	to   func(A) ([]byte, error)

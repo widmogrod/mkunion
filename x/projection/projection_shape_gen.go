@@ -71,7 +71,7 @@ func RecordShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Data",
 			},
 		},
@@ -100,7 +100,7 @@ func WatermarkShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Data",
 			},
 		},
@@ -172,7 +172,7 @@ func LeftShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Either",
 			},
 		},
@@ -205,7 +205,7 @@ func RightShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Either",
 			},
 		},
