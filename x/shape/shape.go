@@ -184,6 +184,7 @@ type FieldLike struct {
 const (
 	TagUnionName             = "mkunion"
 	TagUnionOptionNoRegistry = "no-type-registry"
+	TagShapeName             = "shape"
 )
 
 type Tag struct {
