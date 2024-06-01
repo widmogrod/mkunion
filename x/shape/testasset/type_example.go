@@ -1,10 +1,9 @@
+//go:tag mkunion:",no-type-registry"
 package testasset
 
 import (
 	"time"
 )
-
-//go:generate go run ../../../cmd/mkunion/main.go --type-registry=false
 
 //go:tag mkunion:"Example"
 type (

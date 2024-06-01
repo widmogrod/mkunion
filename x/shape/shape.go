@@ -182,7 +182,8 @@ type FieldLike struct {
 }
 
 const (
-	TagUnionName = "mkunion_union_name"
+	TagUnionName             = "mkunion"
+	TagUnionOptionNoRegistry = "no-type-registry"
 )
 
 type Tag struct {

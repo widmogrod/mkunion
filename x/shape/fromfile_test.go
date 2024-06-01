@@ -42,7 +42,7 @@ func TestInferFromFile(t *testing.T) {
 						},
 					},
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&StructLike{
 				Name:          "B",
@@ -89,14 +89,14 @@ func TestInferFromFile(t *testing.T) {
 						Tags:  nil,
 					},
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "C",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				Type:          &PrimitiveLike{Kind: &StringLike{}},
-				Tags:          map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags:          map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "D",
@@ -105,7 +105,7 @@ func TestInferFromFile(t *testing.T) {
 				Type: &PrimitiveLike{Kind: &NumberLike{
 					Kind: &Int64{},
 				}},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "E",
@@ -114,14 +114,14 @@ func TestInferFromFile(t *testing.T) {
 				Type: &PrimitiveLike{Kind: &NumberLike{
 					Kind: &Float64{},
 				}},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "F",
 				PkgName:       "testasset",
 				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				Type:          &PrimitiveLike{Kind: &BooleanLike{}},
-				Tags:          map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags:          map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 
 			&AliasLike{
@@ -137,7 +137,7 @@ func TestInferFromFile(t *testing.T) {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 					},
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 
 			&AliasLike{
@@ -152,7 +152,7 @@ func TestInferFromFile(t *testing.T) {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 					},
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "J",
@@ -163,7 +163,7 @@ func TestInferFromFile(t *testing.T) {
 					Element:  &PrimitiveLike{Kind: &StringLike{}},
 					ArrayLen: ptr(2),
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "K",
@@ -175,7 +175,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "L",
@@ -187,7 +187,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "M",
@@ -207,7 +207,7 @@ func TestInferFromFile(t *testing.T) {
 							"omitempty",
 						},
 					},
-					"mkunion_union_name": {
+					"mkunion": {
 						Value: "Example",
 					},
 				},
@@ -222,7 +222,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "time",
 					PkgImportName: "time",
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "O",
@@ -241,7 +241,7 @@ func TestInferFromFile(t *testing.T) {
 						},
 					},
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 			&AliasLike{
 				Name:          "P",
@@ -284,7 +284,7 @@ func TestInferFromFile(t *testing.T) {
 						},
 					},
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "Example"}},
+				Tags: map[string]Tag{"mkunion": {Value: "Example"}},
 			},
 		},
 		Tags: map[string]Tag{
@@ -375,7 +375,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "AliasExample"}},
+				Tags: map[string]Tag{"mkunion": {Value: "AliasExample"}},
 			},
 			&AliasLike{
 				Name:          "B2",
@@ -387,7 +387,7 @@ func TestInferFromFile(t *testing.T) {
 					PkgName:       "testasset",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
 				},
-				Tags: map[string]Tag{"mkunion_union_name": {Value: "AliasExample"}},
+				Tags: map[string]Tag{"mkunion": {Value: "AliasExample"}},
 			},
 		},
 		Tags: map[string]Tag{
@@ -438,8 +438,9 @@ func TestIndexedTypeWalker_ExpandedShapes(t *testing.T) {
 
 func TestIndexedTypeWalker_Visit(t *testing.T) {
 	useCases := map[string]struct {
-		body     string
-		expected map[string]Shape
+		body            string
+		expected        map[string]Shape
+		expectedPkgTags map[string]Tag
 	}{
 		"from interface declaration": {
 			body: `package test_package
@@ -655,13 +656,18 @@ type (
 			expected: make(map[string]Shape),
 		},
 		"contrastive example, pointer to type parameter is not initialisation": {
-			body: `package projection
+			body: `// projection package is responsible for storing and retrieving data from the storage.
+//go:tag mytag:"-"
+package projection
 
 type Storage[T any] interface {
 	GetAs(id string, x *T) error
 }
 `,
 			expected: make(map[string]Shape),
+			expectedPkgTags: map[string]Tag{
+				"mytag": {Value: "-"},
+			},
 		},
 	}
 	for name, uc := range useCases {
@@ -678,6 +684,10 @@ type Storage[T any] interface {
 			}
 
 			if diff := cmp.Diff(uc.expected, w.ExpandedShapes()); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(uc.expectedPkgTags, w.PackageTags()); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})

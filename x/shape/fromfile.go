@@ -1067,6 +1067,7 @@ type IndexedTypeWalker struct {
 
 	pkgName       string
 	pkgImportName string
+	packageTags   map[string]Tag
 }
 
 func (walker *IndexedTypeWalker) PackageName() string {
@@ -1083,6 +1084,10 @@ func (walker *IndexedTypeWalker) SetPkgImportName(pkgImportName string) {
 
 func (walker *IndexedTypeWalker) IndexedShapes() map[string]Shape {
 	return walker.indexedShapes
+}
+
+func (walker *IndexedTypeWalker) PackageTags() map[string]Tag {
+	return walker.packageTags
 }
 
 func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
@@ -1139,6 +1144,7 @@ func (walker *IndexedTypeWalker) Visit(n ast.Node) ast.Visitor {
 		}
 
 		walker.packageNameToPackageImport[walker.pkgName] = walker.pkgImportName
+		walker.packageTags = MergeTagsInto(walker.packageTags, ExtractDocumentTags(t.Doc))
 
 		for _, imp := range t.Imports {
 			pkgImportName := strings.Trim(imp.Path.Value, "\"")
