@@ -35,7 +35,7 @@ In above example you can see a few important concepts:
 
 #### `//go:generate mkunion`
 
-Go generate directive runs `mkunion` command that you installed in previous step. 
+Go generate directive runs `mkunion` command that you installed in previous step.
 It will generate union type and pattern matching functions for you.
 
 #### `//go:tag mkunion:"Vehicle"`
@@ -45,7 +45,7 @@ You may be familiar with tags when you work with JSON in golang
 
 ```go
 type User struct {
-    Name string `json:"name"`
+Name string `json:"name"`
 }
 
 ```
@@ -54,6 +54,18 @@ Unfortunately Golang don't extend this feature to other parts of the language.
 
 MkUnion defines `//go:tag` comment, following other idiomatic definitions `go:generate`, `go:embed` to allow to add metadata to struct type.
 And MkUnion use it heavily to offer way of adding new behaviour to go types.
+
+##### Tags supported by MkUnion
+
+- `go:tag mkunion:"Vehicle"` - define union type
+- `go:tag serde:"json"` - enable serialisation type (currently only JSON is supported), enbabled by default
+- `go:tag shape:"-"` - disable shape generation for this type, useful in cases x/shared package cannot depend on other x packages, to avid circular dependencies
+- `go:tag mkunion:",no-type-registry"` - if you want to disable generation type registry in a package, in one of go files above package declaration define tag
+```go
+//go:tag mkunion:",no-type-registry"
+package example
+
+```
 
 #### `type (...)` convention
 
@@ -100,7 +112,7 @@ func CalculateFuelUsage(v Vehicle) int {
 }
 ```
 
-And as you can see, it leverage generics to make it easy to write. 
+And as you can see, it leverage generics to make it easy to write.
 No need to cast, or check type, or use `switch` statement.
 
 #### matching functions `Match{Name}R1`
@@ -126,7 +138,7 @@ You just need to use `shared.JSONMarshal` and `shared.JSONUnmarshal` functions t
 
 Example:
 
-```go 
+```go
 func ExampleVehicleFromJSON() {
     vehicle := &Car{
         Color:  "black",
