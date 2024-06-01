@@ -64,7 +64,7 @@ func DoWindowShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Node",
 			},
 		},
@@ -105,7 +105,7 @@ func DoMapShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Node",
 			},
 		},
@@ -138,7 +138,7 @@ func DoLoadShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Node",
 			},
 		},
@@ -173,7 +173,7 @@ func DoJoinShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Node",
 			},
 		},

@@ -1,7 +1,5 @@
 package example
 
-//go:generate go run ../cmd/mkunion/main.go
-
 //go:tag mkunion:"Tree"
 type (
 	Branch[A any] struct{ L, R Tree[A] }

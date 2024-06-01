@@ -45,7 +45,7 @@ func FromBeginningShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "PullCMD",
 			},
 		},
@@ -78,7 +78,7 @@ func FromOffsetShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "PullCMD",
 			},
 		},

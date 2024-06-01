@@ -1,20 +1,26 @@
+//go:tag mkunion:",no-type-registry"
 package main
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion/x/generators"
 	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
+	"io/fs"
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -39,7 +45,7 @@ func main() {
 			&cli.StringSliceFlag{
 				Name:      "input-go-file",
 				Aliases:   []string{"i", "input"},
-				Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:generate mkunion -name=MyUnionType`,
+				Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:tag mkunion:"MyNunionName"`,
 				TakesFile: true,
 			},
 			&cli.BoolFlag{
@@ -72,76 +78,13 @@ func main() {
 				cli.ShowAppHelpAndExit(c, 1)
 			}
 
-			packages := make(map[string]*shape.InferredInfo)
-
-			for _, sourcePath := range sourcePaths {
-				// file name without extension
-				inferred, err := shape.InferFromFile(sourcePath)
-				if err != nil {
-					return err
-				}
-
-				if _, ok := packages[inferred.PackageImportName()]; !ok {
-					packages[inferred.PackageImportName()] = inferred
-				}
-
-				contents, err := GenerateUnions(inferred)
-				if err != nil {
-					return fmt.Errorf("failed generating union in %s: %w", sourcePath, err)
-				}
-
-				err = SaveFile(contents, sourcePath, "union_gen")
-				if err != nil {
-					return fmt.Errorf("failed saving union in %s: %w", sourcePath, err)
-				}
-
-				contents, err = GenerateSerde(inferred)
-				if err != nil {
-					return fmt.Errorf("failed generating serde in %s: %w", sourcePath, err)
-				}
-
-				err = SaveFile(contents, sourcePath, "serde_gen")
-				if err != nil {
-					return fmt.Errorf("failed saving serde in %s: %w", sourcePath, err)
-				}
-
-				contents, err = GenerateShape(inferred)
-				if err != nil {
-					return fmt.Errorf("failed generating shape in %s: %w", sourcePath, err)
-				}
-
-				err = SaveFile(contents, sourcePath, "shape_gen")
-				if err != nil {
-					return fmt.Errorf("failed saving shape in %s: %w", sourcePath, err)
-				}
+			savedFiles, err := GenerateMain(sourcePaths, c.Bool("type-registry"))
+			if err != nil {
+				return err
 			}
 
-			if c.Bool("type-registry") {
-				for _, inferred := range packages {
-					dir := path.Dir(inferred.FileName())
-
-					// walk through all *.go files in the same directory
-					// and generate type registry for all inferred packages
-					// in the same directory
-
-					indexed, err := shape.NewIndexTypeInDir(dir)
-					if err != nil {
-						return fmt.Errorf("mkunion: failed indexing types in directory %s: %w", dir, err)
-					}
-
-					if len(indexed.IndexedShapes()) > 0 {
-						contents, err := GenerateTypeRegistry(indexed)
-						if err != nil {
-							return fmt.Errorf("mkunion: failed walking through directory %s: %w", dir, err)
-						}
-
-						regPath := path.Join(dir, "types.go")
-						err = SaveFile(contents, regPath, "reg_gen")
-						if err != nil {
-							return fmt.Errorf("mkunion: failed saving type registry in %s: %w", regPath, err)
-						}
-					}
-				}
+			for _, x := range savedFiles {
+				fmt.Println(x)
 			}
 
 			return nil
@@ -211,7 +154,7 @@ func main() {
 					&cli.StringSliceFlag{
 						Name:      "input-go-file",
 						Aliases:   []string{"i", "input"},
-						Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:generate mkunion -name=MyUnionType`,
+						Usage:     `When not provided, it will try to use GOFILE environment variable, used when combined with //go:tag mkunion:"MyNunionName"`,
 						TakesFile: true,
 					},
 					&cli.BoolFlag{
@@ -261,6 +204,172 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:        "watch",
+				Description: "Watch for changes in the directory and get mkunion generative features instantly",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "type-registry",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:     "verbose",
+						Aliases:  []string{"v"},
+						Required: false,
+						Value:    false,
+					},
+					&cli.BoolFlag{
+						Name:     "generate-only",
+						Aliases:  []string{"g"},
+						Required: false,
+						Value:    false,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					log.SetLevel(log.InfoLevel)
+					if c.Bool("verbose") {
+						log.SetLevel(log.DebugLevel)
+					}
+
+					// Create a new watcher
+					watcher, err := fsnotify.NewWatcher()
+					if err != nil {
+						log.Fatal(err)
+					}
+					defer watcher.Close()
+
+					// Create a channel to receive events
+					done := make(chan bool)
+
+					justGenerated := sync.Map{}
+
+					// Start a goroutine to handle events
+					go func() {
+						defer close(done)
+						for {
+							select {
+							case <-ctx.Done():
+								return
+
+							case event, ok := <-watcher.Events:
+								if !ok {
+									return
+								}
+
+								if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+									continue
+								}
+
+								if event.Op&fsnotify.Remove == fsnotify.Remove {
+									// if the file was removed, regenerate type registry
+									savedFiles, err := GenerateTypeRegistryForDir([]string{filepath.Dir(event.Name)})
+									if err != nil {
+										log.Warnf("failed to generate type registry for %s: %s", filepath.Dir(event.Name), err)
+										continue
+									}
+
+									for _, x := range savedFiles {
+										log.Infof("re-generated:\t%s", x)
+
+										justGenerated.Store(x, true)
+									}
+								}
+
+								// is .go file?
+								if filepath.Ext(event.Name) != ".go" {
+									continue
+								}
+
+								// extract path name from event.Name
+								pathName := strings.Trim(event.Name, `"`)
+
+								// if the file was generated by watch process, skip it
+								if _, ok := justGenerated.Load(pathName); ok {
+									// but to prevent removing it to fast and resulting in infinit-generation loop
+									// 1s debounce is applied
+									go func(pathName string) {
+										time.Sleep(1 * time.Second)
+										justGenerated.Delete(pathName)
+									}(pathName)
+									continue
+								}
+
+								log.Debugf("Event: %s\t\t%s", event.Op.String(), event.Name)
+
+								// make logging less verbose
+								prevLevel := log.GetLevel()
+								log.SetLevel(log.ErrorLevel)
+								savedFiles, err := GenerateMain([]string{event.Name}, c.Bool("type-registry"))
+								log.SetLevel(prevLevel)
+
+								for _, x := range savedFiles {
+									log.Infof("re-generated:\t%s", x)
+									justGenerated.Store(x, true)
+								}
+
+								if err != nil {
+									log.Errorf("failed to generate: %s; %s", event.Name, err)
+								}
+
+							case err, ok := <-watcher.Errors:
+								if !ok {
+									return
+								}
+								log.Errorf("Error: %s", err)
+							}
+						}
+					}()
+
+					paths := c.Args().Slice()
+					if len(paths) == 0 {
+						paths = []string{"."}
+					}
+
+					paths, err = mapf(paths, artToPath)
+					if err != nil {
+						return err
+					}
+
+					paths = dedup(paths)
+					// generate first before watching
+					sourcePaths, err := goFilesFromDirs(paths)
+					if err != nil {
+						return fmt.Errorf("extracting source paths: %w", err)
+					}
+
+					log.Printf("Initial generation for %d go files", len(sourcePaths))
+
+					prevLevel := log.GetLevel()
+					log.SetLevel(log.ErrorLevel)
+					savedFiles, err := GenerateMain(sourcePaths, c.Bool("type-registry"))
+					log.SetLevel(prevLevel)
+					if err != nil {
+						return fmt.Errorf("initial generation: %w", err)
+					}
+
+					for _, x := range savedFiles {
+						log.Infof("   generated:\t%s", x)
+					}
+
+					if c.Bool("generate-only") {
+						return nil
+					}
+
+					log.Printf("Watching for changes ...")
+					// Add a directory or file to be watched
+					for _, path := range paths {
+						err = watcher.Add(path)
+						if err != nil {
+							return err
+						}
+					}
+
+					// Block until done is received
+					<-done
+
+					return nil
+				},
+			},
 		},
 	}
 
@@ -268,6 +377,257 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func dedup(in []string) []string {
+	m := make(map[string]bool)
+	for _, x := range in {
+		m[x] = true
+	}
+
+	out := make([]string, 0, len(m))
+	for x := range m {
+		out = append(out, x)
+	}
+
+	return out
+}
+
+func mapf(in []string, f func(string) ([]string, error)) ([]string, error) {
+	result := make([]string, 0, len(in))
+	for _, x := range in {
+		y, err := f(x)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, y...)
+	}
+
+	return result, nil
+}
+
+var (
+	ErrUseWorkingDirectory = fmt.Errorf("cannot retrive path of working directory")
+	ErrFindingRecursiveDir = fmt.Errorf("failed to find recursive directories")
+)
+
+func cwdOrPath(x string) (string, error) {
+	if x == "." {
+		cwd, err := syscall.Getwd()
+		if err != nil {
+			return ".", fmt.Errorf("cwdOrPath: %s; %w", x, ErrUseWorkingDirectory)
+		}
+
+		return cwd, nil
+	}
+
+	return x, nil
+}
+func artToPath(x string) ([]string, error) {
+	switch x {
+	case ".":
+		cwd, err := cwdOrPath(x)
+		if err != nil {
+			return nil, fmt.Errorf("artToPath: %s; %w", x, err)
+		}
+
+		return []string{cwd}, nil
+
+	default:
+		if path.Base(x) == "..." {
+			var result []string
+			// recursively walk through all directories starting from the directory
+			dir, err := cwdOrPath(path.Dir(x))
+			if err != nil {
+				return nil, fmt.Errorf("artToPath: recursive %s; %w", x, err)
+			}
+
+			err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+
+				if !d.IsDir() {
+					return nil
+				}
+
+				// if is hidden directory, skip
+				if strings.HasPrefix(d.Name(), ".") {
+					return filepath.SkipDir
+				}
+
+				result = append(result, path)
+				return nil
+			})
+
+			if err != nil {
+				return nil, fmt.Errorf("artToPath: %s; %w; %w", x, err, ErrFindingRecursiveDir)
+			}
+
+			return result, nil
+		}
+
+		return []string{x}, nil
+	}
+}
+
+func goFilesFromDirs(dirs []string) ([]string, error) {
+	var result []string
+	for _, dir := range dirs {
+		// recursively walk through all directories starting from the directory
+		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if dir != path && d.IsDir() {
+				return filepath.SkipDir
+			}
+
+			// if is hidden directory, skip
+			if strings.HasPrefix(d.Name(), ".") {
+				return nil
+			}
+
+			// if is not go file, skip
+			if filepath.Ext(path) != ".go" {
+				return nil
+			}
+
+			// if is generated file, skip
+			if strings.HasSuffix(path, "_gen.go") {
+				return nil
+			}
+
+			result = append(result, path)
+			return nil
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("gofilesFromDirs: %w", err)
+		}
+	}
+
+	return result, nil
+
+}
+
+func GenerateMain(sourcePaths []string, typeRegistry bool) ([]string, error) {
+	packages := make(map[string]*shape.InferredInfo)
+	var savedFiles []string
+
+	for _, sourcePath := range sourcePaths {
+		// file name without extension
+		inferred, err := shape.InferFromFile(sourcePath)
+		if err != nil {
+			return savedFiles, err
+		}
+
+		if _, ok := packages[inferred.PackageImportName()]; !ok {
+			packages[inferred.PackageImportName()] = inferred
+		}
+
+		contents, err := GenerateUnions(inferred)
+		if err != nil {
+			return savedFiles, fmt.Errorf("failed generating union in %s: %w", sourcePath, err)
+		}
+
+		savedFile, err := SaveFile(contents, sourcePath, "union_gen")
+		if err != nil {
+			return savedFiles, fmt.Errorf("failed saving union in %s: %w", sourcePath, err)
+		}
+		if len(savedFile) > 0 {
+			savedFiles = append(savedFiles, savedFile)
+		}
+
+		contents, err = GenerateSerde(inferred)
+		if err != nil {
+			return savedFiles, fmt.Errorf("failed generating serde in %s: %w", sourcePath, err)
+		}
+
+		savedFile, err = SaveFile(contents, sourcePath, "serde_gen")
+		if err != nil {
+			return savedFiles, fmt.Errorf("failed saving serde in %s: %w", sourcePath, err)
+		}
+		if len(savedFile) > 0 {
+			savedFiles = append(savedFiles, savedFile)
+		}
+
+		contents, err = GenerateShape(inferred)
+		if err != nil {
+			return savedFiles, fmt.Errorf("failed generating shape in %s: %w", sourcePath, err)
+		}
+
+		savedFile, err = SaveFile(contents, sourcePath, "shape_gen")
+		if err != nil {
+			return savedFiles, fmt.Errorf("failed saving shape in %s: %w", sourcePath, err)
+		}
+
+		if len(savedFile) > 0 {
+			savedFiles = append(savedFiles, savedFile)
+		}
+	}
+
+	if typeRegistry {
+		uniqueDirs := make(map[string]bool)
+		for _, inferred := range packages {
+			dir := path.Dir(inferred.FileName())
+			uniqueDirs[dir] = true
+		}
+
+		var dirs []string
+		for dir := range uniqueDirs {
+			dirs = append(dirs, dir)
+		}
+
+		savedFiles2, err := GenerateTypeRegistryForDir(dirs)
+		if err != nil {
+			return savedFiles, err
+		}
+		savedFiles = append(savedFiles, savedFiles2...)
+	}
+
+	return savedFiles, nil
+}
+
+func GenerateTypeRegistryForDir(uniqueDirs []string) ([]string, error) {
+	var savedFiles []string
+	for _, dir := range uniqueDirs {
+		// walk through all *.go files in the same directory
+		// and generate type registry for all inferred packages
+		// in the same directory
+
+		indexed, err := shape.NewIndexTypeInDir(dir)
+		if err != nil {
+			return savedFiles, fmt.Errorf("mkunion: failed indexing types in directory %s: %w", dir, err)
+		}
+
+		if shape.TagHasOption(indexed.PackageTags(), shape.TagUnionName, shape.TagUnionOptionNoRegistry) {
+			continue
+		}
+
+		if len(indexed.IndexedShapes()) < 1 {
+			continue
+		}
+
+		contents, err := GenerateTypeRegistry(indexed)
+		if err != nil {
+			return savedFiles, fmt.Errorf("mkunion: failed walking through directory %s: %w", dir, err)
+		}
+
+		regPath := path.Join(dir, "types.go")
+		savedFile, err := SaveFile(contents, regPath, "reg_gen")
+		if err != nil {
+			return savedFiles, fmt.Errorf("mkunion: failed saving type registry in %s: %w", regPath, err)
+		}
+
+		if len(savedFile) > 0 {
+			savedFiles = append(savedFiles, savedFile)
+		}
+	}
+
+	return savedFiles, nil
 }
 
 func GenerateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
@@ -382,6 +742,11 @@ func GenerateShape(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 	initFunc := make(generators.InitFuncs, 0)
 
 	for _, x := range shapes {
+		if shape.TagGetValue(shape.Tags(x), shape.TagShapeName, "") == "-" {
+			// skip shape generation for this type
+			continue
+		}
+
 		packageName = shape.ToGoPkgName(x)
 		contents, err := GenerateShapeFollow(x, &pkgMap, &initFunc, inferred)
 		if err != nil {
@@ -393,6 +758,10 @@ func GenerateShape(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 				return shapesContents, fmt.Errorf("mkunion.GenerateShape: failed to write shape for %s: %w", shape.ToGoTypeName(x), err)
 			}
 		}
+	}
+
+	if len(shapesContents.Bytes()) == 0 {
+		return shapesContents, nil
 	}
 
 	contents := bytes.Buffer{}
@@ -495,9 +864,9 @@ func GenerateShapeOnce(x shape.Shape, pkgMap *generators.PkgMap, initFunc *[]str
 	return &result, nil
 }
 
-func SaveFile(contents bytes.Buffer, sourcePath string, infix string) error {
+func SaveFile(contents bytes.Buffer, sourcePath string, infix string) (string, error) {
 	if len(contents.Bytes()) == 0 {
-		return nil
+		return "", nil
 	}
 
 	sourceName := path.Base(sourcePath)
@@ -510,9 +879,9 @@ func SaveFile(contents bytes.Buffer, sourcePath string, infix string) error {
 	log.Infof("writing %s", fileName)
 	err := os.WriteFile(fileName, contents.Bytes(), 0644)
 	if err != nil {
-		return fmt.Errorf("mkunion.SaveFile: failed to write serde in %s: %w", sourcePath, err)
+		return fileName, fmt.Errorf("mkunion.SaveFile: failed to write serde in %s: %w", sourcePath, err)
 	}
-	return nil
+	return fileName, nil
 }
 
 func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, error) {
@@ -564,7 +933,11 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 		)
 
 		// Register go type
-		contents.WriteString(fmt.Sprintf("\tshared.TypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
+		if packageName == "shared" {
+			contents.WriteString(fmt.Sprintf("\tTypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
+		} else {
+			contents.WriteString(fmt.Sprintf("\tshared.TypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
+		}
 
 		// Try to register type JSON marshaller
 		if ref, ok := inst.(*shape.RefName); ok {

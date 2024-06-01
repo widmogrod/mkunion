@@ -66,6 +66,11 @@ func EnumShape() Shape {
 				},
 			},
 		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Guard",
+			},
+		},
 	}
 }
 
@@ -74,6 +79,11 @@ func RequiredShape() Shape {
 		Name:          "Required",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Guard",
+			},
+		},
 	}
 }
 
@@ -92,6 +102,11 @@ func AndGuardShape() Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 					},
 				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Guard",
 			},
 		},
 	}
@@ -126,6 +141,11 @@ func UIntShape() Shape {
 		Name:          "UInt",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -134,6 +154,11 @@ func UInt8Shape() Shape {
 		Name:          "UInt8",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -142,6 +167,11 @@ func UInt16Shape() Shape {
 		Name:          "UInt16",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -150,6 +180,11 @@ func UInt32Shape() Shape {
 		Name:          "UInt32",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -158,6 +193,11 @@ func UInt64Shape() Shape {
 		Name:          "UInt64",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -166,6 +206,11 @@ func IntShape() Shape {
 		Name:          "Int",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -174,6 +219,11 @@ func Int8Shape() Shape {
 		Name:          "Int8",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -182,6 +232,11 @@ func Int16Shape() Shape {
 		Name:          "Int16",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -190,6 +245,11 @@ func Int32Shape() Shape {
 		Name:          "Int32",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -198,6 +258,11 @@ func Int64Shape() Shape {
 		Name:          "Int64",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -206,6 +271,11 @@ func Float32Shape() Shape {
 		Name:          "Float32",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -214,6 +284,11 @@ func Float64Shape() Shape {
 		Name:          "Float64",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "NumberKind",
+			},
+		},
 	}
 }
 
@@ -237,6 +312,11 @@ func BooleanLikeShape() Shape {
 		Name:          "BooleanLike",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "PrimitiveKind",
+			},
+		},
 	}
 }
 
@@ -245,6 +325,11 @@ func StringLikeShape() Shape {
 		Name:          "StringLike",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "PrimitiveKind",
+			},
+		},
 	}
 }
 
@@ -261,6 +346,11 @@ func NumberLikeShape() Shape {
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "PrimitiveKind",
 			},
 		},
 	}
@@ -292,6 +382,11 @@ func AnyShape() Shape {
 		Name:          "Any",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
+			},
+		},
 	}
 }
 
@@ -324,6 +419,11 @@ func RefNameShape() Shape {
 				},
 			},
 		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
+			},
+		},
 	}
 }
 
@@ -340,6 +440,11 @@ func PointerLikeShape() Shape {
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
 			},
 		},
 	}
@@ -397,6 +502,11 @@ func AliasLikeShape() Shape {
 				},
 			},
 		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
+			},
+		},
 	}
 }
 
@@ -413,6 +523,11 @@ func PrimitiveLikeShape() Shape {
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
 			},
 		},
 	}
@@ -443,6 +558,11 @@ func ListLikeShape() Shape {
 				},
 			},
 		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
+			},
+		},
 	}
 }
 
@@ -467,6 +587,11 @@ func MapLikeShape() Shape {
 					PkgName:       "shape",
 					PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
 			},
 		},
 	}
@@ -524,6 +649,11 @@ func StructLikeShape() Shape {
 				},
 			},
 		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
+			},
+		},
 	}
 }
 
@@ -575,6 +705,11 @@ func UnionLikeShape() Shape {
 						PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 					},
 				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Shape",
 			},
 		},
 	}

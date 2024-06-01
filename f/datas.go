@@ -1,7 +1,5 @@
 package f
 
-//go:generate go run ../cmd/mkunion
-
 //go:tag mkunion:"Either,serde"
 type (
 	Left[A, B any]  struct{ Value A }

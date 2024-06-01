@@ -12,7 +12,7 @@ package ast
 // Accessor represents field access like "a.b.c"
 // Accessor assumes that interpreter will provide data to return value that exists under such path
 //
-//go:generate go run ../../cmd/mkunion/main.go -name=Value
+//go:tag mkunion:"Value"
 type (
 	Lit      struct{ Value any }
 	Accessor struct{ Path []string }
@@ -25,7 +25,7 @@ type (
 // - Or - ||
 // - Not - !
 //
-//go:generate go run ../../cmd/mkunion/main.go -name=Operator
+//go:tag mkunion:"Operator"
 type (
 	Eq  struct{ L, R Value }
 	Gt  struct{ L, R Value }

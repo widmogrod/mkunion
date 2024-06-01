@@ -31,9 +31,6 @@ import (
 	"syscall"
 )
 
-// generate all unions
-//go:generate ../../cmd/mkunion/mkunion
-
 // this command make sure that all types that are imported will have generated typescript mapping
 //go:generate ../../cmd/mkunion/mkunion shape-export --language=typescript -o ./src/workflow
 

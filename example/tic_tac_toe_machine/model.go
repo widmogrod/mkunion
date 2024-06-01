@@ -8,7 +8,7 @@ type (
 
 // Commands that trigger state transitions.
 //
-//go:generate go run ../../cmd/mkunion/main.go -name=Command
+//go:tag mkunion:"Command"
 type (
 	CreateGameCMD struct {
 		FirstPlayerID PlayerID
@@ -36,7 +36,7 @@ type (
 // State of the game.
 // Commands are used to update or change state
 //
-//go:generate go run ../../cmd/mkunion/main.go -name=State
+//go:tag mkunion:"State"
 type (
 	GameWaitingForPlayer struct {
 		TicTacToeBaseState

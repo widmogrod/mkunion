@@ -18,8 +18,6 @@ You can use `mkunion` to create a union type for the tree:
 ```go title="example/tree.go"
 package example
 
-//go:generate go run ../cmd/mkunion/main.go
-
 //go:tag mkunion:"Tree"
 type (
 	Branch[A any] struct{ L, R Tree[A] }

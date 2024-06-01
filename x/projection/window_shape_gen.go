@@ -48,7 +48,7 @@ func SessionWindowShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "WindowDescription",
 			},
 		},
@@ -79,7 +79,7 @@ func SlidingWindowShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "WindowDescription",
 			},
 		},
@@ -102,7 +102,7 @@ func FixedWindowShape() shape.Shape {
 			},
 		},
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "WindowDescription",
 			},
 		},

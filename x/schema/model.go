@@ -1,7 +1,5 @@
 package schema
 
-//go:generate go run ../../cmd/mkunion/main.go
-
 //go:tag mkunion:"Schema"
 type (
 	None   struct{}

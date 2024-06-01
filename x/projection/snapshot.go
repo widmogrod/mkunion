@@ -4,8 +4,6 @@ import (
 	"github.com/widmogrod/mkunion/x/stream"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go
-
 //go:tag mkunion:"SnapshotState"
 type (
 	PullPushContextState struct {

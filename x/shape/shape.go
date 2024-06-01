@@ -1,7 +1,5 @@
 package shape
 
-// go:generate ../../cmd/mkunion/mkunion
-
 //go:tag mkunion:"Shape"
 type (
 	Any     struct{}
@@ -182,7 +180,9 @@ type FieldLike struct {
 }
 
 const (
-	TagUnionName = "mkunion_union_name"
+	TagUnionName             = "mkunion"
+	TagUnionOptionNoRegistry = "no-type-registry"
+	TagShapeName             = "shape"
 )
 
 type Tag struct {

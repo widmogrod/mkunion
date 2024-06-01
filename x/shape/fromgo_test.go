@@ -42,6 +42,7 @@ func TestFromGoo(t *testing.T) {
 							PkgName:       "shape",
 							PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 							Fields:        nil,
+							Tags:          map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "RefName",
@@ -71,6 +72,7 @@ func TestFromGoo(t *testing.T) {
 									},
 								},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "PointerLike",
@@ -86,6 +88,7 @@ func TestFromGoo(t *testing.T) {
 									},
 								},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "AliasLike",
@@ -120,6 +123,7 @@ func TestFromGoo(t *testing.T) {
 									},
 								}},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "PrimitiveLike",
@@ -135,6 +139,7 @@ func TestFromGoo(t *testing.T) {
 									},
 								},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "ListLike",
@@ -154,6 +159,7 @@ func TestFromGoo(t *testing.T) {
 									Type: &PointerLike{Type: &PrimitiveLike{&NumberLike{Kind: &Int{}}}},
 								},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "MapLike",
@@ -177,6 +183,7 @@ func TestFromGoo(t *testing.T) {
 									},
 								},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "StructLike",
@@ -229,6 +236,7 @@ func TestFromGoo(t *testing.T) {
 									},
 								},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 						&StructLike{
 							Name:          "UnionLike",
@@ -279,6 +287,7 @@ func TestFromGoo(t *testing.T) {
 									},
 								},
 							},
+							Tags: map[string]Tag{"mkunion": {Value: "Shape"}},
 						},
 					},
 				},

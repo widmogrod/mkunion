@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go
-
 //go:tag mkunion:"Tree"
 type (
 	Branch struct {

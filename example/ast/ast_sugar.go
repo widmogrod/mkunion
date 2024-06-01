@@ -1,6 +1,6 @@
 package ast
 
-//go:generate go run ../../cmd/mkunion/main.go -name=SyntaxSugar
+//go:tag mkunion:"SyntaxSugar"
 type (
 	EqTo     struct{ V any }
 	GrThan   struct{ V any }

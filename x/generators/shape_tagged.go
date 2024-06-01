@@ -46,6 +46,7 @@ func (g *ShapeTagged) Generate() (string, error) {
 		return "", fmt.Errorf("generators.ShapeTagged.Generate: when generating shape func; %w", err)
 
 	}
+	marshalPart = g.removeShapePkgIfShapePkg(marshalPart)
 	body.WriteString(marshalPart)
 
 	head := &strings.Builder{}
@@ -57,6 +58,7 @@ func (g *ShapeTagged) Generate() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("generators.ShapeTagged.Generate: when generating imports; %w", err)
 		}
+		impPart = g.removeShapePkgIfShapePkg(impPart)
 		head.WriteString(impPart)
 	}
 
@@ -66,6 +68,7 @@ func (g *ShapeTagged) Generate() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("generators.ShapeTagged.Generate: when generating func init(); %w", err)
 		}
+		varPart = g.removeShapePkgIfShapePkg(varPart)
 		head.WriteString(varPart)
 	}
 
@@ -75,6 +78,14 @@ func (g *ShapeTagged) Generate() (string, error) {
 	} else {
 		return body.String(), nil
 	}
+}
+
+func (g *ShapeTagged) removeShapePkgIfShapePkg(x string) string {
+	if shape.ToGoPkgName(g.shape) == "shape" {
+		return strings.ReplaceAll(x, "shape.", "")
+	}
+
+	return x
 }
 
 func (g *ShapeTagged) GenerateImports(pkgMap PkgMap) (string, error) {
@@ -97,7 +108,7 @@ func (g *ShapeTagged) ExtractImportFuncs(s shape.Shape) []string {
 	}
 
 	result := []string{
-		fmt.Sprintf("shape.Register(%sShape())", name),
+		g.removeShapePkgIfShapePkg(fmt.Sprintf("shape.Register(%sShape())", name)),
 	}
 
 	switch x := s.(type) {

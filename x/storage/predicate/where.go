@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go
-
 //go:tag serde:"json"
 type WherePredicates struct {
 	Predicate Predicate

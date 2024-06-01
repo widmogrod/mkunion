@@ -18,6 +18,10 @@ jobs:
       - run: go install github.com/matryer/moq@latest
 
       - run: go get -v -t -d ./...
+        # generate code with mkunion
+      - run: ./cmd/mkunion/mkunion watch -g ./...
+
+      # generate code with go generate
       - run: go generate ./...
 
       - run: pip install awscli-local

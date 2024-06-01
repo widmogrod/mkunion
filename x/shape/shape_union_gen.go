@@ -100,10 +100,10 @@ func MatchGuardR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AndGuard", AndGuardFromJSON, AndGuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Enum", EnumFromJSON, EnumToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Guard", GuardFromJSON, GuardToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Required", RequiredFromJSON, RequiredToJSON)
 }
 
 type GuardUnionJSON struct {
@@ -120,11 +120,10 @@ func GuardFromJSON(x []byte) (Guard, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data GuardUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.GuardFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -143,44 +142,40 @@ func GuardFromJSON(x []byte) (Guard, error) {
 	} else if data.AndGuard != nil {
 		return AndGuardFromJSON(data.AndGuard)
 	}
-
-	return nil, fmt.Errorf("shape.Guard: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.GuardFromJSON: unknown type: %s", data.Type)
 }
 
 func GuardToJSON(x Guard) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchGuardR2(
 		x,
-		func(x *Enum) ([]byte, error) {
-			body, err := EnumToJSON(x)
+		func(y *Enum) ([]byte, error) {
+			body, err := EnumToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.GuardToJSON: %w", err)
 			}
-
 			return json.Marshal(GuardUnionJSON{
 				Type: "shape.Enum",
 				Enum: body,
 			})
 		},
-		func(x *Required) ([]byte, error) {
-			body, err := RequiredToJSON(x)
+		func(y *Required) ([]byte, error) {
+			body, err := RequiredToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.GuardToJSON: %w", err)
 			}
-
 			return json.Marshal(GuardUnionJSON{
 				Type:     "shape.Required",
 				Required: body,
 			})
 		},
-		func(x *AndGuard) ([]byte, error) {
-			body, err := AndGuardToJSON(x)
+		func(y *AndGuard) ([]byte, error) {
+			body, err := AndGuardToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.GuardToJSON: %w", err)
 			}
-
 			return json.Marshal(GuardUnionJSON{
 				Type:     "shape.AndGuard",
 				AndGuard: body,
@@ -193,9 +188,8 @@ func EnumFromJSON(x []byte) (*Enum, error) {
 	result := new(Enum)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.EnumFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -303,9 +297,8 @@ func RequiredFromJSON(x []byte) (*Required, error) {
 	result := new(Required)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.RequiredFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -355,9 +348,8 @@ func AndGuardFromJSON(x []byte) (*AndGuard, error) {
 	result := new(AndGuard)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.AndGuardFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -688,19 +680,19 @@ func MatchNumberKindR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberKind", NumberKindFromJSON, NumberKindToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt", UIntFromJSON, UIntToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt8", UInt8FromJSON, UInt8ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt16", UInt16FromJSON, UInt16ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt32", UInt32FromJSON, UInt32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt64", UInt64FromJSON, UInt64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float32", Float32FromJSON, Float32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float64", Float64FromJSON, Float64ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int", IntFromJSON, IntToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int8", Int8FromJSON, Int8ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int16", Int16FromJSON, Int16ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int32", Int32FromJSON, Int32ToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int64", Int64FromJSON, Int64ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float32", Float32FromJSON, Float32ToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Float64", Float64FromJSON, Float64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Int8", Int8FromJSON, Int8ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberKind", NumberKindFromJSON, NumberKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt", UIntFromJSON, UIntToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt16", UInt16FromJSON, UInt16ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt32", UInt32FromJSON, UInt32ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt64", UInt64FromJSON, UInt64ToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UInt8", UInt8FromJSON, UInt8ToJSON)
 }
 
 type NumberKindUnionJSON struct {
@@ -726,11 +718,10 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data NumberKindUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.NumberKindFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -785,143 +776,130 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 	} else if data.Float64 != nil {
 		return Float64FromJSON(data.Float64)
 	}
-
-	return nil, fmt.Errorf("shape.NumberKind: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.NumberKindFromJSON: unknown type: %s", data.Type)
 }
 
 func NumberKindToJSON(x NumberKind) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchNumberKindR2(
 		x,
-		func(x *UInt) ([]byte, error) {
-			body, err := UIntToJSON(x)
+		func(y *UInt) ([]byte, error) {
+			body, err := UIntToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type: "shape.UInt",
 				UInt: body,
 			})
 		},
-		func(x *UInt8) ([]byte, error) {
-			body, err := UInt8ToJSON(x)
+		func(y *UInt8) ([]byte, error) {
+			body, err := UInt8ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:  "shape.UInt8",
 				UInt8: body,
 			})
 		},
-		func(x *UInt16) ([]byte, error) {
-			body, err := UInt16ToJSON(x)
+		func(y *UInt16) ([]byte, error) {
+			body, err := UInt16ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:   "shape.UInt16",
 				UInt16: body,
 			})
 		},
-		func(x *UInt32) ([]byte, error) {
-			body, err := UInt32ToJSON(x)
+		func(y *UInt32) ([]byte, error) {
+			body, err := UInt32ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:   "shape.UInt32",
 				UInt32: body,
 			})
 		},
-		func(x *UInt64) ([]byte, error) {
-			body, err := UInt64ToJSON(x)
+		func(y *UInt64) ([]byte, error) {
+			body, err := UInt64ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:   "shape.UInt64",
 				UInt64: body,
 			})
 		},
-		func(x *Int) ([]byte, error) {
-			body, err := IntToJSON(x)
+		func(y *Int) ([]byte, error) {
+			body, err := IntToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type: "shape.Int",
 				Int:  body,
 			})
 		},
-		func(x *Int8) ([]byte, error) {
-			body, err := Int8ToJSON(x)
+		func(y *Int8) ([]byte, error) {
+			body, err := Int8ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type: "shape.Int8",
 				Int8: body,
 			})
 		},
-		func(x *Int16) ([]byte, error) {
-			body, err := Int16ToJSON(x)
+		func(y *Int16) ([]byte, error) {
+			body, err := Int16ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:  "shape.Int16",
 				Int16: body,
 			})
 		},
-		func(x *Int32) ([]byte, error) {
-			body, err := Int32ToJSON(x)
+		func(y *Int32) ([]byte, error) {
+			body, err := Int32ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:  "shape.Int32",
 				Int32: body,
 			})
 		},
-		func(x *Int64) ([]byte, error) {
-			body, err := Int64ToJSON(x)
+		func(y *Int64) ([]byte, error) {
+			body, err := Int64ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:  "shape.Int64",
 				Int64: body,
 			})
 		},
-		func(x *Float32) ([]byte, error) {
-			body, err := Float32ToJSON(x)
+		func(y *Float32) ([]byte, error) {
+			body, err := Float32ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:    "shape.Float32",
 				Float32: body,
 			})
 		},
-		func(x *Float64) ([]byte, error) {
-			body, err := Float64ToJSON(x)
+		func(y *Float64) ([]byte, error) {
+			body, err := Float64ToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
 			}
-
 			return json.Marshal(NumberKindUnionJSON{
 				Type:    "shape.Float64",
 				Float64: body,
@@ -934,9 +912,8 @@ func UIntFromJSON(x []byte) (*UInt, error) {
 	result := new(UInt)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.UIntFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -986,9 +963,8 @@ func UInt8FromJSON(x []byte) (*UInt8, error) {
 	result := new(UInt8)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.UInt8FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1038,9 +1014,8 @@ func UInt16FromJSON(x []byte) (*UInt16, error) {
 	result := new(UInt16)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.UInt16FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1090,9 +1065,8 @@ func UInt32FromJSON(x []byte) (*UInt32, error) {
 	result := new(UInt32)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.UInt32FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1142,9 +1116,8 @@ func UInt64FromJSON(x []byte) (*UInt64, error) {
 	result := new(UInt64)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.UInt64FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1194,9 +1167,8 @@ func IntFromJSON(x []byte) (*Int, error) {
 	result := new(Int)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.IntFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1246,9 +1218,8 @@ func Int8FromJSON(x []byte) (*Int8, error) {
 	result := new(Int8)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.Int8FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1298,9 +1269,8 @@ func Int16FromJSON(x []byte) (*Int16, error) {
 	result := new(Int16)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.Int16FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1350,9 +1320,8 @@ func Int32FromJSON(x []byte) (*Int32, error) {
 	result := new(Int32)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.Int32FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1402,9 +1371,8 @@ func Int64FromJSON(x []byte) (*Int64, error) {
 	result := new(Int64)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.Int64FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1454,9 +1422,8 @@ func Float32FromJSON(x []byte) (*Float32, error) {
 	result := new(Float32)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.Float32FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1506,9 +1473,8 @@ func Float64FromJSON(x []byte) (*Float64, error) {
 	result := new(Float64)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.Float64FromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1647,10 +1613,10 @@ func MatchPrimitiveKindR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveKind", PrimitiveKindFromJSON, PrimitiveKindToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.BooleanLike", BooleanLikeFromJSON, BooleanLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StringLike", StringLikeFromJSON, StringLikeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.NumberLike", NumberLikeFromJSON, NumberLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveKind", PrimitiveKindFromJSON, PrimitiveKindToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StringLike", StringLikeFromJSON, StringLikeToJSON)
 }
 
 type PrimitiveKindUnionJSON struct {
@@ -1667,11 +1633,10 @@ func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data PrimitiveKindUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.PrimitiveKindFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -1690,44 +1655,40 @@ func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
 	} else if data.NumberLike != nil {
 		return NumberLikeFromJSON(data.NumberLike)
 	}
-
-	return nil, fmt.Errorf("shape.PrimitiveKind: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.PrimitiveKindFromJSON: unknown type: %s", data.Type)
 }
 
 func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchPrimitiveKindR2(
 		x,
-		func(x *BooleanLike) ([]byte, error) {
-			body, err := BooleanLikeToJSON(x)
+		func(y *BooleanLike) ([]byte, error) {
+			body, err := BooleanLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.PrimitiveKindToJSON: %w", err)
 			}
-
 			return json.Marshal(PrimitiveKindUnionJSON{
 				Type:        "shape.BooleanLike",
 				BooleanLike: body,
 			})
 		},
-		func(x *StringLike) ([]byte, error) {
-			body, err := StringLikeToJSON(x)
+		func(y *StringLike) ([]byte, error) {
+			body, err := StringLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.PrimitiveKindToJSON: %w", err)
 			}
-
 			return json.Marshal(PrimitiveKindUnionJSON{
 				Type:       "shape.StringLike",
 				StringLike: body,
 			})
 		},
-		func(x *NumberLike) ([]byte, error) {
-			body, err := NumberLikeToJSON(x)
+		func(y *NumberLike) ([]byte, error) {
+			body, err := NumberLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.PrimitiveKindToJSON: %w", err)
 			}
-
 			return json.Marshal(PrimitiveKindUnionJSON{
 				Type:       "shape.NumberLike",
 				NumberLike: body,
@@ -1740,9 +1701,8 @@ func BooleanLikeFromJSON(x []byte) (*BooleanLike, error) {
 	result := new(BooleanLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.BooleanLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1792,9 +1752,8 @@ func StringLikeFromJSON(x []byte) (*StringLike, error) {
 	result := new(StringLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.StringLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -1844,9 +1803,8 @@ func NumberLikeFromJSON(x []byte) (*NumberLike, error) {
 	result := new(NumberLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.NumberLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2101,14 +2059,14 @@ func MatchShapeR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Shape", ShapeFromJSON, ShapeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Any", AnyFromJSON, AnyToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.RefName", RefNameFromJSON, RefNameToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PointerLike", PointerLikeFromJSON, PointerLikeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.AliasLike", AliasLikeFromJSON, AliasLikeToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveLike", PrimitiveLikeFromJSON, PrimitiveLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Any", AnyFromJSON, AnyToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.ListLike", ListLikeFromJSON, ListLikeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.MapLike", MapLikeFromJSON, MapLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PointerLike", PointerLikeFromJSON, PointerLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.PrimitiveLike", PrimitiveLikeFromJSON, PrimitiveLikeToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.RefName", RefNameFromJSON, RefNameToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.Shape", ShapeFromJSON, ShapeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.StructLike", StructLikeFromJSON, StructLikeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/shape.UnionLike", UnionLikeFromJSON, UnionLikeToJSON)
 }
@@ -2133,11 +2091,10 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 	if string(x[:4]) == "null" {
 		return nil, nil
 	}
-
 	var data ShapeUnionJSON
 	err := json.Unmarshal(x, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.ShapeFromJSON: %w", err)
 	}
 
 	switch data.Type {
@@ -2180,110 +2137,100 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 	} else if data.UnionLike != nil {
 		return UnionLikeFromJSON(data.UnionLike)
 	}
-
-	return nil, fmt.Errorf("shape.Shape: unknown type %s", data.Type)
+	return nil, fmt.Errorf("shape.ShapeFromJSON: unknown type: %s", data.Type)
 }
 
 func ShapeToJSON(x Shape) ([]byte, error) {
 	if x == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return MatchShapeR2(
 		x,
-		func(x *Any) ([]byte, error) {
-			body, err := AnyToJSON(x)
+		func(y *Any) ([]byte, error) {
+			body, err := AnyToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type: "shape.Any",
 				Any:  body,
 			})
 		},
-		func(x *RefName) ([]byte, error) {
-			body, err := RefNameToJSON(x)
+		func(y *RefName) ([]byte, error) {
+			body, err := RefNameToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:    "shape.RefName",
 				RefName: body,
 			})
 		},
-		func(x *PointerLike) ([]byte, error) {
-			body, err := PointerLikeToJSON(x)
+		func(y *PointerLike) ([]byte, error) {
+			body, err := PointerLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:        "shape.PointerLike",
 				PointerLike: body,
 			})
 		},
-		func(x *AliasLike) ([]byte, error) {
-			body, err := AliasLikeToJSON(x)
+		func(y *AliasLike) ([]byte, error) {
+			body, err := AliasLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:      "shape.AliasLike",
 				AliasLike: body,
 			})
 		},
-		func(x *PrimitiveLike) ([]byte, error) {
-			body, err := PrimitiveLikeToJSON(x)
+		func(y *PrimitiveLike) ([]byte, error) {
+			body, err := PrimitiveLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:          "shape.PrimitiveLike",
 				PrimitiveLike: body,
 			})
 		},
-		func(x *ListLike) ([]byte, error) {
-			body, err := ListLikeToJSON(x)
+		func(y *ListLike) ([]byte, error) {
+			body, err := ListLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:     "shape.ListLike",
 				ListLike: body,
 			})
 		},
-		func(x *MapLike) ([]byte, error) {
-			body, err := MapLikeToJSON(x)
+		func(y *MapLike) ([]byte, error) {
+			body, err := MapLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:    "shape.MapLike",
 				MapLike: body,
 			})
 		},
-		func(x *StructLike) ([]byte, error) {
-			body, err := StructLikeToJSON(x)
+		func(y *StructLike) ([]byte, error) {
+			body, err := StructLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:       "shape.StructLike",
 				StructLike: body,
 			})
 		},
-		func(x *UnionLike) ([]byte, error) {
-			body, err := UnionLikeToJSON(x)
+		func(y *UnionLike) ([]byte, error) {
+			body, err := UnionLikeToJSON(y)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
 			}
-
 			return json.Marshal(ShapeUnionJSON{
 				Type:      "shape.UnionLike",
 				UnionLike: body,
@@ -2296,9 +2243,8 @@ func AnyFromJSON(x []byte) (*Any, error) {
 	result := new(Any)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.AnyFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2348,9 +2294,8 @@ func RefNameFromJSON(x []byte) (*RefName, error) {
 	result := new(RefName)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.RefNameFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2508,9 +2453,8 @@ func PointerLikeFromJSON(x []byte) (*PointerLike, error) {
 	result := new(PointerLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.PointerLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2586,9 +2530,8 @@ func AliasLikeFromJSON(x []byte) (*AliasLike, error) {
 	result := new(AliasLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.AliasLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2858,9 +2801,8 @@ func PrimitiveLikeFromJSON(x []byte) (*PrimitiveLike, error) {
 	result := new(PrimitiveLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.PrimitiveLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -2936,9 +2878,8 @@ func ListLikeFromJSON(x []byte) (*ListLike, error) {
 	result := new(ListLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.ListLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3062,9 +3003,8 @@ func MapLikeFromJSON(x []byte) (*MapLike, error) {
 	result := new(MapLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.MapLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3152,9 +3092,8 @@ func StructLikeFromJSON(x []byte) (*StructLike, error) {
 	result := new(StructLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.StructLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 
@@ -3447,9 +3386,8 @@ func UnionLikeFromJSON(x []byte) (*UnionLike, error) {
 	result := new(UnionLike)
 	err := result.UnmarshalJSON(x)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shape.UnionLikeFromJSON: %w", err)
 	}
-
 	return result, nil
 }
 

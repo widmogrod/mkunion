@@ -42,7 +42,7 @@ func NoneShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Schema",
 			},
 		},
@@ -55,7 +55,7 @@ func BoolShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Schema",
 			},
 		},
@@ -69,7 +69,7 @@ func NumberShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Schema",
 			},
 		},
@@ -87,7 +87,7 @@ func StringShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Schema",
 			},
 		},
@@ -101,7 +101,7 @@ func BinaryShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Schema",
 			},
 		},
@@ -121,7 +121,7 @@ func ListShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Schema",
 			},
 		},
@@ -141,7 +141,7 @@ func MapShape() shape.Shape {
 		PkgName:       "schema",
 		PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 		Tags: map[string]shape.Tag{
-			"mkunion_union_name": {
+			"mkunion": {
 				Value: "Schema",
 			},
 		},
