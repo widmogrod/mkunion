@@ -6,9 +6,8 @@ import (
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go
-
 type RecordType = string
+
 type Repository[T any] interface {
 	Get(recordID string, recordType RecordType) (Record[T], error)
 	UpdateRecords(command UpdateRecords[Record[T]]) (*UpdateRecordsResult[Record[T]], error)

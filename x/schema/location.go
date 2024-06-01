@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go
-
 //go:tag mkunion:"Location"
 type (
 	LocationField struct {

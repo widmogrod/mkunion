@@ -2,8 +2,6 @@ package typedful
 
 import "github.com/widmogrod/mkunion/x/storage/schemaless"
 
-//go:generate go run ../../../../cmd/mkunion/main.go
-
 type User struct {
 	Name string
 	Age  int

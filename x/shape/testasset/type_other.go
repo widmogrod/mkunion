@@ -1,6 +1,5 @@
+//go:tag mkunion:",no-type-registry"
 package testasset
-
-//go:generate go run ../../../cmd/mkunion/main.go --type-registry=false
 
 //go:tag mkunion:"SomeDSL"
 type (

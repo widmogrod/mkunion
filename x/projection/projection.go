@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-//go:generate go run ../../cmd/mkunion/main.go -v
-
 var (
 	ErrStateAckNilOffset    = errors.New("cannot acknowledge nil offset")
 	ErrStateAckNilWatermark = errors.New("cannot acknowledge nil watermark")

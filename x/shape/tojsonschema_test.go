@@ -5,13 +5,6 @@ import (
 	"testing"
 )
 
-// //go:generate go run ../../cmd/mkunion/main.go -name=Temperature
-// type (
-//
-//	Celsius    struct{}
-//	Farsighted struct{}
-//
-// )
 type structB struct {
 	Count int      `desc:"total number of words in sentence"`
 	Words []string `desc:"list of words in sentence"`

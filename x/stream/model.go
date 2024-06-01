@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-//go:generate go run ../../cmd/mkunion
-
 var (
 	ErrNoMoreNewDataInStream = fmt.Errorf("no more new data in stream")
 	ErrOffsetSetOnPush       = fmt.Errorf("offset set on push")

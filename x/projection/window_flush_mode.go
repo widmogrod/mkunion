@@ -1,7 +1,5 @@
 package projection
 
-//go:generate go run ../../cmd/mkunion/main.go
-
 //go:tag mkunion:"WindowFlushMode"
 type (
 	//Accumulate struct {

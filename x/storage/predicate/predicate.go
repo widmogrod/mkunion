@@ -4,8 +4,6 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go
-
 //go:tag mkunion:"Predicate"
 type (
 	And struct {

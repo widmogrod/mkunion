@@ -1,7 +1,5 @@
 package shape
 
-// go:generate ../../cmd/mkunion/mkunion
-
 //go:tag mkunion:"Shape"
 type (
 	Any     struct{}

@@ -1,13 +1,13 @@
 package testutils
 
-//go:generate go run ../../../cmd/mkunion/main.go -name=Alphabet
+//go:tag mkunion:"Alphabet"
 type (
 	A1 struct{}
 	B2 struct{}
 	C3 struct{}
 )
 
-//go:generate go run ../../../cmd/mkunion/main.go -name=Number
+//go:tag mkunion:"Number"
 type (
 	N0 struct{}
 	N1 struct{}

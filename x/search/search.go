@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-//go:generate go run ../../cmd/mkunion
-
 var (
 	ErrEmptyCommand   = fmt.Errorf("empty command")
 	ErrDocumentExists = fmt.Errorf("document already exists")

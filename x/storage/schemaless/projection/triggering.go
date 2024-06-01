@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-//go:generate go run ../../../../cmd/mkunion/main.go
-
-// go:generate mkunion -name=TriggerType -variants=AtPeriod,AtWindowItemSize,AtWatermark
-//
 //go:tag mkunion:"TriggerType"
 type (
 	AtPeriod1         = AtPeriod

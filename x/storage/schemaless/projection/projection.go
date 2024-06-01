@@ -9,8 +9,6 @@ import (
 
 var ErrNotFound = errors.New("node not found")
 
-//go:generate go run ../../../../cmd/mkunion/main.go
-
 //go:tag mkunion:"Node"
 type (
 	DoWindow struct {
