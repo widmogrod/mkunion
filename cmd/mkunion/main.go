@@ -1,3 +1,4 @@
+//go:tag mkunion:",no-type-registry"
 package main
 
 import (
@@ -250,6 +251,20 @@ func main() {
 
 								if event.Op&fsnotify.Chmod == fsnotify.Chmod {
 									continue
+								}
+
+								if event.Op&fsnotify.Remove == fsnotify.Remove {
+									// if the file was removed, regenerate type registry
+									savedFiles, err := GenerateTypeRegistryForDir([]string{filepath.Dir(event.Name)})
+									if err != nil {
+										log.Warnf("failed to generate type registry for %s: %s", filepath.Dir(event.Name), err)
+										continue
+									}
+
+									for _, x := range savedFiles {
+										log.Infof("re-generated:\t%s", x)
+										justGenerated[x] = true
+									}
 								}
 
 								// is .go file?
@@ -550,32 +565,54 @@ func GenerateMain(sourcePaths []string, typeRegistry bool) ([]string, error) {
 			uniqueDirs[dir] = true
 		}
 
+		var dirs []string
 		for dir := range uniqueDirs {
-			// walk through all *.go files in the same directory
-			// and generate type registry for all inferred packages
-			// in the same directory
+			dirs = append(dirs, dir)
+		}
 
-			indexed, err := shape.NewIndexTypeInDir(dir)
-			if err != nil {
-				return savedFiles, fmt.Errorf("mkunion: failed indexing types in directory %s: %w", dir, err)
-			}
+		savedFiles2, err := GenerateTypeRegistryForDir(dirs)
+		if err != nil {
+			return savedFiles, err
+		}
+		savedFiles = append(savedFiles, savedFiles2...)
+	}
 
-			if len(indexed.IndexedShapes()) > 0 {
-				contents, err := GenerateTypeRegistry(indexed)
-				if err != nil {
-					return savedFiles, fmt.Errorf("mkunion: failed walking through directory %s: %w", dir, err)
-				}
+	return savedFiles, nil
+}
 
-				regPath := path.Join(dir, "types.go")
-				savedFile, err := SaveFile(contents, regPath, "reg_gen")
-				if err != nil {
-					return savedFiles, fmt.Errorf("mkunion: failed saving type registry in %s: %w", regPath, err)
-				}
+func GenerateTypeRegistryForDir(uniqueDirs []string) ([]string, error) {
+	var savedFiles []string
+	for _, dir := range uniqueDirs {
+		// walk through all *.go files in the same directory
+		// and generate type registry for all inferred packages
+		// in the same directory
 
-				if len(savedFile) > 0 {
-					savedFiles = append(savedFiles, savedFile)
-				}
-			}
+		indexed, err := shape.NewIndexTypeInDir(dir)
+		if err != nil {
+			return savedFiles, fmt.Errorf("mkunion: failed indexing types in directory %s: %w", dir, err)
+		}
+
+		if shape.TagHasOption(indexed.PackageTags(), shape.TagUnionName, shape.TagUnionOptionNoRegistry) {
+			continue
+		}
+
+		if len(indexed.IndexedShapes()) < 1 {
+			continue
+		}
+
+		contents, err := GenerateTypeRegistry(indexed)
+		if err != nil {
+			return savedFiles, fmt.Errorf("mkunion: failed walking through directory %s: %w", dir, err)
+		}
+
+		regPath := path.Join(dir, "types.go")
+		savedFile, err := SaveFile(contents, regPath, "reg_gen")
+		if err != nil {
+			return savedFiles, fmt.Errorf("mkunion: failed saving type registry in %s: %w", regPath, err)
+		}
+
+		if len(savedFile) > 0 {
+			savedFiles = append(savedFiles, savedFile)
 		}
 	}
 
@@ -694,6 +731,11 @@ func GenerateShape(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 	initFunc := make(generators.InitFuncs, 0)
 
 	for _, x := range shapes {
+		if shape.TagGetValue(shape.Tags(x), shape.TagShapeName, "") == "-" {
+			// skip shape generation for this type
+			continue
+		}
+
 		packageName = shape.ToGoPkgName(x)
 		contents, err := GenerateShapeFollow(x, &pkgMap, &initFunc, inferred)
 		if err != nil {
@@ -705,6 +747,10 @@ func GenerateShape(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 				return shapesContents, fmt.Errorf("mkunion.GenerateShape: failed to write shape for %s: %w", shape.ToGoTypeName(x), err)
 			}
 		}
+	}
+
+	if len(shapesContents.Bytes()) == 0 {
+		return shapesContents, nil
 	}
 
 	contents := bytes.Buffer{}
@@ -876,7 +922,11 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 		)
 
 		// Register go type
-		contents.WriteString(fmt.Sprintf("\tshared.TypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
+		if packageName == "shared" {
+			contents.WriteString(fmt.Sprintf("\tTypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
+		} else {
+			contents.WriteString(fmt.Sprintf("\tshared.TypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
+		}
 
 		// Try to register type JSON marshaller
 		if ref, ok := inst.(*shape.RefName); ok {
