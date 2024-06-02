@@ -80,6 +80,12 @@ Alternatively you can run `mkunion` command directly
 mkunion -i example/vehicle.go
 ```
 
+
+#### What order you should run `mkunion watch` and `go generate`?
+First run `mkunion watch ./...` to generate union types, and then run `go generate ./...` to generate code that uses union types.
+
+I found that this order works best, especially with extension like `moq` that will fail to generate mocks when an type is not defined, which is the case for union types, unit you run `mkunion watch`.
+
 ### Match over union type
 When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go))
 
