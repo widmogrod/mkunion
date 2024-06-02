@@ -111,7 +111,7 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 					// we can retry this operation (if warehouse is idempotent)
 					// OrderID could be used to deduplicate operation
 					// it's not required in this example
-					err := di.WarehouseRemoveStock(nil, s.Order.OrderAttr.Quantity)
+					err := di.WarehouseRemoveStock(ctx, s.Order.OrderAttr.Quantity)
 					if err != nil {
 						return &OrderError{
 							ProblemCode:    ProblemWarehouseAPIUnreachable,
@@ -128,7 +128,7 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 					// we can retry this operation (if payment gateway is idempotent)
 					// OrderID could be used to deduplicate operation
 					// it's not required in this example
-					err := di.PaymentCharge(nil, s.Order.OrderAttr.Price)
+					err := di.PaymentCharge(ctx, s.Order.OrderAttr.Price)
 					if err != nil {
 						return &OrderError{
 							ProblemCode:    ProblemPaymentAPIUnreachable,
