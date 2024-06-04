@@ -256,6 +256,11 @@ func main() {
 									return
 								}
 
+								// is .go file?
+								if filepath.Ext(event.Name) != ".go" {
+									continue
+								}
+
 								if event.Op&fsnotify.Chmod == fsnotify.Chmod {
 									continue
 								}
@@ -273,11 +278,6 @@ func main() {
 
 										justGenerated.Store(x, true)
 									}
-								}
-
-								// is .go file?
-								if filepath.Ext(event.Name) != ".go" {
-									continue
 								}
 
 								// extract path name from event.Name
