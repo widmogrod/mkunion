@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {createContext, useEffect, useState} from 'react';
 import './App.css';
 import * as openai from './workflow/github_com_sashabaranov_go-openai'
 import * as schemaless from './workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
@@ -821,8 +821,46 @@ function App() {
                                                         </>
                                                     )
                                                 case "schema.String":
+                                                    let funcName = "non"
+                                                    if (done.BaseState?.Flow?.$type === "workflow.Flow") {
+                                                        funcName = done.BaseState?.Flow["workflow.Flow"].Name!
+                                                    }
+
+                                                    let build = (type: string, funcName: string): predicate.Predicate => {
+                                                        return {
+                                                            "$type": "predicate.Compare",
+                                                            "predicate.Compare": {
+                                                                Location: `Data["${type}"].BaseState.Flow["workflow.Flow"].Name`,
+                                                                Operation: "==",
+                                                                BindValue: {
+                                                                    "$type": "predicate.Literal",
+                                                                    "predicate.Literal": {
+                                                                        Value: {
+                                                                            "$type": "schema.String",
+                                                                            "schema.String": funcName
+                                                                        }
+                                                                    }
+                                                                },
+                                                            }
+                                                        }
+                                                    }
+
                                                     return <>
                                                         <span className="done">workflow.Done</span>
+                                                        <button onClick={() => ctx.filter({
+                                                            Predicate: {
+                                                                "$type": "predicate.Or",
+                                                                "predicate.Or": {
+                                                                    L: [
+                                                                        build("workflow.Done", funcName),
+                                                                        build("workflow.Error", funcName),
+                                                                        build("workflow.Await", funcName),
+                                                                        build("workflow.Scheduled", funcName),
+                                                                        build("workflow.ScheduleStopped", funcName),
+                                                                    ]
+                                                                }
+                                                            }
+                                                        })}>show {funcName}</button>
                                                         <button onClick={() => ctx.filter({
                                                             Predicate: {
                                                                 "$type": "predicate.Compare",
@@ -1167,7 +1205,6 @@ function WorkflowToString(props: { flow?: workflow.Workflow }) {
     }, [props.flow])
 
     return <>
-        {/*<pre>{JSON.stringify(props.flow)}</pre>*/}
         <pre>{str}</pre>
     </>
 }
