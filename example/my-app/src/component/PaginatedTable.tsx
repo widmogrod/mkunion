@@ -371,10 +371,34 @@ function PredicateRender(props: {
                 return <></>
             }
 
+
             return <div className={"filter-group"}>
-                or {or.L?.map((x) => {
-                return <PredicateRender predicate={x}/>
-            }).join(" or ")}
+                <button onClick={() => {
+                    props.onChange && props.onChange(undefined)
+                }}>x
+                </button>
+                (OR
+                {or.L?.map((x) => {
+                    return <PredicateRender
+                        predicate={x}
+                        onChange={(where) => {
+                            let predicates = or.L?.map((y) => (y === x) ? where : y).filter((y) => y !== undefined) as predicate.Predicate[]
+
+                            if (predicates.length === 0) {
+                                props.onChange && props.onChange(undefined)
+                                return
+                            }
+
+                            props.onChange && props.onChange({
+                                "$type": "predicate.Or",
+                                "predicate.Or": {
+                                    L: predicates
+                                }
+                            })
+                        }}
+                    />
+                })}
+                )
             </div>
 
         case "predicate.Not":
