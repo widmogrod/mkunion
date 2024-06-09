@@ -17,10 +17,17 @@ function flowCreate(flow: workflow.Flow) {
         .then(data => console.log("save-flow-result", data))
 }
 
-function flowToString(flow: workflow.Workflow) {
+function flowToStringFromWorkflow(flow: workflow.Workflow) {
     return fetch('http://localhost:8080/workflow-to-str', {
         method: 'POST',
         body: JSON.stringify(flow),
+    })
+        .then(res => res.text())
+}
+
+function flowToStringFromRunID(runID: string) {
+    return fetch(`http://localhost:8080/workflow-to-str-from-run/${runID}`, {
+        method: 'GET',
     })
         .then(res => res.text())
 }
@@ -816,12 +823,13 @@ function App() {
                                                                     src={`data:image/jpeg;base64,${done.Result["schema.Binary"]}`}
                                                                     alt=""/>
                                                             </div>
-                                                            <WorkflowToString flow={done.BaseState?.Flow}/>
+                                                            <WorkflowToString runID={done.BaseState?.RunID}/>
                                                             <ListVariables data={done.BaseState}/>
                                                         </>
                                                     )
                                                 case "schema.String":
                                                     let funcName = "non"
+
                                                     if (done.BaseState?.Flow?.$type === "workflow.Flow") {
                                                         funcName = done.BaseState?.Flow["workflow.Flow"].Name!
                                                     }
@@ -905,7 +913,7 @@ function App() {
                                                             {done.Result["schema.String"]}
                                                         </div>
 
-                                                        <WorkflowToString flow={done.BaseState?.Flow}/>
+                                                        <WorkflowToString runID={done.BaseState?.RunID}/>
                                                         <ListVariables data={done.BaseState}/>
                                                     </>
                                             }
@@ -926,7 +934,7 @@ function App() {
                                                     <dt>Retried</dt>
                                                     <dd>{error.Retried} / {error.BaseState?.DefaultMaxRetries}</dd>
                                                 </dl>
-                                                <WorkflowToString flow={error.BaseState?.Flow}/>
+                                                <WorkflowToString runID={error.BaseState?.RunID}/>
                                                 <ListVariables data={error.BaseState}/>
                                                 <TryRecover error={error} onFinish={() => ctx.refresh()}/>
                                             </>
@@ -957,7 +965,7 @@ function App() {
                                                     })}
                                                             className={"filter filter-in"}>only
                                                     </button>
-                                                    <WorkflowToString flow={await_.BaseState?.Flow}/>
+                                                    <WorkflowToString runID={await_.BaseState?.RunID}/>
                                                     <ListVariables data={await_.BaseState}/>
 
                                                     <input type={"text"}
@@ -995,7 +1003,7 @@ function App() {
                                                     <span className="schedguled">workflow.Scheduled</span>
                                                     <span>{JSON.stringify(scheduled.ExpectedRunTimestamp)}</span>
                                                     <span>{parentRunID}</span>
-                                                    <WorkflowToString flow={scheduled.BaseState?.Flow}/>
+                                                    <WorkflowToString runID={scheduled.BaseState?.RunID}/>
                                                     <ListVariables data={scheduled.BaseState}/>
                                                     <button onClick={() => {
                                                         stopSchedule(parentRunID).finally(() => {
@@ -1018,7 +1026,7 @@ function App() {
 
                                             return <>
                                                 <span className="stopped">workflow.ScheduleStopped</span>
-                                                <WorkflowToString flow={scheduleStopped.BaseState?.Flow}/>
+                                                <WorkflowToString runID={scheduleStopped.BaseState?.RunID}/>
                                                 <ListVariables data={scheduleStopped.BaseState}/>
                                                 <button onClick={() => {
                                                     resumeSchedule(parentRunID1).finally(() => {
@@ -1191,18 +1199,21 @@ function SchemaValue(props: { data?: schema.Schema }) {
 }
 
 
-function WorkflowToString(props: { flow?: workflow.Workflow }) {
+function WorkflowToString(props: { flow?: workflow.Workflow, runID?: string}) {
     const [str, setStr] = useState("")
 
     useEffect(() => {
-        if (!props.flow) {
-            return
+        if (props.flow) {
+            flowToStringFromWorkflow(props.flow).then((data) => {
+                setStr(data)
+            })
+        } else if (props.runID) {
+            flowToStringFromRunID(props.runID).then((data) => {
+                setStr(data)
+            })
         }
 
-        flowToString(props.flow).then((data) => {
-            setStr(data)
-        })
-    }, [props.flow])
+    }, [props.flow, props.runID])
 
     return <>
         <pre>{str}</pre>
