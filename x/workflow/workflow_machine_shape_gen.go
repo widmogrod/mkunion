@@ -22,6 +22,7 @@ func init() {
 	shape.Register(ErrorShape())
 	shape.Register(ExecutionShape())
 	shape.Register(ExprShape())
+	shape.Register(FlowIDShape())
 	shape.Register(FlowRefShape())
 	shape.Register(FlowShape())
 	shape.Register(GetValueShape())
@@ -32,6 +33,7 @@ func init() {
 	shape.Register(ReshaperShape())
 	shape.Register(ResumeOptionsShape())
 	shape.Register(ResumeScheduleShape())
+	shape.Register(RunIDShape())
 	shape.Register(RunOptionShape())
 	shape.Register(RunShape())
 	shape.Register(ScheduleRunShape())
@@ -39,6 +41,7 @@ func init() {
 	shape.Register(ScheduledShape())
 	shape.Register(SetValueShape())
 	shape.Register(StateShape())
+	shape.Register(StepIDShape())
 	shape.Register(StopScheduleShape())
 	shape.Register(TryRecoverShape())
 	shape.Register(WorkflowShape())
@@ -135,7 +138,11 @@ func TryRecoverShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "RunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "RunID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 		},
 		Tags: map[string]shape.Tag{
@@ -154,7 +161,11 @@ func StopScheduleShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ParentRunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "RunID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 		},
 		Tags: map[string]shape.Tag{
@@ -173,7 +184,11 @@ func ResumeScheduleShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ParentRunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "RunID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 		},
 		Tags: map[string]shape.Tag{
@@ -311,6 +326,17 @@ func DelayRunShape() shape.Shape {
 }
 
 //shape:shape
+func RunIDShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "RunID",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		IsAlias:       true,
+		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+	}
+}
+
+//shape:shape
 
 func ExprShape() shape.Shape {
 	return &shape.UnionLike{
@@ -334,7 +360,11 @@ func EndShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "StepID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 			{
 				Name: "Result",
@@ -361,7 +391,11 @@ func AssignShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "StepID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 			{
 				Name: "VarOk",
@@ -396,7 +430,11 @@ func ApplyShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "StepID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 			{
 				Name: "Name",
@@ -439,7 +477,11 @@ func ChooseShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "StepID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 			{
 				Name: "If",
@@ -475,6 +517,17 @@ func ChooseShape() shape.Shape {
 				Value: "Expr",
 			},
 		},
+	}
+}
+
+//shape:shape
+func StepIDShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "StepID",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		IsAlias:       true,
+		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 
@@ -907,11 +960,19 @@ func BaseStateShape() shape.Shape {
 			},
 			{
 				Name: "RunID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "RunID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 			{
 				Name: "StepID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "StepID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 			{
 				Name: "Variables",
@@ -969,7 +1030,11 @@ func ExecutionShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "FlowID",
-				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				Type: &shape.RefName{
+					Name:          "FlowID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
 			},
 			{
 				Name: "Status",
@@ -1011,6 +1076,17 @@ func ExecutionShape() shape.Shape {
 				},
 			},
 		},
+	}
+}
+
+//shape:shape
+func FlowIDShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "FlowID",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		IsAlias:       true,
+		Type:          &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 	}
 }
 

@@ -4,8 +4,12 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
+type StepID = string
+type FlowID = string
+type RunID = string
+
 type Execution struct {
-	FlowID    string
+	FlowID    FlowID
 	Status    State
 	Location  string
 	StartTime int64
@@ -42,14 +46,14 @@ type (
 		//Fail       schema.Schema
 	}
 	TryRecover struct {
-		RunID string
+		RunID RunID
 	}
 	StopSchedule struct {
 		// ParentRunID can be stopped by user, or by system
-		ParentRunID string
+		ParentRunID RunID
 	}
 	ResumeSchedule struct {
-		ParentRunID string
+		ParentRunID RunID
 	}
 )
 
@@ -90,8 +94,8 @@ type (
 //go:tag serde:"json"
 type BaseState struct {
 	Flow       Workflow // Flow is a reference to the flow that describes execution
-	RunID      string   // RunID is a unique identifier of the execution
-	StepID     string   // StepID is a unique identifier of the step in the execution
+	RunID      RunID    // RunID is a unique identifier of the execution
+	StepID     StepID   // StepID is a unique identifier of the step in the execution
 	Variables  map[string]schema.Schema
 	ExprResult map[string]schema.Schema
 
@@ -116,11 +120,11 @@ type (
 //go:tag mkunion:"Expr"
 type (
 	End struct {
-		ID     string
+		ID     StepID
 		Result Reshaper
 	}
 	Assign struct {
-		ID    string
+		ID    StepID
 		VarOk string
 		// if VarErr is not empty, then error will be assigned to this variable
 		// to give chance to handle it, before it will be returned to the caller
@@ -129,13 +133,13 @@ type (
 		Val    Expr
 	}
 	Apply struct {
-		ID    string
+		ID    StepID
 		Name  string
 		Args  []Reshaper
 		Await *ApplyAwaitOptions
 	}
 	Choose struct {
-		ID   string
+		ID   StepID
 		If   Predicate
 		Then []Expr
 		Else []Expr

@@ -508,7 +508,7 @@ func (r *TryRecover) _marshalJSONTryRecover(x TryRecover) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
 	var fieldRunID []byte
-	fieldRunID, err = r._marshalJSONstring(x.RunID)
+	fieldRunID, err = r._marshalJSONRunID(x.RunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: TryRecover._marshalJSONTryRecover: field name RunID; %w", err)
 	}
@@ -519,10 +519,10 @@ func (r *TryRecover) _marshalJSONTryRecover(x TryRecover) ([]byte, error) {
 	}
 	return result, nil
 }
-func (r *TryRecover) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
+func (r *TryRecover) _marshalJSONRunID(x RunID) ([]byte, error) {
+	result, err := shared.JSONMarshal[RunID](x)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: TryRecover._marshalJSONstring:; %w", err)
+		return nil, fmt.Errorf("workflow: TryRecover._marshalJSONRunID:; %w", err)
 	}
 	return result, nil
 }
@@ -542,18 +542,17 @@ func (r *TryRecover) _unmarshalJSONTryRecover(data []byte) (TryRecover, error) {
 		return result, fmt.Errorf("workflow: TryRecover._unmarshalJSONTryRecover: native struct unwrap; %w", err)
 	}
 	if fieldRunID, ok := partial["RunID"]; ok {
-		result.RunID, err = r._unmarshalJSONstring(fieldRunID)
+		result.RunID, err = r._unmarshalJSONRunID(fieldRunID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: TryRecover._unmarshalJSONTryRecover: field RunID; %w", err)
 		}
 	}
 	return result, nil
 }
-func (r *TryRecover) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
+func (r *TryRecover) _unmarshalJSONRunID(data []byte) (RunID, error) {
+	result, err := shared.JSONUnmarshal[RunID](data)
 	if err != nil {
-		return result, fmt.Errorf("workflow: TryRecover._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("workflow: TryRecover._unmarshalJSONRunID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -586,7 +585,7 @@ func (r *StopSchedule) _marshalJSONStopSchedule(x StopSchedule) ([]byte, error) 
 	partial := make(map[string]json.RawMessage)
 	var err error
 	var fieldParentRunID []byte
-	fieldParentRunID, err = r._marshalJSONstring(x.ParentRunID)
+	fieldParentRunID, err = r._marshalJSONRunID(x.ParentRunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: StopSchedule._marshalJSONStopSchedule: field name ParentRunID; %w", err)
 	}
@@ -597,10 +596,10 @@ func (r *StopSchedule) _marshalJSONStopSchedule(x StopSchedule) ([]byte, error) 
 	}
 	return result, nil
 }
-func (r *StopSchedule) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
+func (r *StopSchedule) _marshalJSONRunID(x RunID) ([]byte, error) {
+	result, err := shared.JSONMarshal[RunID](x)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: StopSchedule._marshalJSONstring:; %w", err)
+		return nil, fmt.Errorf("workflow: StopSchedule._marshalJSONRunID:; %w", err)
 	}
 	return result, nil
 }
@@ -620,18 +619,17 @@ func (r *StopSchedule) _unmarshalJSONStopSchedule(data []byte) (StopSchedule, er
 		return result, fmt.Errorf("workflow: StopSchedule._unmarshalJSONStopSchedule: native struct unwrap; %w", err)
 	}
 	if fieldParentRunID, ok := partial["ParentRunID"]; ok {
-		result.ParentRunID, err = r._unmarshalJSONstring(fieldParentRunID)
+		result.ParentRunID, err = r._unmarshalJSONRunID(fieldParentRunID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: StopSchedule._unmarshalJSONStopSchedule: field ParentRunID; %w", err)
 		}
 	}
 	return result, nil
 }
-func (r *StopSchedule) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
+func (r *StopSchedule) _unmarshalJSONRunID(data []byte) (RunID, error) {
+	result, err := shared.JSONUnmarshal[RunID](data)
 	if err != nil {
-		return result, fmt.Errorf("workflow: StopSchedule._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("workflow: StopSchedule._unmarshalJSONRunID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -664,7 +662,7 @@ func (r *ResumeSchedule) _marshalJSONResumeSchedule(x ResumeSchedule) ([]byte, e
 	partial := make(map[string]json.RawMessage)
 	var err error
 	var fieldParentRunID []byte
-	fieldParentRunID, err = r._marshalJSONstring(x.ParentRunID)
+	fieldParentRunID, err = r._marshalJSONRunID(x.ParentRunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ResumeSchedule._marshalJSONResumeSchedule: field name ParentRunID; %w", err)
 	}
@@ -675,10 +673,10 @@ func (r *ResumeSchedule) _marshalJSONResumeSchedule(x ResumeSchedule) ([]byte, e
 	}
 	return result, nil
 }
-func (r *ResumeSchedule) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
+func (r *ResumeSchedule) _marshalJSONRunID(x RunID) ([]byte, error) {
+	result, err := shared.JSONMarshal[RunID](x)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeSchedule._marshalJSONstring:; %w", err)
+		return nil, fmt.Errorf("workflow: ResumeSchedule._marshalJSONRunID:; %w", err)
 	}
 	return result, nil
 }
@@ -698,18 +696,17 @@ func (r *ResumeSchedule) _unmarshalJSONResumeSchedule(data []byte) (ResumeSchedu
 		return result, fmt.Errorf("workflow: ResumeSchedule._unmarshalJSONResumeSchedule: native struct unwrap; %w", err)
 	}
 	if fieldParentRunID, ok := partial["ParentRunID"]; ok {
-		result.ParentRunID, err = r._unmarshalJSONstring(fieldParentRunID)
+		result.ParentRunID, err = r._unmarshalJSONRunID(fieldParentRunID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: ResumeSchedule._unmarshalJSONResumeSchedule: field ParentRunID; %w", err)
 		}
 	}
 	return result, nil
 }
-func (r *ResumeSchedule) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
+func (r *ResumeSchedule) _unmarshalJSONRunID(data []byte) (RunID, error) {
+	result, err := shared.JSONUnmarshal[RunID](data)
 	if err != nil {
-		return result, fmt.Errorf("workflow: ResumeSchedule._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("workflow: ResumeSchedule._unmarshalJSONRunID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -950,7 +947,7 @@ func (r *End) _marshalJSONEnd(x End) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
 	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
+	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: field name ID; %w", err)
 	}
@@ -967,10 +964,10 @@ func (r *End) _marshalJSONEnd(x End) ([]byte, error) {
 	}
 	return result, nil
 }
-func (r *End) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
+func (r *End) _marshalJSONStepID(x StepID) ([]byte, error) {
+	result, err := shared.JSONMarshal[StepID](x)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: End._marshalJSONstring:; %w", err)
+		return nil, fmt.Errorf("workflow: End._marshalJSONStepID:; %w", err)
 	}
 	return result, nil
 }
@@ -997,7 +994,7 @@ func (r *End) _unmarshalJSONEnd(data []byte) (End, error) {
 		return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: native struct unwrap; %w", err)
 	}
 	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
+		result.ID, err = r._unmarshalJSONStepID(fieldID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: End._unmarshalJSONEnd: field ID; %w", err)
 		}
@@ -1010,11 +1007,10 @@ func (r *End) _unmarshalJSONEnd(data []byte) (End, error) {
 	}
 	return result, nil
 }
-func (r *End) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
+func (r *End) _unmarshalJSONStepID(data []byte) (StepID, error) {
+	result, err := shared.JSONUnmarshal[StepID](data)
 	if err != nil {
-		return result, fmt.Errorf("workflow: End._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("workflow: End._unmarshalJSONStepID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -1054,7 +1050,7 @@ func (r *Assign) _marshalJSONAssign(x Assign) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
 	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
+	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name ID; %w", err)
 	}
@@ -1080,6 +1076,13 @@ func (r *Assign) _marshalJSONAssign(x Assign) ([]byte, error) {
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Assign) _marshalJSONStepID(x StepID) ([]byte, error) {
+	result, err := shared.JSONMarshal[StepID](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Assign._marshalJSONStepID:; %w", err)
 	}
 	return result, nil
 }
@@ -1113,7 +1116,7 @@ func (r *Assign) _unmarshalJSONAssign(data []byte) (Assign, error) {
 		return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: native struct unwrap; %w", err)
 	}
 	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
+		result.ID, err = r._unmarshalJSONStepID(fieldID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field ID; %w", err)
 		}
@@ -1135,6 +1138,13 @@ func (r *Assign) _unmarshalJSONAssign(data []byte) (Assign, error) {
 		if err != nil {
 			return result, fmt.Errorf("workflow: Assign._unmarshalJSONAssign: field Val; %w", err)
 		}
+	}
+	return result, nil
+}
+func (r *Assign) _unmarshalJSONStepID(data []byte) (StepID, error) {
+	result, err := shared.JSONUnmarshal[StepID](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Assign._unmarshalJSONStepID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -1182,7 +1192,7 @@ func (r *Apply) _marshalJSONApply(x Apply) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
 	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
+	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name ID; %w", err)
 	}
@@ -1210,6 +1220,13 @@ func (r *Apply) _marshalJSONApply(x Apply) ([]byte, error) {
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *Apply) _marshalJSONStepID(x StepID) ([]byte, error) {
+	result, err := shared.JSONMarshal[StepID](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Apply._marshalJSONStepID:; %w", err)
 	}
 	return result, nil
 }
@@ -1271,7 +1288,7 @@ func (r *Apply) _unmarshalJSONApply(data []byte) (Apply, error) {
 		return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: native struct unwrap; %w", err)
 	}
 	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
+		result.ID, err = r._unmarshalJSONStepID(fieldID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field ID; %w", err)
 		}
@@ -1293,6 +1310,13 @@ func (r *Apply) _unmarshalJSONApply(data []byte) (Apply, error) {
 		if err != nil {
 			return result, fmt.Errorf("workflow: Apply._unmarshalJSONApply: field Await; %w", err)
 		}
+	}
+	return result, nil
+}
+func (r *Apply) _unmarshalJSONStepID(data []byte) (StepID, error) {
+	result, err := shared.JSONUnmarshal[StepID](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Apply._unmarshalJSONStepID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -1376,7 +1400,7 @@ func (r *Choose) _marshalJSONChoose(x Choose) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
 	var fieldID []byte
-	fieldID, err = r._marshalJSONstring(x.ID)
+	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name ID; %w", err)
 	}
@@ -1405,10 +1429,10 @@ func (r *Choose) _marshalJSONChoose(x Choose) ([]byte, error) {
 	}
 	return result, nil
 }
-func (r *Choose) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
+func (r *Choose) _marshalJSONStepID(x StepID) ([]byte, error) {
+	result, err := shared.JSONMarshal[StepID](x)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONstring:; %w", err)
+		return nil, fmt.Errorf("workflow: Choose._marshalJSONStepID:; %w", err)
 	}
 	return result, nil
 }
@@ -1457,7 +1481,7 @@ func (r *Choose) _unmarshalJSONChoose(data []byte) (Choose, error) {
 		return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: native struct unwrap; %w", err)
 	}
 	if fieldID, ok := partial["ID"]; ok {
-		result.ID, err = r._unmarshalJSONstring(fieldID)
+		result.ID, err = r._unmarshalJSONStepID(fieldID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: Choose._unmarshalJSONChoose: field ID; %w", err)
 		}
@@ -1482,11 +1506,10 @@ func (r *Choose) _unmarshalJSONChoose(data []byte) (Choose, error) {
 	}
 	return result, nil
 }
-func (r *Choose) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
+func (r *Choose) _unmarshalJSONStepID(data []byte) (StepID, error) {
+	result, err := shared.JSONUnmarshal[StepID](data)
 	if err != nil {
-		return result, fmt.Errorf("workflow: Choose._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("workflow: Choose._unmarshalJSONStepID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }

@@ -236,6 +236,11 @@ func getFlow(x Workflow, dep Dependency) (*Flow, error) {
 	)
 }
 
+func GetFlowFromState(state State, dep Dependency) (*Flow, error) {
+	base := GetBaseState(state)
+	return getFlow(base.Flow, dep)
+}
+
 var cronParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 
 func calculateExpectedRunTimestamp(x RunOption, dep Dependency) (int64, error) {
@@ -358,8 +363,26 @@ func ScheduleNext(x State, dep Dependency) *Run {
 	return nil
 }
 
-func GetRunID(state State) string {
+func GetRunIDFromBaseState(state State) string {
 	return GetBaseState(state).RunID
+}
+
+func GetStepIDFromExpr(expr Expr) StepID {
+	return MatchExprR1(
+		expr,
+		func(x *End) StepID {
+			return x.ID
+		},
+		func(x *Assign) StepID {
+			return x.ID
+		},
+		func(x *Apply) StepID {
+			return x.ID
+		},
+		func(x *Choose) StepID {
+			return x.ID
+		},
+	)
 }
 
 func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error) {
