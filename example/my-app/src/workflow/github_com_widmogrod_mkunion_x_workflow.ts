@@ -204,12 +204,14 @@ export type NextOperation = {
 export type BaseState = {
 	Flow?: Workflow,
 	RunID?: string,
-	StepID?: string,
+	StepID?: StepID,
 	Variables?: {[key: string]: schema.Schema},
 	ExprResult?: {[key: string]: schema.Schema},
 	DefaultMaxRetries?: number,
 	RunOption?: RunOption,
 }
+
+export type StepID = string
 
 export type Done = {
 	Result?: schema.Schema,
