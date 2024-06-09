@@ -56,7 +56,7 @@ export function PaginatedTable<T>(props: PaginatedTableProps<T>) {
 
     useEffect(() => {
         props.load(state).then(setData)
-    }, [state])
+    }, [state, props])
 
     const ctx = {
         refresh: () => {
