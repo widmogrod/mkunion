@@ -359,6 +359,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						return nil
 					}
 
+					ss = shape.IndexWith(ss, y)
+
 					res, sch := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...))
 					if res != nil {
 						return &locres{
@@ -517,6 +519,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						return nil
 					}
 
+					ss = shape.IndexWith(ss, y)
+
 					res, sch := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...))
 					if res != nil {
 						return &locres{
@@ -533,6 +537,20 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 							data:  res,
 							loc:   locations,
 							shape: sch,
+						}
+					}
+
+					return nil
+
+				case *shape.StructLike:
+					for _, field := range y.Fields {
+						res, sch := GetShapeSchemaLocation(field.Type, data, locations)
+						if res != nil {
+							return &locres{
+								data:  res,
+								loc:   locations,
+								shape: sch,
+							}
 						}
 					}
 
