@@ -23,7 +23,20 @@ func (w *WherePredicates) Evaluate(data schema.Schema) bool {
 	}
 }
 
-func Where(query string, params ParamBinds, s shape.Shape) (*WherePredicates, error) {
+type WhereOpt struct {
+	AllowExtraParams bool
+	WithShapeDef     shape.Shape
+}
+
+var DefaultWhereOpt = WhereOpt{
+	AllowExtraParams: false,
+}
+
+func Where(query string, params ParamBinds, opts *WhereOpt) (*WherePredicates, error) {
+	if opts == nil {
+		opts = &DefaultWhereOpt
+	}
+
 	if query == "" {
 		return nil, nil
 	}
@@ -49,7 +62,8 @@ func Where(query string, params ParamBinds, s shape.Shape) (*WherePredicates, er
 		}
 	}
 
-	if len(extraParams) > 0 || len(missingParams) > 0 {
+	if (len(extraParams) > 0 && !opts.AllowExtraParams) ||
+		len(missingParams) > 0 {
 		message := strings.Builder{}
 		if len(missingParams) > 0 {
 			message.WriteString(fmt.Sprintf(`missing params: "%s"`, strings.Join(missingParams, `", "`)))
@@ -67,12 +81,12 @@ func Where(query string, params ParamBinds, s shape.Shape) (*WherePredicates, er
 	return &WherePredicates{
 		Predicate: predicates,
 		Params:    params,
-		Shape:     s,
+		Shape:     opts.WithShapeDef,
 	}, nil
 }
 
-func MustWhere(query string, params ParamBinds, s shape.Shape) *WherePredicates {
-	where, err := Where(query, params, s)
+func MustWhere(query string, params ParamBinds, opts *WhereOpt) *WherePredicates {
+	where, err := Where(query, params, opts)
 	if err != nil {
 		panic(err)
 	}
