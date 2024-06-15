@@ -186,10 +186,10 @@ func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 
 		scanInput.ExclusiveStartKey = map[string]types.AttributeValue{
 			"ID": &types.AttributeValueMemberS{
-				Value: schema.AsDefault[string](schema.GetSchema(schemed, "ID"), ""),
+				Value: schema.GetSchemaDefault[string](schemed, "ID", ""),
 			},
 			"Type": &types.AttributeValueMemberS{
-				Value: schema.AsDefault[string](schema.GetSchema(schemed, "Type"), ""),
+				Value: schema.GetSchemaDefault[string](schemed, "Type", ""),
 			},
 		}
 	}

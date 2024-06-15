@@ -1,4 +1,6 @@
 stateDiagram
+ %% error=callback expired 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.Callback"
  %% error=callback not match 
 	"*workflow.Await" --> "*workflow.Await": "❌*workflow.Callback"
 	"*workflow.Await" --> "*workflow.Done": "*workflow.Callback"
@@ -12,6 +14,19 @@ stateDiagram
 	"*workflow.Scheduled" --> "*workflow.Scheduled": "❌*workflow.Callback"
  %% error=invalid state transition 
 	[*] --> [*]: "❌*workflow.Callback"
+ %% error=cannot expire async, timeout valid 
+	"*workflow.Await" --> "*workflow.Await": "❌*workflow.ExpireAsync"
+	"*workflow.Await" --> "*workflow.Error": "*workflow.ExpireAsync"
+ %% error=cannot apply commands, when workflow is completed 
+	"*workflow.Done" --> "*workflow.Done": "❌*workflow.ExpireAsync"
+ %% error=invalid state transition 
+	"*workflow.Error" --> "*workflow.Error": "❌*workflow.ExpireAsync"
+ %% error=invalid state transition 
+	"*workflow.ScheduleStopped" --> "*workflow.ScheduleStopped": "❌*workflow.ExpireAsync"
+ %% error=invalid state transition 
+	"*workflow.Scheduled" --> "*workflow.Scheduled": "❌*workflow.ExpireAsync"
+ %% error=invalid state transition 
+	[*] --> [*]: "❌*workflow.ExpireAsync"
  %% error=invalid state transition 
 	"*workflow.Await" --> "*workflow.Await": "❌*workflow.ResumeSchedule"
  %% error=cannot apply commands, when workflow is completed 
@@ -57,6 +72,8 @@ stateDiagram
 	"*workflow.Done" --> "*workflow.Done": "❌*workflow.TryRecover"
 	"*workflow.Error" --> "*workflow.Done": "*workflow.TryRecover"
 	"*workflow.Error" --> "*workflow.Error": "*workflow.TryRecover"
+ %% error=max retries reached 
+	"*workflow.Error" --> "*workflow.Error": "❌*workflow.TryRecover"
  %% error=invalid state transition 
 	"*workflow.ScheduleStopped" --> "*workflow.ScheduleStopped": "❌*workflow.TryRecover"
  %% error=invalid state transition 

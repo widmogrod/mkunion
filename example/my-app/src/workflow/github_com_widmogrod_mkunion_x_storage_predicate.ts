@@ -2,6 +2,7 @@
 export type WherePredicates = {
 	Predicate?: Predicate,
 	Params?: ParamBinds,
+	Shape?: shape.Shape,
 }
 
 export type Predicate = {
@@ -66,3 +67,5 @@ export type ParamBinds = {[key: BindName]: schema.Schema}
 
 //eslint-disable-next-line
 import * as schema from './github_com_widmogrod_mkunion_x_schema'
+//eslint-disable-next-line
+import * as shape from './github_com_widmogrod_mkunion_x_shape'

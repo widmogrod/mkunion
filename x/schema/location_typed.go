@@ -20,6 +20,10 @@ type TypedLocation struct {
 	shape shape.Shape
 }
 
+func (location *TypedLocation) ShapeDef() shape.Shape {
+	return location.shape
+}
+
 func (location *TypedLocation) WrapLocationStr(field string) (string, error) {
 	loc, err := ParseLocation(field)
 	if err != nil {
@@ -57,6 +61,8 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []Location, s shape.Sh
 					if !ok {
 						panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s; %w", y.Name, shape.ErrShapeNotFound))
 					}
+
+					s = shape.IndexWith(s, y)
 
 					return location.wrapLocationShapeAware(loc, s)
 				},
@@ -129,6 +135,9 @@ func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []Location {
 			if !found {
 				panic(fmt.Errorf("shapeToSchemaName: shape.RefName not found %s; %w", x.Name, shape.ErrShapeNotFound))
 			}
+
+			s = shape.IndexWith(s, x)
+
 			return location.shapeToSchemaName(s)
 		},
 		func(x *shape.PointerLike) []Location {

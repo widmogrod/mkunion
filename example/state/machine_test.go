@@ -86,7 +86,7 @@ func TestSuite(t *testing.T) {
 								}).
 								BeforeCommand(func(t testing.TB, di Dependency) {
 									di.(*DependencyMock).ResetCalls()
-									di.(*DependencyMock).WarehouseRemoveStockFunc = func(quantity int) error {
+									di.(*DependencyMock).WarehouseRemoveStockFunc = func(ctx context.Context, quantity int) error {
 										return fmt.Errorf("warehouse api unreachable")
 									}
 								}).
@@ -221,7 +221,7 @@ func TestStateTransition_UsingTableTests(t *testing.T) {
 			GivenCommand: &MarkOrderCompleteCMD{OrderID: "123"},
 			BeforeCommand: func(t testing.TB, di Dependency) {
 				di.(*DependencyMock).ResetCalls()
-				di.(*DependencyMock).WarehouseRemoveStockFunc = func(quantity int) error {
+				di.(*DependencyMock).WarehouseRemoveStockFunc = func(ctx context.Context, quantity int) error {
 					return fmt.Errorf("warehouse api unreachable")
 				}
 			},
@@ -247,7 +247,7 @@ func TestStateTransition_UsingTableTests(t *testing.T) {
 			GivenCommand: &TryRecoverErrorCMD{OrderID: "123"},
 			BeforeCommand: func(t testing.TB, di Dependency) {
 				di.(*DependencyMock).ResetCalls()
-				di.(*DependencyMock).WarehouseRemoveStockFunc = func(quantity int) error {
+				di.(*DependencyMock).WarehouseRemoveStockFunc = func(ctx context.Context, quantity int) error {
 					return fmt.Errorf("warehouse api unreachable")
 				}
 			},

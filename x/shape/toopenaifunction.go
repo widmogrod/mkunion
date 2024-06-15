@@ -7,8 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ToOpenAIFunctionDefinition(name, desc string, in Shape) openai.FunctionDefinition {
-	return openai.FunctionDefinition{
+func ToOpenAIFunctionDefinition(name, desc string, in Shape) *openai.FunctionDefinition {
+	return &openai.FunctionDefinition{
 		Name:        name,
 		Description: desc,
 		Parameters:  toFunctionParameters(in),

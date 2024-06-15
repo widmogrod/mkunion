@@ -58,7 +58,8 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		}
 
 	case reflect.Interface:
-		shape, found := LookupShape(MkRefNameFromReflect(x))
+		ref := MkRefNameFromReflect(x)
+		shape, found := LookupShape(ref)
 
 		union, isUnion := shape.(*UnionLike)
 		if isUnion {
@@ -78,6 +79,7 @@ func FromGoReflect(x reflect.Type, infiniteRecursionFix map[string]Shape) Shape 
 		}
 
 		if found {
+			shape = IndexWith(shape, ref)
 			return shape
 		}
 

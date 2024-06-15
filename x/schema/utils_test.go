@@ -240,6 +240,7 @@ func TestGet(t *testing.T) {
 		data     Schema
 		location string
 		expected Schema
+		found    bool
 	}{
 		"nested map": {
 			data: MkMap(
@@ -249,6 +250,7 @@ func TestGet(t *testing.T) {
 			),
 			location: "Data.Age",
 			expected: MkInt(10),
+			found:    true,
 		},
 		"nested serialised union # accessor": {
 			data: MkMap(
@@ -260,6 +262,7 @@ func TestGet(t *testing.T) {
 					))))),
 			location: "Data[*].Age[*]",
 			expected: MkInt(10),
+			found:    true,
 		},
 		"nested serialised union direct accessor": {
 			data: MkMap(
@@ -271,12 +274,26 @@ func TestGet(t *testing.T) {
 					))))),
 			location: `Data["schema.Map"].Age["schema.Number"]`,
 			expected: MkInt(10),
+			found:    true,
+		},
+		"non existen path": {
+			data: MkMap(
+				MkField("Data", MkMap(
+					MkField("schema.Map", MkMap(
+						MkField("Age", MkMap(
+							MkField("schema.Number", MkInt(10)),
+						)),
+					))))),
+			location: `Data["schema.Map"].Date`,
+			expected: nil,
+			found:    false,
 		},
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			result := GetSchema(uc.data, uc.location)
+			result, found := GetSchema(uc.data, uc.location)
 			assert.Equal(t, uc.expected, result)
+			assert.Equal(t, uc.found, found)
 		})
 	}
 }

@@ -107,8 +107,27 @@ func Test_GetShapeLocation(t *testing.T) {
 		},
 	}
 
-	result, resultShape := schema.Get(subject, "TwoNext[*].OneValue")
+	result, resultShape, found := schema.Get(subject, "TwoNext[*].OneValue")
 
 	assert.Equal(t, schema.MkString("hello"), result)
 	assert.Equal(t, &shape.PrimitiveLike{Kind: &shape.StringLike{}}, resultShape)
+	assert.True(t, found)
+}
+
+func Test_GetShapeLocation_Complex(t *testing.T) {
+	subject := ExampleChange[Example]{
+		After: ExampleRecord[Example]{
+			Data: &ExampleTwo{
+				TwoData: schema.MkInt(1),
+				TwoNext: &ExampleOne{
+					OneValue: "hello",
+				},
+			},
+		},
+	}
+
+	result, resultShape, found := schema.Get[ExampleChange[Example]](subject, `After.Data[*].TwoNext[*].OneValue`)
+	assert.Equal(t, schema.MkString("hello"), result)
+	assert.Equal(t, &shape.PrimitiveLike{Kind: &shape.StringLike{}}, resultShape)
+	assert.True(t, found)
 }

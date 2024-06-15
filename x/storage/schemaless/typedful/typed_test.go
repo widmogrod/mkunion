@@ -18,12 +18,9 @@ func TestNewRepository2Typed(t *testing.T) {
 	assert.Len(t, updated.Deleted, 0)
 
 	result, err := r.FindingRecords(schemaless.FindingRecords[schemaless.Record[User]]{
-		Where: predicate.MustWhere(
-			`Data.Age > :age`,
-			predicate.ParamBinds{
-				":age": schema.MkInt(20),
-			},
-		),
+		Where: predicate.MustWhere(`Data.Age > :age`, predicate.ParamBinds{
+			":age": schema.MkInt(20),
+		}, nil),
 		Sort: []schemaless.SortField{
 			{
 				Field:      `Data.Name`,

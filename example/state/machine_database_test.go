@@ -57,7 +57,7 @@ func TestPersistMachine(t *testing.T) {
 		RecordType: recordType,
 		Where: predicate.MustWhere("ID = :id", predicate.ParamBinds{
 			":id": schema.MkString(orderId),
-		}),
+		}, nil),
 	})
 
 	assert.NoError(t, err)
@@ -118,7 +118,7 @@ func TestPersistMachine(t *testing.T) {
 		RecordType: recordType,
 		Where: predicate.MustWhere("ID = :id", predicate.ParamBinds{
 			":id": schema.MkString(orderId),
-		}),
+		}, nil),
 	})
 	assert.NoError(t, err)
 	if assert.Len(t, records.Items, 1) {

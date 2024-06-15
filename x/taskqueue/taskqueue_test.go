@@ -129,12 +129,12 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 					return
 				}
 
-				t.Logf("next id=%s", workflow.GetRunID(work.State()))
+				t.Logf("next id=%s", workflow.GetRunIDFromBaseState(work.State()))
 				//d, _ = schema.ToJSON(schema.FromPrimitiveGo(work.State()))
 				//t.Logf("nextState: %s", string(d))
 
 				saving = append(saving, schemaless.Record[workflow.State]{
-					ID:   workflow.GetRunID(work.State()),
+					ID:   workflow.GetRunIDFromBaseState(work.State()),
 					Type: task.Data.Type,
 					Data: work.State(),
 				})
@@ -218,7 +218,7 @@ To run this test, please set AWS_SQS_QUEUE_URL to the address of your AWS SQS in
 	newState := work.State()
 	fmt.Printf("newState: %#v\n", newState)
 	_, err = repo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-		ID:   workflow.GetRunID(newState),
+		ID:   workflow.GetRunIDFromBaseState(newState),
 		Type: "process",
 		Data: newState,
 	}))

@@ -217,35 +217,39 @@ func (repo *TypedRepoWithAggregator[T, C]) ReindexAll() {
 }
 
 func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) predicate.Predicate {
+	return WrapPredicate(p, repo.loc)
+}
+
+func WrapPredicate(p predicate.Predicate, loc *schema.TypedLocation) predicate.Predicate {
 	return predicate.MatchPredicateR1(
 		p,
 		func(x *predicate.And) predicate.Predicate {
 			r := &predicate.And{}
 			for _, p := range x.L {
-				r.L = append(r.L, repo.wrapPredicate(p))
+				r.L = append(r.L, WrapPredicate(p, loc))
 			}
 			return r
 		},
 		func(x *predicate.Or) predicate.Predicate {
 			r := &predicate.Or{}
 			for _, p := range x.L {
-				r.L = append(r.L, repo.wrapPredicate(p))
+				r.L = append(r.L, WrapPredicate(p, loc))
 			}
 			return r
 		},
 		func(x *predicate.Not) predicate.Predicate {
 			r := &predicate.Not{}
-			r.P = repo.wrapPredicate(x.P)
+			r.P = WrapPredicate(x.P, loc)
 			return r
 		},
 		func(x *predicate.Compare) predicate.Predicate {
-			loc, err := repo.loc.WrapLocationStr(x.Location)
+			locw, err := loc.WrapLocationStr(x.Location)
 			if err != nil {
 				panic(fmt.Errorf("wrapPredicate: %w", err))
 			}
 
 			return &predicate.Compare{
-				Location:  loc,
+				Location:  locw,
 				Operation: x.Operation,
 				BindValue: predicate.MatchBindableR1(
 					x.BindValue,
@@ -256,13 +260,13 @@ func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) 
 						return x
 					},
 					func(x *predicate.Locatable) predicate.Bindable {
-						loc, err := repo.loc.WrapLocationStr(x.Location)
+						locw, err := loc.WrapLocationStr(x.Location)
 						if err != nil {
 							panic(fmt.Errorf("wrapPredicate: %w", err))
 						}
 
 						return &predicate.Locatable{
-							Location: loc,
+							Location: locw,
 						}
 					},
 				),

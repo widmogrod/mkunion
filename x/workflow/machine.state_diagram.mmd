@@ -1,5 +1,6 @@
 stateDiagram
 	"*workflow.Await" --> "*workflow.Done": "*workflow.Callback"
+	"*workflow.Await" --> "*workflow.Error": "*workflow.ExpireAsync"
 	"*workflow.ScheduleStopped" --> "*workflow.Scheduled": "*workflow.ResumeSchedule"
 	"*workflow.Scheduled" --> "*workflow.Done": "*workflow.Run"
 	[*] --> "*workflow.Await": "*workflow.Run"
