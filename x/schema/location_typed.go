@@ -58,6 +58,8 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []Location, s shape.Sh
 						panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s; %w", y.Name, shape.ErrShapeNotFound))
 					}
 
+					s = shape.IndexWith(s, y)
+
 					return location.wrapLocationShapeAware(loc, s)
 				},
 				func(x *shape.PointerLike) []Location {
@@ -129,6 +131,9 @@ func (location *TypedLocation) shapeToSchemaName(x shape.Shape) []Location {
 			if !found {
 				panic(fmt.Errorf("shapeToSchemaName: shape.RefName not found %s; %w", x.Name, shape.ErrShapeNotFound))
 			}
+
+			s = shape.IndexWith(s, x)
+
 			return location.shapeToSchemaName(s)
 		},
 		func(x *shape.PointerLike) []Location {
