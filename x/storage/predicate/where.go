@@ -3,6 +3,7 @@ package predicate
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"golang.org/x/exp/slices"
 	"strings"
 )
@@ -11,13 +12,18 @@ import (
 type WherePredicates struct {
 	Predicate Predicate
 	Params    ParamBinds
+	Shape     shape.Shape
 }
 
 func (w *WherePredicates) Evaluate(data schema.Schema) bool {
-	return EvaluateSchema(w.Predicate, data, w.Params)
+	if w.Shape == nil {
+		return EvaluateSchema(w.Predicate, data, w.Params)
+	} else {
+		return EvaluateShape(w.Predicate, w.Shape, data, w.Params)
+	}
 }
 
-func Where(query string, params ParamBinds) (*WherePredicates, error) {
+func Where(query string, params ParamBinds, s shape.Shape) (*WherePredicates, error) {
 	if query == "" {
 		return nil, nil
 	}
@@ -61,11 +67,12 @@ func Where(query string, params ParamBinds) (*WherePredicates, error) {
 	return &WherePredicates{
 		Predicate: predicates,
 		Params:    params,
+		Shape:     s,
 	}, nil
 }
 
-func MustWhere(query string, params ParamBinds) *WherePredicates {
-	where, err := Where(query, params)
+func MustWhere(query string, params ParamBinds, s shape.Shape) *WherePredicates {
+	where, err := Where(query, params, s)
 	if err != nil {
 		panic(err)
 	}
