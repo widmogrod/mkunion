@@ -2,6 +2,7 @@ package taskqueue
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
@@ -43,12 +44,9 @@ type TaskQueue[T any] struct {
 }
 
 func (q *TaskQueue[T]) RunCDC(ctx context.Context) error {
-	return q.stream.Subscribe(ctx, 0, func(change schemaless.Change[T]) {
-		filter := predicate.MustWhere(q.desc.Filter, q.params())
-		if !predicate.EvaluateSchema(filter.Predicate, schema.FromGo(change.After), filter.Params) {
-			return
-		}
+	filter := predicate.MustWhere(q.desc.Filter, q.params(), nil)
 
+	return q.stream.Subscribe(ctx, 0, filter, func(change schemaless.Change[T]) {
 		err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
 			ID:   change.After.ID,
 			Data: *change.After,
@@ -67,9 +65,11 @@ func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
 
 		var after = &schemaless.FindingRecords[schemaless.Record[T]]{
 			RecordType: q.desc.Entity,
-			Where:      predicate.MustWhere(q.desc.Filter, q.params()),
+			Where:      predicate.MustWhere(q.desc.Filter, q.params(), nil),
 			Limit:      10,
 		}
+
+		log := log.WithField("where", q.desc.Filter)
 
 		for {
 			records, err := q.find.FindingRecords(*after)
@@ -77,6 +77,8 @@ func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
 				panic(err)
 				return err
 			}
+
+			log.Infof("taskqueue: FindingRecords(): %d", len(records.Items))
 
 			for _, record := range records.Items {
 				err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
