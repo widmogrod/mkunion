@@ -610,6 +610,24 @@ func main() {
 		}
 	}()
 
+	procTimeout, descTimeout := backgroundTimeout(di, statesRepo)
+	queueTimeout := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
+	streamTimeout := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
+	taskTimeout := taskqueue.NewTaskQueue[workflow.State](descTimeout, queueTimeout, statesRepo, streamTimeout, procTimeout)
+
+	go func() {
+		err := taskTimeout.RunSelector(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	go func() {
+		err := taskTimeout.RunProcessor(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
