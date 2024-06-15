@@ -14,6 +14,9 @@ export type Command = {
 } | {
 	"$type"?: "workflow.ResumeSchedule",
 	"workflow.ResumeSchedule": ResumeSchedule
+} | {
+	"$type"?: "workflow.ExpireAsync",
+	"workflow.ExpireAsync": ExpireAsync
 }
 
 export type Run = {
@@ -88,7 +91,7 @@ export type Apply = {
 }
 
 export type ApplyAwaitOptions = {
-	Timeout?: number,
+	TimeoutSeconds?: number,
 }
 
 export type Choose = {
@@ -170,6 +173,10 @@ export type ResumeSchedule = {
 	ParentRunID?: RunID,
 }
 
+export type ExpireAsync = {
+	RunID?: RunID,
+}
+
 export type FunctionInput = {
 	Name?: string,
 	CallbackID?: string,
@@ -229,7 +236,7 @@ export type Error = {
 
 export type Await = {
 	CallbackID?: string,
-	Timeout?: number,
+	ExpectedTimeoutTimestamp?: number,
 	BaseState?: BaseState,
 }
 

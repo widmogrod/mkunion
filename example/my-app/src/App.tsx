@@ -498,7 +498,7 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
                                             },
                                         ],
                                         Await: {
-                                            Timeout: 10,
+                                            TimeoutSeconds: 10,
                                         }
                                     }
                                 }
