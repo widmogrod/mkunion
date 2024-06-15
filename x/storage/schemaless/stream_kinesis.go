@@ -136,17 +136,17 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 				Deleted: false,
 			}
 
-			switch schema.AsDefault[string](schema.GetSchema(schemed, "eventName"), "") {
+			switch schema.GetSchemaDefault[string](schemed, "eventName", "") {
 			case "MODIFY":
 				// has both NewImage and OldImage
-				old := schema.GetSchema(schemed, "dynamodb.OldImage")
+				old, _ := schema.GetSchema(schemed, "dynamodb.OldImage")
 				before, err := s.toTyped(old)
 				if err != nil {
 					panic(err)
 				}
 				result.Before = &before
 
-				new := schema.GetSchema(schemed, "dynamodb.NewImage")
+				new, _ := schema.GetSchema(schemed, "dynamodb.NewImage")
 				after, err := s.toTyped(new)
 				if err != nil {
 					panic(err)
@@ -155,7 +155,7 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 
 			case "INSERT":
 				// has only NewImage
-				new := schema.GetSchema(schemed, "dynamodb.NewImage")
+				new, _ := schema.GetSchema(schemed, "dynamodb.NewImage")
 				after, err := s.toTyped(new)
 				if err != nil {
 					panic(err)
@@ -163,7 +163,7 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 				result.After = &after
 			case "REMOVE":
 				// has only OldImage
-				old := schema.GetSchema(schemed, "dynamodb.OldImage")
+				old, _ := schema.GetSchema(schemed, "dynamodb.OldImage")
 				before, err := s.toTyped(old)
 				if err != nil {
 					panic(err)
@@ -172,7 +172,7 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 				result.Deleted = true
 
 			default:
-				panic(fmt.Errorf("unknown event name: %s", schema.AsDefault[string](schema.GetSchema(schemed, "eventName"), "")))
+				panic(fmt.Errorf("unknown event name: %s", schema.GetSchemaDefault[string](schemed, "eventName", "")))
 			}
 
 			resultC <- result

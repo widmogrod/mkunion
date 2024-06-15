@@ -59,8 +59,8 @@ func TestDefaultInMemoryInterpreter2(t *testing.T) {
 				//	},
 				//)
 
-				previous := schema.AsDefault[string](schema.GetSchema(x.Data, "Previous"), "")
-				current := schema.GetSchema(x.Data, "Current")
+				previous := schema.GetSchemaDefault[string](x.Data, "Previous", "")
+				current, _ := schema.GetSchema(x.Data, "Current")
 
 				returning(Item{
 					Key: x.Key,

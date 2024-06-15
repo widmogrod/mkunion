@@ -39,7 +39,9 @@ func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], err
 			predicate.ParamBinds{
 				":id": schema.MkString(recordID),
 			},
-			s.shapeDef,
+			&predicate.WhereOpt{
+				WithShapeDef: s.shapeDef,
+			},
 		),
 		Limit: 1,
 	})
@@ -272,8 +274,9 @@ func (s *InMemoryRepository[A]) AppendLog() *AppendLog[A] {
 func sortRecords[A any](records []Record[A], sortFields []SortField) []Record[A] {
 	sort.Slice(records, func(i, j int) bool {
 		for _, sortField := range sortFields {
-			fieldA, _ := schema.Get[Record[A]](records[i], sortField.Field)
-			fieldB, _ := schema.Get[Record[A]](records[j], sortField.Field)
+			// TODO: fix this it's inefficient, we should propage shape information
+			fieldA, _, _ := schema.Get[Record[A]](records[i], sortField.Field)
+			fieldB, _, _ := schema.Get[Record[A]](records[j], sortField.Field)
 			cmp := schema.Compare(fieldA, fieldB)
 			if sortField.Descending {
 				cmp = -cmp
