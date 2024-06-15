@@ -160,26 +160,17 @@ func main() {
 		func(cmd workflow.Command) (*predicate.WherePredicates, bool) {
 			switch cmd := cmd.(type) {
 			case *workflow.StopSchedule:
-				return predicate.MustWhere(
-					`Data["workflow.Scheduled"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
-					predicate.ParamBinds{
-						":runID": schema.MkString(cmd.ParentRunID),
-					},
-				), true
+				return predicate.MustWhere(`Data["workflow.Scheduled"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`, predicate.ParamBinds{
+					":runID": schema.MkString(cmd.ParentRunID),
+				}, nil), true
 			case *workflow.ResumeSchedule:
-				return predicate.MustWhere(
-					`Data["workflow.ScheduleStopped"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
-					predicate.ParamBinds{
-						":runID": schema.MkString(cmd.ParentRunID),
-					},
-				), true
+				return predicate.MustWhere(`Data["workflow.ScheduleStopped"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`, predicate.ParamBinds{
+					":runID": schema.MkString(cmd.ParentRunID),
+				}, nil), true
 			case *workflow.TryRecover:
-				return predicate.MustWhere(
-					`Data["workflow.Error"].BaseState.RunID = :runID`,
-					predicate.ParamBinds{
-						":runID": schema.MkString(cmd.RunID),
-					},
-				), true
+				return predicate.MustWhere(`Data["workflow.Error"].BaseState.RunID = :runID`, predicate.ParamBinds{
+					":runID": schema.MkString(cmd.RunID),
+				}, nil), true
 			}
 			return nil, false
 		},
@@ -540,13 +531,10 @@ func main() {
 			// find callback id in database
 			records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
 				//RecordType: "process",
-				Where: predicate.MustWhere(
-					`Type = :type AND Data["workflow.Await"].CallbackID = :callbackID`,
-					predicate.ParamBinds{
-						":type":       schema.MkString("process"),
-						":callbackID": schema.MkString(callbackCMD.CallbackID),
-					},
-				),
+				Where: predicate.MustWhere(`Type = :type AND Data["workflow.Await"].CallbackID = :callbackID`, predicate.ParamBinds{
+					":type":       schema.MkString("process"),
+					":callbackID": schema.MkString(callbackCMD.CallbackID),
+				}, nil),
 				Limit: 1,
 			})
 			if err != nil {
@@ -586,97 +574,37 @@ func main() {
 			return newState, nil
 		}))
 
-	proc := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
-		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
-			work := workflow.NewMachine(di, task.Data.Data)
-			err := work.Handle(context.TODO(), &workflow.Run{})
-			if err != nil {
-				log.Errorf("err: %s", err)
-				return
-			}
-
-			newState := work.State()
-			//log.Infof("newState: %T", newState)
-
-			saving := []schemaless.Record[workflow.State]{
-				{
-					ID:      task.Data.ID,
-					Data:    newState,
-					Type:    task.Data.Type,
-					Version: task.Data.Version,
-				},
-			}
-
-			if next := workflow.ScheduleNext(newState, di); next != nil {
-				work := workflow.NewMachine(di, nil)
-				err := work.Handle(context.TODO(), next)
-				if err != nil {
-					log.Infof("err: %s", err)
-					return
-				}
-
-				//log.Infof("next id=%s", workflow.GetRunIDFromBaseState(work.State()))
-
-				saving = append(saving, schemaless.Record[workflow.State]{
-					ID:   workflow.GetRunIDFromBaseState(work.State()),
-					Type: task.Data.Type,
-					Data: work.State(),
-				})
-			}
-
-			_, err = statesRepo.UpdateRecords(schemaless.Save(saving...))
-			if err != nil {
-				if errors.Is(err, schemaless.ErrVersionConflict) {
-					// make it configurable, but by default we should
-					// just ignore conflicts, since that means we may have duplicate,
-					// or some other process already update it.
-					// assuming that queue is populated from stream of changes
-					// it such case (there was update) new message with new version
-					// will land in queue soon (if it pass selector)
-					log.Warnf("version conflict, ignoring: %s", err.Error())
-				} else {
-					panic(err)
-				}
-			}
-		},
-	}
-
-	// there can be few process,
-	// - timeout out workflow (command to timeout)
-	// - retry workflow (command to retry)
-	// - run workflow (command to run)
-	// - callback workflow (command to callback)
-	// - terminate workflow (command to terminate)
-	// - complete workflow (command to complete)
-
-	desc := &taskqueue.Description{
-		Change: []string{"create"},
-		Entity: "process",
-		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0 AND Version = 1`,
-		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
-AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0
-`,
-	}
+	procScheduled, descScheduled := backgroundScheduled(di, statesRepo)
 	queue := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
 	stream := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
-	tq2 := taskqueue.NewTaskQueue[workflow.State](desc, queue, statesRepo, stream, proc)
-
-	//go func() {
-	//	err := tq2.RunCDC(ctx)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}()
+	taskScheduled := taskqueue.NewTaskQueue[workflow.State](descScheduled, queue, statesRepo, stream, procScheduled)
 
 	go func() {
-		err := tq2.RunSelector(ctx)
+		err := taskScheduled.RunSelector(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	go func() {
+		err := taskScheduled.RunProcessor(ctx)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
+	procRetry, descRetry := backgroundRetry(di, statesRepo)
+	queueRetry := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
+	streamRetry := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
+	taskRetry := taskqueue.NewTaskQueue[workflow.State](descRetry, queueRetry, statesRepo, streamRetry, procRetry)
+
 	go func() {
-		err := tq2.RunProcessor(ctx)
+		err := taskRetry.RunCDC(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	go func() {
+		err := taskRetry.RunProcessor(ctx)
 		if err != nil {
 			panic(err)
 		}
