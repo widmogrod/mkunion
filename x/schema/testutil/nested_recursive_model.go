@@ -16,3 +16,11 @@ type (
 		Schemas []schema.Schema
 	}
 )
+
+type ExampleRecord[T any] struct {
+	Data T
+}
+
+type ExampleChange[T any] struct {
+	After ExampleRecord[T]
+}
