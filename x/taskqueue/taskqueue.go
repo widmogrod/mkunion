@@ -44,7 +44,9 @@ type TaskQueue[T any] struct {
 }
 
 func (q *TaskQueue[T]) RunCDC(ctx context.Context) error {
-	filter := predicate.MustWhere(q.desc.Filter, q.params(), nil)
+	filter := predicate.MustWhere(q.desc.Filter, q.params(), &predicate.WhereOpt{
+		AllowExtraParams: true,
+	})
 
 	return q.stream.Subscribe(ctx, 0, filter, func(change schemaless.Change[T]) {
 		err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
@@ -58,14 +60,19 @@ func (q *TaskQueue[T]) RunCDC(ctx context.Context) error {
 }
 
 func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
+	whereOpts := &predicate.WhereOpt{
+		AllowExtraParams: true,
+	}
+
 	var timeDelta = time.Second * 1
 	var startTime time.Time
+
 	for {
 		startTime = time.Now()
 
 		var after = &schemaless.FindingRecords[schemaless.Record[T]]{
 			RecordType: q.desc.Entity,
-			Where:      predicate.MustWhere(q.desc.Filter, q.params(), nil),
+			Where:      predicate.MustWhere(q.desc.Filter, q.params(), whereOpts),
 			Limit:      10,
 		}
 
