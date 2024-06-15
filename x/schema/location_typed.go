@@ -20,6 +20,10 @@ type TypedLocation struct {
 	shape shape.Shape
 }
 
+func (location *TypedLocation) ShapeDef() shape.Shape {
+	return location.shape
+}
+
 func (location *TypedLocation) WrapLocationStr(field string) (string, error) {
 	loc, err := ParseLocation(field)
 	if err != nil {
