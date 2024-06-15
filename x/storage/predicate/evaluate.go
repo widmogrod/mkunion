@@ -13,7 +13,7 @@ func Evaluate[A any](predicate Predicate, data A, bind ParamBinds) bool {
 
 	s, found := shape.LookupShape(original)
 	if !found {
-		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
+		panic(fmt.Errorf("predicate.Evaluate: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
 	}
 
 	s = shape.IndexWith(s, original)
