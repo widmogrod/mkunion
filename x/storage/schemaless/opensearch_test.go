@@ -44,12 +44,10 @@ To run this test, please set OPENSEARCH_ADDRESS to the address of your OpenSearc
 
 	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
 		RecordType: "ExampleRecord",
-		Where: predicate.MustWhere(
-			`Data.Age > :age AND Data.Age < :maxAge`,
-			predicate.ParamBinds{
-				":age":    schema.MkInt(20),
-				":maxAge": schema.MkInt(40),
-			}),
+		Where: predicate.MustWhere(`Data.Age > :age AND Data.Age < :maxAge`, predicate.ParamBinds{
+			":age":    schema.MkInt(20),
+			":maxAge": schema.MkInt(40),
+		}, nil),
 		Sort: []SortField{
 			{
 				Field:      `Data.Name`,

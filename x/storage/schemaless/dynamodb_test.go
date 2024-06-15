@@ -51,12 +51,10 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 
 	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
 		RecordType: "ExampleRecord",
-		Where: predicate.MustWhere(
-			`Data.Age > :age AND Data.Age < :maxAge`,
-			predicate.ParamBinds{
-				":age":    schema.MkInt(20),
-				":maxAge": schema.MkInt(40),
-			}),
+		Where: predicate.MustWhere(`Data.Age > :age AND Data.Age < :maxAge`, predicate.ParamBinds{
+			":age":    schema.MkInt(20),
+			":maxAge": schema.MkInt(40),
+		}, nil),
 		Sort: []SortField{
 			{
 				Field:      `Data.Name`,
