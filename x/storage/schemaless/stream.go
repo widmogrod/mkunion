@@ -4,16 +4,18 @@ import (
 	"container/list"
 	"context"
 	"errors"
+	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"sync"
 )
 
 type AppendLoger[T any] interface {
 	Close()
-	Change(from, to Record[T]) error
+	Change(from, to *Record[T]) error
 	Delete(data Record[T]) error
 	Push(x Change[T])
 	Append(b *AppendLog[T])
-	Subscribe(ctx context.Context, fromOffset int, f func(Change[T])) error
+	Subscribe(ctx context.Context, fromOffset int, filter *predicate.WherePredicates, f func(Change[T])) error
 }
 
 type Change[T any] struct {
@@ -23,12 +25,13 @@ type Change[T any] struct {
 	Offset  int
 }
 
-func NewAppendLog[T any]() *AppendLog[T] {
+func NewAppendLog[T any](shapeDef shape.Shape) *AppendLog[T] {
 	mux := &sync.RWMutex{}
 	return &AppendLog[T]{
-		log:  list.List{},
-		mux:  mux,
-		cond: sync.NewCond(mux.RLocker()),
+		log:      list.List{},
+		mux:      mux,
+		cond:     sync.NewCond(mux.RLocker()),
+		shapeDef: shapeDef,
 	}
 }
 
@@ -36,10 +39,11 @@ var _ AppendLoger[any] = (*AppendLog[any])(nil)
 
 // AppendLog is a stream of events, and in context of schemaless, it is a stream of changes to records, or deleted record with past state
 type AppendLog[T any] struct {
-	log    list.List
-	mux    *sync.RWMutex
-	cond   *sync.Cond
-	closed bool
+	log      list.List
+	mux      *sync.RWMutex
+	cond     *sync.Cond
+	closed   bool
+	shapeDef shape.Shape
 }
 
 func (a *AppendLog[T]) Close() {
@@ -50,7 +54,7 @@ func (a *AppendLog[T]) Close() {
 	a.cond.Broadcast()
 }
 
-func (a *AppendLog[T]) Change(from, to Record[T]) error {
+func (a *AppendLog[T]) Change(from, to *Record[T]) error {
 	a.mux.Lock()
 	defer a.mux.Unlock()
 
@@ -59,8 +63,8 @@ func (a *AppendLog[T]) Change(from, to Record[T]) error {
 	}
 
 	a.log.PushBack(Change[T]{
-		Before:  &from,
-		After:   &to,
+		Before:  from,
+		After:   to,
 		Deleted: false,
 	})
 	a.cond.Broadcast()
@@ -112,7 +116,7 @@ func (a *AppendLog[T]) Append(b *AppendLog[T]) {
 	a.cond.Broadcast()
 }
 
-func (a *AppendLog[T]) Subscribe(ctx context.Context, fromOffset int, f func(Change[T])) error {
+func (a *AppendLog[T]) Subscribe(ctx context.Context, fromOffset int, filter *predicate.WherePredicates, f func(Change[T])) error {
 	var prev *list.Element = nil
 
 	// Until, there is no messages, wait
@@ -150,7 +154,14 @@ func (a *AppendLog[T]) Subscribe(ctx context.Context, fromOffset int, f func(Cha
 		default:
 			msg := prev.Value.(Change[T])
 
-			f(msg)
+			validCondition := true
+			if filter != nil && msg.After != nil {
+				validCondition = predicate.Evaluate[Record[T]](filter.Predicate, *msg.After, filter.Params)
+			}
+
+			if validCondition {
+				f(msg)
+			}
 
 			// Wait for new changes to be available
 			a.cond.L.Lock()
