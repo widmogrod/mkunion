@@ -23,7 +23,7 @@ func TestToStrWorkflow(t *testing.T) {
 						&GetValue{Path: "input"},
 					},
 					Await: &ApplyAwaitOptions{
-						Timeout: int64(time.Second * 10),
+						TimeoutSeconds: int64(time.Second * 10),
 					},
 				},
 			},
@@ -84,7 +84,11 @@ func TestToStrWorkflow(t *testing.T) {
 
 		result := ToStrWorkflow(program, ToStrContextFromState(state))
 		expected := `flow hello_world_flow(input)  {
-	var res = await concat("hello ", input) @timeout(10000000000) ← ❌function-execution: function concat() returned error: expected string, got <nil>
+	var res = await concat("hello ", input) @timeout(10000000000)
+	
+		🔺error: function-execution:
+			function concat() returned error: expected string, got <nil>
+	
 	if res="hello world" {
 		return res
 	} else {

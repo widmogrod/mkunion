@@ -149,7 +149,7 @@ func TestMachine(t *testing.T) {
 						&GetValue{Path: "input"},
 					},
 					Await: &ApplyAwaitOptions{
-						Timeout: int64(time.Second * 10),
+						TimeoutSeconds: 10,
 					},
 				},
 			},
@@ -338,8 +338,8 @@ func TestMachine(t *testing.T) {
 				Input: schema.MkString("world"),
 			}).
 			ThenState(t, &Await{
-				Timeout:    int64(10 * time.Second),
-				CallbackID: callbackID,
+				ExpectedTimeoutTimestamp: time.Now().Add(10 * time.Second).Unix(),
+				CallbackID:               callbackID,
 				BaseState: BaseState{
 					RunID:  runID,
 					StepID: "apply-concat",
@@ -351,8 +351,55 @@ func TestMachine(t *testing.T) {
 					DefaultMaxRetries: 3,
 				},
 			}).
-			ForkCase(t, "callback received", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
-				// Assuming that callback is received before timeout.
+			ForkCase(t, "cannot expire await callback, when timeout valid", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
+				c.
+					GivenCommand(&ExpireAsync{
+						RunID: runID,
+					}).
+					ThenStateAndError(t, &Await{
+						ExpectedTimeoutTimestamp: time.Now().Add(10 * time.Second).Unix(),
+						CallbackID:               callbackID,
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "apply-concat",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+							},
+							ExprResult:        make(map[string]schema.Schema),
+							DefaultMaxRetries: 3,
+						},
+					}, ErrCannotExpireAsync)
+			}).
+			ForkCase(t, "callback not received within timeout, expire is allowed", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
+				c.
+					BeforeCommand(func(t testing.TB, di Dependency) {
+						future := time.Now().Add(11 * time.Second)
+						di.(*DI).MockTimeNow = &future
+					}).
+					GivenCommand(&ExpireAsync{
+						RunID: runID,
+					}).
+					AfterCommand(func(t testing.TB, di Dependency) {
+						di.(*DI).MockTimeNow = &timeNow
+					}).
+					ThenState(t, &Error{
+						Code:    "async-timeout",
+						Reason:  "callback not received in time window",
+						Retried: 3,
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "apply-concat",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+							},
+							ExprResult:        make(map[string]schema.Schema),
+							DefaultMaxRetries: 3,
+						},
+					})
+			}).
+			ForkCase(t, "callback received, within timeout", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&Callback{
 						CallbackID: callbackID,
@@ -375,6 +422,34 @@ func TestMachine(t *testing.T) {
 						},
 					})
 			}).
+			ForkCase(t, "callback received, after timeout", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
+				c.
+					BeforeCommand(func(t testing.TB, di Dependency) {
+						future := time.Now().Add(11 * time.Second)
+						di.(*DI).MockTimeNow = &future
+					}).
+					GivenCommand(&Callback{
+						CallbackID: callbackID,
+						Result:     schema.MkString("hello + world"),
+					}).
+					AfterCommand(func(t testing.TB, di Dependency) {
+						di.(*DI).MockTimeNow = &timeNow
+					}).
+					ThenStateAndError(t, &Await{
+						ExpectedTimeoutTimestamp: time.Now().Add(10 * time.Second).Unix(),
+						CallbackID:               callbackID,
+						BaseState: BaseState{
+							RunID:  runID,
+							StepID: "apply-concat",
+							Flow:   &FlowRef{FlowID: "hello_world_flow_await"},
+							Variables: map[string]schema.Schema{
+								"input": schema.MkString("world"),
+							},
+							ExprResult:        make(map[string]schema.Schema),
+							DefaultMaxRetries: 3,
+						},
+					}, ErrCallbackExpired)
+			}).
 			ForkCase(t, "received invalid callbackID", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 				c.
 					GivenCommand(&Callback{
@@ -382,8 +457,8 @@ func TestMachine(t *testing.T) {
 						Result:     schema.MkString("hello + world"),
 					}).
 					ThenStateAndError(t, &Await{
-						Timeout:    int64(10 * time.Second),
-						CallbackID: callbackID,
+						ExpectedTimeoutTimestamp: timeNow.Add(10 * time.Second).Unix(),
+						CallbackID:               callbackID,
 						BaseState: BaseState{
 							RunID:  runID,
 							StepID: "apply-concat",

@@ -37,6 +37,7 @@ func init() {
 	shared.TypeRegistryStore[Done]("github.com/widmogrod/mkunion/x/workflow.Done")
 	shared.TypeRegistryStore[End]("github.com/widmogrod/mkunion/x/workflow.End")
 	shared.TypeRegistryStore[Error]("github.com/widmogrod/mkunion/x/workflow.Error")
+	shared.TypeRegistryStore[ExpireAsync]("github.com/widmogrod/mkunion/x/workflow.ExpireAsync")
 	shared.TypeRegistryStore[Flow]("github.com/widmogrod/mkunion/x/workflow.Flow")
 	shared.TypeRegistryStore[FlowRef]("github.com/widmogrod/mkunion/x/workflow.FlowRef")
 	shared.TypeRegistryStore[FunctionInput]("github.com/widmogrod/mkunion/x/workflow.FunctionInput")

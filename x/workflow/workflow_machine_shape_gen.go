@@ -21,6 +21,7 @@ func init() {
 	shape.Register(EndShape())
 	shape.Register(ErrorShape())
 	shape.Register(ExecutionShape())
+	shape.Register(ExpireAsyncShape())
 	shape.Register(ExprShape())
 	shape.Register(FlowIDShape())
 	shape.Register(FlowRefShape())
@@ -60,6 +61,7 @@ func CommandShape() shape.Shape {
 			TryRecoverShape(),
 			StopScheduleShape(),
 			ResumeScheduleShape(),
+			ExpireAsyncShape(),
 		},
 	}
 }
@@ -184,6 +186,29 @@ func ResumeScheduleShape() shape.Shape {
 		Fields: []*shape.FieldLike{
 			{
 				Name: "ParentRunID",
+				Type: &shape.RefName{
+					Name:          "RunID",
+					PkgName:       "workflow",
+					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion": {
+				Value: "Command",
+			},
+		},
+	}
+}
+
+func ExpireAsyncShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ExpireAsync",
+		PkgName:       "workflow",
+		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "RunID",
 				Type: &shape.RefName{
 					Name:          "RunID",
 					PkgName:       "workflow",
@@ -595,7 +620,7 @@ func ApplyAwaitOptionsShape() shape.Shape {
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
-				Name: "Timeout",
+				Name: "TimeoutSeconds",
 				Type: &shape.PrimitiveLike{
 					Kind: &shape.NumberLike{
 						Kind: &shape.Int64{},
@@ -865,7 +890,7 @@ func AwaitShape() shape.Shape {
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 			{
-				Name: "Timeout",
+				Name: "ExpectedTimeoutTimestamp",
 				Type: &shape.PrimitiveLike{
 					Kind: &shape.NumberLike{
 						Kind: &shape.Int64{},

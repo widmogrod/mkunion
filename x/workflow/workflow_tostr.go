@@ -47,7 +47,7 @@ func injectError(result *strings.Builder, c *ToStrContext, id StepID) *strings.B
 	}
 
 	if info, ok := c.Errors[id]; ok {
-		result.WriteString(fmt.Sprintf(" ← ❌%s: %s", info.Code, info.Message))
+		result.WriteString(fmt.Sprintf("\n\n\t🔺error: %s:\n\t\t%s\n", info.Code, info.Message))
 	}
 
 	return result
@@ -118,7 +118,7 @@ func ToStrExpr(expr Expr, c *ToStrContext) string {
 			result.WriteString(")")
 
 			if x.Await != nil {
-				result.WriteString(fmt.Sprintf(" @timeout(%d)", x.Await.Timeout))
+				result.WriteString(fmt.Sprintf(" @timeout(%d)", x.Await.TimeoutSeconds))
 			}
 
 			return result

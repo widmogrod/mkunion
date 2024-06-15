@@ -14,6 +14,7 @@ type CommandVisitor interface {
 	VisitTryRecover(v *TryRecover) any
 	VisitStopSchedule(v *StopSchedule) any
 	VisitResumeSchedule(v *ResumeSchedule) any
+	VisitExpireAsync(v *ExpireAsync) any
 }
 
 type Command interface {
@@ -26,6 +27,7 @@ var (
 	_ Command = (*TryRecover)(nil)
 	_ Command = (*StopSchedule)(nil)
 	_ Command = (*ResumeSchedule)(nil)
+	_ Command = (*ExpireAsync)(nil)
 )
 
 func (r *Run) AcceptCommand(v CommandVisitor) any            { return v.VisitRun(r) }
@@ -33,6 +35,7 @@ func (r *Callback) AcceptCommand(v CommandVisitor) any       { return v.VisitCal
 func (r *TryRecover) AcceptCommand(v CommandVisitor) any     { return v.VisitTryRecover(r) }
 func (r *StopSchedule) AcceptCommand(v CommandVisitor) any   { return v.VisitStopSchedule(r) }
 func (r *ResumeSchedule) AcceptCommand(v CommandVisitor) any { return v.VisitResumeSchedule(r) }
+func (r *ExpireAsync) AcceptCommand(v CommandVisitor) any    { return v.VisitExpireAsync(r) }
 
 func MatchCommandR3[T0, T1, T2 any](
 	x Command,
@@ -41,6 +44,7 @@ func MatchCommandR3[T0, T1, T2 any](
 	f3 func(x *TryRecover) (T0, T1, T2),
 	f4 func(x *StopSchedule) (T0, T1, T2),
 	f5 func(x *ResumeSchedule) (T0, T1, T2),
+	f6 func(x *ExpireAsync) (T0, T1, T2),
 ) (T0, T1, T2) {
 	switch v := x.(type) {
 	case *Run:
@@ -53,6 +57,8 @@ func MatchCommandR3[T0, T1, T2 any](
 		return f4(v)
 	case *ResumeSchedule:
 		return f5(v)
+	case *ExpireAsync:
+		return f6(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -67,6 +73,7 @@ func MatchCommandR2[T0, T1 any](
 	f3 func(x *TryRecover) (T0, T1),
 	f4 func(x *StopSchedule) (T0, T1),
 	f5 func(x *ResumeSchedule) (T0, T1),
+	f6 func(x *ExpireAsync) (T0, T1),
 ) (T0, T1) {
 	switch v := x.(type) {
 	case *Run:
@@ -79,6 +86,8 @@ func MatchCommandR2[T0, T1 any](
 		return f4(v)
 	case *ResumeSchedule:
 		return f5(v)
+	case *ExpireAsync:
+		return f6(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -92,6 +101,7 @@ func MatchCommandR1[T0 any](
 	f3 func(x *TryRecover) T0,
 	f4 func(x *StopSchedule) T0,
 	f5 func(x *ResumeSchedule) T0,
+	f6 func(x *ExpireAsync) T0,
 ) T0 {
 	switch v := x.(type) {
 	case *Run:
@@ -104,6 +114,8 @@ func MatchCommandR1[T0 any](
 		return f4(v)
 	case *ResumeSchedule:
 		return f5(v)
+	case *ExpireAsync:
+		return f6(v)
 	}
 	var result1 T0
 	return result1
@@ -116,6 +128,7 @@ func MatchCommandR0(
 	f3 func(x *TryRecover),
 	f4 func(x *StopSchedule),
 	f5 func(x *ResumeSchedule),
+	f6 func(x *ExpireAsync),
 ) {
 	switch v := x.(type) {
 	case *Run:
@@ -128,11 +141,14 @@ func MatchCommandR0(
 		f4(v)
 	case *ResumeSchedule:
 		f5(v)
+	case *ExpireAsync:
+		f6(v)
 	}
 }
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Callback", CallbackFromJSON, CallbackToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Command", CommandFromJSON, CommandToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.ExpireAsync", ExpireAsyncFromJSON, ExpireAsyncToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.ResumeSchedule", ResumeScheduleFromJSON, ResumeScheduleToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Run", RunFromJSON, RunToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.StopSchedule", StopScheduleFromJSON, StopScheduleToJSON)
@@ -146,6 +162,7 @@ type CommandUnionJSON struct {
 	TryRecover     json.RawMessage `json:"workflow.TryRecover,omitempty"`
 	StopSchedule   json.RawMessage `json:"workflow.StopSchedule,omitempty"`
 	ResumeSchedule json.RawMessage `json:"workflow.ResumeSchedule,omitempty"`
+	ExpireAsync    json.RawMessage `json:"workflow.ExpireAsync,omitempty"`
 }
 
 func CommandFromJSON(x []byte) (Command, error) {
@@ -172,6 +189,8 @@ func CommandFromJSON(x []byte) (Command, error) {
 		return StopScheduleFromJSON(data.StopSchedule)
 	case "workflow.ResumeSchedule":
 		return ResumeScheduleFromJSON(data.ResumeSchedule)
+	case "workflow.ExpireAsync":
+		return ExpireAsyncFromJSON(data.ExpireAsync)
 	}
 
 	if data.Run != nil {
@@ -184,6 +203,8 @@ func CommandFromJSON(x []byte) (Command, error) {
 		return StopScheduleFromJSON(data.StopSchedule)
 	} else if data.ResumeSchedule != nil {
 		return ResumeScheduleFromJSON(data.ResumeSchedule)
+	} else if data.ExpireAsync != nil {
+		return ExpireAsyncFromJSON(data.ExpireAsync)
 	}
 	return nil, fmt.Errorf("workflow.CommandFromJSON: unknown type: %s", data.Type)
 }
@@ -242,6 +263,16 @@ func CommandToJSON(x Command) ([]byte, error) {
 			return json.Marshal(CommandUnionJSON{
 				Type:           "workflow.ResumeSchedule",
 				ResumeSchedule: body,
+			})
+		},
+		func(y *ExpireAsync) ([]byte, error) {
+			body, err := ExpireAsyncToJSON(y)
+			if err != nil {
+				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
+			}
+			return json.Marshal(CommandUnionJSON{
+				Type:        "workflow.ExpireAsync",
+				ExpireAsync: body,
 			})
 		},
 	)
@@ -707,6 +738,83 @@ func (r *ResumeSchedule) _unmarshalJSONRunID(data []byte) (RunID, error) {
 	result, err := shared.JSONUnmarshal[RunID](data)
 	if err != nil {
 		return result, fmt.Errorf("workflow: ResumeSchedule._unmarshalJSONRunID: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func ExpireAsyncFromJSON(x []byte) (*ExpireAsync, error) {
+	result := new(ExpireAsync)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow.ExpireAsyncFromJSON: %w", err)
+	}
+	return result, nil
+}
+
+func ExpireAsyncToJSON(x *ExpireAsync) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*ExpireAsync)(nil)
+	_ json.Marshaler   = (*ExpireAsync)(nil)
+)
+
+func (r *ExpireAsync) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONExpireAsync(*r)
+}
+func (r *ExpireAsync) _marshalJSONExpireAsync(x ExpireAsync) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	var fieldRunID []byte
+	fieldRunID, err = r._marshalJSONRunID(x.RunID)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ExpireAsync._marshalJSONExpireAsync: field name RunID; %w", err)
+	}
+	partial["RunID"] = fieldRunID
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ExpireAsync._marshalJSONExpireAsync: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *ExpireAsync) _marshalJSONRunID(x RunID) ([]byte, error) {
+	result, err := shared.JSONMarshal[RunID](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: ExpireAsync._marshalJSONRunID:; %w", err)
+	}
+	return result, nil
+}
+func (r *ExpireAsync) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONExpireAsync(data)
+	if err != nil {
+		return fmt.Errorf("workflow: ExpireAsync.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *ExpireAsync) _unmarshalJSONExpireAsync(data []byte) (ExpireAsync, error) {
+	result := ExpireAsync{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ExpireAsync._unmarshalJSONExpireAsync: native struct unwrap; %w", err)
+	}
+	if fieldRunID, ok := partial["RunID"]; ok {
+		result.RunID, err = r._unmarshalJSONRunID(fieldRunID)
+		if err != nil {
+			return result, fmt.Errorf("workflow: ExpireAsync._unmarshalJSONExpireAsync: field RunID; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *ExpireAsync) _unmarshalJSONRunID(data []byte) (RunID, error) {
+	result, err := shared.JSONUnmarshal[RunID](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: ExpireAsync._unmarshalJSONRunID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -3428,12 +3536,12 @@ func (r *Await) _marshalJSONAwait(x Await) ([]byte, error) {
 		return nil, fmt.Errorf("workflow: Await._marshalJSONAwait: field name CallbackID; %w", err)
 	}
 	partial["CallbackID"] = fieldCallbackID
-	var fieldTimeout []byte
-	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
+	var fieldExpectedTimeoutTimestamp []byte
+	fieldExpectedTimeoutTimestamp, err = r._marshalJSONint64(x.ExpectedTimeoutTimestamp)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: Await._marshalJSONAwait: field name Timeout; %w", err)
+		return nil, fmt.Errorf("workflow: Await._marshalJSONAwait: field name ExpectedTimeoutTimestamp; %w", err)
 	}
-	partial["Timeout"] = fieldTimeout
+	partial["ExpectedTimeoutTimestamp"] = fieldExpectedTimeoutTimestamp
 	var fieldBaseState []byte
 	fieldBaseState, err = r._marshalJSONBaseState(x.BaseState)
 	if err != nil {
@@ -3488,10 +3596,10 @@ func (r *Await) _unmarshalJSONAwait(data []byte) (Await, error) {
 			return result, fmt.Errorf("workflow: Await._unmarshalJSONAwait: field CallbackID; %w", err)
 		}
 	}
-	if fieldTimeout, ok := partial["Timeout"]; ok {
-		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
+	if fieldExpectedTimeoutTimestamp, ok := partial["ExpectedTimeoutTimestamp"]; ok {
+		result.ExpectedTimeoutTimestamp, err = r._unmarshalJSONint64(fieldExpectedTimeoutTimestamp)
 		if err != nil {
-			return result, fmt.Errorf("workflow: Await._unmarshalJSONAwait: field Timeout; %w", err)
+			return result, fmt.Errorf("workflow: Await._unmarshalJSONAwait: field ExpectedTimeoutTimestamp; %w", err)
 		}
 	}
 	if fieldBaseState, ok := partial["BaseState"]; ok {

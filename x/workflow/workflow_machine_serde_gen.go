@@ -22,12 +22,12 @@ func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
 func (r *ApplyAwaitOptions) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
-	var fieldTimeout []byte
-	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
+	var fieldTimeoutSeconds []byte
+	fieldTimeoutSeconds, err = r._marshalJSONint64(x.TimeoutSeconds)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name Timeout; %w", err)
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name TimeoutSeconds; %w", err)
 	}
-	partial["Timeout"] = fieldTimeout
+	partial["TimeoutSeconds"] = fieldTimeoutSeconds
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: struct; %w", err)
@@ -56,10 +56,10 @@ func (r *ApplyAwaitOptions) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyA
 	if err != nil {
 		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: native struct unwrap; %w", err)
 	}
-	if fieldTimeout, ok := partial["Timeout"]; ok {
-		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
+	if fieldTimeoutSeconds, ok := partial["TimeoutSeconds"]; ok {
+		result.TimeoutSeconds, err = r._unmarshalJSONint64(fieldTimeoutSeconds)
 		if err != nil {
-			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field Timeout; %w", err)
+			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field TimeoutSeconds; %w", err)
 		}
 	}
 	return result, nil

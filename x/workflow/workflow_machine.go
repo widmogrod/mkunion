@@ -55,6 +55,9 @@ type (
 	ResumeSchedule struct {
 		ParentRunID RunID
 	}
+	ExpireAsync struct {
+		RunID RunID
+	}
 )
 
 //go:tag mkunion:"State"
@@ -75,9 +78,9 @@ type (
 		BaseState BaseState
 	}
 	Await struct {
-		CallbackID string
-		Timeout    int64
-		BaseState  BaseState
+		CallbackID               string
+		ExpectedTimeoutTimestamp int64
+		BaseState                BaseState
 	}
 	// Scheduled is a state that is used to schedule execution of the flow, once or periodically
 	Scheduled struct {
@@ -198,7 +201,7 @@ type (
 	////
 	//ResumeSchedule struct {
 	//	ID      string
-	//	Timeout time.DelayBySeconds
+	//	ExpectedTimeoutTimestamp time.DelayBySeconds
 	//	//Caller  schema.Schema
 	//	//Callee  schema.Schema
 	//	RunOption ResumeOptions
@@ -208,13 +211,13 @@ type (
 //go:tag serde:"json"
 type ResumeOptions struct {
 	Timeout int64
-	//Timeout time.DelayBySeconds
+	//ExpectedTimeoutTimestamp time.DelayBySeconds
 }
 
 //go:tag serde:"json"
 type ApplyAwaitOptions struct {
-	Timeout int64
-	//Timeout time.DelayBySeconds
+	TimeoutSeconds int64
+	//ExpectedTimeoutTimestamp time.DelayBySeconds
 }
 
 //go:tag mkunion:"Reshaper"
