@@ -1432,9 +1432,8 @@ function resumeSchedule(parentRunID: string) {
 
 function callFunc(funcID: string, args: any[]) {
     const cmd: workflow.FunctionInput = {
-        Name: "funcID",
+        Name: funcID,
         Args: args,
-
     }
 
     return fetch('http://localhost:8080/func', {
