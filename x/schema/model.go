@@ -1,5 +1,7 @@
 package schema
 
+import "github.com/widmogrod/mkunion/x/shape"
+
 //go:tag mkunion:"Schema"
 type (
 	None   struct{}
@@ -78,4 +80,30 @@ func MkField(name string, value Schema) Field {
 func AppendList(list *List, items ...Schema) *List {
 	result := append(*list, items...)
 	return &result
+}
+
+const PktImportName = "github.com/widmogrod/mkunion/x/schema"
+
+var names = map[string]bool{
+	"Schema": true,
+	"None":   true,
+	"Bool":   true,
+	"Number": true,
+	"String": true,
+	"Binary": true,
+	"List":   true,
+	"Map":    true,
+}
+
+func IsShapeASchema(x shape.Shape) bool {
+	switch y := x.(type) {
+	case *shape.RefName:
+		return y.PkgImportName == PktImportName && names[y.Name]
+	case *shape.StructLike:
+		return y.PkgImportName == PktImportName && names[y.Name]
+	case *shape.UnionLike:
+		return y.PkgImportName == PktImportName && names[y.Name]
+	}
+
+	return false
 }

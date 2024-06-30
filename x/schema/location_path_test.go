@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseLocation(t *testing.T) {
-	input := `x.y[1].Data["some.Some"].Abc[*].X`
+	input := `x.y[1].Data["some.Some"].Abc[*].X[0]["some.Other"]`
 	result, err := ParseLocation(input)
 	assert.NoError(t, err)
 	assert.Equal(t, []Location{
@@ -18,6 +18,8 @@ func TestParseLocation(t *testing.T) {
 		&LocationField{Name: "Abc"},
 		&LocationAnything{},
 		&LocationField{Name: "X"},
+		&LocationIndex{Index: 0},
+		&LocationField{Name: "some.Other"},
 	}, result)
 
 	assert.Equal(t, input, LocationToStr(result))

@@ -232,10 +232,6 @@ func GetSchemaLocation(data Schema, locations []Location, found bool) (Schema, b
 				return nil, locations, false
 			},
 		)
-
-		//if data == nil {
-		//	return data, false
-		//}
 	}
 }
 
@@ -305,7 +301,6 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 					if found {
 						return &locres{
 							data:  res,
-							loc:   locations,
 							shape: sch,
 						}
 					}
@@ -365,7 +360,6 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 						if found {
 							return &locres{
 								data:  res,
-								loc:   locations,
 								shape: sch,
 							}
 						}
@@ -385,7 +379,6 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 					if found {
 						return &locres{
 							data:  res,
-							loc:   locations,
 							shape: sch,
 						}
 					}
@@ -484,8 +477,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 						res, sch, found := GetShapeSchemaLocation(y.Val, value, locations, found)
 						if found {
 							return &locres{
-								data:  res,
-								loc:   locations,
+								data: res,
+								//loc:   locations,
 								shape: sch,
 							}
 						}
@@ -509,8 +502,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 						res, sch, found := GetShapeSchemaLocation(variant, fieldValue, locations, found)
 						if found {
 							return &locres{
-								data:  res,
-								loc:   locations,
+								data: res,
+								//loc:   locations,
 								shape: sch,
 							}
 						}
@@ -526,8 +519,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 						res, sch, found := GetShapeSchemaLocation(y.Element, item, locations, found)
 						if found {
 							return &locres{
-								data:  res,
-								loc:   locations,
+								data: res,
+								//loc:   locations,
 								shape: sch,
 							}
 						}
@@ -544,8 +537,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 					res, sch, found := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...), found)
 					if found {
 						return &locres{
-							data:  res,
-							loc:   locations,
+							data: res,
+							//loc:   locations,
 							shape: sch,
 						}
 					}
@@ -554,8 +547,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 					res, sch, found := GetShapeSchemaLocation(y.Type, data, locations, found)
 					if found {
 						return &locres{
-							data:  res,
-							loc:   locations,
+							data: res,
+							//loc:   locations,
 							shape: sch,
 						}
 					}
@@ -567,8 +560,8 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 						res, sch, found := GetShapeSchemaLocation(field.Type, data, locations, found)
 						if found {
 							return &locres{
-								data:  res,
-								loc:   locations,
+								data: res,
+								//loc:   locations,
 								shape: sch,
 							}
 						}
