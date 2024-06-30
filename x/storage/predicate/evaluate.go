@@ -154,20 +154,6 @@ func GetValue(x Bindable, params ParamBinds, data schema.Schema) (schema.Schema,
 	)
 }
 
-func EvaluateEqualPrimitive(record schema.Schema, location string, value any) bool {
-	return EvaluateSchema(
-		&Compare{
-			Location:  location,
-			Operation: "=",
-			BindValue: &BindValue{BindName: ":value"},
-		},
-		record,
-		map[string]schema.Schema{
-			":value": schema.FromPrimitiveGo(value),
-		},
-	)
-}
-
 func EvaluateEqual[A any](data A, location string, value any) bool {
 	return Evaluate[A](
 		&Compare{
