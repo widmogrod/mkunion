@@ -384,7 +384,7 @@ func TestMachine(t *testing.T) {
 						di.(*DI).MockTimeNow = &timeNow
 					}).
 					ThenState(t, &Error{
-						Code:    "async-timeout",
+						Code:    ProblemCallbackTimeout,
 						Reason:  "callback not received in time window",
 						Retried: 3,
 						BaseState: BaseState{
@@ -478,7 +478,7 @@ func TestMachine(t *testing.T) {
 				Flow: &FlowRef{FlowID: "hello_world_flow"},
 			}).
 			ThenState(t, &Error{
-				Code:   "function-execution",
+				Code:   ProblemExecutingFunction,
 				Reason: "function concat() returned error: expected string, got <nil>",
 				BaseState: BaseState{
 					RunID:  runID,
@@ -521,7 +521,7 @@ func TestMachine(t *testing.T) {
 				}
 			}).
 			ThenState(t, &Error{
-				Code:   "function-missing",
+				Code:   ProblemMissingFunction,
 				Reason: "function concat() not found, details: function funcID='concat' not found",
 				BaseState: BaseState{
 					RunID:  runID,
@@ -554,7 +554,7 @@ func TestMachine(t *testing.T) {
 						}
 					}).
 					ThenState(t, &Error{
-						Code:    "function-missing",
+						Code:    ProblemMissingFunction,
 						Reason:  "function concat() not found, details: function funcID='concat' not found",
 						Retried: 1,
 						BaseState: BaseState{

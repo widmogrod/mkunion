@@ -142,8 +142,8 @@ func Transition(ctx context.Context, dep Dependency, cmd Command, state State) (
 				}
 
 				switch s.Code {
-				case "function-missing",
-					"function-execution":
+				case ProblemMissingFunction,
+					ProblemExecutingFunction:
 					newContext := cloneBaseState(s.BaseState)
 
 					flow, err := getFlow(newContext.Flow, dep)
@@ -223,7 +223,7 @@ func Transition(ctx context.Context, dep Dependency, cmd Command, state State) (
 				}
 
 				return &Error{
-					Code:   "async-timeout",
+					Code:   ProblemCallbackTimeout,
 					Reason: "callback not received in time window",
 					// set value to max retries, so that non recoverable error, won't be even retried
 					Retried:   s.BaseState.DefaultMaxRetries,
@@ -544,7 +544,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			val, err := ExecuteReshaper(context, x.Result)
 			if err != nil {
 				return &Error{
-					Code:      "execute-reshaper",
+					Code:      ProblemVariableAccess,
 					Reason:    "failed to execute reshaper in ok path",
 					BaseState: newContext,
 				}
@@ -567,7 +567,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 
 			if _, ok := newContext.Variables[x.VarOk]; ok {
 				return &Error{
-					Code:      "assign-variable",
+					Code:      ProblemVariableNameInUser,
 					Reason:    fmt.Sprintf("variable %s already exists", x.VarOk),
 					BaseState: newContext,
 				}
@@ -597,7 +597,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				val, err := ExecuteReshaper(context, arg)
 				if err != nil {
 					return &Error{
-						Code:      "execute-reshaper",
+						Code:      ProblemVariableAccess,
 						Reason:    fmt.Sprintf("failed to execute reshaper while preparing args for function %s(), reason: %s", x.Name, err.Error()),
 						BaseState: newContext,
 					}
@@ -608,7 +608,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			fn, err := dep.FindFunction(x.Name)
 			if err != nil {
 				return &Error{
-					Code:      "function-missing",
+					Code:      ProblemMissingFunction,
 					Reason:    fmt.Sprintf("function %s() not found, details: %s", x.Name, err.Error()),
 					BaseState: newContext,
 				}
@@ -627,7 +627,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			val, err := fn(input)
 			if err != nil {
 				return &Error{
-					Code:      "function-execution",
+					Code:      ProblemExecutingFunction,
 					Reason:    fmt.Sprintf("function %s() returned error: %s", x.Name, err.Error()),
 					BaseState: newContext,
 				}
@@ -653,7 +653,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			isTrue, err := ExecutePredicate(newContext, x.If, dep)
 			if err != nil {
 				return &Error{
-					Code:      "choose-evaluate-predicate",
+					Code:      ProblemPredicateEvaluation,
 					Reason:    "failed to evaluate predicate, reason: " + err.Error(),
 					BaseState: newContext,
 				}
@@ -662,7 +662,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			// THEN branch cannot be empty, ELSE can, since it is optional
 			if len(x.Then) == 0 {
 				return &Error{
-					Code:      "choose-then-empty",
+					Code:      ProblemChooseThenEmpty,
 					Reason:    "then branch cannot be empty",
 					BaseState: newContext,
 				}

@@ -108,6 +108,16 @@ type BaseState struct {
 	RunOption RunOption
 }
 
+const (
+	ProblemVariableNameInUser  = "assign-variable"
+	ProblemVariableAccess      = "execute-reshaper"
+	ProblemMissingFunction     = "missing-function"
+	ProblemExecutingFunction   = "function-execution"
+	ProblemPredicateEvaluation = "choose-evaluate-predicate"
+	ProblemChooseThenEmpty     = "choose-then-empty"
+	ProblemCallbackTimeout     = "callback-timeout"
+)
+
 //go:tag mkunion:"Workflow"
 type (
 	Flow struct {
