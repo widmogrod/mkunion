@@ -768,7 +768,7 @@ func (service *Service[Dep, CMD, State]) CreateOrUpdate(ctx context.Context, cmd
 func (service *Service[Dep, CMD, State]) StateByID(id string) (res State, err error) {
 	record, err := service.repo.Get(id, service.recordType)
 	if err != nil {
-		err = fmt.Errorf("service.Service.StateByID(%s) err=%w", err)
+		err = fmt.Errorf("service.Service.StateByID(%s) err=%w", id, err)
 		return
 	}
 
