@@ -75,3 +75,16 @@ func TestTreeSchema(t *testing.T) {
 	result := schema.ToGo[Tree[int]](sch)
 	assert.Equal(t, tree, result)
 }
+
+func TestMyNameMatch(t *testing.T) {
+	leaf1 := &Leaf[any]{Value: 1}
+	leaf2 := &Leaf[any]{Value: 2}
+
+	result := treeDoNumbers(leaf1, leaf2)
+	assert.Equal(t, 3, result)
+
+	branch1 := &Branch[any]{L: leaf1, R: leaf2}
+
+	result = treeDoNumbers(branch1, leaf1)
+	assert.Equal(t, -1, result)
+}

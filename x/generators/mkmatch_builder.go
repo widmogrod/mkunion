@@ -140,10 +140,8 @@ func (b *MkMatchBuilder) extractPackageName(node ast.Node) {
 }
 
 func (b *MkMatchBuilder) SetName(name string) error {
-	if b.name == "" {
+	if b.name == "" || b.name == "-" {
 		b.name = name
-	} else {
-		return fmt.Errorf("match.SetName cannot declare name more than once")
 	}
 
 	return nil
@@ -151,13 +149,13 @@ func (b *MkMatchBuilder) SetName(name string) error {
 
 func (b *MkMatchBuilder) SetInputs(types ...string) error {
 	if len(types) == 0 {
-		return fmt.Errorf("match.SetInputs is empty")
+		return fmt.Errorf("mkmatch: list of type parameters is required")
 	}
 
 	if b.inputTypes == nil {
 		b.inputTypes = types
 	} else {
-		return fmt.Errorf("match.SetInputs cannot declare inputs more than once")
+		return fmt.Errorf("mkmatch: cannot declare type parameters more than once")
 	}
 
 	return nil
@@ -165,11 +163,11 @@ func (b *MkMatchBuilder) SetInputs(types ...string) error {
 
 func (b *MkMatchBuilder) AddCase(name string, inputs ...string) error {
 	if len(inputs) == 0 {
-		return fmt.Errorf("match.AddCase is empty; case name: %s", name)
+		return fmt.Errorf("mkmatch: matching case %s must have at least %d arguments", name, len(b.inputTypes))
 	}
 
-	if len(inputs) > len(b.inputTypes) {
-		return fmt.Errorf("match.AddCase function must have at least same number of arguments as number of type params; case name: %s", name)
+	if len(inputs) != len(b.inputTypes) {
+		return fmt.Errorf("mkmatch: matching case %s must have same number of function arguments as number of type params", name)
 	}
 
 	// check if there are no duplicates in other cases
@@ -181,7 +179,7 @@ func (b *MkMatchBuilder) AddCase(name string, inputs ...string) error {
 			}
 		}
 		if same == 0 {
-			return fmt.Errorf("match.AddCase cannot have duplicate; cases name: %s", b.names[cid])
+			return fmt.Errorf("mkmatch: matching case %s cannot have duplicate argument names", b.names[cid])
 		}
 	}
 	b.cases = append(b.cases, inputs)
@@ -189,7 +187,7 @@ func (b *MkMatchBuilder) AddCase(name string, inputs ...string) error {
 	// check if there are no duplicates in names
 	for _, caseName := range b.names {
 		if caseName == name {
-			return fmt.Errorf("match.AddCase cannot have duplicate; case name: %s", caseName)
+			return fmt.Errorf("mkmatch: cannot have duplicate; case name: %s", caseName)
 		}
 	}
 	b.names = append(b.names, name)
@@ -206,13 +204,21 @@ type MatchSpec struct {
 }
 
 func (b *MkMatchBuilder) Build() (*MatchSpec, error) {
+	if b.name == "" {
+		return nil, fmt.Errorf("mkmatch: type match must have name")
+	}
+
+	if len(b.cases) == 0 {
+		return nil, fmt.Errorf("mkmatch: type match must have at least one case")
+	}
+
 	pkgMap := make(PkgMap)
 
 	for pkgName := range b.usePackageNames {
 		if pkg, ok := b.knownPkgMap[pkgName]; ok {
 			pkgMap[pkgName] = pkg
 		} else {
-			return nil, fmt.Errorf("match.Build cannot find package %s", pkgName)
+			return nil, fmt.Errorf("mkmatch: cannot find package import path for name %s", pkgName)
 		}
 	}
 
