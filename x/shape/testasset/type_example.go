@@ -81,3 +81,9 @@ type (
 	}
 	None[AZ ListOf2[*O, time.Location]] struct{}
 )
+
+//go:tag mkmatch:"MyMatchWithCustomName"
+type MyMach[A, B Example] interface {
+	MatchEs(a, b E)
+	Finally(a, b Example)
+}
