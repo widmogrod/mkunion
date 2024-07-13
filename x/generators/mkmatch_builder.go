@@ -168,8 +168,8 @@ func (b *MkMatchBuilder) AddCase(name string, inputs ...string) error {
 		return fmt.Errorf("match.AddCase is empty; case name: %s", name)
 	}
 
-	if len(inputs) != len(b.inputTypes) {
-		return fmt.Errorf("match.AddCase function must have same number of arguments as inputs; case name: %s", name)
+	if len(inputs) > len(b.inputTypes) {
+		return fmt.Errorf("match.AddCase function must have at least same number of arguments as number of type params; case name: %s", name)
 	}
 
 	// check if there are no duplicates in other cases
