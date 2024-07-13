@@ -39,9 +39,7 @@ func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], err
 			predicate.ParamBinds{
 				":id": schema.MkString(recordID),
 			},
-			&predicate.WhereOpt{
-				WithShapeDef: s.shapeDef,
-			},
+			nil,
 		),
 		Limit: 1,
 	})
@@ -157,7 +155,7 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 	if query.Where != nil {
 		newRecords := make([]Record[A], 0)
 		for _, record := range records {
-			if predicate.Evaluate[Record[A]](query.Where.Predicate, record, query.Where.Params) {
+			if predicate.EvaluateSchema(query.Where.Predicate, schema.FromGo[Record[A]](record), query.Where.Params) {
 				newRecords = append(newRecords, record)
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
@@ -12,7 +13,12 @@ func NewTypedRepoWithAggregator[T, C any](
 	store schemaless.Repository[schema.Schema],
 	aggregator func() schemaless.Aggregator[T, C],
 ) *TypedRepoWithAggregator[T, C] {
-	location, err := schema.NewTypedLocation[schemaless.Record[T]]()
+	encodedAs, found := shape.LookupShapeReflectAndIndex[schemaless.Record[schema.Schema]]()
+	if !found {
+		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: shape not found %w", shape.ErrShapeNotFound))
+	}
+
+	location, err := schema.NewTypedLocationWithEncoded[schemaless.Record[T]](encodedAs)
 	if err != nil {
 		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
 	}
@@ -128,8 +134,13 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.Findi
 	//		Data["schema.Map"].Name, Data["schema.Map"].Age
 	// This means, that we need add between data path and
 
-	if query.Where != nil {
-		query.Where.Predicate = repo.wrapPredicate(query.Where.Predicate)
+	where := query.Where
+	if where != nil {
+		where = &predicate.WherePredicates{
+			Predicate: WrapPredicate(query.Where.Predicate, repo.loc),
+			Params:    query.Where.Params,
+			Shape:     repo.loc.ShapeDef(),
+		}
 	}
 
 	// do the same for sort fields
@@ -143,7 +154,7 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.Findi
 
 	found, err := repo.store.FindingRecords(schemaless.FindingRecords[schemaless.Record[schema.Schema]]{
 		RecordType: query.RecordType,
-		Where:      query.Where,
+		Where:      where,
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		After:      query.After,
@@ -214,10 +225,6 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.Findi
 //     This implies control plane. Versions of records should follow monotonically increasing order, that way it will be easier to detect when index is up to date.
 func (repo *TypedRepoWithAggregator[T, C]) ReindexAll() {
 	panic("not implemented")
-}
-
-func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) predicate.Predicate {
-	return WrapPredicate(p, repo.loc)
 }
 
 func WrapPredicate(p predicate.Predicate, loc *schema.TypedLocation) predicate.Predicate {

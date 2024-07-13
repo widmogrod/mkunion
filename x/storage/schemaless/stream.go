@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"errors"
+	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"sync"
@@ -156,7 +157,8 @@ func (a *AppendLog[T]) Subscribe(ctx context.Context, fromOffset int, filter *pr
 
 			validCondition := true
 			if filter != nil && msg.After != nil {
-				validCondition = predicate.Evaluate[Record[T]](filter.Predicate, *msg.After, filter.Params)
+				validCondition = predicate.EvaluateSchema(filter.Predicate, schema.FromGo[Record[T]](*msg.After), filter.Params)
+				//validCondition = predicate.Evaluate[Record[T]](filter.Predicate, *msg.After, filter.Params)
 			}
 
 			if validCondition {

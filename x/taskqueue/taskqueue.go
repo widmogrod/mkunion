@@ -6,6 +6,7 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"golang.org/x/exp/slices"
 	"time"
 )
 
@@ -48,10 +49,25 @@ func (q *TaskQueue[T]) RunCDC(ctx context.Context) error {
 		AllowExtraParams: true,
 	})
 
+	_, deleted := slices.BinarySearch(q.desc.Change, "deleted")
+
 	return q.stream.Subscribe(ctx, 0, filter, func(change schemaless.Change[T]) {
+		if change.Deleted && !deleted {
+			log.Infof("taskqueue: Change: %v is deleted, but we are not interested in deleted records", change)
+			return
+		}
+
+		var id string
+		if change.After != nil {
+			id = change.After.ID
+		} else {
+			id = change.Before.ID
+		}
+
 		err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
-			ID:   change.After.ID,
-			Data: *change.After,
+			ID:      id,
+			Data:    change.After,
+			Deleted: change.Deleted,
 		})
 		if err != nil {
 			panic(err)
@@ -90,7 +106,7 @@ func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
 			for _, record := range records.Items {
 				err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
 					ID:   record.ID,
-					Data: record,
+					Data: &record,
 					Meta: nil,
 				})
 				if err != nil {
@@ -151,9 +167,10 @@ type Description struct {
 }
 
 type Task[T any] struct {
-	ID   string
-	Data T
-	Meta map[string]string
+	ID      string
+	Data    *T
+	Deleted bool
+	Meta    map[string]string
 }
 
 type FunctionProcessor[T any] struct {

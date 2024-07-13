@@ -4,12 +4,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
 
 func NewTypedAppendLog[T any](log schemaless.AppendLoger[schema.Schema]) *TypedAppendLog[T] {
-	location, err := schema.NewTypedLocation[schemaless.Record[T]]()
+	encodedAs, found := shape.LookupShapeReflectAndIndex[schemaless.Record[schema.Schema]]()
+	if !found {
+		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: shape not found %w", shape.ErrShapeNotFound))
+	}
+
+	location, err := schema.NewTypedLocationWithEncoded[schemaless.Record[T]](encodedAs)
 	if err != nil {
 		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
 	}
