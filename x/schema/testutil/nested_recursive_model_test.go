@@ -289,7 +289,6 @@ func TestShapeLocationConversion(t *testing.T) {
 			expectLocation: `Data["schema.Map"]["testutil.ExampleTree"]["schema.Map"]`,
 		},
 		{
-
 			found:          true,
 			data:           schema.FromGo[ExampleRecord[Example]](recordExample),
 			encodedAs:      locEncodedAsSch.ShapeDef(),
@@ -409,6 +408,38 @@ func TestShapeLocationConversion(t *testing.T) {
 			typedLocation:  locRec2,
 			givenLocation:  `Data.Ptr`,
 			expectLocation: `Data["schema.Map"].Ptr["schema.Number"]`,
+		},
+		// $type first level
+		{
+			found:          true,
+			data:           schema.FromGo[ExampleRecord[Example]](recordExample),
+			encodedAs:      locEncodedAsSch.ShapeDef(),
+			typedLocation:  locRec,
+			givenLocation:  `Data["$type"]`,
+			expectLocation: `Data["$type"]`,
+		}, {
+			found:          true,
+			data:           schema.FromGo[ExampleRecord[schema.Schema]](recordSchema),
+			encodedAs:      locEncodedAsRSS.ShapeDef(),
+			typedLocation:  locRec,
+			givenLocation:  `Data["$type"]`,
+			expectLocation: `Data["schema.Map"]["$type"]["schema.String"]`,
+		},
+		// $type second level
+		{
+			found:          true,
+			data:           schema.FromGo[ExampleRecord[Example]](recordExample),
+			encodedAs:      locEncodedAsSch.ShapeDef(),
+			typedLocation:  locRec,
+			givenLocation:  `Data["testutil.ExampleTree"].Items[0]["$type"]`,
+			expectLocation: `Data["testutil.ExampleTree"].Items[0]["$type"]`,
+		}, {
+			found:          true,
+			data:           schema.FromGo[ExampleRecord[schema.Schema]](recordSchema),
+			encodedAs:      locEncodedAsRSS.ShapeDef(),
+			typedLocation:  locRec,
+			givenLocation:  `Data["testutil.ExampleTree"].Items[0]["$type"]`,
+			expectLocation: `Data["schema.Map"]["testutil.ExampleTree"]["schema.Map"].Items["schema.List"][0]["schema.Map"]["$type"]["schema.String"]`,
 		},
 	}
 	for _, uc := range useCases {

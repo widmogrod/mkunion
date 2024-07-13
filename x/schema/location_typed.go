@@ -173,7 +173,6 @@ func (location *TypedLocation) WrapLocationEncodedAs(loc []Location, s0, s1 shap
 				},
 				func(x0 shape.Shape, x1 shape.Shape) ([]Location, error) {
 					if IsShapeASchema(x1) {
-						//wrap = wrap && !shape.IsStruct(x0)
 						return append(
 							location.wrapCond([]Location{}, wrap, x0),
 							location.wrapLocationShapeAware(loc, x0, wrap)...,
@@ -270,7 +269,9 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []Location, s shape.Sh
 						panic("not implemented")
 					}
 					if x.Name == "$type" {
-						return append([]Location{x})
+						return location.wrapCond([]Location{x}, wrap, &shape.PrimitiveLike{
+							Kind: &shape.StringLike{},
+						})
 					}
 
 					for _, variant := range y.Variant {
