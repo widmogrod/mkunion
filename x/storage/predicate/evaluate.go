@@ -13,7 +13,7 @@ func Evaluate[A any](predicate Predicate, data A, bind ParamBinds) bool {
 
 	s, found := shape.LookupShape(original)
 	if !found {
-		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
+		panic(fmt.Errorf("predicate.Evaluate: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
 	}
 
 	s = shape.IndexWith(s, original)
@@ -32,8 +32,8 @@ func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind 
 					return false
 				}
 			}
-			return true
 
+			return true
 		},
 		func(x *Or) bool {
 			for _, p := range x.L {
@@ -47,8 +47,8 @@ func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind 
 			return !EvaluateShape(x.P, s, data, bind)
 		},
 		func(x *Compare) bool {
-			value, ok := GetValue(x.BindValue, bind, data)
-			if !ok {
+			value, found := GetValue(x.BindValue, bind, data)
+			if !found {
 				return false
 			}
 
@@ -56,7 +56,11 @@ func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind 
 			_ = loc
 
 			// Field value that is not set and equality is not about None is always false.
-			fieldValue, _ := schema.GetShapeLocation(s, data, x.Location)
+			fieldValue, _, found := schema.GetShapeLocation(s, data, x.Location)
+			if !found {
+				return false
+			}
+
 			cmp := schema.Compare(fieldValue, value)
 			switch x.Operation {
 			case "=", "==":
@@ -102,13 +106,17 @@ func EvaluateSchema(predicate Predicate, data schema.Schema, bind ParamBinds) bo
 			return !EvaluateSchema(x.P, data, bind)
 		},
 		func(x *Compare) bool {
-			value, ok := GetValue(x.BindValue, bind, data)
-			if !ok {
+			value, found := GetValue(x.BindValue, bind, data)
+			if !found {
 				return false
 			}
 
 			// Field value that is not set and equality is not about None is always false.
-			fieldValue := schema.GetSchema(data, x.Location)
+			fieldValue, found := schema.GetSchema(data, x.Location)
+			if !found {
+				return false
+			}
+
 			cmp := schema.Compare(fieldValue, value)
 			switch x.Operation {
 			case "=", "==":
@@ -141,21 +149,7 @@ func GetValue(x Bindable, params ParamBinds, data schema.Schema) (schema.Schema,
 			return x.Value, true
 		},
 		func(x *Locatable) (schema.Schema, bool) {
-			return schema.GetSchema(data, x.Location), true
-		},
-	)
-}
-
-func EvaluateEqualPrimitive(record schema.Schema, location string, value any) bool {
-	return EvaluateSchema(
-		&Compare{
-			Location:  location,
-			Operation: "=",
-			BindValue: &BindValue{BindName: ":value"},
-		},
-		record,
-		map[string]schema.Schema{
-			":value": schema.FromPrimitiveGo(value),
+			return schema.GetSchema(data, x.Location)
 		},
 	)
 }

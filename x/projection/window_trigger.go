@@ -27,14 +27,11 @@ func TriggerDescriptionToWhere(trigger TriggerDescription) (*predicate.WherePred
 	return MatchTriggerDescriptionR2(
 		trigger,
 		func(x *AtWatermark) (*predicate.WherePredicates, error) {
-			return predicate.Where(
-				"Data.Window.End <= :watermark",
-				predicate.ParamBinds{
-					// Placeholder for watermark
-					//":key":       schema.MkString(":key"),
-					":watermark": schema.MkInt(math.MaxInt64),
-				},
-			)
+			return predicate.Where("Data.Window.End <= :watermark", predicate.ParamBinds{
+				// Placeholder for watermark
+				//":key":       schema.MkString(":key"),
+				":watermark": schema.MkInt(math.MaxInt64),
+			}, nil)
 		},
 	)
 }

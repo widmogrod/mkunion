@@ -20,8 +20,13 @@ func MustParseLocation(input string) []Location {
 }
 
 func ParseLocation(input string) ([]Location, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return nil, nil
+	}
+
 	// Parse the input and build a Predicate value
-	ast, err := pathParser.ParseString("", strings.TrimSpace(input))
+	ast, err := pathParser.ParseString("", input)
 	if err != nil {
 		return nil, err
 	}

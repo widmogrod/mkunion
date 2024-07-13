@@ -31,6 +31,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 		possibleVariantTypes: map[string][]string{},
 		possibleTaggedTypes:  map[string]map[string]Tag{},
 		shapes:               make(map[string]Shape),
+		taggedNodes:          make(map[string][]*NodeAndTag),
 	}
 
 	fset := token.NewFileSet()
@@ -176,6 +177,21 @@ type InferredInfo struct {
 	packageNameToPackageImport map[string]string
 	currentType                string
 	possibleTaggedTypes        map[string]map[string]Tag
+	taggedNodes                map[string][]*NodeAndTag
+}
+
+type NodeAndTag struct {
+	Name string
+	Node ast.Node
+	Tag  Tag
+}
+
+type TagVisitor func(x *NodeAndTag)
+
+func (f *InferredInfo) RunVisitorOnTaggedASTNodes(tagName string, visitor TagVisitor) {
+	for _, node := range f.taggedNodes[tagName] {
+		visitor(node)
+	}
 }
 
 func (f *InferredInfo) FileName() string {
@@ -188,6 +204,10 @@ func (f *InferredInfo) PackageName() string {
 
 func (f *InferredInfo) PackageImportName() string {
 	return f.pkgImportName
+}
+
+func (f *InferredInfo) PackageNameToPackageImport() map[string]string {
+	return f.packageNameToPackageImport
 }
 
 func (f *InferredInfo) RetrieveUnions() []*UnionLike {
@@ -350,6 +370,14 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		// //go:generate mkunion -name=Example
 		// //go:tag mkunion:"Example"
 		tags := ExtractDocumentTags(t.Doc)
+
+		for tname, tvalue := range tags {
+			f.taggedNodes[tname] = append(f.taggedNodes[tname], &NodeAndTag{
+				Name: tname,
+				Node: t,
+				Tag:  tvalue,
+			})
+		}
 
 		// detect single declaration of type with a comment block
 		// // some comment

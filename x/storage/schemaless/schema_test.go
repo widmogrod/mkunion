@@ -17,12 +17,10 @@ func TestNewRepository2WithSchema(t *testing.T) {
 	assert.Len(t, updated.Deleted, 0, "should have 0 deleted records")
 
 	result, err := repo.FindingRecords(FindingRecords[Record[ExampleRecord]]{
-		Where: predicate.MustWhere(
-			`Data.Age > :age AND Data.Age < :maxAge`,
-			predicate.ParamBinds{
-				":age":    schema.MkInt(20),
-				":maxAge": schema.MkInt(40),
-			}),
+		Where: predicate.MustWhere(`Data.Age > :age AND Data.Age < :maxAge`, predicate.ParamBinds{
+			":age":    schema.MkInt(20),
+			":maxAge": schema.MkInt(40),
+		}, nil),
 		Sort: []SortField{
 			{
 				Field:      `Data.Name`,

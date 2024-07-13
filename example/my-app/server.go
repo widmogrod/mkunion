@@ -160,31 +160,22 @@ func main() {
 		func(cmd workflow.Command) (*predicate.WherePredicates, bool) {
 			switch cmd := cmd.(type) {
 			case *workflow.StopSchedule:
-				return predicate.MustWhere(
-					`Data["workflow.Scheduled"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
-					predicate.ParamBinds{
-						":runID": schema.MkString(cmd.ParentRunID),
-					},
-				), true
+				return predicate.MustWhere(`Data["workflow.Scheduled"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`, predicate.ParamBinds{
+					":runID": schema.MkString(cmd.ParentRunID),
+				}, nil), true
 			case *workflow.ResumeSchedule:
-				return predicate.MustWhere(
-					`Data["workflow.ScheduleStopped"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`,
-					predicate.ParamBinds{
-						":runID": schema.MkString(cmd.ParentRunID),
-					},
-				), true
+				return predicate.MustWhere(`Data["workflow.ScheduleStopped"].BaseState.RunOption["workflow.ScheduleRun"].ParentRunID = :runID`, predicate.ParamBinds{
+					":runID": schema.MkString(cmd.ParentRunID),
+				}, nil), true
 			case *workflow.TryRecover:
-				return predicate.MustWhere(
-					`Data["workflow.Error"].BaseState.RunID = :runID`,
-					predicate.ParamBinds{
-						":runID": schema.MkString(cmd.RunID),
-					},
-				), true
+				return predicate.MustWhere(`Data["workflow.Error"].BaseState.RunID = :runID`, predicate.ParamBinds{
+					":runID": schema.MkString(cmd.RunID),
+				}, nil), true
 			}
 			return nil, false
 		},
 		func(state workflow.State) (string, bool) {
-			return workflow.GetRunID(state), true
+			return workflow.GetRunIDFromBaseState(state), true
 		},
 	)
 
@@ -194,9 +185,7 @@ func main() {
 	}))
 
 	e.POST("/message", TypedJSONRequest(
-		func(x ChatCMD) (ChatResult, error) {
-			ctx := context.Background()
-
+		func(ctx context.Context, x ChatCMD) (ChatResult, error) {
 			model := openai.GPT3Dot5Turbo1106
 			tools := []openai.Tool{
 				{
@@ -349,7 +338,7 @@ func main() {
 	})
 
 	e.POST("/flow", TypedJSONRequest(
-		func(x workflow.Workflow) (workflow.Workflow, error) {
+		func(ctx context.Context, x workflow.Workflow) (workflow.Workflow, error) {
 			flow, ok := x.(*workflow.Flow)
 			if !ok {
 				return nil, errors.New("expected *workflow.Flow")
@@ -493,8 +482,8 @@ func main() {
 	})
 
 	e.POST("/", TypedJSONRequest(
-		func(cmd workflow.Command) (workflow.State, error) {
-			return srv.CreateOrUpdate(cmd)
+		func(ctx context.Context, cmd workflow.Command) (workflow.State, error) {
+			return srv.CreateOrUpdate(ctx, cmd)
 		}))
 
 	e.POST("/workflow-to-str", func(c echo.Context) error {
@@ -510,11 +499,29 @@ func main() {
 			return err
 		}
 
-		return c.String(http.StatusOK, workflow.ToStrWorkflow(program, 0))
+		return c.String(http.StatusOK, workflow.ToStrWorkflow(program, nil))
+	})
+
+	e.GET("/workflow-to-str-from-run/:id", func(c echo.Context) error {
+		runID := c.Param("id")
+
+		state, err := srv.StateByID(runID)
+		if err != nil {
+			log.Errorf("workflow-to-str-from-run: id=%s failed to get state: %v", runID, err)
+			return err
+		}
+
+		program, err := workflow.GetFlowFromState(state, di)
+		if err != nil {
+			log.Errorf("workflow-to-str-from-run: id=%s failed to get flow: %v", runID, err)
+			return err
+		}
+
+		return c.String(http.StatusOK, workflow.ToStrWorkflow(program, workflow.ToStrContextFromState(state)))
 	})
 
 	e.POST("/callback", TypedJSONRequest(
-		func(cmd workflow.Command) (workflow.State, error) {
+		func(ctx context.Context, cmd workflow.Command) (workflow.State, error) {
 			callbackCMD, ok := cmd.(*workflow.Callback)
 			if !ok {
 				log.Errorf("expected callback command")
@@ -524,13 +531,10 @@ func main() {
 			// find callback id in database
 			records, err := statesRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[workflow.State]]{
 				//RecordType: "process",
-				Where: predicate.MustWhere(
-					`Type = :type AND Data["workflow.Await"].CallbackID = :callbackID`,
-					predicate.ParamBinds{
-						":type":       schema.MkString("process"),
-						":callbackID": schema.MkString(callbackCMD.CallbackID),
-					},
-				),
+				Where: predicate.MustWhere(`Type = :type AND Data["workflow.Await"].CallbackID = :callbackID`, predicate.ParamBinds{
+					":type":       schema.MkString("process"),
+					":callbackID": schema.MkString(callbackCMD.CallbackID),
+				}, nil),
 				Limit: 1,
 			})
 			if err != nil {
@@ -548,7 +552,7 @@ func main() {
 
 			// apply command
 			work := workflow.NewMachine(di, state.Data)
-			err = work.Handle(context.TODO(), cmd)
+			err = work.Handle(ctx, cmd)
 			if err != nil {
 				log.Errorf("failed to handle command: %v", err)
 				return nil, err
@@ -557,7 +561,7 @@ func main() {
 			// save state
 			newState := work.State()
 			_, err = statesRepo.UpdateRecords(schemaless.Save(schemaless.Record[workflow.State]{
-				ID:      workflow.GetRunID(newState),
+				ID:      workflow.GetRunIDFromBaseState(newState),
 				Type:    "process",
 				Data:    newState,
 				Version: state.Version,
@@ -570,97 +574,55 @@ func main() {
 			return newState, nil
 		}))
 
-	proc := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
-		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
-			work := workflow.NewMachine(di, task.Data.Data)
-			err := work.Handle(context.TODO(), &workflow.Run{})
-			if err != nil {
-				log.Errorf("err: %s", err)
-				return
-			}
-
-			newState := work.State()
-			//log.Infof("newState: %T", newState)
-
-			saving := []schemaless.Record[workflow.State]{
-				{
-					ID:      task.Data.ID,
-					Data:    newState,
-					Type:    task.Data.Type,
-					Version: task.Data.Version,
-				},
-			}
-
-			if next := workflow.ScheduleNext(newState, di); next != nil {
-				work := workflow.NewMachine(di, nil)
-				err := work.Handle(context.TODO(), next)
-				if err != nil {
-					log.Infof("err: %s", err)
-					return
-				}
-
-				//log.Infof("next id=%s", workflow.GetRunID(work.State()))
-
-				saving = append(saving, schemaless.Record[workflow.State]{
-					ID:   workflow.GetRunID(work.State()),
-					Type: task.Data.Type,
-					Data: work.State(),
-				})
-			}
-
-			_, err = statesRepo.UpdateRecords(schemaless.Save(saving...))
-			if err != nil {
-				if errors.Is(err, schemaless.ErrVersionConflict) {
-					// make it configurable, but by default we should
-					// just ignore conflicts, since that means we may have duplicate,
-					// or some other process already update it.
-					// assuming that queue is populated from stream of changes
-					// it such case (there was update) new message with new version
-					// will land in queue soon (if it pass selector)
-					log.Warnf("version conflict, ignoring: %s", err.Error())
-				} else {
-					panic(err)
-				}
-			}
-		},
-	}
-
-	// there can be few process,
-	// - timeout out workflow (command to timeout)
-	// - retry workflow (command to retry)
-	// - run workflow (command to run)
-	// - callback workflow (command to callback)
-	// - terminate workflow (command to terminate)
-	// - complete workflow (command to complete)
-
-	desc := &taskqueue.Description{
-		Change: []string{"create"},
-		Entity: "process",
-		//Filter: `Data[*]["workflow.Scheduled"].RunOption["workflow.DelayRun"].DelayBySeconds > 0 AND Version = 1`,
-		Filter: `Data["workflow.Scheduled"].ExpectedRunTimestamp <= :now 
-AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0
-`,
-	}
+	procScheduled, descScheduled := backgroundScheduled(di, statesRepo)
 	queue := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
 	stream := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
-	tq2 := taskqueue.NewTaskQueue[workflow.State](desc, queue, statesRepo, stream, proc)
-
-	//go func() {
-	//	err := tq2.RunCDC(ctx)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}()
+	taskScheduled := taskqueue.NewTaskQueue[workflow.State](descScheduled, queue, statesRepo, stream, procScheduled)
 
 	go func() {
-		err := tq2.RunSelector(ctx)
+		err := taskScheduled.RunSelector(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	go func() {
+		err := taskScheduled.RunProcessor(ctx)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
+	procRetry, descRetry := backgroundRetry(di, statesRepo)
+	queueRetry := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
+	streamRetry := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
+	taskRetry := taskqueue.NewTaskQueue[workflow.State](descRetry, queueRetry, statesRepo, streamRetry, procRetry)
+
 	go func() {
-		err := tq2.RunProcessor(ctx)
+		err := taskRetry.RunCDC(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	go func() {
+		err := taskRetry.RunProcessor(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	procTimeout, descTimeout := backgroundTimeout(di, statesRepo)
+	queueTimeout := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
+	streamTimeout := typedful.NewTypedAppendLog[workflow.State](store.AppendLog())
+	taskTimeout := taskqueue.NewTaskQueue[workflow.State](descTimeout, queueTimeout, statesRepo, streamTimeout, procTimeout)
+
+	go func() {
+		err := taskTimeout.RunSelector(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	go func() {
+		err := taskTimeout.RunProcessor(ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -688,7 +650,7 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0
 	log.Infof("exiting")
 }
 
-func TypedJSONRequest[A, B any](handle func(x A) (B, error)) func(c echo.Context) error {
+func TypedJSONRequest[A, B any](handle func(ctx context.Context, x A) (B, error)) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		data, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -702,7 +664,7 @@ func TypedJSONRequest[A, B any](handle func(x A) (B, error)) func(c echo.Context
 			return err
 		}
 
-		out, err := handle(in)
+		out, err := handle(c.Request().Context(), in)
 		if err != nil {
 			return err
 		}
@@ -746,7 +708,7 @@ type Service[Dep any, CMD any, State any] struct {
 	newMachine               func(state State) *machine.Machine[Dep, CMD, State]
 }
 
-func (service *Service[Dep, CMD, State]) CreateOrUpdate(cmd CMD) (res State, err error) {
+func (service *Service[Dep, CMD, State]) CreateOrUpdate(ctx context.Context, cmd CMD) (res State, err error) {
 	version := uint16(0)
 	recordID := ""
 	where, foundAndUpdate := service.extractWhereFromCommandF(cmd)
@@ -770,7 +732,7 @@ func (service *Service[Dep, CMD, State]) CreateOrUpdate(cmd CMD) (res State, err
 	}
 
 	work := service.newMachine(res)
-	err = work.Handle(context.TODO(), cmd)
+	err = work.Handle(ctx, cmd)
 	if err != nil {
 		log.Errorf("failed to handle command: %v", err)
 		return res, err
@@ -801,4 +763,14 @@ func (service *Service[Dep, CMD, State]) CreateOrUpdate(cmd CMD) (res State, err
 	}
 
 	return newState, nil
+}
+
+func (service *Service[Dep, CMD, State]) StateByID(id string) (res State, err error) {
+	record, err := service.repo.Get(id, service.recordType)
+	if err != nil {
+		err = fmt.Errorf("service.Service.StateByID(%s) err=%w", id, err)
+		return
+	}
+
+	return record.Data, nil
 }

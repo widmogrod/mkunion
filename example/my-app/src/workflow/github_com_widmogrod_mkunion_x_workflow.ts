@@ -14,6 +14,9 @@ export type Command = {
 } | {
 	"$type"?: "workflow.ResumeSchedule",
 	"workflow.ResumeSchedule": ResumeSchedule
+} | {
+	"$type"?: "workflow.ExpireAsync",
+	"workflow.ExpireAsync": ExpireAsync
 }
 
 export type Run = {
@@ -51,9 +54,11 @@ export type Expr = {
 }
 
 export type End = {
-	ID?: string,
+	ID?: StepID,
 	Result?: Reshaper,
 }
+
+export type StepID = string
 
 export type Reshaper = {
 	"$type"?: "workflow.GetValue",
@@ -72,25 +77,25 @@ export type SetValue = {
 }
 
 export type Assign = {
-	ID?: string,
+	ID?: StepID,
 	VarOk?: string,
 	VarErr?: string,
 	Val?: Expr,
 }
 
 export type Apply = {
-	ID?: string,
+	ID?: StepID,
 	Name?: string,
 	Args?: Reshaper[],
 	Await?: ApplyAwaitOptions,
 }
 
 export type ApplyAwaitOptions = {
-	Timeout?: number,
+	TimeoutSeconds?: number,
 }
 
 export type Choose = {
-	ID?: string,
+	ID?: StepID,
 	If?: Predicate,
 	Then?: Expr[],
 	Else?: Expr[],
@@ -155,15 +160,21 @@ export type Callback = {
 }
 
 export type TryRecover = {
-	RunID?: string,
+	RunID?: RunID,
 }
 
+export type RunID = string
+
 export type StopSchedule = {
-	ParentRunID?: string,
+	ParentRunID?: RunID,
 }
 
 export type ResumeSchedule = {
-	ParentRunID?: string,
+	ParentRunID?: RunID,
+}
+
+export type ExpireAsync = {
+	RunID?: RunID,
 }
 
 export type FunctionInput = {
@@ -203,8 +214,8 @@ export type NextOperation = {
 
 export type BaseState = {
 	Flow?: Workflow,
-	RunID?: string,
-	StepID?: string,
+	RunID?: RunID,
+	StepID?: StepID,
 	Variables?: {[key: string]: schema.Schema},
 	ExprResult?: {[key: string]: schema.Schema},
 	DefaultMaxRetries?: number,
@@ -225,7 +236,7 @@ export type Error = {
 
 export type Await = {
 	CallbackID?: string,
-	Timeout?: number,
+	ExpectedTimeoutTimestamp?: number,
 	BaseState?: BaseState,
 }
 

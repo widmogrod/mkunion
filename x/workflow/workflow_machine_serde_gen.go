@@ -22,12 +22,12 @@ func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
 func (r *ApplyAwaitOptions) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
-	var fieldTimeout []byte
-	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
+	var fieldTimeoutSeconds []byte
+	fieldTimeoutSeconds, err = r._marshalJSONint64(x.TimeoutSeconds)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name Timeout; %w", err)
+		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name TimeoutSeconds; %w", err)
 	}
-	partial["Timeout"] = fieldTimeout
+	partial["TimeoutSeconds"] = fieldTimeoutSeconds
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: struct; %w", err)
@@ -56,10 +56,10 @@ func (r *ApplyAwaitOptions) _unmarshalJSONApplyAwaitOptions(data []byte) (ApplyA
 	if err != nil {
 		return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: native struct unwrap; %w", err)
 	}
-	if fieldTimeout, ok := partial["Timeout"]; ok {
-		result.Timeout, err = r._unmarshalJSONint64(fieldTimeout)
+	if fieldTimeoutSeconds, ok := partial["TimeoutSeconds"]; ok {
+		result.TimeoutSeconds, err = r._unmarshalJSONint64(fieldTimeoutSeconds)
 		if err != nil {
-			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field Timeout; %w", err)
+			return result, fmt.Errorf("workflow: ApplyAwaitOptions._unmarshalJSONApplyAwaitOptions: field TimeoutSeconds; %w", err)
 		}
 	}
 	return result, nil
@@ -94,13 +94,13 @@ func (r *BaseState) _marshalJSONBaseState(x BaseState) ([]byte, error) {
 	}
 	partial["Flow"] = fieldFlow
 	var fieldRunID []byte
-	fieldRunID, err = r._marshalJSONstring(x.RunID)
+	fieldRunID, err = r._marshalJSONRunID(x.RunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name RunID; %w", err)
 	}
 	partial["RunID"] = fieldRunID
 	var fieldStepID []byte
-	fieldStepID, err = r._marshalJSONstring(x.StepID)
+	fieldStepID, err = r._marshalJSONStepID(x.StepID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name StepID; %w", err)
 	}
@@ -142,10 +142,17 @@ func (r *BaseState) _marshalJSONWorkflow(x Workflow) ([]byte, error) {
 	}
 	return result, nil
 }
-func (r *BaseState) _marshalJSONstring(x string) ([]byte, error) {
-	result, err := json.Marshal(x)
+func (r *BaseState) _marshalJSONRunID(x RunID) ([]byte, error) {
+	result, err := shared.JSONMarshal[RunID](x)
 	if err != nil {
-		return nil, fmt.Errorf("workflow: BaseState._marshalJSONstring:; %w", err)
+		return nil, fmt.Errorf("workflow: BaseState._marshalJSONRunID:; %w", err)
+	}
+	return result, nil
+}
+func (r *BaseState) _marshalJSONStepID(x StepID) ([]byte, error) {
+	result, err := shared.JSONMarshal[StepID](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: BaseState._marshalJSONStepID:; %w", err)
 	}
 	return result, nil
 }
@@ -162,6 +169,13 @@ func (r *BaseState) _marshalJSONmapLb_string_bLschema_Schema(x map[string]schema
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONmapLb_string_bLschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *BaseState) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: BaseState._marshalJSONstring:; %w", err)
 	}
 	return result, nil
 }
@@ -208,13 +222,13 @@ func (r *BaseState) _unmarshalJSONBaseState(data []byte) (BaseState, error) {
 		}
 	}
 	if fieldRunID, ok := partial["RunID"]; ok {
-		result.RunID, err = r._unmarshalJSONstring(fieldRunID)
+		result.RunID, err = r._unmarshalJSONRunID(fieldRunID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: BaseState._unmarshalJSONBaseState: field RunID; %w", err)
 		}
 	}
 	if fieldStepID, ok := partial["StepID"]; ok {
-		result.StepID, err = r._unmarshalJSONstring(fieldStepID)
+		result.StepID, err = r._unmarshalJSONStepID(fieldStepID)
 		if err != nil {
 			return result, fmt.Errorf("workflow: BaseState._unmarshalJSONBaseState: field StepID; %w", err)
 		}
@@ -252,11 +266,17 @@ func (r *BaseState) _unmarshalJSONWorkflow(data []byte) (Workflow, error) {
 	}
 	return result, nil
 }
-func (r *BaseState) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
-	err := json.Unmarshal(data, &result)
+func (r *BaseState) _unmarshalJSONRunID(data []byte) (RunID, error) {
+	result, err := shared.JSONUnmarshal[RunID](data)
 	if err != nil {
-		return result, fmt.Errorf("workflow: BaseState._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("workflow: BaseState._unmarshalJSONRunID: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *BaseState) _unmarshalJSONStepID(data []byte) (StepID, error) {
+	result, err := shared.JSONUnmarshal[StepID](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: BaseState._unmarshalJSONStepID: native ref unwrap; %w", err)
 	}
 	return result, nil
 }
@@ -274,6 +294,14 @@ func (r *BaseState) _unmarshalJSONmapLb_string_bLschema_Schema(data []byte) (map
 			return nil, fmt.Errorf("workflow: BaseState._unmarshalJSONmapLb_string_bLschema_Schema: value; %w", err)
 		}
 		result[key] = value
+	}
+	return result, nil
+}
+func (r *BaseState) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: BaseState._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

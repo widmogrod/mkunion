@@ -283,7 +283,69 @@ func FromGoReflect(xschema shape.Shape, yreflect reflect.Value) Schema {
 	return shape.MatchShapeR1(
 		xschema,
 		func(x *shape.Any) Schema {
-			panic("schema.FromGoReflect: not implemented shape.Any to Schema")
+			switch yreflect.Kind() {
+			case reflect.Bool:
+				return MkBool(yreflect.Bool())
+
+			case reflect.String:
+				return MkString(yreflect.String())
+
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return MkInt(yreflect.Int())
+
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				return MkUint(yreflect.Uint())
+
+			case reflect.Float32, reflect.Float64:
+				return MkFloat(yreflect.Float())
+
+			case reflect.Slice:
+				if yreflect.Type().Elem().Kind() == reflect.Uint8 {
+					return MkBinary(yreflect.Bytes())
+				} else {
+					result := List{}
+					for i := 0; i < yreflect.Len(); i++ {
+						result = append(result, FromGoReflect(x, yreflect.Index(i)))
+					}
+
+					return &result
+				}
+
+			case reflect.Map:
+				result := Map{}
+				for _, key := range yreflect.MapKeys() {
+					result[key.String()] = FromGoReflect(x, yreflect.MapIndex(key))
+				}
+
+				return &result
+
+			case reflect.Struct:
+				result := Map{}
+
+				for i := 0; i < yreflect.NumField(); i++ {
+					field := yreflect.Type().Field(i)
+					result[field.Name] = FromGoReflect(x, yreflect.Field(i))
+				}
+
+				return &result
+
+			case reflect.Ptr:
+				if yreflect.IsNil() {
+					return MkNone()
+				}
+
+				return FromGoReflect(x, yreflect.Elem())
+
+			case reflect.Interface:
+				if yreflect.IsNil() {
+					return MkNone()
+				}
+
+				return FromGoReflect(x, yreflect.Elem())
+
+			default:
+				panic(fmt.Errorf("schema.FromGoReflect: shape.Any expected reflect.Bool, reflect.String, reflect.Int, reflect.Uint, reflect.Float, reflect.Slice, reflect.Map, reflect.Struct, reflect.Ptr, reflect.Interface, got %s", yreflect.Kind().String()))
+			}
 		},
 		func(x *shape.RefName) Schema {
 			y, found := shape.LookupShape(x)

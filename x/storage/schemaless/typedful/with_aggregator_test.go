@@ -43,6 +43,7 @@ func TestNewRepositoryInMemory(t *testing.T) {
 			predicate.ParamBinds{
 				":age": schema.MkInt(20),
 			},
+			nil,
 		),
 		Sort: []schemaless.SortField{
 			{

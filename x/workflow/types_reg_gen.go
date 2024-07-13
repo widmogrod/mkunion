@@ -6,6 +6,7 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"strings"
 	"testing"
 )
 
@@ -20,6 +21,7 @@ func init() {
 	shared.TypeRegistryStore[schema.Number]("github.com/widmogrod/mkunion/x/schema.Number")
 	shared.TypeRegistryStore[schema.String]("github.com/widmogrod/mkunion/x/schema.String")
 	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.State]")
+	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 	shared.TypeRegistryStore[And]("github.com/widmogrod/mkunion/x/workflow.And")
 	shared.TypeRegistryStore[Apply]("github.com/widmogrod/mkunion/x/workflow.Apply")
@@ -35,6 +37,7 @@ func init() {
 	shared.TypeRegistryStore[Done]("github.com/widmogrod/mkunion/x/workflow.Done")
 	shared.TypeRegistryStore[End]("github.com/widmogrod/mkunion/x/workflow.End")
 	shared.TypeRegistryStore[Error]("github.com/widmogrod/mkunion/x/workflow.Error")
+	shared.TypeRegistryStore[ExpireAsync]("github.com/widmogrod/mkunion/x/workflow.ExpireAsync")
 	shared.TypeRegistryStore[Flow]("github.com/widmogrod/mkunion/x/workflow.Flow")
 	shared.TypeRegistryStore[FlowRef]("github.com/widmogrod/mkunion/x/workflow.FlowRef")
 	shared.TypeRegistryStore[FunctionInput]("github.com/widmogrod/mkunion/x/workflow.FunctionInput")
@@ -51,5 +54,6 @@ func init() {
 	shared.TypeRegistryStore[Scheduled]("github.com/widmogrod/mkunion/x/workflow.Scheduled")
 	shared.TypeRegistryStore[SetValue]("github.com/widmogrod/mkunion/x/workflow.SetValue")
 	shared.TypeRegistryStore[StopSchedule]("github.com/widmogrod/mkunion/x/workflow.StopSchedule")
+	shared.TypeRegistryStore[ToStrContext]("github.com/widmogrod/mkunion/x/workflow.ToStrContext")
 	shared.TypeRegistryStore[TryRecover]("github.com/widmogrod/mkunion/x/workflow.TryRecover")
 }

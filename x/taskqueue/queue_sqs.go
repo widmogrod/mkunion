@@ -26,9 +26,14 @@ type SQSQueue[T any] struct {
 var _ Queuer[any] = (*SQSQueue[any])(nil)
 
 func (queue *SQSQueue[T]) Push(ctx context.Context, task Task[T]) error {
-	body, err := shared.JSONMarshal[T](task.Data)
-	if err != nil {
-		return fmt.Errorf("sqsQueue.Push: JSONMarshal=%w", err)
+	var body []byte
+	var err error
+
+	if task.Data != nil {
+		body, err = shared.JSONMarshal[T](*task.Data)
+		if err != nil {
+			return fmt.Errorf("sqsQueue.Push: JSONMarshal=%w", err)
+		}
 	}
 
 	bodyStr := string(body)
@@ -77,7 +82,7 @@ func (queue *SQSQueue[T]) Pop(ctx context.Context) ([]Task[T], error) {
 
 		task := Task[T]{
 			ID:   *message.MessageId,
-			Data: data,
+			Data: &data,
 			Meta: map[string]string{
 				"SQS.ReceiptHandle": *message.ReceiptHandle,
 			},

@@ -3,6 +3,7 @@ package predicate
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"golang.org/x/exp/slices"
 	"strings"
 )
@@ -11,13 +12,31 @@ import (
 type WherePredicates struct {
 	Predicate Predicate
 	Params    ParamBinds
+	Shape     shape.Shape
 }
 
 func (w *WherePredicates) Evaluate(data schema.Schema) bool {
-	return EvaluateSchema(w.Predicate, data, w.Params)
+	if w.Shape == nil {
+		return EvaluateSchema(w.Predicate, data, w.Params)
+	} else {
+		return EvaluateShape(w.Predicate, w.Shape, data, w.Params)
+	}
 }
 
-func Where(query string, params ParamBinds) (*WherePredicates, error) {
+type WhereOpt struct {
+	AllowExtraParams bool
+	WithShapeDef     shape.Shape
+}
+
+var DefaultWhereOpt = WhereOpt{
+	AllowExtraParams: false,
+}
+
+func Where(query string, params ParamBinds, opts *WhereOpt) (*WherePredicates, error) {
+	if opts == nil {
+		opts = &DefaultWhereOpt
+	}
+
 	if query == "" {
 		return nil, nil
 	}
@@ -43,7 +62,8 @@ func Where(query string, params ParamBinds) (*WherePredicates, error) {
 		}
 	}
 
-	if len(extraParams) > 0 || len(missingParams) > 0 {
+	if (len(extraParams) > 0 && !opts.AllowExtraParams) ||
+		len(missingParams) > 0 {
 		message := strings.Builder{}
 		if len(missingParams) > 0 {
 			message.WriteString(fmt.Sprintf(`missing params: "%s"`, strings.Join(missingParams, `", "`)))
@@ -61,11 +81,12 @@ func Where(query string, params ParamBinds) (*WherePredicates, error) {
 	return &WherePredicates{
 		Predicate: predicates,
 		Params:    params,
+		Shape:     opts.WithShapeDef,
 	}, nil
 }
 
-func MustWhere(query string, params ParamBinds) *WherePredicates {
-	where, err := Where(query, params)
+func MustWhere(query string, params ParamBinds, opts *WhereOpt) *WherePredicates {
+	where, err := Where(query, params, opts)
 	if err != nil {
 		panic(err)
 	}

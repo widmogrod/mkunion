@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
@@ -12,7 +13,12 @@ func NewTypedRepoWithAggregator[T, C any](
 	store schemaless.Repository[schema.Schema],
 	aggregator func() schemaless.Aggregator[T, C],
 ) *TypedRepoWithAggregator[T, C] {
-	location, err := schema.NewTypedLocation[schemaless.Record[T]]()
+	encodedAs, found := shape.LookupShapeReflectAndIndex[schemaless.Record[schema.Schema]]()
+	if !found {
+		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: shape not found %w", shape.ErrShapeNotFound))
+	}
+
+	location, err := schema.NewTypedLocationWithEncoded[schemaless.Record[T]](encodedAs)
 	if err != nil {
 		panic(fmt.Errorf("typedful.NewTypedRepoWithAggregator: %w", err))
 	}
@@ -128,8 +134,13 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.Findi
 	//		Data["schema.Map"].Name, Data["schema.Map"].Age
 	// This means, that we need add between data path and
 
-	if query.Where != nil {
-		query.Where.Predicate = repo.wrapPredicate(query.Where.Predicate)
+	where := query.Where
+	if where != nil {
+		where = &predicate.WherePredicates{
+			Predicate: WrapPredicate(query.Where.Predicate, repo.loc),
+			Params:    query.Where.Params,
+			Shape:     repo.loc.ShapeDef(),
+		}
 	}
 
 	// do the same for sort fields
@@ -143,7 +154,7 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.Findi
 
 	found, err := repo.store.FindingRecords(schemaless.FindingRecords[schemaless.Record[schema.Schema]]{
 		RecordType: query.RecordType,
-		Where:      query.Where,
+		Where:      where,
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		After:      query.After,
@@ -216,36 +227,36 @@ func (repo *TypedRepoWithAggregator[T, C]) ReindexAll() {
 	panic("not implemented")
 }
 
-func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) predicate.Predicate {
+func WrapPredicate(p predicate.Predicate, loc *schema.TypedLocation) predicate.Predicate {
 	return predicate.MatchPredicateR1(
 		p,
 		func(x *predicate.And) predicate.Predicate {
 			r := &predicate.And{}
 			for _, p := range x.L {
-				r.L = append(r.L, repo.wrapPredicate(p))
+				r.L = append(r.L, WrapPredicate(p, loc))
 			}
 			return r
 		},
 		func(x *predicate.Or) predicate.Predicate {
 			r := &predicate.Or{}
 			for _, p := range x.L {
-				r.L = append(r.L, repo.wrapPredicate(p))
+				r.L = append(r.L, WrapPredicate(p, loc))
 			}
 			return r
 		},
 		func(x *predicate.Not) predicate.Predicate {
 			r := &predicate.Not{}
-			r.P = repo.wrapPredicate(x.P)
+			r.P = WrapPredicate(x.P, loc)
 			return r
 		},
 		func(x *predicate.Compare) predicate.Predicate {
-			loc, err := repo.loc.WrapLocationStr(x.Location)
+			locw, err := loc.WrapLocationStr(x.Location)
 			if err != nil {
 				panic(fmt.Errorf("wrapPredicate: %w", err))
 			}
 
 			return &predicate.Compare{
-				Location:  loc,
+				Location:  locw,
 				Operation: x.Operation,
 				BindValue: predicate.MatchBindableR1(
 					x.BindValue,
@@ -256,13 +267,13 @@ func (repo *TypedRepoWithAggregator[T, C]) wrapPredicate(p predicate.Predicate) 
 						return x
 					},
 					func(x *predicate.Locatable) predicate.Bindable {
-						loc, err := repo.loc.WrapLocationStr(x.Location)
+						locw, err := loc.WrapLocationStr(x.Location)
 						if err != nil {
 							panic(fmt.Errorf("wrapPredicate: %w", err))
 						}
 
 						return &predicate.Locatable{
-							Location: loc,
+							Location: locw,
 						}
 					},
 				),

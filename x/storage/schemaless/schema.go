@@ -3,15 +3,22 @@ package schemaless
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"sort"
 	"sync"
 )
 
 func NewInMemoryRepository[A any]() *InMemoryRepository[A] {
+	shapeDef, found := shape.LookupShapeReflectAndIndex[A]()
+	if !found {
+		panic(fmt.Errorf("store.InMemoryRepository: shape not found %w", shape.ErrShapeNotFound))
+	}
+
 	return &InMemoryRepository[A]{
 		store:     make(map[string]Record[A]),
-		appendLog: NewAppendLog[A](),
+		appendLog: NewAppendLog[A](shapeDef),
+		shapeDef:  shapeDef,
 	}
 }
 
@@ -21,14 +28,19 @@ type InMemoryRepository[A any] struct {
 	store     map[string]Record[A]
 	appendLog *AppendLog[A]
 	mux       sync.RWMutex
+	shapeDef  shape.Shape
 }
 
 func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], error) {
 	result, err := s.FindingRecords(FindingRecords[Record[A]]{
 		RecordType: recordType,
-		Where: predicate.MustWhere("ID = :id", predicate.ParamBinds{
-			":id": schema.MkString(recordID),
-		}),
+		Where: predicate.MustWhere(
+			"ID = :id",
+			predicate.ParamBinds{
+				":id": schema.MkString(recordID),
+			},
+			nil,
+		),
 		Limit: 1,
 	})
 	if err != nil {
@@ -54,7 +66,7 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*Upda
 		Saved:   make(map[string]Record[A]),
 		Deleted: make(map[string]Record[A]),
 	}
-	newLog := NewAppendLog[A]()
+	newLog := NewAppendLog[A](s.shapeDef)
 
 	for key, record := range x.Saving {
 		stored, ok := s.store[s.toKey(record)]
@@ -90,9 +102,9 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*Upda
 		s.store[s.toKey(record)] = record
 
 		if before == nil {
-			err = newLog.Change(Record[A]{}, record)
+			err = newLog.Change(nil, &record)
 		} else {
-			err = newLog.Change(*before, record)
+			err = newLog.Change(before, &record)
 		}
 		if err != nil {
 			panic(fmt.Errorf("store.InMemoryRepository.UpdateRecords: append log failed (1) %s %w", err, ErrInternalError))
@@ -143,7 +155,7 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 	if query.Where != nil {
 		newRecords := make([]Record[A], 0)
 		for _, record := range records {
-			if predicate.Evaluate[Record[A]](query.Where.Predicate, record, query.Where.Params) {
+			if predicate.EvaluateSchema(query.Where.Predicate, schema.FromGo[Record[A]](record), query.Where.Params) {
 				newRecords = append(newRecords, record)
 			}
 		}
@@ -260,8 +272,9 @@ func (s *InMemoryRepository[A]) AppendLog() *AppendLog[A] {
 func sortRecords[A any](records []Record[A], sortFields []SortField) []Record[A] {
 	sort.Slice(records, func(i, j int) bool {
 		for _, sortField := range sortFields {
-			fieldA, _ := schema.Get[Record[A]](records[i], sortField.Field)
-			fieldB, _ := schema.Get[Record[A]](records[j], sortField.Field)
+			// TODO: fix this it's inefficient, we should propage shape information
+			fieldA, _, _ := schema.Get[Record[A]](records[i], sortField.Field)
+			fieldB, _, _ := schema.Get[Record[A]](records[j], sortField.Field)
 			cmp := schema.Compare(fieldA, fieldB)
 			if sortField.Descending {
 				cmp = -cmp

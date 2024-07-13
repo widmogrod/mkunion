@@ -13,14 +13,17 @@ import (
 var (
 	ErrAlreadyStarted         = errors.New("already started")
 	ErrCallbackNotMatch       = errors.New("callback not match")
+	ErrCallbackExpired        = errors.New("callback expired")
 	ErrInvalidStateTransition = errors.New("invalid state transition")
 	ErrExpressionHasResult    = errors.New("expression has result")
 	ErrStateReachEnd          = errors.New("cannot apply commands, when workflow is completed")
 	ErrMaxRetriesReached      = errors.New("max retries reached")
+	ErrNotRecoverable         = errors.New("not recoverable error code")
 	ErrFlowNotFound           = errors.New("flow not found")
 	ErrFlowNotSet             = errors.New("flow not set")
 	ErrIntervalParse          = errors.New("failed to parse interval")
 	ErrRunIDNotMatch          = errors.New("run id not match")
+	ErrCannotExpireAsync      = errors.New("cannot expire async, timeout valid")
 )
 
 type Dependency interface {
@@ -104,6 +107,10 @@ func Transition(ctx context.Context, dep Dependency, cmd Command, state State) (
 					return nil, ErrCallbackNotMatch
 				}
 
+				if s.ExpectedTimeoutTimestamp < dep.TimeNow().Unix() {
+					return nil, ErrCallbackExpired
+				}
+
 				newContext := cloneBaseState(s.BaseState)
 				if _, ok := newContext.ExprResult[s.BaseState.StepID]; ok {
 					return nil, ErrExpressionHasResult
@@ -130,29 +137,40 @@ func Transition(ctx context.Context, dep Dependency, cmd Command, state State) (
 				}
 
 				maxRetries := s.BaseState.DefaultMaxRetries
-				//if s.MaxRetries > 0 {
-				//	maxRetries = s.MaxRetries
-				//}
 				if s.Retried >= maxRetries {
 					return nil, ErrMaxRetriesReached
 				}
 
-				newContext := cloneBaseState(s.BaseState)
+				switch s.Code {
+				case ProblemMissingFunction,
+					ProblemExecutingFunction:
+					newContext := cloneBaseState(s.BaseState)
 
-				flow, err := getFlow(newContext.Flow, dep)
-				if err != nil {
-					return nil, err
+					flow, err := getFlow(newContext.Flow, dep)
+					if err != nil {
+						return nil, err
+					}
+
+					newStatus := ExecuteAll(newContext, flow, dep)
+
+					// when state is, the same error, then let's increment Retried counter
+					errorState, isErrorState := newStatus.(*Error)
+					if isErrorState && errorState.Code == s.Code && errorState.Reason == s.Reason {
+						errorState.Retried = s.Retried + 1
+					}
+
+					return newStatus, nil
+
+				default:
+					//return &Error{
+					//	Code:   s.Code,
+					//	Reason: s.Reason,
+					//	// set value to max retries, so that non recoverable error, won't be even retried
+					//	Retried:   s.BaseState.DefaultMaxRetries,
+					//	BaseState: s.BaseState,
+					//}, nil
+					return nil, ErrNotRecoverable
 				}
-
-				newStatus := ExecuteAll(newContext, flow, dep)
-
-				// when state is, the same error, then let's increment Retried counter
-				errorState, isErrorState := newStatus.(*Error)
-				if isErrorState && errorState.Code == s.Code && errorState.Reason == s.Reason {
-					errorState.Retried = s.Retried + 1
-				}
-
-				return newStatus, nil
 			}
 
 			return nil, ErrInvalidStateTransition
@@ -188,6 +206,28 @@ func Transition(ctx context.Context, dep Dependency, cmd Command, state State) (
 				return &Scheduled{
 					ExpectedRunTimestamp: runTimestamp,
 					BaseState:            s.BaseState,
+				}, nil
+			}
+
+			return nil, ErrInvalidStateTransition
+		},
+		func(x *ExpireAsync) (State, error) {
+			switch s := state.(type) {
+			case *Await:
+				if s.BaseState.RunID != x.RunID {
+					return nil, ErrRunIDNotMatch
+				}
+
+				if dep.TimeNow().Unix() < s.ExpectedTimeoutTimestamp {
+					return nil, ErrCannotExpireAsync
+				}
+
+				return &Error{
+					Code:   ProblemCallbackTimeout,
+					Reason: "callback not received in time window",
+					// set value to max retries, so that non recoverable error, won't be even retried
+					Retried:   s.BaseState.DefaultMaxRetries,
+					BaseState: s.BaseState,
 				}, nil
 			}
 
@@ -236,6 +276,11 @@ func getFlow(x Workflow, dep Dependency) (*Flow, error) {
 	)
 }
 
+func GetFlowFromState(state State, dep Dependency) (*Flow, error) {
+	base := GetBaseState(state)
+	return getFlow(base.Flow, dep)
+}
+
 var cronParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 
 func calculateExpectedRunTimestamp(x RunOption, dep Dependency) (int64, error) {
@@ -251,12 +296,16 @@ func calculateExpectedRunTimestamp(x RunOption, dep Dependency) (int64, error) {
 		},
 		func(x *DelayRun) (int64, error) {
 			// always calculate time in the future
-			return dep.
-				TimeNow().
-				Add(time.Duration(x.DelayBySeconds) * time.Second).
-				Unix(), nil
+			return calculateExpectedFutureTimestamp(dep, x.DelayBySeconds), nil
 		},
 	)
+}
+
+func calculateExpectedFutureTimestamp(dep Dependency, seconds int64) int64 {
+	return dep.
+		TimeNow().
+		Add(time.Duration(seconds) * time.Second).
+		Unix()
 }
 
 func extractParentRunID(context BaseState) string {
@@ -358,8 +407,26 @@ func ScheduleNext(x State, dep Dependency) *Run {
 	return nil
 }
 
-func GetRunID(state State) string {
+func GetRunIDFromBaseState(state State) string {
 	return GetBaseState(state).RunID
+}
+
+func GetStepIDFromExpr(expr Expr) StepID {
+	return MatchExprR1(
+		expr,
+		func(x *End) StepID {
+			return x.ID
+		},
+		func(x *Assign) StepID {
+			return x.ID
+		},
+		func(x *Apply) StepID {
+			return x.ID
+		},
+		func(x *Choose) StepID {
+			return x.ID
+		},
+	)
 }
 
 func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error) {
@@ -380,7 +447,12 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 				return nil, fmt.Errorf("workflow.ExecuteReshaper: expected location to start with field name, got %s", x.Path)
 			}
 			if val, ok := context.Variables[field.Name]; ok {
-				return schema.GetSchemaLocation(val, rest), nil
+				value, found := schema.GetSchemaLocation(val, rest, true)
+				if !found {
+					return nil, fmt.Errorf("workflow.ExecuteReshaper: failed to find location %s in %s", x.Path, val)
+				}
+
+				return value, nil
 			} else {
 				return nil, fmt.Errorf("variable %s not found", x.Path)
 			}
@@ -472,7 +544,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			val, err := ExecuteReshaper(context, x.Result)
 			if err != nil {
 				return &Error{
-					Code:      "execute-reshaper",
+					Code:      ProblemVariableAccess,
 					Reason:    "failed to execute reshaper in ok path",
 					BaseState: newContext,
 				}
@@ -495,7 +567,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 
 			if _, ok := newContext.Variables[x.VarOk]; ok {
 				return &Error{
-					Code:      "assign-variable",
+					Code:      ProblemVariableNameInUser,
 					Reason:    fmt.Sprintf("variable %s already exists", x.VarOk),
 					BaseState: newContext,
 				}
@@ -525,7 +597,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 				val, err := ExecuteReshaper(context, arg)
 				if err != nil {
 					return &Error{
-						Code:      "execute-reshaper",
+						Code:      ProblemVariableAccess,
 						Reason:    fmt.Sprintf("failed to execute reshaper while preparing args for function %s(), reason: %s", x.Name, err.Error()),
 						BaseState: newContext,
 					}
@@ -536,7 +608,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			fn, err := dep.FindFunction(x.Name)
 			if err != nil {
 				return &Error{
-					Code:      "function-missing",
+					Code:      ProblemMissingFunction,
 					Reason:    fmt.Sprintf("function %s() not found, details: %s", x.Name, err.Error()),
 					BaseState: newContext,
 				}
@@ -555,7 +627,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			val, err := fn(input)
 			if err != nil {
 				return &Error{
-					Code:      "function-execution",
+					Code:      ProblemExecutingFunction,
 					Reason:    fmt.Sprintf("function %s() returned error: %s", x.Name, err.Error()),
 					BaseState: newContext,
 				}
@@ -563,9 +635,9 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 
 			if x.Await != nil {
 				return &Await{
-					Timeout:    x.Await.Timeout,
-					CallbackID: input.CallbackID,
-					BaseState:  newContext,
+					ExpectedTimeoutTimestamp: calculateExpectedFutureTimestamp(dep, x.Await.TimeoutSeconds),
+					CallbackID:               input.CallbackID,
+					BaseState:                newContext,
 				}
 			}
 
@@ -581,7 +653,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			isTrue, err := ExecutePredicate(newContext, x.If, dep)
 			if err != nil {
 				return &Error{
-					Code:      "choose-evaluate-predicate",
+					Code:      ProblemPredicateEvaluation,
 					Reason:    "failed to evaluate predicate, reason: " + err.Error(),
 					BaseState: newContext,
 				}
@@ -590,7 +662,7 @@ func ExecuteExpr(context BaseState, expr Expr, dep Dependency) State {
 			// THEN branch cannot be empty, ELSE can, since it is optional
 			if len(x.Then) == 0 {
 				return &Error{
-					Code:      "choose-then-empty",
+					Code:      ProblemChooseThenEmpty,
 					Reason:    "then branch cannot be empty",
 					BaseState: newContext,
 				}

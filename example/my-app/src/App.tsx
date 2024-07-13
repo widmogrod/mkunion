@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {createContext, useEffect, useState} from 'react';
 import './App.css';
 import * as openai from './workflow/github_com_sashabaranov_go-openai'
 import * as schemaless from './workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
@@ -17,10 +17,17 @@ function flowCreate(flow: workflow.Flow) {
         .then(data => console.log("save-flow-result", data))
 }
 
-function flowToString(flow: workflow.Workflow) {
+function flowToStringFromWorkflow(flow: workflow.Workflow) {
     return fetch('http://localhost:8080/workflow-to-str', {
         method: 'POST',
         body: JSON.stringify(flow),
+    })
+        .then(res => res.text())
+}
+
+function flowToStringFromRunID(runID: string) {
+    return fetch(`http://localhost:8080/workflow-to-str-from-run/${runID}`, {
+        method: 'GET',
     })
         .then(res => res.text())
 }
@@ -491,7 +498,7 @@ function runContactAwait(imageWidth: number, imageHeight: number, onData?: (data
                                             },
                                         ],
                                         Await: {
-                                            Timeout: 10,
+                                            TimeoutSeconds: 10,
                                         }
                                     }
                                 }
@@ -816,13 +823,52 @@ function App() {
                                                                     src={`data:image/jpeg;base64,${done.Result["schema.Binary"]}`}
                                                                     alt=""/>
                                                             </div>
-                                                            <WorkflowToString flow={done.BaseState?.Flow}/>
+                                                            <WorkflowToString runID={done.BaseState?.RunID}/>
                                                             <ListVariables data={done.BaseState}/>
                                                         </>
                                                     )
                                                 case "schema.String":
+                                                    let funcName = "non"
+
+                                                    if (done.BaseState?.Flow?.$type === "workflow.Flow") {
+                                                        funcName = done.BaseState?.Flow["workflow.Flow"].Name!
+                                                    }
+
+                                                    let build = (type: string, funcName: string): predicate.Predicate => {
+                                                        return {
+                                                            "$type": "predicate.Compare",
+                                                            "predicate.Compare": {
+                                                                Location: `Data["${type}"].BaseState.Flow["workflow.Flow"].Name`,
+                                                                Operation: "==",
+                                                                BindValue: {
+                                                                    "$type": "predicate.Literal",
+                                                                    "predicate.Literal": {
+                                                                        Value: {
+                                                                            "$type": "schema.String",
+                                                                            "schema.String": funcName
+                                                                        }
+                                                                    }
+                                                                },
+                                                            }
+                                                        }
+                                                    }
+
                                                     return <>
                                                         <span className="done">workflow.Done</span>
+                                                        <button onClick={() => ctx.filter({
+                                                            Predicate: {
+                                                                "$type": "predicate.Or",
+                                                                "predicate.Or": {
+                                                                    L: [
+                                                                        build("workflow.Done", funcName),
+                                                                        build("workflow.Error", funcName),
+                                                                        build("workflow.Await", funcName),
+                                                                        build("workflow.Scheduled", funcName),
+                                                                        build("workflow.ScheduleStopped", funcName),
+                                                                    ]
+                                                                }
+                                                            }
+                                                        })}>show {funcName}</button>
                                                         <button onClick={() => ctx.filter({
                                                             Predicate: {
                                                                 "$type": "predicate.Compare",
@@ -867,7 +913,7 @@ function App() {
                                                             {done.Result["schema.String"]}
                                                         </div>
 
-                                                        <WorkflowToString flow={done.BaseState?.Flow}/>
+                                                        <WorkflowToString runID={done.BaseState?.RunID}/>
                                                         <ListVariables data={done.BaseState}/>
                                                     </>
                                             }
@@ -888,7 +934,7 @@ function App() {
                                                     <dt>Retried</dt>
                                                     <dd>{error.Retried} / {error.BaseState?.DefaultMaxRetries}</dd>
                                                 </dl>
-                                                <WorkflowToString flow={error.BaseState?.Flow}/>
+                                                <WorkflowToString runID={error.BaseState?.RunID}/>
                                                 <ListVariables data={error.BaseState}/>
                                                 <TryRecover error={error} onFinish={() => ctx.refresh()}/>
                                             </>
@@ -919,7 +965,7 @@ function App() {
                                                     })}
                                                             className={"filter filter-in"}>only
                                                     </button>
-                                                    <WorkflowToString flow={await_.BaseState?.Flow}/>
+                                                    <WorkflowToString runID={await_.BaseState?.RunID}/>
                                                     <ListVariables data={await_.BaseState}/>
 
                                                     <input type={"text"}
@@ -957,7 +1003,7 @@ function App() {
                                                     <span className="schedguled">workflow.Scheduled</span>
                                                     <span>{JSON.stringify(scheduled.ExpectedRunTimestamp)}</span>
                                                     <span>{parentRunID}</span>
-                                                    <WorkflowToString flow={scheduled.BaseState?.Flow}/>
+                                                    <WorkflowToString runID={scheduled.BaseState?.RunID}/>
                                                     <ListVariables data={scheduled.BaseState}/>
                                                     <button onClick={() => {
                                                         stopSchedule(parentRunID).finally(() => {
@@ -980,7 +1026,7 @@ function App() {
 
                                             return <>
                                                 <span className="stopped">workflow.ScheduleStopped</span>
-                                                <WorkflowToString flow={scheduleStopped.BaseState?.Flow}/>
+                                                <WorkflowToString runID={scheduleStopped.BaseState?.RunID}/>
                                                 <ListVariables data={scheduleStopped.BaseState}/>
                                                 <button onClick={() => {
                                                     resumeSchedule(parentRunID1).finally(() => {
@@ -1153,21 +1199,23 @@ function SchemaValue(props: { data?: schema.Schema }) {
 }
 
 
-function WorkflowToString(props: { flow?: workflow.Workflow }) {
+function WorkflowToString(props: { flow?: workflow.Workflow, runID?: string}) {
     const [str, setStr] = useState("")
 
     useEffect(() => {
-        if (!props.flow) {
-            return
+        if (props.flow) {
+            flowToStringFromWorkflow(props.flow).then((data) => {
+                setStr(data)
+            })
+        } else if (props.runID) {
+            flowToStringFromRunID(props.runID).then((data) => {
+                setStr(data)
+            })
         }
 
-        flowToString(props.flow).then((data) => {
-            setStr(data)
-        })
-    }, [props.flow])
+    }, [props.flow, props.runID])
 
     return <>
-        {/*<pre>{JSON.stringify(props.flow)}</pre>*/}
         <pre>{str}</pre>
     </>
 }
@@ -1384,9 +1432,8 @@ function resumeSchedule(parentRunID: string) {
 
 function callFunc(funcID: string, args: any[]) {
     const cmd: workflow.FunctionInput = {
-        Name: "funcID",
+        Name: funcID,
         Args: args,
-
     }
 
     return fetch('http://localhost:8080/func', {

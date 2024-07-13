@@ -6,7 +6,7 @@ import (
 )
 
 func TestMatchBuilding(t *testing.T) {
-	builder := NewMatchBuilder()
+	builder := NewMkMatchBuilder()
 
 	err := builder.SetName("MatchAlphabetNumber")
 	assert.NoError(t, err)
@@ -34,5 +34,4 @@ func TestMatchBuilding(t *testing.T) {
 	assert.Equal(t, []string{"Name1", "Name2", "Name3"}, output.Names)
 	assert.Equal(t, []string{"Alphabet", "Number"}, output.Inputs)
 	assert.Equal(t, "MatchAlphabetNumber", output.Name)
-
 }

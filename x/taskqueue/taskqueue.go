@@ -2,9 +2,11 @@ package taskqueue
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"golang.org/x/exp/slices"
 	"time"
 )
 
@@ -43,15 +45,29 @@ type TaskQueue[T any] struct {
 }
 
 func (q *TaskQueue[T]) RunCDC(ctx context.Context) error {
-	return q.stream.Subscribe(ctx, 0, func(change schemaless.Change[T]) {
-		filter := predicate.MustWhere(q.desc.Filter, q.params())
-		if !predicate.EvaluateSchema(filter.Predicate, schema.FromGo(change.After), filter.Params) {
+	filter := predicate.MustWhere(q.desc.Filter, q.params(), &predicate.WhereOpt{
+		AllowExtraParams: true,
+	})
+
+	_, deleted := slices.BinarySearch(q.desc.Change, "deleted")
+
+	return q.stream.Subscribe(ctx, 0, filter, func(change schemaless.Change[T]) {
+		if change.Deleted && !deleted {
+			log.Infof("taskqueue: Change: %v is deleted, but we are not interested in deleted records", change)
 			return
 		}
 
+		var id string
+		if change.After != nil {
+			id = change.After.ID
+		} else {
+			id = change.Before.ID
+		}
+
 		err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
-			ID:   change.After.ID,
-			Data: *change.After,
+			ID:      id,
+			Data:    change.After,
+			Deleted: change.Deleted,
 		})
 		if err != nil {
 			panic(err)
@@ -60,16 +76,23 @@ func (q *TaskQueue[T]) RunCDC(ctx context.Context) error {
 }
 
 func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
+	whereOpts := &predicate.WhereOpt{
+		AllowExtraParams: true,
+	}
+
 	var timeDelta = time.Second * 1
 	var startTime time.Time
+
 	for {
 		startTime = time.Now()
 
 		var after = &schemaless.FindingRecords[schemaless.Record[T]]{
 			RecordType: q.desc.Entity,
-			Where:      predicate.MustWhere(q.desc.Filter, q.params()),
+			Where:      predicate.MustWhere(q.desc.Filter, q.params(), whereOpts),
 			Limit:      10,
 		}
+
+		log := log.WithField("where", q.desc.Filter)
 
 		for {
 			records, err := q.find.FindingRecords(*after)
@@ -78,10 +101,12 @@ func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
 				return err
 			}
 
+			log.Infof("taskqueue: FindingRecords(): %d", len(records.Items))
+
 			for _, record := range records.Items {
 				err := q.queue.Push(ctx, Task[schemaless.Record[T]]{
 					ID:   record.ID,
-					Data: record,
+					Data: &record,
 					Meta: nil,
 				})
 				if err != nil {
@@ -142,9 +167,10 @@ type Description struct {
 }
 
 type Task[T any] struct {
-	ID   string
-	Data T
-	Meta map[string]string
+	ID      string
+	Data    *T
+	Deleted bool
+	Meta    map[string]string
 }
 
 type FunctionProcessor[T any] struct {

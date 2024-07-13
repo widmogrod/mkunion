@@ -30,9 +30,24 @@ func (s sumVisitor) VisitLeaf(v *Leaf[int]) any {
 	return v.Value
 }
 
-////go:generate go run ../cmd/mkunion/main.go match -name=MyTriesMatch
-//type MyTriesMatch[T0, T1 Tree[A], A any] interface {
-//	MatchLeafs(*Leaf[A], *Leaf[A])
-//	MatchBranches(*Branch[A], any)
-//	MatchMixed(any, any)
-//}
+//go:tag mkmatch:"MyName"
+type MyTriesMatch[T0, T1 Tree[any]] interface {
+	MatchLeafs(*Leaf[any], *Leaf[any])
+	MatchBranches(*Branch[any], any)
+	MatchMixed(any, any)
+}
+
+func treeDoNumbers(a, b Tree[any]) int {
+	return MyNameR1(
+		a, b,
+		func(x0 *Leaf[any], x1 *Leaf[any]) int {
+			return x0.Value.(int) + x1.Value.(int)
+		},
+		func(x0 *Branch[any], x1 any) int {
+			return -1
+		},
+		func(x0 any, x1 any) int {
+			return -10
+		},
+	)
+}

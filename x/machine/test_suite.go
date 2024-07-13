@@ -128,6 +128,7 @@ func (suite *Suite[D, C, S]) fuzzy() {
 func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filename string) bool {
 	suite.fuzzy()
 
+	t.Helper()
 	// extract fine name from file, if there is extension remove it
 	fileName := filename + ".state_diagram.mmd"
 	fileNameWithErrorTransitions := filename + ".state_diagram_with_errors.mmd"

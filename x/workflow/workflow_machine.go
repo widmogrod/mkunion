@@ -4,8 +4,12 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
+type StepID = string
+type FlowID = string
+type RunID = string
+
 type Execution struct {
-	FlowID    string
+	FlowID    FlowID
 	Status    State
 	Location  string
 	StartTime int64
@@ -42,14 +46,17 @@ type (
 		//Fail       schema.Schema
 	}
 	TryRecover struct {
-		RunID string
+		RunID RunID
 	}
 	StopSchedule struct {
 		// ParentRunID can be stopped by user, or by system
-		ParentRunID string
+		ParentRunID RunID
 	}
 	ResumeSchedule struct {
-		ParentRunID string
+		ParentRunID RunID
+	}
+	ExpireAsync struct {
+		RunID RunID
 	}
 )
 
@@ -71,9 +78,9 @@ type (
 		BaseState BaseState
 	}
 	Await struct {
-		CallbackID string
-		Timeout    int64
-		BaseState  BaseState
+		CallbackID               string
+		ExpectedTimeoutTimestamp int64
+		BaseState                BaseState
 	}
 	// Scheduled is a state that is used to schedule execution of the flow, once or periodically
 	Scheduled struct {
@@ -90,8 +97,8 @@ type (
 //go:tag serde:"json"
 type BaseState struct {
 	Flow       Workflow // Flow is a reference to the flow that describes execution
-	RunID      string   // RunID is a unique identifier of the execution
-	StepID     string   // StepID is a unique identifier of the step in the execution
+	RunID      RunID    // RunID is a unique identifier of the execution
+	StepID     StepID   // StepID is a unique identifier of the step in the execution
 	Variables  map[string]schema.Schema
 	ExprResult map[string]schema.Schema
 
@@ -100,6 +107,16 @@ type BaseState struct {
 
 	RunOption RunOption
 }
+
+const (
+	ProblemVariableNameInUser  = "assign-variable"
+	ProblemVariableAccess      = "execute-reshaper"
+	ProblemMissingFunction     = "missing-function"
+	ProblemExecutingFunction   = "function-execution"
+	ProblemPredicateEvaluation = "choose-evaluate-predicate"
+	ProblemChooseThenEmpty     = "choose-then-empty"
+	ProblemCallbackTimeout     = "callback-timeout"
+)
 
 //go:tag mkunion:"Workflow"
 type (
@@ -116,11 +133,11 @@ type (
 //go:tag mkunion:"Expr"
 type (
 	End struct {
-		ID     string
+		ID     StepID
 		Result Reshaper
 	}
 	Assign struct {
-		ID    string
+		ID    StepID
 		VarOk string
 		// if VarErr is not empty, then error will be assigned to this variable
 		// to give chance to handle it, before it will be returned to the caller
@@ -129,13 +146,13 @@ type (
 		Val    Expr
 	}
 	Apply struct {
-		ID    string
+		ID    StepID
 		Name  string
 		Args  []Reshaper
 		Await *ApplyAwaitOptions
 	}
 	Choose struct {
-		ID   string
+		ID   StepID
 		If   Predicate
 		Then []Expr
 		Else []Expr
@@ -194,7 +211,7 @@ type (
 	////
 	//ResumeSchedule struct {
 	//	ID      string
-	//	Timeout time.DelayBySeconds
+	//	ExpectedTimeoutTimestamp time.DelayBySeconds
 	//	//Caller  schema.Schema
 	//	//Callee  schema.Schema
 	//	RunOption ResumeOptions
@@ -204,13 +221,13 @@ type (
 //go:tag serde:"json"
 type ResumeOptions struct {
 	Timeout int64
-	//Timeout time.DelayBySeconds
+	//ExpectedTimeoutTimestamp time.DelayBySeconds
 }
 
 //go:tag serde:"json"
 type ApplyAwaitOptions struct {
-	Timeout int64
-	//Timeout time.DelayBySeconds
+	TimeoutSeconds int64
+	//ExpectedTimeoutTimestamp time.DelayBySeconds
 }
 
 //go:tag mkunion:"Reshaper"

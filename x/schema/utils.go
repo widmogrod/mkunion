@@ -149,79 +149,93 @@ func AsDefault[A int | int8 | int16 | int32 | int64 |
 	return def
 }
 
-func GetSchema(data Schema, location string) Schema {
+func GetSchemaDefault[A int | int8 | int16 | int32 | int64 |
+	uint | uint8 | uint16 | uint32 | uint64 |
+	float32 | float64 |
+	bool | string | []byte](data Schema, location string, def A) A {
+	val, found := GetSchema(data, location)
+	if !found {
+		return def
+	}
+
+	res, ok := As[A](val)
+	if ok {
+		return res
+	}
+
+	return def
+}
+func GetSchema(data Schema, location string) (Schema, bool) {
 	path, err := ParseLocation(location)
 	if err != nil {
 		log.Warnf("schema.GetSchema: failed to parse location: %s", err)
-		return nil
+		return nil, false
 	}
 
-	return GetSchemaLocation(data, path)
+	return GetSchemaLocation(data, path, false)
 }
 
-func GetSchemaLocation(data Schema, locations []Location) Schema {
+func GetSchemaLocation(data Schema, locations []Location, found bool) (Schema, bool) {
 	for {
 		if len(locations) == 0 {
-			return data
+			return data, found
+		} else if data == nil {
+			return nil, false
 		}
 
 		location := locations[0]
 		locations = locations[1:]
 
-		data, locations = MatchLocationR2(
+		data, locations, found = MatchLocationR3(
 			location,
-			func(x *LocationField) (Schema, []Location) {
+			func(x *LocationField) (Schema, []Location, bool) {
 				mapData, ok := data.(*Map)
 				if !ok {
-					return nil, locations
+					return nil, locations, false
 				}
 
 				if value, ok := (*mapData)[x.Name]; ok {
-					return value, locations
+					return value, locations, true
 				}
 
-				return nil, locations
+				return nil, locations, false
 			},
-			func(x *LocationIndex) (Schema, []Location) {
+			func(x *LocationIndex) (Schema, []Location, bool) {
 				listData, ok := data.(*List)
 				if ok && len(*listData) > x.Index {
-					return (*listData)[x.Index], locations
+					return (*listData)[x.Index], locations, true
 				}
 
-				return nil, locations
+				return nil, locations, false
 			},
-			func(x *LocationAnything) (Schema, []Location) {
+			func(x *LocationAnything) (Schema, []Location, bool) {
 				switch y := data.(type) {
 				case *List:
 					for _, item := range *y {
-						newData := GetSchemaLocation(item, locations)
-						if newData != nil {
-							return newData, nil
+						newData, found := GetSchemaLocation(item, locations, found)
+						if found {
+							return newData, nil, found
 						}
 					}
 
-					return nil, locations
+					return nil, locations, false
 
 				case *Map:
 					for _, value := range *y {
-						newData := GetSchemaLocation(value, locations)
-						if newData != nil {
-							return newData, nil
+						newData, found := GetSchemaLocation(value, locations, found)
+						if found {
+							return newData, nil, found
 						}
 					}
 				}
 
-				return nil, locations
+				return nil, locations, false
 			},
 		)
-
-		if data == nil {
-			return data
-		}
 	}
 }
 
-func Get[A any](data A, location string) (Schema, shape.Shape) {
+func Get[A any](data A, location string) (Schema, shape.Shape, bool) {
 	s, found := shape.LookupShapeReflectAndIndex[A]()
 	if !found {
 		panic(fmt.Errorf("schema.GetLocation: shape.RefName not found %T; %w", *new(A), shape.ErrShapeNotFound))
@@ -232,13 +246,13 @@ func Get[A any](data A, location string) (Schema, shape.Shape) {
 	return GetShapeLocation(s, sdata, location)
 }
 
-func GetShapeLocation(s shape.Shape, data Schema, location string) (Schema, shape.Shape) {
+func GetShapeLocation(s shape.Shape, data Schema, location string) (Schema, shape.Shape, bool) {
 	l, err := ParseLocation(location)
 	if err != nil {
 		panic(fmt.Errorf("schema.GetLocation: failed to parse location: %s", err))
 	}
 
-	return GetShapeSchemaLocation(s, data, l)
+	return GetShapeSchemaLocation(s, data, l, false)
 }
 
 type locres struct {
@@ -247,10 +261,12 @@ type locres struct {
 	shape shape.Shape
 }
 
-func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (Schema, shape.Shape) {
+func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, found bool) (Schema, shape.Shape, bool) {
 	for {
 		if len(locations) == 0 {
-			return data, s
+			return data, s, found
+		} else if data == nil {
+			return nil, nil, false
 		}
 
 		location := locations[0]
@@ -281,11 +297,10 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						}
 					}
 				case *shape.AliasLike:
-					res, sch := GetShapeSchemaLocation(y.Type, data, append([]Location{x}, locations...))
-					if res != nil {
+					res, sch, found := GetShapeSchemaLocation(y.Type, data, append([]Location{x}, locations...), found)
+					if found {
 						return &locres{
 							data:  res,
-							loc:   locations,
 							shape: sch,
 						}
 					}
@@ -341,11 +356,10 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 							continue
 						}
 
-						res, sch := GetShapeSchemaLocation(variant, fieldValue, locations)
-						if res != nil {
+						res, sch, found := GetShapeSchemaLocation(variant, fieldValue, locations, found)
+						if found {
 							return &locres{
 								data:  res,
-								loc:   locations,
 								shape: sch,
 							}
 						}
@@ -359,11 +373,12 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						return nil
 					}
 
-					res, sch := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...))
-					if res != nil {
+					ss = shape.IndexWith(ss, y)
+
+					res, sch, found := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...), found)
+					if found {
 						return &locres{
 							data:  res,
-							loc:   locations,
 							shape: sch,
 						}
 					}
@@ -459,11 +474,11 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 					}
 
 					for _, value := range *mapData {
-						res, sch := GetShapeSchemaLocation(y.Val, value, locations)
-						if res != nil {
+						res, sch, found := GetShapeSchemaLocation(y.Val, value, locations, found)
+						if found {
 							return &locres{
-								data:  res,
-								loc:   locations,
+								data: res,
+								//loc:   locations,
 								shape: sch,
 							}
 						}
@@ -484,11 +499,11 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 							continue
 						}
 
-						res, sch := GetShapeSchemaLocation(variant, fieldValue, locations)
-						if res != nil {
+						res, sch, found := GetShapeSchemaLocation(variant, fieldValue, locations, found)
+						if found {
 							return &locres{
-								data:  res,
-								loc:   locations,
+								data: res,
+								//loc:   locations,
 								shape: sch,
 							}
 						}
@@ -501,11 +516,11 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 					}
 
 					for _, item := range *listData {
-						res, sch := GetShapeSchemaLocation(y.Element, item, locations)
-						if res != nil {
+						res, sch, found := GetShapeSchemaLocation(y.Element, item, locations, found)
+						if found {
 							return &locres{
-								data:  res,
-								loc:   locations,
+								data: res,
+								//loc:   locations,
 								shape: sch,
 							}
 						}
@@ -517,22 +532,38 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 						return nil
 					}
 
-					res, sch := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...))
-					if res != nil {
+					ss = shape.IndexWith(ss, y)
+
+					res, sch, found := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...), found)
+					if found {
 						return &locres{
-							data:  res,
-							loc:   locations,
+							data: res,
+							//loc:   locations,
 							shape: sch,
 						}
 					}
 
 				case *shape.AliasLike:
-					res, sch := GetShapeSchemaLocation(y.Type, data, locations)
-					if res != nil {
+					res, sch, found := GetShapeSchemaLocation(y.Type, data, locations, found)
+					if found {
 						return &locres{
-							data:  res,
-							loc:   locations,
+							data: res,
+							//loc:   locations,
 							shape: sch,
+						}
+					}
+
+					return nil
+
+				case *shape.StructLike:
+					for _, field := range y.Fields {
+						res, sch, found := GetShapeSchemaLocation(field.Type, data, locations, found)
+						if found {
+							return &locres{
+								data: res,
+								//loc:   locations,
+								shape: sch,
+							}
 						}
 					}
 
@@ -544,16 +575,13 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location) (S
 		)
 
 		if res == nil {
-			return nil, nil
+			return nil, nil, false
 		}
 
 		data = res.data
 		s = res.shape
 		locations = res.loc
-
-		if data == nil {
-			return data, s
-		}
+		found = true
 	}
 }
 
