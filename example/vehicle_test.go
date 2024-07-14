@@ -42,3 +42,13 @@ func ExampleVehicleFromJSON() {
 	fmt.Printf("%#v", vehicle)
 	// Output: &example.Car{Color:"black", Wheels:4}
 }
+
+func ExampleMatchPairs() {
+	var vehicle1 Vehicle = &Boat{Color: "black", Propellers: 10}
+	var vehicle2 Vehicle = &Plane{Color: "white", Engines: 2}
+
+	result := NamePairs(vehicle1, vehicle2)
+
+	fmt.Println(result)
+	// Output: Boat black vs *example.Plane
+}

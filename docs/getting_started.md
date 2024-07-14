@@ -53,10 +53,19 @@ And MkUnion use it heavily to offer way of adding new behaviour to go types.
 - `go:tag serde:"json"` - enable serialisation type (currently only JSON is supported), enbabled by default
 - `go:tag shape:"-"` - disable shape generation for this type, useful in cases x/shared package cannot depend on other x packages, to avid circular dependencies
 - `go:tag mkunion:",no-type-registry"` - if you want to disable generation type registry in a package, in one of go files above package declaration define tag
-```go
-//go:tag mkunion:",no-type-registry"
-package example
-```
+	```go
+	//go:tag mkunion:",no-type-registry"
+	package example
+	```
+- `go:tag mkmatch:""` - generate custom pattern matching function from interface definition
+	```go title="example/vehicle.go"
+	//go:tag mkmatch:"MatchPairs"
+	type MatchPairs[A, B Vehicle] interface {
+		MatchCars(x, y *Car)
+		MatchBoatAny(x *Boat, y any)
+		Finally(x, y any)
+	}
+	```
 
 #### `type (...)` convention
 
