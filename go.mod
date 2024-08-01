@@ -3,7 +3,7 @@ module github.com/widmogrod/mkunion
 go 1.21
 
 require (
-	github.com/alecthomas/participle/v2 v2.0.0
+	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/aws/aws-sdk-go-v2 v1.30.3
 	github.com/aws/aws-sdk-go-v2/config v1.27.26
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.14.9
