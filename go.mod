@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.14.9
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.34.3
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.29.3
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.34.3
 	github.com/confluentinc/confluent-kafka-go/v2 v2.4.0
 	github.com/fatih/structtag v1.2.0
 	github.com/fsnotify/fsnotify v1.7.0
