@@ -50,7 +50,7 @@ And MkUnion use it heavily to offer way of adding new behaviour to go types.
 ##### Tags supported by MkUnion
 
 - `go:tag mkunion:"Vehicle"` - define union type
-- `go:tag serde:"json"` - enable serialisation type (currently only JSON is supported), enbabled by default
+- `go:tag serde:"json"` - enable serialisation type (currently only JSON is supported), enabled by default
 - `go:tag shape:"-"` - disable shape generation for this type, useful in cases x/shared package cannot depend on other x packages, to avid circular dependencies
 - `go:tag mkunion:",no-type-registry"` - if you want to disable generation type registry in a package, in one of go files above package declaration define tag
 ```go
