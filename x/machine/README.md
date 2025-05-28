@@ -181,7 +181,7 @@ sequenceDiagram
 Example implementation of such a sequence diagram:
 
 ```go
-func Handle(rq Request, response Response) { // Corrected typo: Resopnse -> Response
+func Handle(rq Request, response Response) { 
 	ctx := rq.Context()
 	
 	// extract `objectId` and `command` from the request and perform some validation
@@ -193,10 +193,10 @@ func Handle(rq Request, response Response) { // Corrected typo: Resopnse -> Resp
 	if err != nil { /*handle error*/ }
 
     machine := NewSimpleMachineWithState(Transition, state)
-    newState, err := machine.Apply(command, state) // Use 'command' variable
+    newState, err := machine.Apply(command, state) 
     if err != nil { /*handle error*/ }
 	
-    err = store.Save(ctx, newState) // Add missing '='
+    err = store.Save(ctx, newState) 
     if err != nil { /*handle error*/ }
 	
 	// serialize the response
@@ -241,38 +241,38 @@ Here is an example implementation of such a transition function:
 
 ```go
 func Transition(cmd Command, state State) (State, error) {
-return MustMatchCommandR2(
-    cmd,
-    /* ... */
-    func(cmd *CorrectStateCMD) (State, error) {
-        switch state := state.(type) {
-        case *RecoverableError:
-            state.RetryCount = state.RetryCount + 1
-			
-            // here we can do some self-healing logic
-            if state.ErrCode == DuplicateServiceUnavailable { // Assuming DuplicateServiceUnavailable is a defined error code
-                newState, err := Transition(&MarkAsDuplicateCMD{}, state.PrevState) // Assuming MarkAsDuplicateCMD is a defined command
-                 if err != nil {
-                    // we failed to correct the error, so we return an error state 
-                     return &RecoverableError{
-                        ErrCode:    0, // Consider setting a more specific error code from 'err'
-                        PrevState:  state.PrevState,
-                        RetryCount: state.RetryCount,
-                    }, nil
-                }
-				
-                 // we managed to fix the state, so we return new state
-                 return newState, nil
-             } else {
-                 // log information that we have a new error code that we don't know how to handle
-             }
-			
-            // try to correct the error in the next iteration
-            return state, nil
-        }
-        return state, nil // Added default return for the switch
-    },
-) // Assuming MustMatchCommandR2 is a function that requires this closing parenthesis
+    return MustMatchCommandR2(
+        cmd,
+        /* ... */
+        func(cmd *CorrectStateCMD) (State, error) {
+            switch state := state.(type) {
+            case *RecoverableError:
+                state.RetryCount = state.RetryCount + 1
+                
+                // here we can do some self-healing logic
+                if state.ErrCode == DuplicateServiceUnavailable { // DuplicateServiceUnavailable is a defined error code
+                    newState, err := Transition(&MarkAsDuplicateCMD{}, state.PrevState) 
+                     if err != nil {
+                        // we failed to correct the error, so we return an error state 
+                         return &RecoverableError{
+                            ErrCode:    0, // Consider setting a more specific error code from 'err'
+                            PrevState:  state.PrevState,
+                            RetryCount: state.RetryCount,
+                        }, nil
+                    }
+                    
+                     // we managed to fix the state, so we return new state
+                     return newState, nil
+                 } else {
+                     // log information that we have a new error code that we don't know how to handle
+                 }
+                
+                // try to correct the error in the next iteration
+                return state, nil
+            }
+            return state, nil // Added default return for the switch
+        },
+    )
 }
 ```
 
