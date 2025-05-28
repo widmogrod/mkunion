@@ -6,7 +6,7 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
-func ExampleTreeJson() {
+func Example_treeJson() {
 	tree := &Branch[int]{
 		L: &Leaf[int]{Value: 1},
 		R: &Branch[int]{

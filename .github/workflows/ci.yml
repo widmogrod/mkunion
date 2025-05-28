@@ -12,6 +12,9 @@ jobs:
           go-version: ^1.21
         id: go
 
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+
       - run: cd cmd/mkunion; go get -v -t -d ./...
       - run: cd cmd/mkunion; go build -o mkunion
 
