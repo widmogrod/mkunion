@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// StoreStateInDatabase is an example how to store state in database
-func ExampleStoreStateInDatabase() {
+// Example_storeStateInDatabase is an example how to store state in database
+func Example_storeStateInDatabase() {
 	now := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	// example state

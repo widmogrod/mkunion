@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func ExampleTreeSumValues() {
+func Example_treeSumValues() {
 	tree := &Branch[int]{
 		L: &Leaf[int]{Value: 1},
 		R: &Branch[int]{
@@ -32,7 +32,7 @@ type orderAgg struct {
 	Result int
 }
 
-func ExampleTreeCustomReduction() {
+func Example_treeCustomReduction() {
 	tree := &Branch[int]{
 		L: &Leaf[int]{Value: 1},
 		R: &Branch[int]{
