@@ -7,8 +7,8 @@ go install github.com/widmogrod/mkunion/cmd/mkunion@latest
 ```
 
 ### Define your first union type
-Create your first union. In our simple example we will represent different types of vehicles.
-But in a more complex example you may want to represent different states of your application, model domain aggregates, or create your own DSL.
+Create your first union. In our simple example, we will represent different types of vehicles.
+But in a more complex example, you may want to represent different states of your application, model domain aggregates, or create your own DSL.
 ```go title="example/vehicle.go"
 package example
 
@@ -29,12 +29,12 @@ type (
 )
 ```
 
-In above example you can see a few important concepts:
+In the above example, you can see a few important concepts:
 
 #### `//go:tag mkunion:"Vehicle"`
 
-Tag are powerful and flexible way to add metadata to your code.
-You may be familiar with tags when you work with JSON in golang
+Tags are a powerful and flexible way to add metadata to your code.
+You may be familiar with tags when you work with JSON in Go:
 
 ```go
 type User struct {
@@ -42,65 +42,65 @@ type User struct {
 }
 ```
 
-Unfortunately Golang don't extend this feature to other parts of the language.
+Unfortunately, Go doesn't extend this feature to other parts of the language.
 
-MkUnion defines `//go:tag` comment, following other idiomatic definitions `go:generate`, `go:embed` to allow to add metadata to struct type.
-And MkUnion use it heavily to offer way of adding new behaviour to go types.
+MkUnion defines the `//go:tag` comment, following other idiomatic definitions like `go:generate` and `go:embed`, to allow adding metadata to struct types.
+And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
 
 ##### Tags supported by MkUnion
 
-- `go:tag mkunion:"Vehicle"` - define union type
-- `go:tag serde:"json"` - enable serialisation type (currently only JSON is supported), enabled by default
-- `go:tag shape:"-"` - disable shape generation for this type, useful in cases x/shared package cannot depend on other x packages, to avid circular dependencies
-- `go:tag mkunion:",no-type-registry"` - if you want to disable generation type registry in a package, in one of go files above package declaration define tag
-	```go
-	//go:tag mkunion:",no-type-registry"
-	package example
-	```
+- `go:tag mkunion:"Vehicle"` - defines a union type.
+- `go:tag serde:"json"` - enables serialization type (currently only JSON is supported), enabled by default.
+- `go:tag shape:"-"` - disables shape generation for this type, useful in cases where an x/shared package cannot depend on other x packages, to avoid circular dependencies.
+- `go:tag mkunion:",no-type-registry"` - if you want to disable generation of the type registry in a package, define this tag in one of the Go files above the package declaration:
+  ```go
+  //go:tag mkunion:",no-type-registry"
+  package example
+  ```
 - `go:tag mkmatch:""` - generate custom pattern matching function from interface definition
-	```go title="example/vehicle.go"
-	//go:tag mkmatch:"MatchPairs"
-	type MatchPairs[A, B Vehicle] interface {
-		MatchCars(x, y *Car)
-		MatchBoatAny(x *Boat, y any)
-		Finally(x, y any)
-	}
-	```
+  ```go title="example/vehicle.go"
+  //go:tag mkmatch:"MatchPairs"
+  type MatchPairs[A, B Vehicle] interface {
+      MatchCars(x, y *Car)
+      MatchBoatAny(x *Boat, y any)
+      Finally(x, y any)
+  }
+  ```
 
 #### `type (...)` convention
 
-Union type is defined as a set of types in a single type declaration. You can think of it as "one of" type.
-To make it more readable, as convention I decided to use `type (...)` declaration block, instead of individual `type` declaration.
+A union type is defined as a set of types in a single type declaration. You can think of it as a "one of" type.
+To make it more readable, as a convention, I decided to use the `type (...)` declaration block instead of individual `type` declarations.
 
 ### Generate code and watch for changes
 
-Run in your terminal to generate union type for your code and watch for changes
+Run in your terminal to generate union types for your code and watch for changes:
 ```
 mkunion watch ./...
 ```
 
-To generate unions without watching for changes, you can run
+To generate unions without watching for changes, you can run:
 ```
 mkunion watch -g ./...
 ```
 
-Alternatively you can run `mkunion` command directly
+Alternatively, you can run the `mkunion` command directly:
 ```
 mkunion -i example/vehicle.go
 ```
 
 
 #### What order you should run `mkunion watch` and `go generate`?
-First run `mkunion watch ./...` to generate union types, and then run `go generate ./...` to generate code that uses union types.
+First, run `mkunion watch ./...` to generate union types, and then run `go generate ./...` to generate code that uses union types.
 
-I found that this order works best, especially with extension like `moq` that will fail to generate mocks when an type is not defined, which is the case for union types, unit you run `mkunion watch`.
+I found that this order works best, especially with extensions like `moq` that will fail to generate mocks when a type is not defined, which is the case for union types, until you run `mkunion watch`.
 
 ### Match over union type
-When you run `mkunion` command, it will generate file alongside your original file with `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go))
+When you run the `mkunion` command, it will generate a file alongside your original file with the `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go)).
 
-You can use those function to do exhaustive matching on your union type.
+You can use these functions to do exhaustive matching on your union type.
 
-For example, you can calculate fuel usage for different types of vehicles, with function that looks like this:
+For example, you can calculate fuel usage for different types of vehicles with a function that looks like this:
 
 ```go title="example/vehicle.go"
 func CalculateFuelUsage(v Vehicle) int {
@@ -119,12 +119,12 @@ func CalculateFuelUsage(v Vehicle) int {
 }
 ```
 
-And as you can see, it leverage generics to make it easy to write.
-No need to cast, or check type, or use `switch` statement.
+And as you can see, it leverages generics to make it easy to write.
+No need to cast, check types, or use `switch` statements.
 
 #### matching functions `Match{Name}R1`
 Where `Name` is the name of your union type.
-Where `R0`, `R1`, `R2`, `R3` stands for number of return values.
+Where `R0`, `R1`, `R2`, `R3` stand for the number of return values.
 
 Example of `MatchVehicleR1` function signature:
 ```go
@@ -140,8 +140,8 @@ func MatchVehicleR1[T0 any](
 
 ### JSON marshalling
 
-MkUnion also generate JSON marshalling functions for you.
-You just need to use `shared.JSONMarshal` and `shared.JSONUnmarshal` functions to marshal and unmarshal your union type.
+MkUnion also generates JSON marshalling functions for you.
+You just need to use the `shared.JSONMarshal` and `shared.JSONUnmarshal` functions to marshal and unmarshal your union type.
 
 Example:
 
@@ -164,7 +164,7 @@ func ExampleVehicleToJSON() {
 }
 ```
 
-You can notice that it has opinionated way of marshalling and unmarshalling your union type.
-It uses `$type` field to store type information, and then store actual data in separate field, with corresponding name.
+You can notice that it has an opinionated way of marshalling and unmarshalling your union type.
+It uses the `$type` field to store type information, and then stores the actual data in a separate field with the corresponding name.
 
-You can read more about it in [Marshaling union in JSON](./examples/json.md) section.
+You can read more about it in the [Marshaling union in JSON](./examples/json.md) section.

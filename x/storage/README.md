@@ -1,6 +1,6 @@
-# x/storage - Golang schemaless orm with union type support
-Make working with data types in golang easy and simple. 
-Focus on business logic, that differentiate your needs, not serialization and deserialization.
+# x/storage - Go schemaless ORM with union type support
+Make working with data types in Go easy and simple. 
+Focus on business logic that differentiates your needs, not on serialization and deserialization.
 
 
 ```go
@@ -13,7 +13,7 @@ store := schemaless.NewInMemoryRepository()
 //store := schemaless.NewDynamoDBRepository(dynamodb.NewFromConfig(cfg), tableName)
 //store := NewOpenSearchRepository(client, indexName)
 
-// make working with records type safe
+// Make working with records type-safe
 repo := typedful.NewTypedRepository[MyRecord](store)
 state, err := repo.Get("1", "user")
 assert.ErrorIs(t, err, schemaless.ErrNotFound)
