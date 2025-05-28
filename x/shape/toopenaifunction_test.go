@@ -27,8 +27,7 @@ func TestToOpenAIFunctionDefinition(t *testing.T) {
     "properties": {
       "location": {
         "type": "string",
-        "description": "The city and state e.g. San Francisco, CA",
-        "properties": {}
+        "description": "The city and state e.g. San Francisco, CA"
       },
       "unit": {
         "type": "string",
@@ -36,8 +35,7 @@ func TestToOpenAIFunctionDefinition(t *testing.T) {
         "enum": [
           "c",
           "f"
-        ],
-        "properties": {}
+        ]
       }
     }
   }
