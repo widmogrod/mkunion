@@ -4,7 +4,7 @@
 - [ ] **docs**: document simple state machine and how to use `mkunion` for it
 - [x] **feature**: `mkunion watch ./...` command that watches for changes in files and runs faster than `go generate ./...`
 - [x] **feature**: `go:tag mkmatch` to generate pattern matching functions
-- [ ] **feature**: `go:tag mkmatch` with better type parameters validation
+- [x] **feature**: `go:tag mkmatch` with better type parameters validation
 - [ ] **docs**: document how to write custom pattern matching functions
 - [ ] **docs**: document other packages in `x/` directory
 - [ ] **docs**: document typescript types generation and end-to-end typs concepts (from backend to frontend)
