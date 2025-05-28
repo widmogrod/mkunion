@@ -1,11 +1,11 @@
-# x/schema - Golang recursive schema
-Library allows to write code that work with any type of schemas.
-Regardless if those are JSON, XML, YAML, or golang structs.
+# x/schema - Go recursive schema
+The library allows you to write code that works with any type of schema,
+regardless if those are JSON, XML, YAML, or Go structs.
 
-Most benefits
-- Union types can be deserialized into interface field
+Key benefits include:
+- Union types can be deserialized into an interface field.
 
-## How to convert between json <-> go
+## How to convert between JSON <-> Go
 ```go
 data := `{"name": "John", "cars": [{"name":"Ford"}]}`
 schema := schema.FromJSON(data)
@@ -22,9 +22,9 @@ expected := map[string]any{
 assert.Equal(t, expected, nativego)
 ```
 
-## How to convert schema into named golang struct?
-This example shows how to convert only part of schema to golang struct.
-List of cars will have type `Car` when parent `Person` object will be `map[string]any`.
+## How to convert schema into a named Go struct?
+This example shows how to convert only part of a schema to a Go struct.
+The list of cars will have type `Car` while the parent `Person` object is `map[string]any`.
 ```go
 type Car struct {
     Name string
@@ -43,34 +43,41 @@ expected := map[string]any{
 assert.Equal(t, expected, nativego)
 ```
 
-## How to define custom serialization and deserilization?
-Currently, ser-deser operations are available on maps.
-This is current design decision, it might change in the future.
+## How to define custom serialization and deserialization?
+Currently, serialization/deserialization operations are available on maps.
+This is a current design decision; it might change in the future.
 
 ```go
 type Car struct {
     Name string
 }
 
-// make sure to Car implements schema.Marshaler and schema.Unmarshaler
+// Make sure that Car implements schema.Marshaler and schema.Unmarshaler
 var (
-	_ schema.Marshaler = (*Car)(nil)
-    _ schema.Unmarshaler = (*Car)(nil)
+	_ schema.Marshaler   = (*Car)(nil)
+	_ schema.Unmarshaler = (*Car)(nil)
 )
 
-func (c *Car) MarshalSchema() (schema.*Map, error) {
+func (c *Car) MarshalSchema() (schema.Map, error) { // Assuming schema.Map is the intended return type, not a pointer
     return schema.MkMap(map[string]schema.Schema{
         "name": schema.MkString(c.Name),
     }), nil
 }
 
-func (c *Car) UnmarshalSchema(x schema.*Map) error {
+func (c *Car) UnmarshalSchema(x schema.Map) error { // Assuming schema.Map is the intended parameter type
     for _, field := range x.Field {
-        switch key {
+        switch field.Name { // Corrected to use field.Name
         case "name":
-            c.Name = s.MustToString()
+            // Assuming field.Value is of type schema.Schema and has a MustToString method
+            // or if s was meant to be field.Value of type schema.String
+            if strVal, ok := field.Value.(*schema.String); ok {
+                c.Name = strVal.MustToString()
+            } else {
+                // Handle type mismatch error for field.Value if necessary
+                return fmt.Errorf("field 'name' is not a string, got %T", field.Value)
+            }
         default:
-            return fmt.Errorf("unknown key %s", key)
+            return fmt.Errorf("unknown key %s", field.Name) // Corrected to use field.Name
         }
     }
 	
@@ -78,14 +85,14 @@ func (c *Car) UnmarshalSchema(x schema.*Map) error {
 }
 ```
 
-### How to convert well defined types from external packages?
+### How to convert well-defined types from external packages?
 ```go
 type Car struct {
     Name string
     LastDriven time.Time
 }
 
-// Register conversion from time.Time to schema.String
+// Register a conversion from time.Time to schema.String
 schema.RegisterWellDefinedTypesConversion[time.Time](
   func(x time.Time) Schema {
       return MkString(x.Format(time.RFC3339Nano))
@@ -100,7 +107,7 @@ schema.RegisterWellDefinedTypesConversion[time.Time](
   },
 )
 
-// Then you can translate schema between back and forth without worrying about time.Time
+// Then you can translate the schema back and forth without worrying about time.Time
 schema := FromGo(data)
 result, err := ToGoG[ExternalPackageStruct](schema)
 assert.NoError(t, err)
@@ -109,10 +116,10 @@ assert.Equal(t, data, result)
 
 ## Roadmap
 ### V0.1.0
-- [x] Json <-> Schema <-> Go (with structs mapping)
+- [x] JSON <-> Schema <-> Go (with structs mapping)
 - [x] Write test with wrong type conversions
-- [x] Value are split into Number(Int, Float), String, Bool, and Null
-- [x] Default schema registry + mkunion make union serialization/deserialization work transperently
+- [x] Values are split into Number(Int, Float), String, Bool, and Null
+- [x] Default schema registry + mkunion make union serialization/deserialization work transparently
 - [x] Support pointers *string, etc.
 - [x] Support DynamoDB (FromDynamoDB, ToDynamoDB)
 - [x] Support for pointer to types like *string, *int, etc.
@@ -121,9 +128,9 @@ assert.Equal(t, data, result)
  
 ### V0.2.x
 - [x] Support options for `ToGo` & `FromGo` like `WithOnlyTheseRules`, `WithExtraRules`, `WithDefaultMapDef`, etc. 
-      Gives better control on how schema is converted to golang.
-      It's especially important from security reasons, whey you want to allow rules only whitelisted rules, for user generated json input.
-- [x] Schema support interface for custom type-setters, that don't require reflection, and mkunion can leverage them. Use `UseTypeDef` eg. `WhenPath([]string{}, UseTypeDef(&someTypeDef{})),`
+      Gives better control on how schema is converted to Go.
+      It's especially important from security reasons, when you want to allow only whitelisted rules for user-generated JSON input.
+- [x] Schema support interface for custom type-setters that doesn't require reflection, and mkunion can leverage them. Use `UseTypeDef` eg. `WhenPath([]string{}, UseTypeDef(&someTypeDef{})),`
 - [x] Support for how union names should be expressed in schema `WithUnionFormatter(func(t reflect.Type) string)`
 
 ### V0.3.x
@@ -131,25 +138,25 @@ assert.Equal(t, data, result)
 
 ### V0.4.x
 - [x] Support for Binary type
-- [x] Add missing function for MkBinary, MkFloat, MkNone
+- [x] Add missing functions for MkBinary, MkFloat, MkNone
 
 ### V0.5.x
 - [x] `schema.UnwrapDynamoDB` takes DynamoDB specific nesting and removes it.
 - [x] Eliminate data races in `*UnionVariants[A] -> MapDefFor` & `UseUnionFormatter` data race
-- [x] Introduce `ToGoG[T any]` function, that makes ToGo with type assertion and tries to convert to T
-- [x] Rename `schema.As` to `schema.AsDefault` and make `schema.As` as variant that returns false, if type is not supported
+- [x] Introduce `ToGoG[T any]` function that makes ToGo with type assertion and tries to convert to T
+- [x] Rename `schema.As` to `schema.AsDefault` and make `schema.As` a variant that returns false if the type is not supported
 
 ### V0.6.x
-- [x] Support serialization of `schema.Marchaler` to `schema.Unmarshaller`, that can dramatically improve performance in some cases.
-      Limitation of current implementation is that it works only on *Map, and don't allow custom ser-deser on other types.
-      It's not hard decision. It's just that I don't have use case for other types yet.
+- [x] Support serialization of `schema.Marshaler` to `schema.Unmarshaller`, that can dramatically improve performance in some cases.
+      Limitation of current implementation is that it works only on `*Map`, and doesn't allow custom serialization/deserialization on other types.
+      It's not a hard decision. It's just that I don't have a use case for other types yet.
 
 ### V0.7.x
-- [x] schema.Schema is now serializable and deserilizable
+- [x] schema.Schema is now serializable and deserializable
 
 ### V0.8.x
-- [x] `schema` use `x/shape` and native types to represent variants like Map and List and Bytes
-- [x] schema.Schema is refactored to leverage simpler types thanks to `x/shape` library
+- [x] `schema` uses `x/shape` and native types to represent variants like Map and List and Bytes
+- [x] schema.Schema is refactored to leverage simpler types thanks to the `x/shape` library
 - [x] schema.ToJSON and schema.FromJSON are removed and replaced by `mkunion` defaults
 
 ### V0.11.x

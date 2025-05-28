@@ -1,1 +1,1 @@
-# x/taskqueue - Golang task queue with transactional support
+# x/taskqueue - Go task queue with transactional support

@@ -5,11 +5,11 @@ title: Union and generic types
 MkUnion will generate generic unions for you.
 
 You only need to declare each variant type of the union with a type parameter,
-and library will figure out the rest.
+and the library will figure out the rest.
 
 What is **IMPORTANT** is that each variant type (Branch, Leaf in this example) needs to have the same number of type parameters.
 
-For example, let's say you want to create a recursive tree data structure, that in leaves will hold value of `A` type.
+For example, let's say you want to create a recursive tree data structure, that in its leaves will hold a value of `A` type.
 
 ## Declaration and generation
 
@@ -30,7 +30,7 @@ you have access to the same features as with non-generic unions.
 
 ## Matching function
 
-Let's define higher order function `ReduceTree` that will travers leaves in `Tree` and produce a single value.
+Let's define a higher-order function `ReduceTree` that will traverse leaves in `Tree` and produce a single value.
 
 This function uses `MatchTreeR1` function that is generated automatically for you.
 
@@ -72,7 +72,7 @@ func ExampleTreeSumValues() {
 }
 ```
 
-You can also reduce tree to complex structure, for example to keep track of order of values in the tree, along with sum of all values in the tree.
+You can also reduce the tree to a complex structure, for example, to keep track of the order of values in the tree, along with the sum of all values in the tree.
 
 ```go title="example/tree_test.go"
 func ExampleTreeCustomReduction() {
@@ -105,10 +105,10 @@ func ExampleTreeCustomReduction() {
 
 ## Either & Option types
 
-For educational purposes, let's create two most popular union types in functional languages: `Option` and `Either` with corresponding `Map` functions.
+For educational purposes, let's create two of the most popular union types in functional languages: `Option` and `Either`, with corresponding `Map` functions.
 
-- Either type is used to represent one of two possible values. Many times left value holds success value, and right value holds error value.
-- Option type is used to represent a value that may or may not be present. Replaces nulls in some languages.
+- The Either type is used to represent one of two possible values. Many times the left value holds the success value, and the right value holds an error value.
+- The Option type is used to represent a value that may or may not be present, often replacing nulls in other languages.
 
 ```go title="f/datas.go"
 //go:tag mkunion:"Either"
@@ -148,9 +148,9 @@ func MapOption[A, B any](x Option[A], f func(A) B) Option[B] {
 }
 ```
 
-In above example, we define `MapEither` and `MapOption` functions that will apply function `f` to value inside `Either` or `Option` type.
+In the example above, we define `MapEither` and `MapOption` functions that will apply the function `f` to the value inside the `Either` or `Option` type.
 
-It would be much better to have only one `Map` definition, but due to limitations of Go type system, we need to define separate functions for each type.
+It would be preferable to have only one `Map` definition, but due to limitations of the Go type system, we need to define separate functions for each type.
 
-I'm considering adding code generation for such behaviours in the future. Not yet due to focus on validating core concepts.
+I'm considering adding code generation for such behaviors in the future. This is not yet implemented due to a focus on validating core concepts.
 

@@ -5,21 +5,21 @@
 
 
 ## About
-Strongly typed **union type** in golang with generics*.
+Strongly typed **union type** in golang that supports generics*.
 
 * with exhaustive _pattern matching_ support
 * with _json marshalling_ including generics
-* and as a bonus, can generate compatible typescript types for end-to-end type safety in your application
+* and as a bonus, can generate compatible TypeScript types for end-to-end type safety in your application
 
 ## Why
-Historically in languages without union types like golang, unions were solved either by using Visitor pattern, or using `iota` and `switch` statement, or other workarounds.
+Historically, in languages like Go that lack native union types, developers have resorted to workarounds such as the Visitor pattern or `iota` with `switch` statements.
 
-Visitor pattern requires a lot of boiler plate code and hand crafting of the `Accept` method for each type in the union.
-`iota` and `switch` statement is not type safe and can lead to runtime errors, especially when new type is added and not all `case` statements are updated.
+The Visitor pattern requires a lot of boilerplate code and manual crafting of the `Accept` method for each type in the union.
+Using `iota` and `switch` statements is not type-safe and can lead to runtime errors, especially when a new type is added and not all `case` statements are updated.
 
-On top of that, any data marshalling like to/from JSON requires additional, hand crafted code, to make it work.
+On top of that, any data marshalling, like to/from JSON, requires additional, handcrafted code to make it work.
 
-MkUnion solves all of those problems, by generating opinionated and strongly typed meaningful code for you.
+MkUnion solves all of these problems by generating opinionated and strongly typed, meaningful code for you.
 
 ## Example
 
@@ -82,4 +82,5 @@ func ExampleFromJSON() {
 
 ## Next
 
-- Read [getting started](https://widmogrod.github.io/mkunion/getting_started/)  to learn more.
+- Read [getting started](https://widmogrod.github.io/mkunion/getting_started/) to learn more.
+- Or to understand better concepts jump and read [value proposition](./docs/value_proposition.md)

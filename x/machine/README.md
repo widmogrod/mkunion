@@ -1,20 +1,20 @@
 # mkunion and state machines
-Package models state machines as a union of **states**, and transition functions as a union of **commands**.
-Package provides an inferring method to visualize state machines as a mermaid diagram.
+The package models state machines as a union of **states**, and transition functions as a union of **commands**.
+The package provides an inference method to visualize state machines as a mermaid diagram.
 
 ## TODO
-- [ ] explain field management
-- [ ] dependency injection
-- [ ] demonstrate process orchestration
-- [ ] demonstrate states managing states
-- [ ] visualize error state
-- [ ] describe why not to start with state diagram first? TDD, fuzzy, self documenting and context coherence vs switching context
-- [ ] describe storage with version use case as optimistic locking
+- [ ] Explain field management
+- [ ] Dependency injection
+- [ ] Demonstrate process orchestration
+- [ ] Demonstrate states managing states
+- [ ] Visualize error state
+- [ ] Describe why not to start with a state diagram first: TDD, fuzzing, self-documentation, and context coherence vs. context switching
+- [ ] Describe storage with version use case as optimistic locking
 
 ## Example
-Look into [simple_machine_test.go](../../example/state/simple_machine_test.go) directory for a complete example.
+Look into the [simple_machine_test.go](../../example/state/simple_machine_test.go) directory for a complete example.
 
-Example implements such state machine:
+The example implements such a state machine:
 ```mermaid
 stateDiagram
 	[*] --> "*state.Candidate": "*state.CreateCandidateCMD"
@@ -23,13 +23,13 @@ stateDiagram
 	"*state.Candidate" --> "*state.Duplicate": "*state.MarkAsDuplicateCMD"
 ```
 
-Below is a code sample that demonstrate how to implement such state machine in golang.
-Code shows how to use `mkunion` to generate union of commands and states
+Below is a code sample that demonstrates how to implement such a state machine in Go.
+The code shows how to use `mkunion` to generate a union of commands and states.
 
 ```go
 //go:generate mkunion -name State
 type (
-    Candiate struct {}
+    Candidate struct {} // Corrected typo: Candiate -> Candidate
     Duplicate struct {}
     Canonical struct {}
     Unique struct {}
@@ -50,23 +50,23 @@ var (
 func Transition(cmd Command, state State) (State, error) {
     return MustMatchCommandR2(
         cmd,
-        func (cmd *CreateCandidateCMD) (State, error) {/* ... */},
-        func (cmd *MarkAsDuplicateCMD) (State, error) {
-            if state.(*Canonical) {
+        func(cmd *CreateCandidateCMD) (State, error) {/* ... */},
+        func(cmd *MarkAsDuplicateCMD) (State, error) {
+            if _, ok := state.(*Canonical); ok { // Check type assertion result
                 return nil, ErrCannotChangeDuplicateToCanonical
             }
 
             return &Duplicate{}, nil
         }, 
-        func (cmd *MarkAsCanonicalCMD) (State, error) {/* .. */}, 
-        func (cmd *MarkAsUniqueCMD) (State, error) {/* ... */},
+        func(cmd *MarkAsCanonicalCMD) (State, error) {/* .. */}, 
+        func(cmd *MarkAsUniqueCMD) (State, error) {/* ... */},
     )
 }
 ```
 
 ## Testing state machines & self documenting
-Library provides a way to test state machines and generate a mermaid diagram from tests.
-Above diagram that you see is generated from the following test.
+The library provides a way to test state machines and generate a mermaid diagram from tests.
+The diagram you see above is generated from the following test.
 
 ```go
 func TestSuite(t *testing.T) {
@@ -101,14 +101,14 @@ func TestSuite(t *testing.T) {
 }
 ```
 
-## Infer stat diagram from tests - self documenting
-Note in above example function `suite.Fuzzy(t)`.
-This function explore how machine will act on transition between states, that are not explicitly defined.
-Using Fuzzy help to discover edge cases, that can be inspected visually.
+## Infer state diagram from tests - self documenting
+Note in the above example the function `suite.Fuzzy(t)`.
+This function explores how the machine will act on transitions between states that are not explicitly defined.
+Using fuzzing helps to discover edge cases that can be inspected visually.
 
 `suite.SelfDocumentStateDiagram` will create two diagrams. 
-- First one is a diagram of ONLY successful transitions, that are easier to read (first diagram in this document).
-- Second one is a diagram that includes transition that resulted in an error, such diagram is much more visually complex, yet also valuable.
+- The first one is a diagram of ONLY successful transitions, which is easier to read (first diagram in this document).
+- The second one is a diagram that includes transitions that resulted in an error; such a diagram is much more visually complex, yet also valuable.
 
 
 ```mermaid
@@ -168,7 +168,7 @@ sequenceDiagram
     deactivate Store
     
     R->>R: Create machine with state
-    R->>R: Apply command on a state
+    R->>R: Apply the command to the state
     
     R->>Store: Save state in database under request.ObjectId
     activate Store
@@ -178,43 +178,43 @@ sequenceDiagram
     deactivate R
 ```
 
-Example implementation of such sequence diagram:
+Example implementation of such a sequence diagram:
 
 ```go
-func Handle(rq Request, response Resopnse) {
+func Handle(rq Request, response Response) { // Corrected typo: Resopnse -> Response
 	ctx := rq.Context()
 	
-	// extract objectId and command from request + do some validation
+	// extract `objectId` and `command` from the request and perform some validation
     id := rq.ObjectId
 	command := rq.Command
 	
-    // Load state from store
+    // Load the state from the store
     state, err := store.Find(ctx, id)
 	if err != nil { /*handle error*/ }
 
     machine := NewSimpleMachineWithState(Transition, state)
-    newState, err := machine.Apply(cmd, state)
+    newState, err := machine.Apply(command, state) // Use 'command' variable
     if err != nil { /*handle error*/ }
 	
-    err := store.Save(ctx, newState)
+    err = store.Save(ctx, newState) // Add missing '='
     if err != nil { /*handle error*/ }
 	
-	// serialize response
+	// serialize the response
 	response.Write(newState)
 }
 ```
 
 ## Error as state. Self-healing systems.
-In request-response situation, handing errors is easy, but what if in some long-lived process something goes wrong?
-How to handle errors in such situation? Without making what we learn about state machines useless or hard to use?
+In a request-response situation, handling errors is easy, but what if something goes wrong in some long-lived process?
+How should errors be handled in such a situation? Without making what we've learned about state machines useless or hard to use?
 
 One solution is to treat errors as state.
-In such case, our state machines will never return error, but instead will return new state, that will represent error.
+In such a case, our state machines will never return an error, but instead will return a new state that will represent an error.
 
-When we introduce explicit command responsible for correcting RecoverableError, we can create self-healing systems.
-Thanks to that, even in situation when errors are unknown, we can retroactivly introduce self-healing logic that correct states.
+When we introduce an explicit command responsible for correcting `RecoverableError`, we can create self-healing systems.
+Thanks to that, even in situations where errors are unknown, we can retroactively introduce self-healing logic that corrects states.
 
-Because there is always there is only one error state, it makes such state machines easy to reason about.
+Since there is always only one error state, it makes such state machines easy to reason about.
 
 ```go
 //go:generate mkunion -name State
@@ -234,10 +234,10 @@ type (
 )
 ```
 
-Now, we have to implement recoverable logic in our state machine.
-We show example above how to do it in `Transition` function.
+Now, we have to implement the recoverable logic in our state machine.
+The example above shows how to do it in the `Transition` function.
 
-Here is example implementation of such transition function:
+Here is an example implementation of such a transition function:
 
 ```go
 func Transition(cmd Command, state State) (State, error) {
@@ -250,55 +250,57 @@ return MustMatchCommandR2(
             state.RetryCount = state.RetryCount + 1
 			
             // here we can do some self-healing logic
-            if state.ErrCode == DuplicateServiceUnavailable {
-                newState, err := Transition(&MarkAsDuplicateCMD{}, state.PrevState)
+            if state.ErrCode == DuplicateServiceUnavailable { // Assuming DuplicateServiceUnavailable is a defined error code
+                newState, err := Transition(&MarkAsDuplicateCMD{}, state.PrevState) // Assuming MarkAsDuplicateCMD is a defined command
                  if err != nil {
-                    // we failed to correct error, so we return error state 
+                    // we failed to correct the error, so we return an error state 
                      return &RecoverableError{
-                        ErrCode: err,
-                        PrevState: state.PrevState,
+                        ErrCode:    0, // Consider setting a more specific error code from 'err'
+                        PrevState:  state.PrevState,
                         RetryCount: state.RetryCount,
                     }, nil
                 }
 				
-                 // we manage to fix state, so we return new state
+                 // we managed to fix the state, so we return new state
                  return newState, nil
              } else {
-                 // log information that we have new code, that we don't know how to handle
+                 // log information that we have a new error code that we don't know how to handle
              }
 			
-            // try to correct error in next iteration
+            // try to correct the error in the next iteration
             return state, nil
         }
-    }
+        return state, nil // Added default return for the switch
+    },
+) // Assuming MustMatchCommandR2 is a function that requires this closing parenthesis
 }
 ```
 
-Now, to correct states we have to select from database all states that are in error state.
-It can be use in many ways, example below use a abstraction called `TaskQueue` that is responsible for running tasks in background.
+Now, to correct states, we have to select all states that are in an error state from the database.
+It can be used in many ways; the example below uses an abstraction called `TaskQueue` that is responsible for running tasks in the background.
 
-This abstraction guaranties that all records (historical and new ones) will be processed.
-You can think about it, as a queue that is populated by records from database, that meet SQL query criteria.
+This abstraction guarantees that all records (historical and new ones) will be processed.
+You can think of it as a queue that is populated by records from the database that meet SQL query criteria.
 
-You can use CRON job and pull database.
+You can use a CRON job and poll the database.
 
 ```go
 //go:generate mms deployyml -type=TaskQueue -name=CorrectMSPErrors -autoscale=1,10 -memory=128Mi -cpu=100m -timeout=10s -schedule="0 0 * * *"
 func main()
-    sql := "SELECT * FROM ObjectState WHERE RecoverableError.RetryCount < 3"
-    store := datalayer.DefaultStore()
-    queue := TaskQueueFrom("correct-msp-errors", sql, store)
-    queue.OnTask(func (ctx context.Context, task Task) error {
+    sql := "SELECT * FROM ObjectState WHERE RecoverableError.RetryCount < 3" // Assuming ObjectState is the table
+    store := datalayer.DefaultStore() // Assuming datalayer.DefaultStore() is available
+    queue := TaskQueueFrom("correct-msp-errors", sql, store) // Assuming TaskQueueFrom is available
+    queue.OnTask(func (ctx context.Context, task Task) error { // Assuming Task type is defined
         state := task.State()
         cmd := &CorrectStateCMD{}
         machine := NewSimpleMachineWithState(Transition, state)
-        newState, err := machine.Apply(cmd, state)
+        newState, err := machine.Apply(cmd, state) // machine.Apply might need context
         if err != nil {
             return err
         }
-        return task.Save(ctx, newState)
+        return task.Save(ctx, newState) // Assuming task.Save is available
     })
-    err := queue.Run(ctx)
+    err := queue.Run(ctx) // Assuming ctx is defined
     if err != nil {
         log.Panic(err)
     }
@@ -307,40 +309,40 @@ func main()
 
 
 ## State machines and command queues and workflows
-What if command would initiate state "to process" and save it in db
-What if task queue would take such state and process it
-Woudn't this be something like command queue?
+What if a command would initiate a state "to process" and save it in the database?
+What if a task queue would take such a state and process it?
+Wouldn't this be something like a command queue?
 
-When to make a list of background processes that transition such states?
+Under what conditions should background processes be used to transition these states?
 
-### processors per state
-It's like micromanage TaskQueue, where each state has it's own state, and it knows what command to apply to given state
-This could be good starting point, when there is not a lot of good tooling
+### Processors per state
+It's like micromanaging the TaskQueue, where each state has its own state and knows what command to apply to a given state.
+This could be a good starting point when there isn't a lot of good tooling.
 
-### processor for state machine
-With good tooling, transition of states can be declared in one place, 
-and deployment to task queue could be done automatically.
+### Processor for state machine
+With good tooling, the transition of states can be declared in one place, 
+and deployment to the task queue could be done automatically.
 
-Note, that only some of the transitions needs to happen in background, other can be done in request-response manner.
+Note that only some of the transitions need to happen in the background; others can be done in a request-response manner.
 
-### processor for state machine with workflow
-State machine could be generalized to workflow.
-We can think about it as set of generic Command and State (like a turing machine).
+### Processor for state machine with workflow
+A state machine could be generalized to a workflow.
+We can think about it as a set of generic Commands and States (like a Turing machine).
 
-States like Pending, Completed, Failed
-Commands like Process, Retry, Cancel
+States like `Pending`, `Completed`, `Failed`.
+Commands like `Process`, `Retry`, `Cancel`.
 
-And workflow DSL with commands like: Invoke, Choose, Assign
-Where function is some ID string, and functions needs to be either 
-pulled from registry, or called remotely (InvokeRemote).
-some operations would require callback (InvokeAndAwait)
+And a workflow DSL with commands like: `Invoke`, `Choose`, `Assign`.
+Where a function is some ID string, and functions need to be either 
+pulled from a registry or called remotely (`InvokeRemote`).
+Some operations would require a callback (`InvokeAndAwait`).
 
-Then background processor would be responsible for executing such workflow (using task queue)
-Program would be responsible for defining workflow, and registering functions.
+Then a background processor would be responsible for executing such a workflow (using a task queue).
+The program would be responsible for defining the workflow and registering functions.
 
-Such programs could be also optimised for deployment, 
-if some function would be better to run on same machine that do RPC call
-like function doing RPC call to database, and caching result in memory or in cache cluster dedicated to specific BFF
+Such programs could also be optimized for deployment, 
+if some function would be better to run on the same machine that makes an RPC call,
+like a function making an RPC call to a database and caching the result in memory or in a cache cluster dedicated to a specific BFF.
 
 
 

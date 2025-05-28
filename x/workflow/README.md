@@ -1,6 +1,6 @@
-# x/workflow - manage workflows in transactional way
+# x/workflow - manage workflows in a transactional way
 
-When you find yourself that you have to do two or more write operation in one operation, you may find this library helpful.
+When you find that you have to do two or more write operations in a single logical operation, you may find this library helpful.
 
 ```go
 flow RegisterUser(input) {
@@ -136,14 +136,14 @@ for _, flow := range flows {
 }
 ```
 
-- Functions must be idempotent. Runtime will always provide unique to operation call ID, so function or middleware needs to deduplicate it
+- Functions must be idempotent. The runtime will always provide a unique-to-operation call ID, so the function or middleware needs to deduplicate it.
 
 ## Roadmap
 ### Ideas
-- [ ] proof of concept with simple ui to explore failed states 
-- [ ] generate from program logic, functions to be implemented
-- [ ] deployment planner, allow to deploy function as embedded (wasm) or remote with autoscaling rules
-- [ ] background processing logic (pull base)
-- [ ] background processing logic stream based
-- [ ] generate functions from OpenAPI, gRPC spec
-- [ ] lang server with autocomplete
+- [ ] Proof of concept with a simple UI to explore failed states
+- [ ] Generate from program logic, functions to be implemented
+- [ ] Deployment planner, allowing functions to be deployed as embedded (Wasm) or remote with autoscaling rules
+- [ ] Background processing logic (pull-based)
+- [ ] Background processing logic (stream-based)
+- [ ] Generate functions from OpenAPI, gRPC spec
+- [ ] Language server with autocomplete
