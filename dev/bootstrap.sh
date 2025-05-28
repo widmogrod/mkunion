@@ -8,7 +8,7 @@ envrc_file=$project_root/.envrc
 echo "Check if necessary tools are installed"
 command -v go >/dev/null 2>&1 || { echo >&2 "golang is not installed. Aborting."; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo >&2 "docker is not installed. Aborting."; exit 1; }
-command -v docker-compose >/dev/null 2>&1 || { echo >&2 "docker-compose is not installed. Aborting."; exit 1; }
+command -v docker compose >/dev/null 2>&1 || { echo >&2 "docker compose is not installed. Aborting."; exit 1; }
 command -v awslocal >/dev/null 2>&1 || { echo >&2 "awslocal is not installed. Aborting. Please run
   pip install awscli-local  "; exit 1; }
 
