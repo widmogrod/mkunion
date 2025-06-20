@@ -7,15 +7,21 @@ type TranslateSyntaxASTtoOperatorAST struct {
 }
 
 func (a *TranslateSyntaxASTtoOperatorAST) VisitEqTo(v *EqTo) any {
+	// Create a copy of currentField to avoid sharing the underlying array
+	pathCopy := make([]string, len(a.currentField))
+	copy(pathCopy, a.currentField)
 	return &Eq{
-		L: &Accessor{a.currentField},
+		L: &Accessor{pathCopy},
 		R: &Lit{Value: v.V},
 	}
 }
 
 func (a *TranslateSyntaxASTtoOperatorAST) VisitGrThan(v *GrThan) any {
+	// Create a copy of currentField to avoid sharing the underlying array
+	pathCopy := make([]string, len(a.currentField))
+	copy(pathCopy, a.currentField)
 	return &Gt{
-		L: &Accessor{a.currentField},
+		L: &Accessor{pathCopy},
 		R: &Lit{Value: v.V},
 	}
 }

@@ -130,7 +130,7 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.Findi
 	// For example Record[User]
 	// should be accessed as
 	//		Data.Name, Data.Age
-	// wheere internal representation Record[schema.Schen] is access it
+	// where internal representation Record[schema.Schema] is access it
 	//		Data["schema.Map"].Name, Data["schema.Map"].Age
 	// This means, that we need add between data path and
 
