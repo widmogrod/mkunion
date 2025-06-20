@@ -6,43 +6,62 @@ You are tasked with analyzing a test file for flakiness, identifying patterns in
 $ARGUMENTS.
 </test_file>
 
+2. Critical Mindset: Fight Confirmation Bias
+   - If a fix commit exists, READ IT FIRST - your hypothesis must explain why that specific fix works
+   - Always try to DISPROVE your hypothesis, not just prove it
+   - Ask yourself: "What evidence would contradict my theory?"
+   - List multiple competing hypotheses before investigating any single one
+   - Warning: The simplest explanation that matches the fix is usually correct
 
-2. Identify flakiness in the test file:
+3. Identify flakiness in the test file:
   - Look for tests that might produce inconsistent results
   - Check for time-dependent assertions, race conditions, or external dependencies
   - Note any suspicious patterns or code that could lead to intermittent failures
 
-3. Search for existing patterns in the codebase that might solve this problem differently:
+4. Search for existing patterns in the codebase that might solve this problem differently:
   - Examine how similar tests are structured in other parts of the codebase
   - Look for utility functions or helper classes that might be relevant
   - Identify any best practices or design patterns used elsewhere that could be applied here
 
-4. Decompose and isolate the root cause using small iterative experiments:
-  - Propose up to 6 small experiments to isolate the issue
-  - For each experiment, describe:
-    a) The hypothesis
-    b) The proposed change
-    c) The expected outcome
-  - After each experiment, analyze the results and refine your understanding of the root cause
+5. Hypothesis Testing Through Experiments (Fight Confirmation Bias):
+  - For each hypothesis, design experiments to both PROVE and DISPROVE it
+  - Structure each experiment as:
+    a) Hypothesis: Clear statement of what you think causes the issue
+    b) Proof test: How to demonstrate this hypothesis is true
+    c) Disproof test: How to demonstrate this hypothesis is FALSE
+    d) Red flag: If you can't design a disproof test, the hypothesis is too vague
+  - Example:
+    * Hypothesis: "Map ordering causes flakiness"
+    * Proof test: "Show test fails with different orderings"
+    * Disproof test: "Check if the fix addresses ordering" (if fix is unrelated to ordering, hypothesis is wrong!)
+  - After each experiment, eliminate disproven hypotheses and refine remaining ones
 
-5. Consider solutions at different abstraction levels:
+6. Consider solutions at different abstraction levels:
   - Think about immediate fixes for the specific issue
   - Explore potential changes to the testing framework or methodology
   - Consider if there are higher-level APIs or architectural changes that could prevent similar issues
 
-6. Propose at least 3 different solutions at different abstraction levels:
+7. Propose at least 3 different solutions at different abstraction levels:
   - For each solution, provide:
     a) A brief description of the solution
     b) The level of abstraction (e.g., quick fix, mid-level change, high-level API change)
     c) Pros and cons of the approach
     d) Potential impact on the rest of the codebase
 
-7. Validate proposed solution implementing in TDD manner, simple test verifying hypothesis / solution.
+8. Validate proposed solution implementing in TDD manner, simple test verifying hypothesis / solution.
   - Propose solutions only when they're verifiable via successful tests
   - Create each hypothesis should have it's own test file
-  - Iterate quickly in blue, read, green flow to cut dead ends fast, and learn even faster whenever it's worth investing further.
+  - Iterate quickly in blue, red, green flow to cut dead ends fast, and learn even faster whenever it's worth investing further.
+  - Each test should verify both that the solution works AND that it addresses the actual root cause
 
-8Summarize your findings and recommendations:
+9. Warning Signs of Confirmation Bias to Watch For:
+  - You're ignoring evidence that doesn't fit your theory
+  - You're making the fix fit your hypothesis instead of vice versa
+  - Your explanation is becoming increasingly complex
+  - You haven't questioned why your "proof" differs from what the actual fix does
+  - You can't explain why the specific fix that was applied would solve your hypothesized problem
+
+10. Summarize your findings and recommendations:
   - Briefly restate the identified flakiness issue
   - Summarize the root cause
   - List your proposed solutions in order of recommendation
