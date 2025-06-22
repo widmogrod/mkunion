@@ -255,29 +255,3 @@
 - name: "sp:13"
   color: "03a9f4"
   description: "13 story points"
-
-# Label groups (for organization)
-label_groups:
-  states:
-    description: "Issue lifecycle states"
-    labels: ["inbox", "needs-human-review", "needs-ai-refinement", "approved", "ready", "in-progress", "in-code-review", "in-acceptance", "done", "archived"]
-    
-  types:
-    description: "Issue types"
-    labels: ["feature", "bug", "documentation", "chore", "refactor"]
-    
-  priorities:
-    description: "Priority levels"
-    labels: ["priority:critical", "priority:high", "priority:medium", "priority:low"]
-    
-  areas:
-    description: "Code areas"
-    labels: ["area:state-machine", "area:codegen", "area:type-system", "area:storage", "area:workflow"]
-    
-  sizes:
-    description: "PR sizes"
-    labels: ["size:XS", "size:S", "size:M", "size:L", "size:XL"]
-    
-  points:
-    description: "Story points"
-    labels: ["sp:1", "sp:2", "sp:3", "sp:5", "sp:8", "sp:13"]

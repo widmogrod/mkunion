@@ -141,17 +141,17 @@ automation_rules:
 views:
   - name: "Sprint Board"
     filter: "milestone:current"
-    columns: ["TODO", "In Progress", "Code Review", "Acceptance", "Done"]
+    columns: [ "TODO", "In Progress", "Code Review", "Acceptance", "Done" ]
     grouping: "assignee"
 
   - name: "Backlog Planning"
     filter: "no:milestone"
-    columns: ["Inbox", "Human Review", "AI Refinement", "Backlog"]
+    columns: [ "Inbox", "Human Review", "AI Refinement", "Backlog" ]
     grouping: "priority"
 
   - name: "My Work"
     filter: "assignee:@me"
-    columns: ["TODO", "In Progress", "Code Review"]
+    columns: [ "TODO", "In Progress", "Code Review" ]
     grouping: "none"
 
   - name: "Blocked Items"
@@ -180,16 +180,16 @@ metrics:
   cycle_time:
     start: "In Progress"
     end: "Done"
-    
+
   lead_time:
     start: "Inbox"
     end: "Done"
-    
+
   throughput:
     measure: "cards_completed"
     period: "week"
-    
+
   wip:
-    columns: ["In Progress", "Code Review"]
+    columns: [ "In Progress", "Code Review" ]
     warning_threshold: 15
     critical_threshold: 20
