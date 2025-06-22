@@ -170,5 +170,4 @@ suite.SelfDocumentStateDiagram(t, "filename.go")
 - Always run `mkunion watch ./...` before `go generate ./...`
 - The type registry can be disabled with `//go:tag mkunion:",no-type-registry"`
 - When running tests that use AWS services, ensure the development environment is bootstrapped
-- Export `RUN_EXPERIMENTAL_TEST="false"` to skip experimental tests in CI
 - On Mac with Colima: ensure Colima is running before executing `dev/bootstrap.sh`
