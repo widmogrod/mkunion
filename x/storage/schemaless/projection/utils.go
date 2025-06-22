@@ -58,7 +58,7 @@ func GenerateItemsEvery(start int64, size int, every time.Duration) chan Item {
 				EventTime: t.UnixNano(),
 			}
 			t = t.Add(every)
-			time.Sleep(every)
+			//time.Sleep(every)
 		}
 	}()
 	return ch
