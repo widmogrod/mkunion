@@ -139,6 +139,7 @@ func (l *ListAssert) AssertAt(index int, expected Item) bool {
 }
 
 func (l *ListAssert) Contains(expected Item) bool {
+	l.t.Helper()
 	for _, item := range l.Items {
 		if diff := cmp.Diff(expected, item); diff == "" {
 			return true
