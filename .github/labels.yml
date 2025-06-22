@@ -1,0 +1,257 @@
+# GitHub Labels Configuration
+# This file defines all labels used in the agile workflow
+
+# State labels (mutually exclusive)
+- name: "inbox"
+  color: "fbca04"
+  description: "New issue awaiting triage"
+
+- name: "needs-human-review"
+  color: "d4c5f9"
+  description: "Requires human validation before proceeding"
+
+- name: "needs-ai-refinement"
+  color: "c5def5"
+  description: "Sent back to AI for more details"
+
+- name: "approved"
+  color: "0e8a16"
+  description: "Validated and ready for backlog"
+
+- name: "ready"
+  color: "2ea44f"
+  description: "Prioritized and ready for development"
+
+- name: "in-progress"
+  color: "1d76db"
+  description: "Actively being worked on"
+
+- name: "in-code-review"
+  color: "5319e7"
+  description: "PR submitted, awaiting review"
+
+- name: "in-acceptance"
+  color: "9b59b6"
+  description: "Deployed and awaiting verification"
+
+- name: "done"
+  color: "98fb98"
+  description: "Completed and verified"
+
+- name: "archived"
+  color: "cccccc"
+  description: "Archived after completion"
+
+# Type labels
+- name: "feature"
+  color: "a2eeef"
+  description: "New feature or enhancement"
+
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "chore"
+  color: "fef2c0"
+  description: "Maintenance or housekeeping"
+
+- name: "refactor"
+  color: "d4a5a5"
+  description: "Code improvement without functional changes"
+
+# Priority labels
+- name: "priority:critical"
+  color: "b60205"
+  description: "Drop everything and fix"
+
+- name: "priority:high"
+  color: "ff9f1c"
+  description: "Important, schedule immediately"
+
+- name: "priority:medium"
+  color: "fbca04"
+  description: "Normal priority"
+
+- name: "priority:low"
+  color: "c2e0c6"
+  description: "Nice to have, schedule when possible"
+
+# Special status labels
+- name: "blocked"
+  color: "e11d21"
+  description: "Cannot proceed due to external dependency"
+
+- name: "stale"
+  color: "795548"
+  description: "No activity for extended period"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+# Area labels
+- name: "area:state-machine"
+  color: "006b75"
+  description: "State machine framework"
+
+- name: "area:codegen"
+  color: "006b75"
+  description: "Code generation functionality"
+
+- name: "area:type-system"
+  color: "006b75"
+  description: "Type system and shape inference"
+
+- name: "area:storage"
+  color: "006b75"
+  description: "Storage and persistence layer"
+
+- name: "area:workflow"
+  color: "006b75"
+  description: "Workflow engine"
+
+# Source labels
+- name: "ai-generated"
+  color: "8b4513"
+  description: "Created by AI assistant"
+
+- name: "ai-refined"
+  color: "daa520"
+  description: "Refined by AI after human feedback"
+
+# Quality labels
+- name: "needs-improvement"
+  color: "e99695"
+  description: "Does not meet quality standards"
+
+- name: "quality-validated"
+  color: "c2e0c6"
+  description: "Meets all quality requirements"
+
+- name: "needs-tests"
+  color: "f9d0c4"
+  description: "Tests need to be added or updated"
+
+# Sprint labels
+- name: "sprint:current"
+  color: "3f51b5"
+  description: "Part of current sprint"
+
+- name: "carryover"
+  color: "9c27b0"
+  description: "Carried over from previous sprint"
+
+# Size labels (for PRs)
+- name: "size:XS"
+  color: "008672"
+  description: "Extra small PR (<50 lines)"
+
+- name: "size:S"
+  color: "008672"
+  description: "Small PR (50-200 lines)"
+
+- name: "size:M"
+  color: "fbca04"
+  description: "Medium PR (200-500 lines)"
+
+- name: "size:L"
+  color: "ff9f1c"
+  description: "Large PR (500-1000 lines)"
+
+- name: "size:XL"
+  color: "e11d21"
+  description: "Extra large PR (>1000 lines)"
+
+# Review labels
+- name: "ready-for-review"
+  color: "0e8a16"
+  description: "PR is ready for review"
+
+- name: "needs-work"
+  color: "e99695"
+  description: "PR needs changes before review"
+
+- name: "fast-track"
+  color: "00ff00"
+  description: "Eligible for expedited review"
+
+- name: "ready-to-merge"
+  color: "2ea44f"
+  description: "Approved and ready to merge"
+
+# Automation labels
+- name: "automated"
+  color: "8b949e"
+  description: "Created by automation"
+
+- name: "skip-ci"
+  color: "8b949e"
+  description: "Skip continuous integration"
+
+# Alert labels
+- name: "urgent"
+  color: "b60205"
+  description: "Requires immediate attention"
+
+- name: "sla-violation"
+  color: "ff6b6b"
+  description: "SLA has been violated"
+
+- name: "capacity-exceeded"
+  color: "ffa94d"
+  description: "Assignee over capacity"
+
+# Metric labels
+- name: "metrics"
+  color: "1f77b4"
+  description: "Metrics and reporting"
+
+- name: "velocity-data"
+  color: "1f77b4"
+  description: "Velocity tracking data"
+
+# Special workflow labels
+- name: "verification-pending"
+  color: "9b59b6"
+  description: "Awaiting acceptance verification"
+
+- name: "verification-failed"
+  color: "e11d21"
+  description: "Failed acceptance testing"
+
+- name: "verified"
+  color: "0e8a16"
+  description: "Passed acceptance testing"
+
+# Story point labels
+- name: "sp:1"
+  color: "e1f5fe"
+  description: "1 story point"
+
+- name: "sp:2"
+  color: "b3e5fc"
+  description: "2 story points"
+
+- name: "sp:3"
+  color: "81d4fa"
+  description: "3 story points"
+
+- name: "sp:5"
+  color: "4fc3f7"
+  description: "5 story points"
+
+- name: "sp:8"
+  color: "29b6f6"
+  description: "8 story points"
+
+- name: "sp:13"
+  color: "03a9f4"
+  description: "13 story points"

@@ -1,0 +1,195 @@
+# GitHub Project Board Configuration
+# This file defines the structure and automation rules for the agile project board
+
+project:
+  name: "mkunion Agile Board"
+  description: "Agile project management board with AI integration support"
+  visibility: "public"
+
+columns:
+  - name: "Inbox"
+    description: "New issues land here for triage"
+    position: 1
+    automation:
+      preset: "To do"
+      rules:
+        - trigger: "issue.opened"
+          action: "move_to_column"
+        - trigger: "issue.labeled:inbox"
+          action: "move_to_column"
+
+  - name: "Human Review"
+    description: "Issues requiring human validation (especially AI-generated)"
+    position: 2
+    automation:
+      rules:
+        - trigger: "issue.labeled:needs-human-review"
+          action: "move_to_column"
+        - trigger: "issue.unlabeled:needs-human-review"
+          action: "move_from_column"
+
+  - name: "AI Refinement"
+    description: "Issues sent back to AI for more details"
+    position: 3
+    automation:
+      rules:
+        - trigger: "issue.labeled:needs-ai-refinement"
+          action: "move_to_column"
+        - trigger: "issue.unlabeled:needs-ai-refinement"
+          action: "move_from_column"
+
+  - name: "Backlog"
+    description: "Approved issues ready for prioritization"
+    position: 4
+    automation:
+      rules:
+        - trigger: "issue.labeled:approved"
+          action: "move_to_column"
+        - trigger: "issue.labeled:ready"
+          action: "move_from_column"
+    wip_limit: null
+
+  - name: "TODO"
+    description: "Prioritized for current/next sprint"
+    position: 5
+    automation:
+      rules:
+        - trigger: "issue.labeled:ready"
+          action: "move_to_column"
+        - trigger: "issue.labeled:in-progress"
+          action: "move_from_column"
+    wip_limit: 20
+
+  - name: "In Progress"
+    description: "Actively being worked on (max 2 per engineer)"
+    position: 6
+    automation:
+      preset: "In progress"
+      rules:
+        - trigger: "issue.labeled:in-progress"
+          action: "move_to_column"
+        - trigger: "pull_request.opened"
+          action: "move_linked_issues"
+    wip_limit: 10
+
+  - name: "Code Review"
+    description: "PR submitted, awaiting review"
+    position: 7
+    automation:
+      rules:
+        - trigger: "issue.labeled:in-code-review"
+          action: "move_to_column"
+        - trigger: "pull_request.review_requested"
+          action: "move_linked_issues"
+        - trigger: "pull_request.merged"
+          action: "move_from_column"
+
+  - name: "Acceptance"
+    description: "Deployed and awaiting verification"
+    position: 8
+    automation:
+      rules:
+        - trigger: "issue.labeled:in-acceptance"
+          action: "move_to_column"
+        - trigger: "pull_request.merged"
+          action: "move_linked_issues"
+        - trigger: "issue.closed"
+          action: "move_from_column"
+
+  - name: "Done"
+    description: "Completed and verified (auto-cleaned biweekly)"
+    position: 9
+    automation:
+      preset: "Done"
+      rules:
+        - trigger: "issue.closed"
+          action: "move_to_column"
+        - trigger: "issue.labeled:done"
+          action: "move_to_column"
+
+# Card display settings
+card_settings:
+  show_labels: true
+  show_assignees: true
+  show_linked_prs: true
+  show_milestones: true
+  show_estimates: true
+
+# Automation rules
+automation_rules:
+  # Capacity management
+  - name: "Enforce WIP limits"
+    trigger: "card.moved"
+    condition: "column.card_count > column.wip_limit"
+    action: "block_move"
+    message: "WIP limit exceeded. Complete existing work first."
+
+  # Auto-assignment
+  - name: "Auto-assign from TODO"
+    trigger: "card.moved_to:In Progress"
+    condition: "card.assignees.count == 0"
+    action: "suggest_assignee"
+    based_on: "workload,skills"
+
+  # Stale card handling
+  - name: "Flag stale cards"
+    trigger: "daily"
+    condition: "card.updated_at < 14.days.ago AND column.name == 'In Progress'"
+    action: "add_label:stale"
+
+# Views
+views:
+  - name: "Sprint Board"
+    filter: "milestone:current"
+    columns: [ "TODO", "In Progress", "Code Review", "Acceptance", "Done" ]
+    grouping: "assignee"
+
+  - name: "Backlog Planning"
+    filter: "no:milestone"
+    columns: [ "Inbox", "Human Review", "AI Refinement", "Backlog" ]
+    grouping: "priority"
+
+  - name: "My Work"
+    filter: "assignee:@me"
+    columns: [ "TODO", "In Progress", "Code Review" ]
+    grouping: "none"
+
+  - name: "Blocked Items"
+    filter: "label:blocked"
+    columns: "all"
+    grouping: "reason"
+
+# Integrations
+integrations:
+  slack:
+    enabled: false
+    events:
+      - "card.moved_to:Done"
+      - "column.wip_limit_exceeded"
+      - "card.blocked"
+
+  github_actions:
+    enabled: true
+    workflows:
+      - "issue-lifecycle.yml"
+      - "pr-lifecycle.yml"
+      - "sprint-management.yml"
+
+# Metrics tracking
+metrics:
+  cycle_time:
+    start: "In Progress"
+    end: "Done"
+
+  lead_time:
+    start: "Inbox"
+    end: "Done"
+
+  throughput:
+    measure: "cards_completed"
+    period: "week"
+
+  wip:
+    columns: [ "In Progress", "Code Review" ]
+    warning_threshold: 15
+    critical_threshold: 20
