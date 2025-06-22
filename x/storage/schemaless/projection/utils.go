@@ -1,6 +1,7 @@
 package projection
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/schema"
 	"sync"
@@ -128,16 +129,22 @@ func (l *ListAssert) AssertLen(expected int) bool {
 }
 
 func (l *ListAssert) AssertAt(index int, expected Item) bool {
-	return assert.Equal(l.t, expected, l.Items[index])
+	l.t.Helper()
+	if diff := cmp.Diff(expected, l.Items[index]); diff != "" {
+		l.t.Fatalf("mismatch at index %d (-want +got):\n%s", index, diff)
+		return false
+	}
+
+	return true
 }
 
 func (l *ListAssert) Contains(expected Item) bool {
 	for _, item := range l.Items {
-		if assert.Equal(l.t, expected, item) {
+		if diff := cmp.Diff(expected, item); diff == "" {
 			return true
 		}
 	}
 
-	l.t.Errorf("expected to find %v in result set but failed", expected)
+	l.t.Fatalf("projection to find %v in result set but failed", expected)
 	return false
 }
