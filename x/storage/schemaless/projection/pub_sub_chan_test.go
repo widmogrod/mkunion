@@ -24,9 +24,14 @@ func TestPubSubChan(t *testing.T) {
 		assert.Equal(t, err2, err)
 	}()
 
+	start := time.Now()
+	timeout := 1 * time.Second
 	for !psc.HasSubscribers() {
+		if time.Since(start) > timeout {
+			t.Fatal("timeout waiting for subscribers")
+		}
 		// wait for subscribers
-		time.Sleep(time.Millisecond * 10)
+		time.Sleep(time.Millisecond * 100)
 	}
 
 	err3 := psc.Publish("foo")
