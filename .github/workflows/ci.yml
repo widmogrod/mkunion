@@ -30,22 +30,8 @@ jobs:
       - run: pip install awscli-local
       - run: dev/bootstrap.sh -nologs
 
-      - run: |
-          find . -type f -name '*.go' -exec grep -C 2 -H 'github.com/opensearch-project/opensearch-go/v2' {} + &2>/dev/null || true
-
-      - run: |
-          ls -la /home/runner/go/pkg/mod/github.com/opensearch-project/opensearch-go
-          ls -la /home/runner/go/pkg/mod/cache/download/github.com/opensearch-project/opensearch-go
-          
-          tree /home/runner/go/pkg/mod/github.com/opensearch-project/opensearch-go
-          tree /home/runner/go/pkg/mod/cache/download/github.com/opensearch-project/opensearch-go
-
-      - run: |
-          cat x/storage/schemaless/types_reg_gen.go
-          
       # run tests
       - run: |
-          export RUN_EXPERIMENTAL_TEST="false"
           set -e
           retries=3
           until [ $retries -le 0 ]; do

@@ -3,6 +3,7 @@ package projection
 import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
+	"sync"
 	"time"
 )
 
@@ -301,6 +302,7 @@ func NewWindowBuffer(wd WindowDescription, sig WindowBufferSignaler) *WindowBuff
 		wd:           wd,
 		sig:          sig,
 		windowGroups: map[string]*ItemGroupedByWindow{},
+		windowOrder:  nil,
 	}
 }
 
@@ -308,6 +310,8 @@ type WindowBuffer struct {
 	wd           WindowDescription
 	sig          WindowBufferSignaler
 	windowGroups map[string]*ItemGroupedByWindow
+	windowOrder  []string
+	lock         sync.RWMutex
 }
 
 func (wb *WindowBuffer) Append(x Item) {
@@ -349,14 +353,30 @@ func (wb *WindowBuffer) Append(x Item) {
 // Backfill is the same as using already existing DAG, but only with different input.
 
 func (wb *WindowBuffer) EachItemGroupedByWindow(f func(group *ItemGroupedByWindow)) {
-	for _, group := range wb.windowGroups {
+	wb.lock.RLock()
+	// Create a snapshot of the groups to iterate over.
+	groups := make([]*ItemGroupedByWindow, 0, len(wb.windowGroups))
+	for _, key := range wb.windowOrder {
+		groups = append(groups, wb.windowGroups[key])
+	}
+	wb.lock.RUnlock()
+
+	// Now, iterate over the snapshot outside of the lock.
+	for _, group := range groups {
 		f(group)
 	}
 }
 
 func (wb *WindowBuffer) EachKeyedWindow(kw *KeyedWindow, f func(group *ItemGroupedByWindow)) {
 	key := KeyedWindowKey(kw)
-	if group, ok := wb.windowGroups[key]; ok {
+
+	wb.lock.RLock()
+	// Find the group under a read lock.
+	group, ok := wb.windowGroups[key]
+	wb.lock.RUnlock()
+
+	// Call the function after the lock has been released.
+	if ok {
 		f(group)
 	}
 }
@@ -364,7 +384,18 @@ func (wb *WindowBuffer) EachKeyedWindow(kw *KeyedWindow, f func(group *ItemGroup
 func (wb *WindowBuffer) RemoveItemGropedByWindow(item *ItemGroupedByWindow) {
 	kw := ToKeyedWindowFromGrouped(item)
 	key := KeyedWindowKey(kw)
+
+	wb.lock.Lock()
 	delete(wb.windowGroups, key)
+	newOrder := make([]string, 0, len(wb.windowOrder)-1)
+	for _, k := range wb.windowOrder {
+		if k != key {
+			newOrder = append(newOrder, k)
+		}
+	}
+	wb.windowOrder = newOrder
+	wb.lock.Unlock()
+
 	wb.sig.SignalWindowDeleted(kw)
 }
 
@@ -373,22 +404,32 @@ func (wb *WindowBuffer) GroupAlsoByWindow(x []ItemGroupedByKey) {
 		for _, item := range group.Data {
 			kw := ToKeyedWindowFromItem(&item)
 			key := KeyedWindowKey(kw)
-			if _, ok := wb.windowGroups[key]; !ok {
-				wb.windowGroups[key] = &ItemGroupedByWindow{
+
+			var created bool
+			var newSize int
+
+			wb.lock.Lock()
+			g, ok := wb.windowGroups[key]
+			if !ok {
+				g = &ItemGroupedByWindow{
 					Key:    group.Key,
 					Data:   &schema.List{},
 					Window: item.Window,
 				}
-
-				wb.sig.SignalWindowCreated(kw)
+				wb.windowGroups[key] = g
+				wb.windowOrder = append(wb.windowOrder, key)
+				created = true
 			}
 
-			wb.windowGroups[key].Data = schema.AppendList(
-				wb.windowGroups[key].Data,
-				item.Data,
-			)
+			g.Data = schema.AppendList(g.Data, item.Data)
+			newSize = len(*g.Data)
+			wb.lock.Unlock()
 
-			wb.sig.SignalWindowSizeReached(kw, len(*wb.windowGroups[key].Data))
+			// Call signals outside the lock to prevent deadlocks.
+			if created {
+				wb.sig.SignalWindowCreated(kw)
+			}
+			wb.sig.SignalWindowSizeReached(kw, newSize)
 		}
 	}
 }

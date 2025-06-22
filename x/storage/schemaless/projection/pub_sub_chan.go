@@ -167,3 +167,9 @@ func (s *PubSubChan[T]) Close() {
 		<-s.closed
 	})
 }
+
+func (s *PubSubChan[T]) HasSubscribers() bool {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return len(s.subscribers) > 0
+}
