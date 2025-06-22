@@ -4,18 +4,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/schema"
 	"math"
-	"os"
+	"sort"
+	"sync"
 	"testing"
 	"time"
 )
 
 func TestTriggers(t *testing.T) {
-	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
-		t.Skip(`Skipping test because:
-- RUN_EXPERIMENTAL_TEST=false is set.
-`)
-	}
-
 	useCases := map[string]struct {
 		td       TriggerDescription
 		wd       WindowDescription
@@ -143,21 +138,67 @@ func TestTriggers(t *testing.T) {
 
 			wb := NewWindowBuffer(uc.wd, trigger)
 
+			// Use a channel to track when all expected results have been collected
+			done := make(chan struct{})
+			var mu sync.Mutex
+
 			trigger.WhenTrigger(func(kw *KeyedWindow) {
 				wb.EachKeyedWindow(kw, func(group *ItemGroupedByWindow) {
+					mu.Lock()
 					returning.Returning(ToElement(group))
 					wb.RemoveItemGropedByWindow(group)
+					// Check if we've collected all expected results
+					if len(returning.Items) == len(uc.expected) {
+						select {
+						case <-done:
+							// Already closed
+						default:
+							close(done)
+						}
+					}
+					mu.Unlock()
 				})
 			})
 
-			for item := range GenerateItemsEvery(withTime(10, 0), 20, 10*time.Millisecond) {
+			// Generate all items with deterministic event times
+			startTime := withTime(10, 0)
+			items := make([]Item, 20)
+			for i := 0; i < 20; i++ {
+				items[i] = Item{
+					Key:       "key",
+					Data:      schema.MkInt(int64(i)),
+					EventTime: startTime + int64(i)*10*int64(time.Millisecond),
+				}
+			}
+
+			// Process all items
+			for _, item := range items {
 				wb.Append(item)
 			}
 
 			// trigger watermark that there won't be any more events
 			trigger.SignalWatermark(math.MaxInt64)
 
-			time.Sleep(100 * time.Millisecond)
+			// Wait for all expected results to be collected with timeout
+			select {
+			case <-done:
+				// All results collected successfully
+			case <-time.After(1 * time.Second):
+				mu.Lock()
+				actualCount := len(returning.Items)
+				mu.Unlock()
+				t.Fatalf("Timeout waiting for results. Expected %d, got %d", len(uc.expected), actualCount)
+			}
+
+			// Sort results by window start time to ensure consistent ordering
+			sort.Slice(returning.Items, func(i, j int) bool {
+				if returning.Items[i].Window == nil || returning.Items[j].Window == nil {
+					return false
+				}
+				return returning.Items[i].Window.Start < returning.Items[j].Window.Start
+			})
+
+			// Now assert the results
 			for i, expected := range uc.expected {
 				returning.AssertAt(i, expected)
 			}
@@ -166,12 +207,6 @@ func TestTriggers(t *testing.T) {
 }
 
 func TestAggregate(t *testing.T) {
-	if os.Getenv("RUN_EXPERIMENTAL_TEST") == "false" {
-		t.Skip(`Skipping test because:
-- RUN_EXPERIMENTAL_TEST=false is set.
-`)
-	}
-
 	// arithmetic sum of series 0..9, 10..19, 0 .. 19
 	// 45, 145, 190
 	useCases := map[string]struct {
@@ -338,22 +373,68 @@ func TestAggregate(t *testing.T) {
 				bag: NewInMemoryBagOf[Item](),
 			}
 
+			// Use a channel to track when all expected results have been collected
+			done := make(chan struct{})
+			var mu sync.Mutex
+
 			trigger.WhenTrigger(func(kw *KeyedWindow) {
 				wb.EachKeyedWindow(kw, func(group *ItemGroupedByWindow) {
+					mu.Lock()
 					err := handler2.Process(ToElement(group), returning.Returning)
 					assert.NoError(t, err)
 					wb.RemoveItemGropedByWindow(group)
+					// Check if we've collected all expected results
+					if len(returning.Items) == len(uc.expected) {
+						select {
+						case <-done:
+							// Already closed
+						default:
+							close(done)
+						}
+					}
+					mu.Unlock()
 				})
 			})
 
-			for item := range GenerateItemsEvery(withTime(10, 0), 20, 10*time.Millisecond) {
+			// Generate all items with deterministic event times
+			startTime := withTime(10, 0)
+			items := make([]Item, 20)
+			for i := 0; i < 20; i++ {
+				items[i] = Item{
+					Key:       "key",
+					Data:      schema.MkInt(int64(i)),
+					EventTime: startTime + int64(i)*10*int64(time.Millisecond),
+				}
+			}
+
+			// Process all items
+			for _, item := range items {
 				wb.Append(item)
 			}
 
 			// trigger watermark that there won't be any more events
 			trigger.SignalWatermark(math.MaxInt64)
 
-			time.Sleep(100 * time.Millisecond)
+			// Wait for all expected results to be collected with timeout
+			select {
+			case <-done:
+				// All results collected successfully
+			case <-time.After(1 * time.Second):
+				mu.Lock()
+				actualCount := len(returning.Items)
+				mu.Unlock()
+				t.Fatalf("Timeout waiting for results. Expected %d, got %d", len(uc.expected), actualCount)
+			}
+
+			// Sort results by window start time to ensure consistent ordering
+			sort.Slice(returning.Items, func(i, j int) bool {
+				if returning.Items[i].Window == nil || returning.Items[j].Window == nil {
+					return false
+				}
+				return returning.Items[i].Window.Start < returning.Items[j].Window.Start
+			})
+
+			// Now assert the results
 			for i, expected := range uc.expected {
 				returning.AssertAt(i, expected)
 			}
