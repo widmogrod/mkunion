@@ -21,7 +21,7 @@ func TestPubSubChan(t *testing.T) {
 			assert.Equal(t, "foo", msg)
 			return err
 		})
-		assert.Error(t, err2, err)
+		assert.Equal(t, err2, err)
 	}()
 
 	for !psc.HasSubscribers() {
