@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://widmogrod.github.io/mkunion/
+    about: Read the documentation for usage guides and examples
+  - name: Discussions
+    url: https://github.com/widmogrod/mkunion/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Security Issues
+    url: https://github.com/widmogrod/mkunion/security/policy
+    about: Please report security vulnerabilities privately

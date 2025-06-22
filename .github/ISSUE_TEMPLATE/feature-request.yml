@@ -1,0 +1,105 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature] "
+labels: ["feature", "inbox"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        Thank you for suggesting a new feature! Please provide detailed information to help us understand and evaluate your request.
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem Description
+      description: What problem does this feature solve?
+      placeholder: |
+        A clear and concise description of the problem you're trying to solve.
+        Ex. I'm always frustrated when [...]
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like to see this problem solved?
+      placeholder: |
+        A clear and concise description of what you want to happen.
+        Include any specific implementation ideas if you have them.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternative solutions or features have you considered?
+      placeholder: |
+        A clear and concise description of any alternative solutions or features you've considered.
+        Why is your proposed solution better?
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Provide specific examples of how this feature would be used
+      placeholder: |
+        1. As a [type of user], I want to [action] so that [benefit]
+        2. When [situation], I need to [action] to achieve [goal]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical - Blocking my work
+        - High - Significant impact on productivity
+        - Medium - Would be nice to have
+        - Low - Minor improvement
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-area
+    attributes:
+      label: Feature Area
+      description: Which area of the system does this feature affect?
+      options:
+        - State Machines
+        - Code Generation
+        - Type System
+        - Storage
+        - Workflow Engine
+        - Documentation
+        - Testing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: success-criteria
+    attributes:
+      label: Success Criteria
+      description: How will we know when this feature is successfully implemented?
+      placeholder: |
+        - [ ] Specific measurable outcome 1
+        - [ ] Specific measurable outcome 2
+        - [ ] Documentation is updated
+        - [ ] Tests cover the new functionality
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched for similar feature requests
+          required: true
+        - label: I have provided clear use cases
+          required: true
+        - label: I am willing to help test this feature
+          required: false
