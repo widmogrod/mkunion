@@ -268,11 +268,11 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 				lastOffset,
 				func(msg Message) error {
 					if msg.Item != nil {
-						log.Info("window buffer msg", msg)
+						log.Info("DoWindow: buffer msg", msg)
 						z := *msg.Item
 						wb.Append(z)
 					} else if msg.Watermark != nil {
-						log.Info("window watermark", msg)
+						log.Info("DoWindow: watermark", msg)
 						trigger.SignalWatermark(*msg.Watermark)
 
 						// forward watermark
@@ -284,7 +284,7 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 							panic(err)
 						}
 					} else {
-						panic("unknown message type")
+						panic("DoWindow: unknown message type")
 					}
 
 					return nil
@@ -312,7 +312,7 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 				lastOffset,
 				func(msg Message) error {
 					if msg.Item != nil {
-						log.Info("window buffer msg", msg)
+						log.Info("DoMap buffer msg", msg)
 						z := *msg.Item
 
 						if z.Type == ItemRetractAndAggregate {
@@ -412,8 +412,8 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 									panic(err)
 								}
 
-								log.Errorln("AccumulatingAndRetracting ", key)
-								log.Errorln("AccumulatingAndRetracting ", isError, isFound)
+								log.Errorln("DoMap: AccumulatingAndRetracting ", key)
+								log.Errorln("DoMap: AccumulatingAndRetracting ", isError, isFound)
 
 								var item2 Item
 								if isFound {
@@ -481,7 +481,7 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 							},
 						)
 					} else if msg.Watermark != nil {
-						log.Info("window watermark", msg)
+						log.Info("DoMap: watermark", msg)
 
 						// forward watermark
 						err := i.pubsub.Publish(ctx, x, Message{
@@ -492,14 +492,14 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 							panic(err)
 						}
 					} else {
-						panic("unknown message type")
+						panic("DoMap: unknown message type")
 					}
 
 					return nil
 				},
 			)
 			if err != nil {
-				return fmt.Errorf("interpreter.DoWindow(1) %w", err)
+				return fmt.Errorf("interpreter.Map(1) %w", err)
 			}
 
 			log.Debugln("DoMap: Finish", i.str(x))
