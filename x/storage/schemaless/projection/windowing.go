@@ -302,6 +302,7 @@ func NewWindowBuffer(wd WindowDescription, sig WindowBufferSignaler) *WindowBuff
 		wd:           wd,
 		sig:          sig,
 		windowGroups: map[string]*ItemGroupedByWindow{},
+		windowOrder:  nil,
 	}
 }
 
@@ -309,6 +310,7 @@ type WindowBuffer struct {
 	wd           WindowDescription
 	sig          WindowBufferSignaler
 	windowGroups map[string]*ItemGroupedByWindow
+	windowOrder  []string
 	lock         sync.RWMutex
 }
 
@@ -354,8 +356,8 @@ func (wb *WindowBuffer) EachItemGroupedByWindow(f func(group *ItemGroupedByWindo
 	wb.lock.RLock()
 	// Create a snapshot of the groups to iterate over.
 	groups := make([]*ItemGroupedByWindow, 0, len(wb.windowGroups))
-	for _, group := range wb.windowGroups {
-		groups = append(groups, group)
+	for _, key := range wb.windowOrder {
+		groups = append(groups, wb.windowGroups[key])
 	}
 	wb.lock.RUnlock()
 
@@ -385,6 +387,13 @@ func (wb *WindowBuffer) RemoveItemGropedByWindow(item *ItemGroupedByWindow) {
 
 	wb.lock.Lock()
 	delete(wb.windowGroups, key)
+	newOrder := make([]string, 0, len(wb.windowOrder)-1)
+	for _, k := range wb.windowOrder {
+		if k != key {
+			newOrder = append(newOrder, k)
+		}
+	}
+	wb.windowOrder = newOrder
 	wb.lock.Unlock()
 
 	wb.sig.SignalWindowDeleted(kw)
@@ -408,6 +417,7 @@ func (wb *WindowBuffer) GroupAlsoByWindow(x []ItemGroupedByKey) {
 					Window: item.Window,
 				}
 				wb.windowGroups[key] = g
+				wb.windowOrder = append(wb.windowOrder, key)
 				created = true
 			}
 
