@@ -315,18 +315,6 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 						log.Info("DoMap buffer msg", msg)
 						z := *msg.Item
 
-						if z.Type == ItemRetractAndAggregate {
-							return x.OnMap.Retract(z, func(item Item) {
-								err := i.pubsub.Publish(ctx, x, Message{
-									Key:  item.Key,
-									Item: &item,
-								})
-								if err != nil {
-									panic(err)
-								}
-							})
-						}
-
 						// If the item doesn't have a window, it means it hasn't been windowed yet
 						// Just pass it through without accumulation logic (only windows groups can be accumulated)
 						if z.Window == nil {
