@@ -10,10 +10,10 @@ import (
 
 func TestTriggers(t *testing.T) {
 	useCases := map[string]struct {
-		td       TriggerDescription
-		wd       WindowDescription
-		fm       WindowFlushMode
-		expected []Item
+		td                TriggerDescription
+		wd                WindowDescription
+		fm                WindowFlushMode
+		expectedToContain []Item
 	}{
 		"should trigger window emitting once at period 100ms, and 10 items arrives as 1 item": {
 			td: &AllOf{
@@ -28,7 +28,7 @@ func TestTriggers(t *testing.T) {
 				Width: 100 * time.Millisecond,
 			},
 			fm: &Discard{},
-			expected: []Item{
+			expectedToContain: []Item{
 				{
 					Key: "key",
 					Data: schema.MkList(
@@ -66,7 +66,7 @@ func TestTriggers(t *testing.T) {
 				Width: 100 * time.Millisecond,
 			},
 			fm: &Discard{},
-			expected: []Item{
+			expectedToContain: []Item{
 				{
 					Key: "key",
 					Data: schema.MkList(
@@ -108,7 +108,7 @@ func TestTriggers(t *testing.T) {
 				Width: 100 * time.Millisecond,
 			},
 			fm: &Discard{},
-			expected: []Item{
+			expectedToContain: []Item{
 				{
 					Key: "key",
 					Data: schema.MkList(
@@ -150,9 +150,10 @@ func TestTriggers(t *testing.T) {
 			// trigger watermark that there won't be any more events
 			trigger.SignalWatermark(math.MaxInt64)
 
-			time.Sleep(100 * time.Millisecond)
-			for i, expected := range uc.expected {
-				returning.AssertAt(i, expected)
+			// because order of windows being flush is not defined
+			// test assertion needs to check if returning results contain expectedToContain value
+			for _, expected := range uc.expectedToContain {
+				returning.Contains(expected)
 			}
 		})
 	}
