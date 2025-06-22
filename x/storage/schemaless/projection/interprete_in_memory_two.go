@@ -294,6 +294,9 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 				return fmt.Errorf("interpreter.Window(1) %w", err)
 			}
 
+			// Trigger final window flush with max watermark
+			trigger.SignalWatermark(math.MaxInt64)
+
 			log.Debugln("DoWindow: Finish", i.str(x))
 			i.pubsub.Finish(ctx, x)
 
