@@ -151,7 +151,7 @@ func (s *PubSubChan[T]) Subscribe(f func(T) error) error {
 	newSubscribers := make([]*subscriber[T], 0, len(s.subscribers)-1)
 	for _, su := range s.subscribers {
 		if su != sub {
-			newSubscribers = append(newSubscribers, sub)
+			newSubscribers = append(newSubscribers, su)
 		}
 	}
 	s.subscribers = newSubscribers
