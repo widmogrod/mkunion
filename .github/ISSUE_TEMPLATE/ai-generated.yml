@@ -1,0 +1,124 @@
+name: AI Generated Issue
+description: Template for issues created by Claude Code or other AI assistants
+title: "[AI] "
+labels: ["ai-generated", "needs-human-review", "inbox"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## AI Generated Issue
+        This issue was created by an AI assistant and requires human review before proceeding to development.
+
+  - type: input
+    id: ai-assistant
+    attributes:
+      label: AI Assistant
+      description: Which AI assistant created this issue?
+      placeholder: "e.g., Claude Code, GitHub Copilot"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: Clear description of the problem or opportunity this issue addresses
+      placeholder: |
+        Describe the problem that needs to be solved or the opportunity to improve the system.
+        Include context about why this is important.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Technical approach suggested by the AI
+      placeholder: |
+        Describe the proposed implementation approach.
+        Include key technical decisions and trade-offs considered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Clear, testable criteria for when this issue is complete
+      placeholder: |
+        - [ ] Criterion 1: Specific, measurable outcome
+        - [ ] Criterion 2: Another testable requirement
+        - [ ] Tests: Unit/integration tests pass
+        - [ ] Documentation: Updated as needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-details
+    attributes:
+      label: Technical Implementation Details
+      description: Specific files, functions, or systems that will be modified
+      placeholder: |
+        **Files to modify:**
+        - `path/to/file.go` - Description of changes
+        
+        **New files to create:**
+        - `path/to/newfile.go` - Purpose of the file
+        
+        **Dependencies:**
+        - External libraries or services required
+    validations:
+      required: true
+
+  - type: dropdown
+    id: estimated-complexity
+    attributes:
+      label: Estimated Complexity
+      description: AI's assessment of implementation complexity
+      options:
+        - "Small (< 4 hours)"
+        - "Medium (4-16 hours)"
+        - "Large (16-40 hours)"
+        - "Extra Large (> 40 hours)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: potential-risks
+    attributes:
+      label: Potential Risks or Considerations
+      description: Any risks, edge cases, or special considerations identified by the AI
+      placeholder: |
+        - Performance implications
+        - Breaking changes
+        - Security considerations
+        - Dependencies on other work
+
+  - type: textarea
+    id: human-review-needed
+    attributes:
+      label: Areas Requiring Human Review
+      description: Specific aspects the AI recommends for human validation
+      placeholder: |
+        - Business logic validation
+        - Architecture decisions
+        - User experience implications
+        - Priority relative to other work
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: ai-validation
+    attributes:
+      label: AI Self-Check
+      description: Confirmations from the AI before submission
+      options:
+        - label: I have searched for similar existing issues
+          required: true
+        - label: I have provided clear acceptance criteria
+          required: true
+        - label: I have identified all files that need modification
+          required: true
+        - label: I have considered security and performance implications
+          required: true
