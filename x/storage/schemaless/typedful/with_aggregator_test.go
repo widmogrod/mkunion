@@ -59,7 +59,8 @@ func TestNewRepositoryInMemory(t *testing.T) {
 		assert.Equal(t, "Jane", result.Items[1].Data.Name)
 	}
 
-	results, err := storage.FindingRecords(schemaless.FindingRecords[schemaless.Record[schema.Schema]]{
+	userCountRepo := NewTypedRepository[UsersCountByAge](storage)
+	results, err := userCountRepo.FindingRecords(schemaless.FindingRecords[schemaless.Record[UsersCountByAge]]{
 		RecordType: "byAge",
 		Sort: []schemaless.SortField{
 			{
@@ -71,12 +72,12 @@ func TestNewRepositoryInMemory(t *testing.T) {
 	assert.NoError(t, err)
 
 	if assert.Len(t, results.Items, 2) {
-		r, err := schemaless.RecordAs[UsersCountByAge](results.Items[0])
+		r := results.Items[0]
 		assert.NoError(t, err)
 		assert.Equal(t, "byAge:20-30", r.ID)
 		assert.Equal(t, 1, r.Data.Count)
 
-		r, err = schemaless.RecordAs[UsersCountByAge](results.Items[1])
+		r = results.Items[1]
 		assert.NoError(t, err)
 		assert.Equal(t, "byAge:30-40", r.ID)
 		assert.Equal(t, 2, r.Data.Count)
