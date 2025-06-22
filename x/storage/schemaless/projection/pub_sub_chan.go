@@ -64,6 +64,7 @@ func NewPubSubChan[T any]() *PubSubChan[T] {
 		subscribers: nil,
 
 		closed: make(chan struct{}),
+		ready:  make(chan struct{}),
 	}
 }
 
@@ -73,8 +74,10 @@ type PubSubChan[T any] struct {
 	subscribers []*subscriber[T]
 	isClosed    atomic.Bool
 	once        sync.Once
+	processOnce sync.Once
 
 	closed chan struct{}
+	ready  chan struct{} // Signals when Process() goroutine is ready
 }
 
 func (s *PubSubChan[T]) Publish(msg T) error {
@@ -93,6 +96,12 @@ func (s *PubSubChan[T]) Publish(msg T) error {
 }
 
 func (s *PubSubChan[T]) Process() {
+	// Signal that Process is ready to handle messages
+	// This is safe to call multiple times due to sync.Once
+	s.processOnce.Do(func() {
+		close(s.ready)
+	})
+
 	var length int
 
 	defer func() {
@@ -125,6 +134,11 @@ func (s *PubSubChan[T]) Process() {
 		}
 		s.lock.RUnlock()
 	}
+}
+
+// WaitReady blocks until the Process goroutine is ready to receive messages
+func (s *PubSubChan[T]) WaitReady() {
+	<-s.ready
 }
 
 func (s *PubSubChan[T]) Subscribe(f func(T) error) error {

@@ -55,6 +55,7 @@ func (i *InMemoryTwoInterpreter) Run(ctx context.Context, nodes []Node) error {
 
 	// Registering new nodes makes sure that, in case of non-deterministic concurrency
 	// when goroutine want to subscribe to a node, it will be registered, even if it's not publishing yet
+	// Register() starts the Process() goroutine immediately
 	for _, node := range nodes {
 		err := i.pubsub.Register(node)
 		if err != nil {
@@ -66,6 +67,12 @@ func (i *InMemoryTwoInterpreter) Run(ctx context.Context, nodes []Node) error {
 		}
 	}
 
+	// Wait for all Process goroutines to be ready before starting any nodes
+	// This ensures that all channels are ready to receive messages before any publishing occurs
+	i.pubsub.WaitReady()
+
+	// Start all nodes concurrently
+	// Now we're guaranteed that all Process goroutines are ready
 	for _, node := range nodes {
 		func(node Node) {
 			group.Go(func() (err error) {
@@ -262,6 +269,8 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 					wb.RemoveItemGropedByWindow(group)
 				})
 			})
+
+			// Subscribe first before signaling ready
 			err := i.pubsub.Subscribe(
 				ctx,
 				x.Input,
@@ -306,6 +315,7 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 			log.Debugln("DoMap: Start ", i.str(x))
 			var lastOffset int = 0
 
+			// Subscribe first before signaling ready
 			err := i.pubsub.Subscribe(
 				ctx,
 				x.Input,
