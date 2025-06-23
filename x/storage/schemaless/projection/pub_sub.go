@@ -180,3 +180,9 @@ func (p *PubSub[T]) Subscribe(ctx context.Context, node T, fromOffset int, f fun
 		}
 	}
 }
+
+// WaitReady is a no-op for PubSub as it doesn't use background goroutines
+// This is implemented to satisfy the PubSubForInterpreter interface
+func (p *PubSub[T]) WaitReady() {
+	// No operation needed - PubSub doesn't use background Process goroutines
+}

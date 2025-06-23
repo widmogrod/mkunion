@@ -10,7 +10,6 @@ import (
 func NewPubSubMultiChan[T comparable]() *PubSubMulti[T] {
 	return &PubSubMulti[T]{
 		multi: make(map[T]PubSubSingler[Message]),
-		onces: make(map[T]*sync.Once),
 		lock:  &sync.RWMutex{},
 		new: func() PubSubSingler[Message] {
 			return NewPubSubChan[Message]()
@@ -24,13 +23,13 @@ type PubSubSingler[T comparable] interface {
 	Process()
 	Subscribe(f func(T) error) error
 	Close()
+	WaitReady()
 }
 
 var _ PubSubForInterpreter[any] = (*PubSubMulti[any])(nil)
 
 type PubSubMulti[T comparable] struct {
 	multi    map[T]PubSubSingler[Message]
-	onces    map[T]*sync.Once
 	lock     *sync.RWMutex
 	new      func() PubSubSingler[Message]
 	finished map[T]bool
@@ -45,9 +44,12 @@ func (p *PubSubMulti[T]) Register(key T) error {
 		//return fmt.Errorf("PubSubMulti.registerRec: key %s already registered", key)
 	}
 
-	p.multi[key] = p.new()
-	//go p.multi[key].Process()
-	p.onces[key] = &sync.Once{}
+	ps := p.new()
+	p.multi[key] = ps
+
+	// Start the Process goroutine immediately upon registration
+	// This ensures the channel is ready to receive messages before any publishing occurs
+	go ps.Process()
 
 	return nil
 }
@@ -75,10 +77,6 @@ func (p *PubSubMulti[T]) Publish(ctx context.Context, key T, msg Message) error 
 	if _, ok := p.multi[key]; !ok {
 		return fmt.Errorf("PubSubMulti.Publish: key=%#v not registered", key)
 	}
-
-	p.onces[key].Do(func() {
-		go p.multi[key].Process()
-	})
 
 	return p.multi[key].Publish(msg)
 }
@@ -117,4 +115,19 @@ func (p *PubSubMulti[T]) Subscribe(ctx context.Context, key T, fromOffset int, f
 	p.lock.RUnlock()
 
 	return p.multi[key].Subscribe(f)
+}
+
+// WaitReady waits for all registered pubsubs to be ready to receive messages
+func (p *PubSubMulti[T]) WaitReady() {
+	p.lock.RLock()
+	pubsubs := make([]PubSubSingler[Message], 0, len(p.multi))
+	for _, ps := range p.multi {
+		pubsubs = append(pubsubs, ps)
+	}
+	p.lock.RUnlock()
+
+	// Wait for all Process goroutines to be ready
+	for _, ps := range pubsubs {
+		ps.WaitReady()
+	}
 }
