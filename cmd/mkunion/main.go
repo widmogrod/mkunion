@@ -899,7 +899,7 @@ func SaveFile(contents bytes.Buffer, sourcePath string, infix string) (string, e
 	log.Infof("writing %s", fileName)
 	err = os.WriteFile(fileName, formatted, 0644)
 	if err != nil {
-		return fileName, fmt.Errorf("mkunion.SaveFile: failed to write serde in %s: %w", sourcePath, err)
+		return fileName, fmt.Errorf("mkunion.SaveFile: failed to write file %s: %w", sourcePath, err)
 	}
 	return fileName, nil
 }
