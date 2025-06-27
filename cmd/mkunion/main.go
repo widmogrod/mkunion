@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go/format"
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -887,8 +888,16 @@ func SaveFile(contents bytes.Buffer, sourcePath string, infix string) (string, e
 		fmt.Sprintf("%s_%s.go", baseName, infix),
 	)
 
+	// Format the generated Go code
+	formatted, err := format.Source(contents.Bytes())
+	if err != nil {
+		// Log warning but continue with unformatted code
+		log.Warnf("failed to format generated code for %s: %v", fileName, err)
+		formatted = contents.Bytes()
+	}
+
 	log.Infof("writing %s", fileName)
-	err := os.WriteFile(fileName, contents.Bytes(), 0644)
+	err = os.WriteFile(fileName, formatted, 0644)
 	if err != nil {
 		return fileName, fmt.Errorf("mkunion.SaveFile: failed to write serde in %s: %w", sourcePath, err)
 	}
