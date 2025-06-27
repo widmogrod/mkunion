@@ -2,11 +2,12 @@ package workflow
 
 import (
 	"fmt"
-	
+
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
 // PlanStep represents a single step in an execution plan
+//
 //go:tag mkunion:"PlanStep"
 type (
 	// ExecuteStep executes an expression and stores the result
@@ -31,6 +32,7 @@ type (
 )
 
 // ExecutionPlan represents a plan of operations to be executed
+//
 //go:tag serde:"json"
 type ExecutionPlan struct {
 	// Steps contains all steps in the plan (initial and dynamically added)
@@ -39,7 +41,7 @@ type ExecutionPlan struct {
 	Queue []string
 
 	// Execution state
-	Completed map[string]bool         // StepID -> completed
+	Completed map[string]bool          // StepID -> completed
 	Results   map[string]schema.Schema // StepID -> result
 	Variables map[string]schema.Schema // Variable name -> value
 
@@ -84,18 +86,18 @@ func NewPlanGenerator() PlanGenerator {
 // GeneratePlan generates an execution plan from a workflow
 func (g *planGenerator) GeneratePlan(flow *Flow, input schema.Schema) *ExecutionPlan {
 	plan := NewExecutionPlan()
-	
+
 	// Initialize with input variable
 	if flow.Arg != "" && input != nil {
 		plan.Variables[flow.Arg] = input
 	}
-	
+
 	// Generate steps for each expression in flow.Body
 	for _, expr := range flow.Body {
 		steps := g.generateStepsForExpr(expr)
 		plan.Steps = append(plan.Steps, steps...)
 	}
-	
+
 	return plan
 }
 
@@ -116,7 +118,7 @@ func (g *planGenerator) findDependencies(reshaper Reshaper) []string {
 func (g *planGenerator) findExprDependencies(expr Expr) []string {
 	var allDeps []string
 	depMap := make(map[string]bool)
-	
+
 	switch e := expr.(type) {
 	case *Apply:
 		// Check dependencies in all arguments
@@ -162,7 +164,7 @@ func (g *planGenerator) findExprDependencies(expr Expr) []string {
 			}
 		}
 	}
-	
+
 	return allDeps
 }
 
@@ -180,11 +182,11 @@ func (g *planGenerator) generateStepsForExpr(expr Expr) []PlanStep {
 		}
 	case *Assign:
 		var steps []PlanStep
-		
+
 		// First, generate steps for the value expression
 		valSteps := g.generateStepsForExpr(e.Val)
 		steps = append(steps, valSteps...)
-		
+
 		// Get the step ID from the value expression
 		var fromStepID string
 		if len(valSteps) > 0 {
@@ -194,7 +196,7 @@ func (g *planGenerator) generateStepsForExpr(expr Expr) []PlanStep {
 				fromStepID = s.StepID
 			}
 		}
-		
+
 		// Then add the assign step
 		assignStep := &AssignStep{
 			StepID:   e.ID,
@@ -202,10 +204,10 @@ func (g *planGenerator) generateStepsForExpr(expr Expr) []PlanStep {
 			FromStep: fromStepID,
 		}
 		steps = append(steps, assignStep)
-		
+
 		// Track that this variable is provided by this assign step
 		g.variableProviders[e.VarOk] = e.ID
-		
+
 		return steps
 	case *Apply:
 		deps := g.findExprDependencies(e)
@@ -256,23 +258,23 @@ func NewPlanExecutor(dep Dependency) PlanExecutor {
 func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 	// Initialize base state from plan
 	baseState := BaseState{
-		RunID:      e.dep.GenerateRunID(),
-		Variables:  plan.Variables,
-		ExprResult: make(map[string]schema.Schema),
+		RunID:             e.dep.GenerateRunID(),
+		Variables:         plan.Variables,
+		ExprResult:        make(map[string]schema.Schema),
 		DefaultMaxRetries: e.dep.MaxRetries(),
 	}
-	
+
 	// Empty plan results in Done state
 	if len(plan.Steps) == 0 {
 		return &Done{
 			BaseState: baseState,
 		}, nil
 	}
-	
+
 	// Execute steps in order (respecting dependencies)
 	for i := 0; i < len(plan.Steps); i++ {
 		step := plan.Steps[i]
-		
+
 		// Check if all dependencies are satisfied
 		if execStep, ok := step.(*ExecuteStep); ok {
 			canExecute := true
@@ -292,15 +294,15 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 				continue
 			}
 		}
-		
+
 		state, result, newSteps, err := e.executeStepWithState(step, plan, baseState)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Update base state from execution
 		baseState = GetBaseState(state)
-		
+
 		// Handle step completion
 		switch s := step.(type) {
 		case *ExecuteStep:
@@ -309,7 +311,7 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 			}
 			plan.Completed[s.StepID] = true
 			plan.ExecutedSteps = append(plan.ExecutedSteps, s.StepID)
-			
+
 			// If we got a Done state, return it
 			if done, isDone := state.(*Done); isDone {
 				return done, nil
@@ -327,12 +329,12 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 				return done, nil
 			}
 		}
-		
+
 		// Add any new steps (for dynamic execution)
 		if len(newSteps) > 0 {
 			plan.Steps = append(plan.Steps, newSteps...)
 		}
-		
+
 		// If we've reached the end but have uncompleted steps, restart from beginning
 		if i == len(plan.Steps)-1 {
 			hasUncompleted := false
@@ -356,7 +358,7 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 			}
 		}
 	}
-	
+
 	// Default to Done state
 	return &Done{
 		BaseState: baseState,
@@ -364,6 +366,7 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 }
 
 // stepResult contains the result of executing a step
+//
 //go:tag serde:"json"
 type stepResult struct {
 	state    State
@@ -387,7 +390,7 @@ func (e *planExecutor) executeStepInternal(step PlanStep, plan *ExecutionPlan, b
 		func(s *ExecuteStep) (*stepResult, error) {
 			// Execute the expression
 			state := ExecuteExpr(baseState, s.Expr, e.dep)
-			
+
 			// Extract result from state
 			switch st := state.(type) {
 			case *Done:
@@ -435,10 +438,10 @@ func (e *planExecutor) executeStep(step PlanStep, plan *ExecutionPlan, baseState
 		func(s *ExecuteStep) (schema.Schema, []PlanStep, error) {
 			// Execute the expression
 			state := ExecuteExpr(baseState, s.Expr, e.dep)
-			
+
 			// Update the base state from the result
 			baseState = GetBaseState(state)
-			
+
 			// Extract result from state
 			switch st := state.(type) {
 			case *Done:

@@ -20,8 +20,8 @@ func init() {
 
 func PlanStepShape() shape.Shape {
 	return &shape.UnionLike{
-		Name: "PlanStep",
-		PkgName: "workflow",
+		Name:          "PlanStep",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Variant: []shape.Shape{
 			ExecuteStepShape(),
@@ -33,8 +33,8 @@ func PlanStepShape() shape.Shape {
 
 func ExecuteStepShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "ExecuteStep",
-		PkgName: "workflow",
+		Name:          "ExecuteStep",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
@@ -44,8 +44,8 @@ func ExecuteStepShape() shape.Shape {
 			{
 				Name: "Expr",
 				Type: &shape.RefName{
-					Name: "Expr",
-					PkgName: "workflow",
+					Name:          "Expr",
+					PkgName:       "workflow",
 					PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 				},
 			},
@@ -66,8 +66,8 @@ func ExecuteStepShape() shape.Shape {
 
 func AssignStepShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "AssignStep",
-		PkgName: "workflow",
+		Name:          "AssignStep",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
@@ -93,8 +93,8 @@ func AssignStepShape() shape.Shape {
 
 func ReturnStepShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "ReturnStep",
-		PkgName: "workflow",
+		Name:          "ReturnStep",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
@@ -113,19 +113,20 @@ func ReturnStepShape() shape.Shape {
 		},
 	}
 }
+
 //shape:shape
 func ExecutionPlanShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "ExecutionPlan",
-		PkgName: "workflow",
+		Name:          "ExecutionPlan",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Steps",
 				Type: &shape.ListLike{
 					Element: &shape.RefName{
-						Name: "PlanStep",
-						PkgName: "workflow",
+						Name:          "PlanStep",
+						PkgName:       "workflow",
 						PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 					},
 				},
@@ -148,8 +149,8 @@ func ExecutionPlanShape() shape.Shape {
 				Type: &shape.MapLike{
 					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 					Val: &shape.RefName{
-						Name: "Schema",
-						PkgName: "schema",
+						Name:          "Schema",
+						PkgName:       "schema",
 						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 					},
 				},
@@ -159,8 +160,8 @@ func ExecutionPlanShape() shape.Shape {
 				Type: &shape.MapLike{
 					Key: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 					Val: &shape.RefName{
-						Name: "Schema",
-						PkgName: "schema",
+						Name:          "Schema",
+						PkgName:       "schema",
 						PkgImportName: "github.com/widmogrod/mkunion/x/schema",
 					},
 				},
@@ -185,27 +186,30 @@ func ExecutionPlanShape() shape.Shape {
 		},
 	}
 }
+
 //shape:shape
 func planExecutorShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "planExecutor",
-		PkgName: "workflow",
+		Name:          "planExecutor",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 	}
 }
+
 //shape:shape
 func planGeneratorShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "planGenerator",
-		PkgName: "workflow",
+		Name:          "planGenerator",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 	}
 }
+
 //shape:shape
 func stepResultShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "stepResult",
-		PkgName: "workflow",
+		Name:          "stepResult",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Tags: map[string]shape.Tag{
 			"serde": {

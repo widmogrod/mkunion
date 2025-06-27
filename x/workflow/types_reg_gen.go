@@ -12,8 +12,8 @@ import (
 
 func init() {
 	shared.TypeRegistryStore[any]("any")
-	shared.TypeRegistryStore[machine.Case[Dependency,Command,State]]("github.com/widmogrod/mkunion/x/machine.Case[github.com/widmogrod/mkunion/x/workflow.Dependency,github.com/widmogrod/mkunion/x/workflow.Command,github.com/widmogrod/mkunion/x/workflow.State]")
-	shared.TypeRegistryStore[machine.Machine[Dependency,Command,State]]("github.com/widmogrod/mkunion/x/machine.Machine[github.com/widmogrod/mkunion/x/workflow.Dependency,github.com/widmogrod/mkunion/x/workflow.Command,github.com/widmogrod/mkunion/x/workflow.State]")
+	shared.TypeRegistryStore[machine.Case[Dependency, Command, State]]("github.com/widmogrod/mkunion/x/machine.Case[github.com/widmogrod/mkunion/x/workflow.Dependency,github.com/widmogrod/mkunion/x/workflow.Command,github.com/widmogrod/mkunion/x/workflow.State]")
+	shared.TypeRegistryStore[machine.Machine[Dependency, Command, State]]("github.com/widmogrod/mkunion/x/machine.Machine[github.com/widmogrod/mkunion/x/workflow.Dependency,github.com/widmogrod/mkunion/x/workflow.Command,github.com/widmogrod/mkunion/x/workflow.State]")
 	shared.TypeRegistryStore[schema.Binary]("github.com/widmogrod/mkunion/x/schema.Binary")
 	shared.TypeRegistryStore[schema.Bool]("github.com/widmogrod/mkunion/x/schema.Bool")
 	shared.TypeRegistryStore[schema.List]("github.com/widmogrod/mkunion/x/schema.List")

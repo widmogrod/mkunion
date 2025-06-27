@@ -12,8 +12,8 @@ func init() {
 //shape:shape
 func testDependencyShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "testDependency",
-		PkgName: "workflow",
+		Name:          "testDependency",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 	}
 }

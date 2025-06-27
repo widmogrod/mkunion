@@ -65,10 +65,10 @@ func TestExecutionPlan_Creation(t *testing.T) {
 func TestExecutionPlan_WithVariables(t *testing.T) {
 	// Arrange
 	plan := NewExecutionPlan()
-	
+
 	// Act
 	plan.Variables["input"] = schema.MkInt(42)
-	
+
 	// Assert
 	assert.Equal(t, 1, len(plan.Variables))
 	val, ok := plan.Variables["input"]
@@ -116,13 +116,13 @@ func TestPlanGenerator_EndExpression(t *testing.T) {
 	// Assert
 	assert.NotNil(t, plan)
 	assert.Len(t, plan.Steps, 1)
-	
+
 	// Verify the generated step
 	step := plan.Steps[0]
 	executeStep, ok := step.(*ExecuteStep)
 	assert.True(t, ok, "Expected ExecuteStep, got %T", step)
 	assert.Equal(t, "end-1", executeStep.StepID)
-	
+
 	// Verify the expression in the step
 	endExpr, ok := executeStep.Expr.(*End)
 	assert.True(t, ok, "Expected End expression, got %T", executeStep.Expr)
@@ -133,10 +133,10 @@ func TestPlanExecutor_EmptyPlan(t *testing.T) {
 	// Arrange
 	plan := NewExecutionPlan()
 	executor := NewPlanExecutor(&testDependency{})
-	
+
 	// Act
 	state, err := executor.Execute(plan)
-	
+
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, state)
@@ -235,16 +235,16 @@ func TestPlanExecutor_ExecuteStep_End(t *testing.T) {
 			DependsOn: []string{},
 		},
 	}
-	
+
 	executor := NewPlanExecutor(&testDependency{})
-	
+
 	// Act
 	state, err := executor.Execute(plan)
-	
+
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, state)
-	
+
 	done, ok := state.(*Done)
 	assert.True(t, ok, "Expected Done state, got %T", state)
 	assert.Equal(t, schema.MkInt(42), done.Result)
@@ -259,7 +259,7 @@ func TestPlanGenerator_AssignExpression(t *testing.T) {
 			&Assign{
 				ID:    "assign-1",
 				VarOk: "x",
-				Val:   &Apply{
+				Val: &Apply{
 					ID:   "apply-1",
 					Name: "add",
 					Args: []Reshaper{
@@ -280,12 +280,12 @@ func TestPlanGenerator_AssignExpression(t *testing.T) {
 	assert.NotNil(t, plan)
 	// Should have 2 steps: one for Apply, one for Assign
 	assert.Len(t, plan.Steps, 2)
-	
+
 	// First step should be the Apply
 	applyStep, ok := plan.Steps[0].(*ExecuteStep)
 	assert.True(t, ok, "Expected ExecuteStep for Apply, got %T", plan.Steps[0])
 	assert.Equal(t, "apply-1", applyStep.StepID)
-	
+
 	// Second step should be Assign
 	assignStep, ok := plan.Steps[1].(*AssignStep)
 	assert.True(t, ok, "Expected AssignStep, got %T", plan.Steps[1])
@@ -319,13 +319,13 @@ func TestPlanGenerator_ApplyExpression(t *testing.T) {
 	// Assert
 	assert.NotNil(t, plan)
 	assert.Len(t, plan.Steps, 1)
-	
+
 	// Verify the generated step
 	step := plan.Steps[0]
 	executeStep, ok := step.(*ExecuteStep)
 	assert.True(t, ok, "Expected ExecuteStep, got %T", step)
 	assert.Equal(t, "apply-1", executeStep.StepID)
-	
+
 	// Verify the expression in the step
 	applyExpr, ok := executeStep.Expr.(*Apply)
 	assert.True(t, ok, "Expected Apply expression, got %T", executeStep.Expr)
@@ -352,23 +352,23 @@ func TestPlanExecutor_ExecuteStep_Apply(t *testing.T) {
 			DependsOn: []string{},
 		},
 	}
-	
+
 	// Create test dependency with a function
 	dep := &testDependency{}
 	executor := NewPlanExecutor(dep)
-	
+
 	// Act
 	state, err := executor.Execute(plan)
-	
+
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, state)
-	
+
 	// Should be Done state with no result (Apply doesn't end the flow)
 	done, ok := state.(*Done)
 	assert.True(t, ok, "Expected Done state, got %T", state)
 	assert.Nil(t, done.Result)
-	
+
 	// Check that the Apply result was stored
 	assert.Contains(t, plan.Results, "apply-1")
 	assert.Contains(t, plan.Completed, "apply-1")
@@ -385,8 +385,8 @@ func TestPlanGenerator_ChooseExpression(t *testing.T) {
 				ID: "choose-1",
 				If: &Compare{
 					Operation: ">",
-					Left:  &GetValue{Path: "input"},
-					Right: &SetValue{Value: schema.MkInt(10)},
+					Left:      &GetValue{Path: "input"},
+					Right:     &SetValue{Value: schema.MkInt(10)},
 				},
 				Then: []Expr{
 					&Apply{
@@ -421,12 +421,12 @@ func TestPlanGenerator_ChooseExpression(t *testing.T) {
 	assert.NotNil(t, plan)
 	// Should have at least one step for Choose
 	assert.Greater(t, len(plan.Steps), 0)
-	
+
 	// First step should be the Choose condition
 	firstStep, ok := plan.Steps[0].(*ExecuteStep)
 	assert.True(t, ok, "Expected ExecuteStep for Choose, got %T", plan.Steps[0])
 	assert.Equal(t, "choose-1", firstStep.StepID)
-	
+
 	// Verify the expression in the step
 	chooseExpr, ok := firstStep.Expr.(*Choose)
 	assert.True(t, ok, "Expected Choose expression, got %T", firstStep.Expr)
@@ -444,8 +444,8 @@ func TestPlanExecutor_ExecuteStep_Choose_TrueBranch(t *testing.T) {
 				ID: "choose-1",
 				If: &Compare{
 					Operation: ">",
-					Left:  &GetValue{Path: "input"},
-					Right: &SetValue{Value: schema.MkInt(10)},
+					Left:      &GetValue{Path: "input"},
+					Right:     &SetValue{Value: schema.MkInt(10)},
 				},
 				Then: []Expr{
 					&End{
@@ -463,23 +463,23 @@ func TestPlanExecutor_ExecuteStep_Choose_TrueBranch(t *testing.T) {
 			DependsOn: []string{},
 		},
 	}
-	
+
 	executor := NewPlanExecutor(&testDependency{})
-	
+
 	// Act
 	state, err := executor.Execute(plan)
-	
+
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, state)
-	
+
 	// Should be Done state with the Then result
 	done, ok := state.(*Done)
 	assert.True(t, ok, "Expected Done state, got %T", state)
 	if done != nil {
 		assert.Equal(t, schema.MkString("then branch"), done.Result)
 	}
-	
+
 	// Check that the Choose result was stored
 	assert.Contains(t, plan.Results, "choose-1")
 	assert.Contains(t, plan.Completed, "choose-1")
@@ -496,8 +496,8 @@ func TestPlanExecutor_ExecuteStep_Choose_FalseBranch(t *testing.T) {
 				ID: "choose-1",
 				If: &Compare{
 					Operation: ">",
-					Left:  &GetValue{Path: "input"},
-					Right: &SetValue{Value: schema.MkInt(10)},
+					Left:      &GetValue{Path: "input"},
+					Right:     &SetValue{Value: schema.MkInt(10)},
 				},
 				Then: []Expr{
 					&End{
@@ -515,16 +515,16 @@ func TestPlanExecutor_ExecuteStep_Choose_FalseBranch(t *testing.T) {
 			DependsOn: []string{},
 		},
 	}
-	
+
 	executor := NewPlanExecutor(&testDependency{})
-	
+
 	// Act
 	state, err := executor.Execute(plan)
-	
+
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, state)
-	
+
 	// Should be Done state with the Else result
 	done, ok := state.(*Done)
 	assert.True(t, ok, "Expected Done state, got %T", state)
@@ -536,7 +536,7 @@ func TestExecutionPlan_Serialization(t *testing.T) {
 	plan := NewExecutionPlan()
 	plan.Variables["input"] = schema.MkInt(42)
 	plan.Variables["name"] = schema.MkString("test")
-	
+
 	plan.Steps = []PlanStep{
 		&ExecuteStep{
 			StepID: "apply-1",
@@ -555,32 +555,32 @@ func TestExecutionPlan_Serialization(t *testing.T) {
 			FromStep: "apply-1",
 		},
 	}
-	
+
 	plan.Results["apply-1"] = schema.MkFloat(84)
 	plan.Completed["apply-1"] = true
 	plan.ExecutedSteps = []string{"apply-1"}
-	
+
 	// Act - Serialize
 	serialized, err := json.Marshal(plan)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, serialized)
-	
+
 	// Act - Deserialize
 	var deserialized ExecutionPlan
 	err = json.Unmarshal(serialized, &deserialized)
 	assert.NoError(t, err)
-	
+
 	// Assert
 	assert.Equal(t, len(plan.Steps), len(deserialized.Steps))
 	assert.Equal(t, len(plan.Variables), len(deserialized.Variables))
 	assert.Equal(t, len(plan.Results), len(deserialized.Results))
 	assert.Equal(t, len(plan.Completed), len(deserialized.Completed))
 	assert.Equal(t, plan.ExecutedSteps, deserialized.ExecutedSteps)
-	
+
 	// Check variables
 	assert.Equal(t, plan.Variables["input"], deserialized.Variables["input"])
 	assert.Equal(t, plan.Variables["name"], deserialized.Variables["name"])
-	
+
 	// Check results
 	assert.Equal(t, plan.Results["apply-1"], deserialized.Results["apply-1"])
 }
@@ -625,15 +625,15 @@ func TestPlanGenerator_DependencyTracking(t *testing.T) {
 	}
 	input := schema.MkInt(10)
 	generator := NewPlanGenerator()
-	
+
 	// Act
 	plan := generator.GeneratePlan(flow, input)
-	
+
 	// Assert
 	assert.NotNil(t, plan)
 	// Should have 5 steps: apply-1, assign-1, apply-2, assign-2, apply-3
 	assert.Len(t, plan.Steps, 5)
-	
+
 	// Find apply-3 step
 	var apply3Step *ExecuteStep
 	for _, step := range plan.Steps {
@@ -644,7 +644,7 @@ func TestPlanGenerator_DependencyTracking(t *testing.T) {
 			}
 		}
 	}
-	
+
 	assert.NotNil(t, apply3Step, "apply-3 step not found")
 	// apply-3 should depend on assign-1 and assign-2
 	assert.Contains(t, apply3Step.DependsOn, "assign-1")
@@ -655,7 +655,7 @@ func TestPlanExecutor_ParallelExecution(t *testing.T) {
 	// Arrange
 	plan := NewExecutionPlan()
 	plan.Variables["input"] = schema.MkInt(10)
-	
+
 	// Two independent Apply steps that can run in parallel
 	plan.Steps = []PlanStep{
 		&ExecuteStep{
@@ -703,25 +703,25 @@ func TestPlanExecutor_ParallelExecution(t *testing.T) {
 			DependsOn: []string{"assign-1", "assign-2"}, // Depends on both assigns
 		},
 	}
-	
+
 	// Create test dependency with functions
 	dep := &testDependency{}
 	executor := NewPlanExecutor(dep)
-	
+
 	// Act
 	state, err := executor.Execute(plan)
-	
+
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, state)
-	
+
 	// Check that all steps were executed
 	assert.Contains(t, plan.Completed, "apply-1")
 	assert.Contains(t, plan.Completed, "apply-2")
 	assert.Contains(t, plan.Completed, "assign-1")
 	assert.Contains(t, plan.Completed, "assign-2")
 	assert.Contains(t, plan.Completed, "apply-3")
-	
+
 	// Check results
 	assert.Equal(t, schema.MkFloat(20), plan.Results["apply-1"]) // 10 * 2
 	assert.Equal(t, schema.MkFloat(30), plan.Results["apply-2"]) // 10 * 3
@@ -749,8 +749,8 @@ func TestIntegration_PlanVsDirectExecution(t *testing.T) {
 				ID: "choose-1",
 				If: &Compare{
 					Operation: ">",
-					Left:  &GetValue{Path: "doubled"},
-					Right: &SetValue{Value: schema.MkInt(50)},
+					Left:      &GetValue{Path: "doubled"},
+					Right:     &SetValue{Value: schema.MkInt(50)},
 				},
 				Then: []Expr{
 					&Apply{
@@ -779,27 +779,27 @@ func TestIntegration_PlanVsDirectExecution(t *testing.T) {
 			},
 		},
 	}
-	
+
 	input := schema.MkInt(30)
 	dep := &testDependency{}
-	
+
 	// Act 1 - Direct execution
 	directResult := runFlowDirectly(t, flow, input, dep)
-	
+
 	// Act 2 - Plan execution
 	generator := NewPlanGenerator()
 	plan := generator.GeneratePlan(flow, input)
 	executor := NewPlanExecutor(dep)
 	planState, err := executor.Execute(plan)
 	assert.NoError(t, err)
-	
+
 	// Assert - Both executions should produce the same result
 	assert.NotNil(t, directResult)
 	assert.NotNil(t, planState)
-	
+
 	done, ok := planState.(*Done)
 	assert.True(t, ok, "Expected Done state from plan execution")
-	
+
 	assert.Equal(t, directResult, done.Result, "Plan execution should produce same result as direct execution")
 	assert.Equal(t, schema.MkFloat(60), done.Result) // input=30, doubled=60, 60>50 so no branch taken, result=60
 }
@@ -812,11 +812,11 @@ func runFlowDirectly(t *testing.T, flow *Flow, input schema.Schema, dep Dependen
 		ExprResult:        make(map[string]schema.Schema),
 		DefaultMaxRetries: dep.MaxRetries(),
 	}
-	
+
 	if flow.Arg != "" && input != nil {
 		baseState.Variables[flow.Arg] = input
 	}
-	
+
 	var lastState State
 	for _, expr := range flow.Body {
 		lastState = ExecuteExpr(baseState, expr, dep)
@@ -828,11 +828,11 @@ func runFlowDirectly(t *testing.T, flow *Flow, input schema.Schema, dep Dependen
 		}
 		baseState = GetBaseState(lastState)
 	}
-	
+
 	if done, ok := lastState.(*Done); ok {
 		return done.Result
 	}
-	
+
 	return nil
 }
 
@@ -857,8 +857,8 @@ func TestIntegration_PlanVsDirectExecution_ElseBranch(t *testing.T) {
 				ID: "choose-1",
 				If: &Compare{
 					Operation: ">",
-					Left:  &GetValue{Path: "doubled"},
-					Right: &SetValue{Value: schema.MkInt(50)},
+					Left:      &GetValue{Path: "doubled"},
+					Right:     &SetValue{Value: schema.MkInt(50)},
 				},
 				Then: []Expr{
 					&End{
@@ -875,27 +875,27 @@ func TestIntegration_PlanVsDirectExecution_ElseBranch(t *testing.T) {
 			},
 		},
 	}
-	
+
 	input := schema.MkInt(20) // Will result in doubled=40, which is < 50
 	dep := &testDependency{}
-	
+
 	// Act 1 - Direct execution
 	directResult := runFlowDirectly(t, flow, input, dep)
-	
+
 	// Act 2 - Plan execution
 	generator := NewPlanGenerator()
 	plan := generator.GeneratePlan(flow, input)
 	executor := NewPlanExecutor(dep)
 	planState, err := executor.Execute(plan)
 	assert.NoError(t, err)
-	
+
 	// Assert - Both executions should produce the same result
 	assert.NotNil(t, directResult)
 	assert.NotNil(t, planState)
-	
+
 	done, ok := planState.(*Done)
 	assert.True(t, ok, "Expected Done state from plan execution")
-	
+
 	assert.Equal(t, directResult, done.Result, "Plan execution should produce same result as direct execution")
 	assert.Equal(t, schema.MkString("else branch"), done.Result) // input=20, doubled=40, 40<50 so else branch taken
 }

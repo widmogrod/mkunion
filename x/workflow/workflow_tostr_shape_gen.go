@@ -13,21 +13,21 @@ func init() {
 //shape:shape
 func ToStrContextShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "ToStrContext",
-		PkgName: "workflow",
+		Name:          "ToStrContext",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Errors",
 				Type: &shape.MapLike{
 					Key: &shape.RefName{
-						Name: "StepID",
-						PkgName: "workflow",
+						Name:          "StepID",
+						PkgName:       "workflow",
 						PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 					},
 					Val: &shape.RefName{
-						Name: "ToStrErrInfo",
-						PkgName: "workflow",
+						Name:          "ToStrErrInfo",
+						PkgName:       "workflow",
 						PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 					},
 				},
@@ -35,11 +35,12 @@ func ToStrContextShape() shape.Shape {
 		},
 	}
 }
+
 //shape:shape
 func ToStrErrInfoShape() shape.Shape {
 	return &shape.StructLike{
-		Name: "ToStrErrInfo",
-		PkgName: "workflow",
+		Name:          "ToStrErrInfo",
+		PkgName:       "workflow",
 		PkgImportName: "github.com/widmogrod/mkunion/x/workflow",
 		Fields: []*shape.FieldLike{
 			{

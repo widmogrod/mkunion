@@ -315,6 +315,7 @@ func (r *ExecutionPlan) _unmarshalJSONschema_Schema(data []byte) (schema.Schema,
 	}
 	return result, nil
 }
+
 var (
 	_ json.Unmarshaler = (*stepResult)(nil)
 	_ json.Marshaler   = (*stepResult)(nil)

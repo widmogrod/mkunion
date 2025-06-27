@@ -454,7 +454,7 @@ func ExecuteReshaper(context BaseState, reshaper Reshaper) (schema.Schema, error
 
 				return value, nil
 			} else {
-				return nil, fmt.Errorf("variable %s not found", x.Path)
+				return nil, fmt.Errorf("workflow.ExecuteReshaper: variable %s not found", x.Path)
 			}
 		},
 		func(x *SetValue) (schema.Schema, error) {

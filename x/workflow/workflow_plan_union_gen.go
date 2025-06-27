@@ -24,8 +24,8 @@ var (
 )
 
 func (r *ExecuteStep) AcceptPlanStep(v PlanStepVisitor) any { return v.VisitExecuteStep(r) }
-func (r *AssignStep) AcceptPlanStep(v PlanStepVisitor) any { return v.VisitAssignStep(r) }
-func (r *ReturnStep) AcceptPlanStep(v PlanStepVisitor) any { return v.VisitReturnStep(r) }
+func (r *AssignStep) AcceptPlanStep(v PlanStepVisitor) any  { return v.VisitAssignStep(r) }
+func (r *ReturnStep) AcceptPlanStep(v PlanStepVisitor) any  { return v.VisitReturnStep(r) }
 
 func MatchPlanStepR3[T0, T1, T2 any](
 	x PlanStep,
@@ -107,10 +107,10 @@ func init() {
 }
 
 type PlanStepUnionJSON struct {
-	Type string `json:"$type,omitempty"`
+	Type        string          `json:"$type,omitempty"`
 	ExecuteStep json.RawMessage `json:"workflow.ExecuteStep,omitempty"`
-	AssignStep json.RawMessage `json:"workflow.AssignStep,omitempty"`
-	ReturnStep json.RawMessage `json:"workflow.ReturnStep,omitempty"`
+	AssignStep  json.RawMessage `json:"workflow.AssignStep,omitempty"`
+	ReturnStep  json.RawMessage `json:"workflow.ReturnStep,omitempty"`
 }
 
 func PlanStepFromJSON(x []byte) (PlanStep, error) {
@@ -151,33 +151,33 @@ func PlanStepToJSON(x PlanStep) ([]byte, error) {
 	}
 	return MatchPlanStepR2(
 		x,
-		func (y *ExecuteStep) ([]byte, error) {
+		func(y *ExecuteStep) ([]byte, error) {
 			body, err := ExecuteStepToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.PlanStepToJSON: %w", err)
 			}
 			return json.Marshal(PlanStepUnionJSON{
-				Type: "workflow.ExecuteStep",
+				Type:        "workflow.ExecuteStep",
 				ExecuteStep: body,
 			})
 		},
-		func (y *AssignStep) ([]byte, error) {
+		func(y *AssignStep) ([]byte, error) {
 			body, err := AssignStepToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.PlanStepToJSON: %w", err)
 			}
 			return json.Marshal(PlanStepUnionJSON{
-				Type: "workflow.AssignStep",
+				Type:       "workflow.AssignStep",
 				AssignStep: body,
 			})
 		},
-		func (y *ReturnStep) ([]byte, error) {
+		func(y *ReturnStep) ([]byte, error) {
 			body, err := ReturnStepToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.PlanStepToJSON: %w", err)
 			}
 			return json.Marshal(PlanStepUnionJSON{
-				Type: "workflow.ReturnStep",
+				Type:       "workflow.ReturnStep",
 				ReturnStep: body,
 			})
 		},
@@ -522,4 +522,3 @@ func (r *ReturnStep) _unmarshalJSONstring(data []byte) (string, error) {
 	}
 	return result, nil
 }
-
