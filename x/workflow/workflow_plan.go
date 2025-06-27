@@ -102,138 +102,138 @@ func (g *planGenerator) GeneratePlan(flow *Flow, input schema.Schema) *Execution
 
 // findDependencies finds variable dependencies in a reshaper
 func (g *planGenerator) findDependencies(reshaper Reshaper) []string {
-	var deps []string
-	switch r := reshaper.(type) {
-	case *GetValue:
-		// Check if this variable is provided by a step
-		if stepID, ok := g.variableProviders[r.Path]; ok {
-			deps = append(deps, stepID)
-		}
-	}
-	return deps
+	return MatchReshaperR1(
+		reshaper,
+		func(r *GetValue) []string {
+			// Check if this variable is provided by a step
+			if stepID, ok := g.variableProviders[r.Path]; ok {
+				return []string{stepID}
+			}
+			return []string{}
+		},
+		func(r *SetValue) []string {
+			return []string{}
+		},
+	)
 }
 
 // findExprDependencies finds all dependencies in an expression
 func (g *planGenerator) findExprDependencies(expr Expr) []string {
-	var allDeps []string
 	depMap := make(map[string]bool)
+	var allDeps []string
 
-	switch e := expr.(type) {
-	case *Apply:
-		// Check dependencies in all arguments
-		for _, arg := range e.Args {
-			deps := g.findDependencies(arg)
-			for _, dep := range deps {
-				if !depMap[dep] {
-					depMap[dep] = true
-					allDeps = append(allDeps, dep)
-				}
-			}
-		}
-	case *End:
-		if e.Result != nil {
-			deps := g.findDependencies(e.Result)
-			for _, dep := range deps {
-				if !depMap[dep] {
-					depMap[dep] = true
-					allDeps = append(allDeps, dep)
-				}
-			}
-		}
-	case *Choose:
-		// Check dependencies in condition
-		if compare, ok := e.If.(*Compare); ok {
-			if compare.Left != nil {
-				deps := g.findDependencies(compare.Left)
-				for _, dep := range deps {
-					if !depMap[dep] {
-						depMap[dep] = true
-						allDeps = append(allDeps, dep)
-					}
-				}
-			}
-			if compare.Right != nil {
-				deps := g.findDependencies(compare.Right)
-				for _, dep := range deps {
-					if !depMap[dep] {
-						depMap[dep] = true
-						allDeps = append(allDeps, dep)
-					}
-				}
+	// Helper function to add dependencies
+	addDeps := func(deps []string) {
+		for _, dep := range deps {
+			if !depMap[dep] {
+				depMap[dep] = true
+				allDeps = append(allDeps, dep)
 			}
 		}
 	}
+
+	MatchExprR0(
+		expr,
+		func(e *End) {
+			if e.Result != nil {
+				addDeps(g.findDependencies(e.Result))
+			}
+		},
+		func(e *Assign) {
+			// Assign dependencies are handled differently in generateStepsForExpr
+			// We don't need to check Val here as it's processed separately
+		},
+		func(e *Apply) {
+			// Check dependencies in all arguments
+			for _, arg := range e.Args {
+				addDeps(g.findDependencies(arg))
+			}
+		},
+		func(e *Choose) {
+			// Check dependencies in condition
+			if compare, ok := e.If.(*Compare); ok {
+				if compare.Left != nil {
+					addDeps(g.findDependencies(compare.Left))
+				}
+				if compare.Right != nil {
+					addDeps(g.findDependencies(compare.Right))
+				}
+			}
+		},
+	)
 
 	return allDeps
 }
 
 // generateStepsForExpr generates plan steps for a single expression
 func (g *planGenerator) generateStepsForExpr(expr Expr) []PlanStep {
-	switch e := expr.(type) {
-	case *End:
-		deps := g.findExprDependencies(e)
-		return []PlanStep{
-			&ExecuteStep{
-				StepID:    e.ID,
-				Expr:      e,
-				DependsOn: deps,
-			},
-		}
-	case *Assign:
-		var steps []PlanStep
+	return MatchExprR1(
+		expr,
+		func(e *End) []PlanStep {
+			deps := g.findExprDependencies(e)
+			return []PlanStep{
+				&ExecuteStep{
+					StepID:    e.ID,
+					Expr:      e,
+					DependsOn: deps,
+				},
+			}
+		},
+		func(e *Assign) []PlanStep {
+			var steps []PlanStep
 
-		// First, generate steps for the value expression
-		valSteps := g.generateStepsForExpr(e.Val)
-		steps = append(steps, valSteps...)
+			// First, generate steps for the value expression
+			valSteps := g.generateStepsForExpr(e.Val)
+			steps = append(steps, valSteps...)
 
-		// Get the step ID from the value expression
-		var fromStepID string
-		if len(valSteps) > 0 {
-			// Get the last step's ID using exhaustive pattern matching
-			fromStepID = MatchPlanStepR1(
-				valSteps[len(valSteps)-1],
-				func(s *ExecuteStep) string { return s.StepID },
-				func(s *AssignStep) string { return s.StepID },
-				func(s *ReturnStep) string { return s.StepID },
-			)
-		}
+			// Get the step ID from the value expression
+			var fromStepID string
+			if len(valSteps) > 0 {
+				// Get the last step's ID using exhaustive pattern matching
+				fromStepID = MatchPlanStepR1(
+					valSteps[len(valSteps)-1],
+					func(s *ExecuteStep) string { return s.StepID },
+					func(s *AssignStep) string { return s.StepID },
+					func(s *ReturnStep) string { return s.StepID },
+				)
+			}
 
-		// Then add the assign step
-		assignStep := &AssignStep{
-			StepID:   e.ID,
-			VarName:  e.VarOk,
-			FromStep: fromStepID,
-		}
-		steps = append(steps, assignStep)
+			// Then add the assign step
+			assignStep := &AssignStep{
+				StepID:   e.ID,
+				VarName:  e.VarOk,
+				FromStep: fromStepID,
+			}
+			steps = append(steps, assignStep)
 
-		// Track that this variable is provided by this assign step
-		g.variableProviders[e.VarOk] = e.ID
+			// Track that this variable is provided by this assign step
+			g.variableProviders[e.VarOk] = e.ID
 
-		return steps
-	case *Apply:
-		deps := g.findExprDependencies(e)
-		return []PlanStep{
-			&ExecuteStep{
-				StepID:    e.ID,
-				Expr:      e,
-				DependsOn: deps,
-			},
-		}
-	case *Choose:
-		// For Choose, we execute it as a single step
-		// The executor will handle the dynamic branching
-		deps := g.findExprDependencies(e)
-		return []PlanStep{
-			&ExecuteStep{
-				StepID:    e.ID,
-				Expr:      e,
-				DependsOn: deps,
-			},
-		}
-	default:
-		// TODO: Handle other expression types (see issue #167)
-		return []PlanStep{}
-	}
+			return steps
+		},
+		func(e *Apply) []PlanStep {
+			deps := g.findExprDependencies(e)
+			return []PlanStep{
+				&ExecuteStep{
+					StepID:    e.ID,
+					Expr:      e,
+					DependsOn: deps,
+				},
+			}
+		},
+		func(e *Choose) []PlanStep {
+			// For Choose, we execute it as a single step
+			// The executor will handle the dynamic branching
+			deps := g.findExprDependencies(e)
+			return []PlanStep{
+				&ExecuteStep{
+					StepID:    e.ID,
+					Expr:      e,
+					DependsOn: deps,
+				},
+			}
+		},
+	)
 }
 
 // PlanExecutor executes plans and produces workflow states
@@ -415,16 +415,27 @@ func (e *planExecutor) executeStepInternal(step PlanStep, plan *ExecutionPlan, b
 			state := ExecuteExpr(baseState, s.Expr, e.dep)
 
 			// Extract result from state
-			switch st := state.(type) {
-			case *Done:
-				return &stepResult{state: state, result: st.Result}, nil
-			case *NextOperation:
-				return &stepResult{state: state, result: st.Result}, nil
-			case *Error:
-				return nil, fmt.Errorf("error executing step %s: %s", s.StepID, st.Reason)
-			default:
-				return nil, fmt.Errorf("unexpected state type: %T", state)
-			}
+			return MatchStateR2(
+				state,
+				func(st *NextOperation) (*stepResult, error) {
+					return &stepResult{state: state, result: st.Result}, nil
+				},
+				func(st *Done) (*stepResult, error) {
+					return &stepResult{state: state, result: st.Result}, nil
+				},
+				func(st *Error) (*stepResult, error) {
+					return nil, fmt.Errorf("error executing step %s: %s", s.StepID, st.Reason)
+				},
+				func(st *Await) (*stepResult, error) {
+					return nil, fmt.Errorf("unexpected Await state in step %s", s.StepID)
+				},
+				func(st *Scheduled) (*stepResult, error) {
+					return nil, fmt.Errorf("unexpected Scheduled state in step %s", s.StepID)
+				},
+				func(st *ScheduleStopped) (*stepResult, error) {
+					return nil, fmt.Errorf("unexpected ScheduleStopped state in step %s", s.StepID)
+				},
+			)
 		},
 		func(s *AssignStep) (*stepResult, error) {
 			// Get result from the source step

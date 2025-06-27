@@ -1,0 +1,273 @@
+name: PR Readiness Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited]
+
+jobs:
+  check-pr-readiness:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate PR completeness
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const checks = {
+              description: { passed: false, message: '' },
+              linkedIssues: { passed: false, message: '' },
+              tests: { passed: false, message: '' },
+              documentation: { passed: false, message: '' },
+              codeQuality: { passed: false, message: '' },
+              size: { passed: false, message: '' }
+            };
+            
+            // Check PR description
+            const body = pr.body || '';
+            if (body.length < 50) {
+              checks.description.message = 'PR description is too short';
+            } else if (body.includes('TODO') || body.includes('WIP')) {
+              checks.description.message = 'PR contains TODO/WIP markers';
+            } else {
+              checks.description.passed = true;
+            }
+            
+            // Check linked issues
+            const issuePattern = /#(\d+)/g;
+            const linkedIssues = body.match(issuePattern);
+            if (!linkedIssues || linkedIssues.length === 0) {
+              checks.linkedIssues.message = 'No linked issues found';
+            } else {
+              checks.linkedIssues.passed = true;
+            }
+            
+            // Check for tests
+            const testFiles = files.filter(f => 
+              f.filename.includes('test') || 
+              f.filename.includes('spec') ||
+              f.filename.endsWith('_test.go')
+            );
+            
+            const hasCodeChanges = files.some(f => 
+              f.filename.endsWith('.go') && 
+              !f.filename.includes('test') &&
+              !f.filename.includes('gen')
+            );
+            
+            if (hasCodeChanges && testFiles.length === 0) {
+              checks.tests.message = 'Code changes without tests';
+            } else {
+              checks.tests.passed = true;
+            }
+            
+            // Check documentation
+            const hasSignificantChanges = files.length > 5 || pr.additions > 200;
+            const hasDocChanges = files.some(f => 
+              f.filename.endsWith('.md') || 
+              f.filename.includes('doc')
+            );
+            
+            if (hasSignificantChanges && !hasDocChanges) {
+              checks.documentation.message = 'Significant changes without documentation updates';
+            } else {
+              checks.documentation.passed = true;
+            }
+            
+            // Check code quality indicators
+            let qualityIssues = [];
+            
+            // Check for large files
+            const largeFiles = files.filter(f => f.changes > 500);
+            if (largeFiles.length > 0) {
+              qualityIssues.push(`${largeFiles.length} files with >500 lines changed`);
+            }
+            
+            // Check for generated files being manually edited
+            const genFiles = files.filter(f => f.filename.includes('_gen'));
+            if (genFiles.length > 0) {
+              qualityIssues.push('Generated files were modified');
+            }
+            
+            if (qualityIssues.length === 0) {
+              checks.codeQuality.passed = true;
+            } else {
+              checks.codeQuality.message = qualityIssues.join(', ');
+            }
+            
+            // Check PR size
+            if (pr.additions + pr.deletions > 1000) {
+              checks.size.message = 'PR is very large, consider splitting';
+            } else {
+              checks.size.passed = true;
+            }
+            
+            // Calculate overall readiness
+            const passedChecks = Object.values(checks).filter(c => c.passed).length;
+            const totalChecks = Object.keys(checks).length;
+            const readinessScore = Math.round((passedChecks / totalChecks) * 100);
+            const isReady = passedChecks === totalChecks;
+            
+            // Generate readiness report
+            let report = `# 📋 PR Readiness Check\n\n`;
+            report += `**Score**: ${readinessScore}% (${passedChecks}/${totalChecks} checks passed)\n`;
+            report += `**Status**: ${isReady ? '✅ Ready for Review' : '⚠️ Needs Attention'}\n\n`;
+            
+            report += '## Checklist\n\n';
+            for (const [check, result] of Object.entries(checks)) {
+              const icon = result.passed ? '✅' : '❌';
+              const checkName = check.charAt(0).toUpperCase() + check.slice(1).replace(/([A-Z])/g, ' $1');
+              report += `- ${icon} **${checkName}**`;
+              if (!result.passed) {
+                report += `: ${result.message}`;
+              }
+              report += '\n';
+            }
+            
+            // Add recommendations
+            if (!isReady) {
+              report += '\n## Recommendations\n\n';
+              
+              if (!checks.description.passed) {
+                report += '- Add a detailed description explaining the changes and their purpose\n';
+              }
+              if (!checks.linkedIssues.passed) {
+                report += '- Link related issues using keywords like "Fixes #123"\n';
+              }
+              if (!checks.tests.passed) {
+                report += '- Add tests to cover your code changes\n';
+              }
+              if (!checks.documentation.passed) {
+                report += '- Update documentation to reflect significant changes\n';
+              }
+              if (!checks.size.passed) {
+                report += '- Consider breaking this PR into smaller, focused changes\n';
+              }
+            }
+            
+            // File analysis
+            report += '\n## File Analysis\n\n';
+            report += `- **Files Changed**: ${files.length}\n`;
+            report += `- **Lines Added**: +${pr.additions}\n`;
+            report += `- **Lines Deleted**: -${pr.deletions}\n`;
+            
+            const fileTypes = {};
+            for (const file of files) {
+              const ext = file.filename.split('.').pop();
+              fileTypes[ext] = (fileTypes[ext] || 0) + 1;
+            }
+            
+            report += `- **File Types**: ${Object.entries(fileTypes).map(([ext, count]) => `${ext} (${count})`).join(', ')}\n`;
+            
+            // Create or update check run
+            const checkName = 'PR Readiness';
+            const { data: checks: checkRuns } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha,
+              check_name: checkName
+            });
+            
+            const checkRunData = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: checkName,
+              head_sha: pr.head.sha,
+              status: 'completed',
+              conclusion: isReady ? 'success' : 'failure',
+              output: {
+                title: `PR Readiness: ${readinessScore}%`,
+                summary: report
+              }
+            };
+            
+            if (checkRuns.check_runs.length > 0) {
+              await github.rest.checks.update({
+                ...checkRunData,
+                check_run_id: checkRuns.check_runs[0].id
+              });
+            } else {
+              await github.rest.checks.create(checkRunData);
+            }
+            
+            // Add labels based on readiness
+            if (isReady) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['ready-for-review']
+              });
+              
+              // Remove needs-work label if exists
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  name: 'needs-work'
+                });
+              } catch (e) {
+                // Label might not exist
+              }
+            } else {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['needs-work']
+              });
+              
+              // Remove ready-for-review label if exists
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  name: 'ready-for-review'
+                });
+              } catch (e) {
+                // Label might not exist
+              }
+            }
+            
+            // Post comment with detailed feedback
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number
+            });
+            
+            const botComment = comments.data.find(c => 
+              c.user.type === 'Bot' && c.body.includes('PR Readiness Check')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: report
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: report
+              });
+            }

@@ -1,0 +1,256 @@
+name: Acceptance Criteria Verification
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  verify-acceptance:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Generate acceptance checklist
+        if: github.event_name == 'issues' && github.event.label.name == 'in-acceptance'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            
+            // Extract acceptance criteria from issue body
+            const body = issue.body || '';
+            const criteriaPattern = /\[[ x]\]\s*(.+)/g;
+            const criteria = [];
+            let match;
+            
+            while ((match = criteriaPattern.exec(body)) !== null) {
+              criteria.push({
+                text: match[1].trim(),
+                checked: match[0].includes('[x]')
+              });
+            }
+            
+            // Generate verification checklist
+            let checklist = `# 🎯 Acceptance Verification Checklist\n\n`;
+            checklist += `**Issue**: #${issue.number} - ${issue.title}\n`;
+            checklist += `**Deployed**: ${new Date().toLocaleString()}\n\n`;
+            
+            checklist += '## Acceptance Criteria\n\n';
+            checklist += 'Please verify each criterion has been met:\n\n';
+            
+            if (criteria.length > 0) {
+              for (const criterion of criteria) {
+                checklist += `- [ ] ${criterion.text}\n`;
+              }
+            } else {
+              checklist += '- [ ] No specific acceptance criteria found - verify issue requirements\n';
+            }
+            
+            checklist += '\n## Additional Verification\n\n';
+            checklist += '- [ ] Feature works as expected in production/staging\n';
+            checklist += '- [ ] No regression in existing functionality\n';
+            checklist += '- [ ] Performance is acceptable\n';
+            checklist += '- [ ] Edge cases have been tested\n';
+            
+            // Add type-specific checks
+            if (issue.labels.some(l => l.name === 'feature')) {
+              checklist += '\n### Feature Verification\n\n';
+              checklist += '- [ ] Feature is accessible to intended users\n';
+              checklist += '- [ ] Feature flag (if applicable) is working correctly\n';
+              checklist += '- [ ] Analytics/monitoring is in place\n';
+            } else if (issue.labels.some(l => l.name === 'bug')) {
+              checklist += '\n### Bug Fix Verification\n\n';
+              checklist += '- [ ] Original bug can no longer be reproduced\n';
+              checklist += '- [ ] Fix doesn't introduce new issues\n';
+              checklist += '- [ ] Root cause has been addressed\n';
+            }
+            
+            checklist += '\n## Sign-off\n\n';
+            checklist += '- [ ] Product Owner approval\n';
+            checklist += '- [ ] QA approval (if applicable)\n';
+            checklist += '- [ ] Engineering approval\n';
+            
+            checklist += '\n---\n';
+            checklist += '**Instructions**: Check off each item as verified. ';
+            checklist += 'Once all items are checked, add a comment with `/accept` to mark this issue as done.\n';
+            checklist += 'If any issues are found, add a comment with `/reject <reason>` to send back for fixes.\n';
+            
+            // Post the checklist
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: checklist
+            });
+            
+            // Add verification-pending label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['verification-pending']
+            });
+
+      - name: Handle acceptance decision
+        if: github.event_name == 'issue_comment' && (contains(github.event.comment.body, '/accept') || contains(github.event.comment.body, '/reject'))
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment;
+            const issue = context.payload.issue;
+            
+            // Check if issue is in acceptance
+            if (!issue.labels.some(l => l.name === 'in-acceptance')) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '❌ This issue is not in acceptance testing. Command ignored.'
+              });
+              return;
+            }
+            
+            // Check user permissions
+            const { data: { permission } } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: comment.user.login
+            });
+            
+            if (!['admin', 'maintain', 'write'].includes(permission)) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ @${comment.user.login} - You don't have permission to accept/reject issues.`
+              });
+              return;
+            }
+            
+            if (comment.body.includes('/accept')) {
+              // Find the verification checklist comment
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number
+              });
+              
+              const checklistComment = comments.find(c => 
+                c.body.includes('Acceptance Verification Checklist')
+              );
+              
+              if (checklistComment) {
+                // Count checked items
+                const totalChecks = (checklistComment.body.match(/\[[ x]\]/g) || []).length;
+                const checkedItems = (checklistComment.body.match(/\[x\]/g) || []).length;
+                
+                if (checkedItems < totalChecks) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `⚠️ **Cannot Accept** - Not all verification items are checked (${checkedItems}/${totalChecks}). Please complete all checks before accepting.`
+                  });
+                  return;
+                }
+              }
+              
+              // Mark as done
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+              
+              // Update labels
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                name: 'in-acceptance'
+              });
+              
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                name: 'verification-pending'
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['done', 'verified']
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ **Accepted** by @${comment.user.login}
+                
+                This issue has been verified and marked as done. Great work team! 🎉
+                
+                **Closed at**: ${new Date().toLocaleString()}`
+              });
+              
+            } else if (comment.body.includes('/reject')) {
+              // Extract rejection reason
+              const reasonMatch = comment.body.match(/\/reject\s+(.+)/);
+              const reason = reasonMatch ? reasonMatch[1] : 'No reason provided';
+              
+              // Move back to in-progress
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                name: 'in-acceptance'
+              });
+              
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                name: 'verification-pending'
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['in-progress', 'verification-failed']
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ **Rejected** by @${comment.user.login}
+                
+                **Reason**: ${reason}
+                
+                This issue has been sent back for fixes. Please address the feedback and resubmit for acceptance testing.
+                
+                **Next Steps**:
+                1. Review the rejection reason
+                2. Make necessary fixes
+                3. Submit PR with fixes
+                4. Issue will return to acceptance after merge`
+              });
+              
+              // Notify assignees
+              if (issue.assignees.length > 0) {
+                const assigneesList = issue.assignees.map(a => `@${a.login}`).join(', ');
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `🔔 ${assigneesList} - This issue was rejected during acceptance testing. Please see the reason above and address the feedback.`
+                });
+              }
+            }

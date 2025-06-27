@@ -1,0 +1,280 @@
+name: SLA Monitoring
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+  issues:
+    types: [opened]
+  schedule:
+    # Check SLAs every hour during business hours
+    - cron: '0 8-18 * * 1-5'
+
+jobs:
+  monitor-slas:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Check PR review SLA
+        if: github.event_name == 'schedule' || github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            const SLA_HOURS = {
+              'first-response': 4,
+              'review-complete': 24,
+              'merge-decision': 48
+            };
+            
+            // Get open PRs
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            const violations = {
+              firstResponse: [],
+              reviewComplete: [],
+              mergeDecision: []
+            };
+            
+            for (const pr of prs) {
+              const createdAt = new Date(pr.created_at);
+              const hoursSinceCreated = (now - createdAt) / (1000 * 60 * 60);
+              
+              // Check for any comments/reviews
+              const { data: reviews } = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number
+              });
+              
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number
+              });
+              
+              // Filter out bot comments
+              const humanComments = comments.filter(c => c.user.type !== 'Bot');
+              const hasHumanInteraction = humanComments.length > 0 || reviews.length > 0;
+              
+              // Check first response SLA
+              if (!hasHumanInteraction && hoursSinceCreated > SLA_HOURS['first-response']) {
+                violations.firstResponse.push({
+                  pr,
+                  hoursSinceCreated: Math.round(hoursSinceCreated)
+                });
+              }
+              
+              // Check review complete SLA
+              const hasApproval = reviews.some(r => r.state === 'APPROVED');
+              const hasRequestedChanges = reviews.some(r => r.state === 'CHANGES_REQUESTED');
+              const hasReviewDecision = hasApproval || hasRequestedChanges;
+              
+              if (!hasReviewDecision && hoursSinceCreated > SLA_HOURS['review-complete']) {
+                violations.reviewComplete.push({
+                  pr,
+                  hoursSinceCreated: Math.round(hoursSinceCreated)
+                });
+              }
+              
+              // Check merge decision SLA
+              if (hasApproval && hoursSinceCreated > SLA_HOURS['merge-decision']) {
+                violations.mergeDecision.push({
+                  pr,
+                  hoursSinceCreated: Math.round(hoursSinceCreated)
+                });
+              }
+            }
+            
+            // Handle violations
+            const totalViolations = violations.firstResponse.length + 
+                                  violations.reviewComplete.length + 
+                                  violations.mergeDecision.length;
+            
+            if (totalViolations > 0) {
+              // Add warning labels to PRs
+              for (const violation of violations.firstResponse) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: violation.pr.number,
+                  labels: ['sla-violation:first-response']
+                });
+                
+                // Notify reviewers
+                if (violation.pr.requested_reviewers.length > 0) {
+                  const reviewers = violation.pr.requested_reviewers.map(r => `@${r.login}`).join(', ');
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: violation.pr.number,
+                    body: `⏰ **SLA Reminder**: This PR has been waiting for ${violation.hoursSinceCreated} hours without a response.\n\n${reviewers} - Please provide initial feedback within the 4-hour SLA.`
+                  });
+                }
+              }
+              
+              // Generate SLA report
+              let report = `# 📊 SLA Violation Report\n\n`;
+              report += `**Generated**: ${now.toLocaleString()}\n`;
+              report += `**Total Violations**: ${totalViolations}\n\n`;
+              
+              if (violations.firstResponse.length > 0) {
+                report += `## ⏰ First Response SLA Violations (>${SLA_HOURS['first-response']}h)\n\n`;
+                for (const v of violations.firstResponse) {
+                  const reviewers = v.pr.requested_reviewers.map(r => `@${r.login}`).join(', ') || 'No reviewers assigned';
+                  report += `- #${v.pr.number}: ${v.pr.title}\n`;
+                  report += `  - Age: ${v.hoursSinceCreated} hours\n`;
+                  report += `  - Reviewers: ${reviewers}\n`;
+                }
+                report += '\n';
+              }
+              
+              if (violations.reviewComplete.length > 0) {
+                report += `## 📝 Review Complete SLA Violations (>${SLA_HOURS['review-complete']}h)\n\n`;
+                for (const v of violations.reviewComplete) {
+                  report += `- #${v.pr.number}: ${v.pr.title} (${v.hoursSinceCreated}h old)\n`;
+                }
+                report += '\n';
+              }
+              
+              if (violations.mergeDecision.length > 0) {
+                report += `## ✅ Merge Decision SLA Violations (>${SLA_HOURS['merge-decision']}h)\n\n`;
+                report += `These PRs are approved but not merged:\n\n`;
+                for (const v of violations.mergeDecision) {
+                  report += `- #${v.pr.number}: ${v.pr.title} (${v.hoursSinceCreated}h old)\n`;
+                }
+                report += '\n';
+              }
+              
+              report += `## SLA Targets\n\n`;
+              report += `- **First Response**: ${SLA_HOURS['first-response']} hours\n`;
+              report += `- **Review Complete**: ${SLA_HOURS['review-complete']} hours\n`;
+              report += `- **Merge Decision**: ${SLA_HOURS['merge-decision']} hours\n`;
+              
+              // Create or update SLA report
+              const { data: existingReports } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'sla-report',
+                state: 'open',
+                per_page: 1
+              });
+              
+              if (existingReports.length > 0) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existingReports[0].number,
+                  body: report
+                });
+              } else {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `📊 SLA Violations - ${totalViolations} Items Need Attention`,
+                  body: report,
+                  labels: ['sla-report', 'metrics'],
+                  assignees: [process.env.TECH_LEAD].filter(Boolean)
+                });
+              }
+            }
+
+      - name: Check issue response SLA
+        if: github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            const ISSUE_SLA_HOURS = {
+              'bug': 8,
+              'critical': 2,
+              'feature': 24,
+              'default': 48
+            };
+            
+            // Get open issues without responses
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            const unrepliedIssues = [];
+            
+            for (const issue of issues) {
+              // Skip PRs
+              if (issue.pull_request) continue;
+              
+              const createdAt = new Date(issue.created_at);
+              const hoursSinceCreated = (now - createdAt) / (1000 * 60 * 60);
+              
+              // Get comments
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number
+              });
+              
+              // Check if there's a non-bot response
+              const hasHumanResponse = comments.some(c => 
+                c.user.type !== 'Bot' && c.user.login !== issue.user.login
+              );
+              
+              if (!hasHumanResponse) {
+                // Determine SLA based on labels
+                let slaHours = ISSUE_SLA_HOURS.default;
+                if (issue.labels.some(l => l.name === 'critical')) {
+                  slaHours = ISSUE_SLA_HOURS.critical;
+                } else if (issue.labels.some(l => l.name === 'bug')) {
+                  slaHours = ISSUE_SLA_HOURS.bug;
+                } else if (issue.labels.some(l => l.name === 'feature')) {
+                  slaHours = ISSUE_SLA_HOURS.feature;
+                }
+                
+                if (hoursSinceCreated > slaHours) {
+                  unrepliedIssues.push({
+                    issue,
+                    hoursSinceCreated: Math.round(hoursSinceCreated),
+                    slaHours
+                  });
+                }
+              }
+            }
+            
+            // Handle unreplied issues
+            if (unrepliedIssues.length > 0) {
+              for (const item of unrepliedIssues) {
+                // Add SLA violation label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: item.issue.number,
+                  labels: ['needs-triage']
+                });
+                
+                // Post reminder
+                if (item.hoursSinceCreated > item.slaHours * 2) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: item.issue.number,
+                    body: `⏰ **SLA Alert**: This issue has been waiting for ${item.hoursSinceCreated} hours without a response (SLA: ${item.slaHours}h).\n\nTeam - Please triage and respond to this issue.`
+                  });
+                }
+              }
+            }
+            
+            console.log('SLA monitoring complete:', {
+              prsChecked: prs.length,
+              issuesChecked: issues.length,
+              violations: totalViolations,
+              unrepliedIssues: unrepliedIssues.length
+            });

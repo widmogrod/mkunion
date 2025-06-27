@@ -1,0 +1,237 @@
+# Escalation Matrix for Notifications
+# Defines who gets notified and when for different scenarios
+
+roles:
+  tech_lead:
+    github_username: "${TECH_LEAD_USERNAME}"
+    responsibilities:
+      - technical_decisions
+      - pr_reviews
+      - blocker_resolution
+      - architecture_reviews
+  
+  engineering_manager:
+    github_username: "${ENGINEERING_MANAGER_USERNAME}"
+    responsibilities:
+      - team_capacity
+      - sla_violations
+      - sprint_planning
+      - escalations
+  
+  product_owner:
+    github_username: "${PRODUCT_OWNER_USERNAME}"
+    responsibilities:
+      - requirement_clarification
+      - acceptance_testing
+      - priority_decisions
+      - backlog_management
+  
+  scrum_master:
+    github_username: "${SCRUM_MASTER_USERNAME}"
+    responsibilities:
+      - sprint_ceremonies
+      - blocker_tracking
+      - team_velocity
+      - process_improvement
+
+escalation_rules:
+  blockers:
+    immediate:
+      duration: "0-2 hours"
+      notify:
+        - assignees
+        - team_members
+      actions:
+        - post_comment
+        - add_label: "blocked"
+    
+    short_term:
+      duration: "2-4 hours"
+      notify:
+        - assignees
+        - tech_lead
+      actions:
+        - post_comment
+        - add_label: "blocker-escalated"
+        - create_thread
+    
+    extended:
+      duration: "4+ hours"
+      notify:
+        - assignees
+        - tech_lead
+        - engineering_manager
+      actions:
+        - create_issue
+        - schedule_meeting
+        - daily_reminder
+    
+    critical:
+      duration: "8+ hours"
+      notify:
+        - assignees
+        - tech_lead
+        - engineering_manager
+        - product_owner
+      actions:
+        - urgent_issue
+        - management_alert
+        - status_page_update
+
+  sla_violations:
+    pr_first_response:
+      threshold: "4 hours"
+      notify:
+        - requested_reviewers
+        - pr_author
+      actions:
+        - post_reminder
+        - add_label: "sla-violation:first-response"
+    
+    pr_review_complete:
+      threshold: "24 hours"
+      notify:
+        - requested_reviewers
+        - tech_lead
+      actions:
+        - escalation_comment
+        - reassign_reviewers
+    
+    issue_triage:
+      bug:
+        threshold: "8 hours"
+        notify:
+          - tech_lead
+          - on_call_engineer
+      critical:
+        threshold: "2 hours"
+        notify:
+          - tech_lead
+          - engineering_manager
+          - on_call_engineer
+      feature:
+        threshold: "24 hours"
+        notify:
+          - product_owner
+          - tech_lead
+
+  capacity_alerts:
+    individual_overload:
+      threshold: ">2 in-progress items"
+      notify:
+        - individual
+        - scrum_master
+      actions:
+        - warning_comment
+        - suggest_reassignment
+    
+    team_capacity:
+      high_utilization:
+        threshold: ">80%"
+        notify:
+          - scrum_master
+          - engineering_manager
+        actions:
+          - capacity_report
+          - defer_new_work
+      
+      critical_capacity:
+        threshold: ">95%"
+        notify:
+          - engineering_manager
+          - product_owner
+        actions:
+          - urgent_planning_meeting
+          - stop_new_work
+
+  sprint_alerts:
+    burndown_behind:
+      threshold: "20% behind ideal"
+      notify:
+        - scrum_master
+        - tech_lead
+      actions:
+        - daily_standup_topic
+        - suggest_re_scoping
+    
+    sprint_at_risk:
+      threshold: "40% behind ideal"
+      notify:
+        - scrum_master
+        - engineering_manager
+        - product_owner
+      actions:
+        - emergency_planning
+        - scope_reduction
+
+notification_channels:
+  github_issues:
+    enabled: true
+    for:
+      - escalations
+      - reports
+      - alerts
+  
+  github_comments:
+    enabled: true
+    for:
+      - reminders
+      - updates
+      - warnings
+  
+  email:
+    enabled: false
+    integration: "github_notifications"
+  
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channels:
+      alerts: "#eng-alerts"
+      daily: "#eng-daily"
+      blockers: "#eng-blockers"
+  
+  calendar:
+    enabled: false
+    integration: "google_calendar"
+    for:
+      - sprint_events
+      - escalation_meetings
+
+# Notification templates
+templates:
+  blocker_escalation:
+    title: "🚨 Blocker Escalation: {issue_number} - {issue_title}"
+    body: |
+      Issue #{issue_number} has been blocked for {hours_blocked} hours.
+      
+      Assignees: {assignees}
+      Priority: {priority}
+      
+      Please take immediate action to unblock.
+  
+  sla_violation:
+    title: "⏰ SLA Violation: {violation_type}"
+    body: |
+      The following items have violated their SLA:
+      {violation_list}
+      
+      Please address these items immediately.
+  
+  capacity_warning:
+    title: "⚠️ Capacity Warning: {user} at {capacity}% utilization"
+    body: |
+      {user} is currently assigned {task_count} in-progress items.
+      
+      Consider redistributing work to maintain quality and velocity.
+
+# Quiet hours (no non-critical notifications)
+quiet_hours:
+  enabled: true
+  timezone: "UTC"
+  start: "18:00"
+  end: "09:00"
+  override_for:
+    - critical_blockers
+    - security_issues
+    - production_incidents

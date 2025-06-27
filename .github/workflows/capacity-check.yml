@@ -1,0 +1,184 @@
+name: Team Capacity Check
+
+on:
+  issues:
+    types: [assigned, unassigned, closed, labeled]
+  pull_request:
+    types: [assigned, unassigned, closed]
+  schedule:
+    # Run every morning at 9 AM UTC
+    - cron: '0 9 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  check-capacity:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+      contents: read
+    steps:
+      - name: Check team member capacity
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get all open issues with in-progress label
+            const { data: inProgressIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'in-progress',
+              state: 'open',
+              per_page: 100
+            });
+            
+            // Get all open PRs
+            const { data: openPRs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            // Count tasks per assignee
+            const workload = {};
+            const violations = [];
+            
+            // Count issues
+            for (const issue of inProgressIssues) {
+              if (issue.assignees && issue.assignees.length > 0) {
+                for (const assignee of issue.assignees) {
+                  if (!workload[assignee.login]) {
+                    workload[assignee.login] = { issues: 0, prs: 0, total: 0 };
+                  }
+                  workload[assignee.login].issues++;
+                  workload[assignee.login].total++;
+                }
+              }
+            }
+            
+            // Count PRs
+            for (const pr of openPRs) {
+              if (pr.assignees && pr.assignees.length > 0) {
+                for (const assignee of pr.assignees) {
+                  if (!workload[assignee.login]) {
+                    workload[assignee.login] = { issues: 0, prs: 0, total: 0 };
+                  }
+                  workload[assignee.login].prs++;
+                  workload[assignee.login].total++;
+                }
+              }
+            }
+            
+            // Check for violations (more than 2 in-progress items)
+            for (const [user, stats] of Object.entries(workload)) {
+              if (stats.issues > 2) {
+                violations.push({
+                  user,
+                  issues: stats.issues,
+                  message: `has ${stats.issues} in-progress issues (max: 2)`
+                });
+              }
+            }
+            
+            // If triggered by issue assignment, check specific assignee
+            if (context.eventName === 'issues' && context.payload.action === 'assigned') {
+              const assignee = context.payload.assignee.login;
+              if (workload[assignee] && workload[assignee].issues > 2) {
+                // Add warning comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  body: `⚠️ **Capacity Warning**
+                  
+                  @${assignee} currently has ${workload[assignee].issues} in-progress issues (limit: 2).
+                  
+                  Please complete existing work before taking on new tasks, or reassign this issue to maintain focus and quality.`
+                });
+                
+                // Add warning label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  labels: ['capacity-exceeded']
+                });
+              }
+            }
+            
+            // Generate capacity report for scheduled runs
+            if (context.eventName === 'schedule' || context.eventName === 'workflow_dispatch') {
+              let report = '# 📊 Team Capacity Report\n\n';
+              report += `Generated: ${new Date().toISOString()}\n\n`;
+              
+              report += '## Current Workload\n\n';
+              report += '| Team Member | In-Progress Issues | Open PRs | Total | Status |\n';
+              report += '|-------------|-------------------|----------|-------|--------|\n';
+              
+              const sortedWorkload = Object.entries(workload).sort((a, b) => b[1].total - a[1].total);
+              
+              for (const [user, stats] of sortedWorkload) {
+                const status = stats.issues > 2 ? '⚠️ Over Capacity' : '✅ OK';
+                report += `| @${user} | ${stats.issues} | ${stats.prs} | ${stats.total} | ${status} |\n`;
+              }
+              
+              if (violations.length > 0) {
+                report += '\n## ⚠️ Capacity Violations\n\n';
+                for (const violation of violations) {
+                  report += `- @${violation.user} ${violation.message}\n`;
+                }
+              }
+              
+              // Calculate team utilization
+              const teamMembers = Object.keys(workload).length;
+              const totalIssues = Object.values(workload).reduce((sum, stats) => sum + stats.issues, 0);
+              const avgIssuesPerPerson = teamMembers > 0 ? (totalIssues / teamMembers).toFixed(1) : 0;
+              const utilization = teamMembers > 0 ? ((totalIssues / (teamMembers * 2)) * 100).toFixed(0) : 0;
+              
+              report += '\n## Team Metrics\n\n';
+              report += `- **Active Team Members**: ${teamMembers}\n`;
+              report += `- **Total In-Progress Issues**: ${totalIssues}\n`;
+              report += `- **Average Issues per Person**: ${avgIssuesPerPerson}\n`;
+              report += `- **Team Utilization**: ${utilization}% (based on 2 issues per person)\n`;
+              
+              if (utilization > 80) {
+                report += `\n⚠️ **High Utilization Warning**: Team is at ${utilization}% capacity. Consider deferring new work.`;
+              }
+              
+              // Create or update capacity report issue
+              const { data: existingIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'capacity-report',
+                state: 'open',
+                per_page: 1
+              });
+              
+              if (existingIssues.length > 0) {
+                // Update existing report
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existingIssues[0].number,
+                  body: report
+                });
+              } else {
+                // Create new report
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `Team Capacity Report - ${new Date().toLocaleDateString()}`,
+                  body: report,
+                  labels: ['capacity-report', 'metrics']
+                });
+              }
+            }
+            
+            // Output metrics for monitoring
+            console.log('Capacity Metrics:', JSON.stringify({
+              timestamp: new Date().toISOString(),
+              workload,
+              violations,
+              teamUtilization: Object.keys(workload).length > 0 ? 
+                (Object.values(workload).reduce((sum, stats) => sum + stats.issues, 0) / (Object.keys(workload).length * 2) * 100).toFixed(0) : 0
+            }));

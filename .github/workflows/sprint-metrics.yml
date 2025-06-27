@@ -1,0 +1,174 @@
+name: Sprint Metrics Collection
+
+on:
+  schedule:
+    # Run every day at 2 PM UTC
+    - cron: '0 14 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  collect-metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      contents: read
+    steps:
+      - name: Collect daily sprint metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            const sprintNumber = Math.floor((now.getTime() - new Date('2024-01-01').getTime()) / (14 * 24 * 60 * 60 * 1000)) + 1;
+            
+            // Get current sprint issues
+            const { data: sprintIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: `sprint:${sprintNumber}`,
+              state: 'all',
+              per_page: 100
+            });
+            
+            // Calculate burndown data
+            const metrics = {
+              date: now.toISOString(),
+              sprint: sprintNumber,
+              todo: 0,
+              inProgress: 0,
+              inReview: 0,
+              done: 0,
+              totalPoints: 0,
+              remainingPoints: 0,
+              completedPoints: 0,
+              blockedIssues: 0,
+              cycleTime: []
+            };
+            
+            // Analyze each issue
+            for (const issue of sprintIssues) {
+              // Get story points
+              const spLabel = issue.labels.find(l => l.name.startsWith('sp:'));
+              const points = spLabel ? parseInt(spLabel.name.split(':')[1]) : 3;
+              
+              metrics.totalPoints += points;
+              
+              // Categorize by state
+              if (issue.state === 'closed') {
+                metrics.done++;
+                metrics.completedPoints += points;
+                
+                // Calculate cycle time
+                const created = new Date(issue.created_at);
+                const closed = new Date(issue.closed_at);
+                const cycleTimeDays = Math.round((closed - created) / (1000 * 60 * 60 * 24));
+                metrics.cycleTime.push(cycleTimeDays);
+              } else {
+                metrics.remainingPoints += points;
+                
+                if (issue.labels.some(l => l.name === 'in-code-review')) {
+                  metrics.inReview++;
+                } else if (issue.labels.some(l => l.name === 'in-progress')) {
+                  metrics.inProgress++;
+                } else {
+                  metrics.todo++;
+                }
+                
+                if (issue.labels.some(l => l.name === 'blocked')) {
+                  metrics.blockedIssues++;
+                }
+              }
+            }
+            
+            // Calculate average cycle time
+            metrics.avgCycleTime = metrics.cycleTime.length > 0 ?
+              Math.round(metrics.cycleTime.reduce((a, b) => a + b, 0) / metrics.cycleTime.length) : 0;
+            
+            // Calculate sprint progress
+            const sprintStart = new Date(now.getTime() - ((sprintNumber - 1) * 14 * 24 * 60 * 60 * 1000));
+            const sprintEnd = new Date(sprintStart.getTime() + (14 * 24 * 60 * 60 * 1000));
+            const sprintProgress = Math.round(((now - sprintStart) / (sprintEnd - sprintStart)) * 100);
+            const idealProgress = Math.round((metrics.completedPoints / metrics.totalPoints) * 100);
+            
+            metrics.sprintProgress = sprintProgress;
+            metrics.idealProgress = idealProgress;
+            metrics.isOnTrack = idealProgress >= (sprintProgress - 10); // 10% buffer
+            
+            // Store metrics as a comment in a tracking issue
+            const { data: trackingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'sprint-metrics-tracking',
+              state: 'open',
+              per_page: 1
+            });
+            
+            let trackingIssue;
+            if (trackingIssues.length === 0) {
+              // Create tracking issue
+              const { data: newIssue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Sprint ${sprintNumber} Metrics Tracking`,
+                body: 'This issue tracks daily sprint metrics. Do not close.',
+                labels: ['sprint-metrics-tracking', 'automated']
+              });
+              trackingIssue = newIssue;
+            } else {
+              trackingIssue = trackingIssues[0];
+            }
+            
+            // Add metrics as comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: trackingIssue.number,
+              body: `<!-- METRICS:${now.toISOString()} -->\n\`\`\`json\n${JSON.stringify(metrics, null, 2)}\n\`\`\``
+            });
+            
+            // Generate daily summary if needed
+            if (metrics.blockedIssues > 0 || !metrics.isOnTrack) {
+              let alert = `# ⚠️ Sprint ${sprintNumber} Daily Alert\n\n`;
+              alert += `**Date**: ${now.toLocaleDateString()}\n`;
+              alert += `**Sprint Progress**: Day ${Math.round(sprintProgress / 100 * 14)}/14 (${sprintProgress}%)\n\n`;
+              
+              if (!metrics.isOnTrack) {
+                alert += `## 📉 Sprint is Behind Schedule\n\n`;
+                alert += `- **Completed**: ${metrics.completedPoints}/${metrics.totalPoints} points (${idealProgress}%)\n`;
+                alert += `- **Expected**: ~${Math.round(metrics.totalPoints * sprintProgress / 100)} points\n`;
+                alert += `- **Gap**: ${Math.round(metrics.totalPoints * sprintProgress / 100) - metrics.completedPoints} points\n\n`;
+              }
+              
+              if (metrics.blockedIssues > 0) {
+                alert += `## 🚧 Blocked Issues (${metrics.blockedIssues})\n\n`;
+                
+                const blockedIssues = sprintIssues.filter(i => 
+                  i.state === 'open' && i.labels.some(l => l.name === 'blocked')
+                );
+                
+                for (const issue of blockedIssues) {
+                  const assignee = issue.assignees.length > 0 ? `@${issue.assignees[0].login}` : 'Unassigned';
+                  alert += `- #${issue.number}: ${issue.title} (${assignee})\n`;
+                }
+                
+                alert += '\nPlease address these blockers immediately.\n';
+              }
+              
+              alert += '\n## Recommended Actions\n\n';
+              alert += '- [ ] Review blocked issues with the team\n';
+              alert += '- [ ] Re-prioritize remaining work\n';
+              alert += '- [ ] Consider moving low-priority items out of sprint\n';
+              alert += '- [ ] Pair programming on complex issues\n';
+              
+              // Create alert issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Sprint ${sprintNumber} Alert - ${now.toLocaleDateString()}`,
+                body: alert,
+                labels: ['sprint-alert', 'urgent'],
+                assignees: process.env.SCRUM_MASTER ? [process.env.SCRUM_MASTER] : []
+              });
+            }
+            
+            // Output metrics for monitoring
+            console.log('Sprint Metrics:', JSON.stringify(metrics));
