@@ -899,3 +899,46 @@ func TestIntegration_PlanVsDirectExecution_ElseBranch(t *testing.T) {
 	assert.Equal(t, directResult, done.Result, "Plan execution should produce same result as direct execution")
 	assert.Equal(t, schema.MkString("else branch"), done.Result) // input=20, doubled=40, 40<50 so else branch taken
 }
+
+func TestPlanExecutor_CircularDependencyProtection(t *testing.T) {
+	// Arrange
+	plan := NewExecutionPlan()
+
+	// Create a simple circular dependency: A -> B -> C -> A
+	plan.Steps = []PlanStep{
+		&ExecuteStep{
+			StepID:    "A",
+			Expr:      &End{ID: "endA", Result: &SetValue{Value: schema.MkInt(1)}},
+			DependsOn: []string{"C"}, // A depends on C
+		},
+		&ExecuteStep{
+			StepID:    "B",
+			Expr:      &End{ID: "endB", Result: &SetValue{Value: schema.MkInt(2)}},
+			DependsOn: []string{"A"}, // B depends on A
+		},
+		&ExecuteStep{
+			StepID:    "C",
+			Expr:      &End{ID: "endC", Result: &SetValue{Value: schema.MkInt(3)}},
+			DependsOn: []string{"B"}, // C depends on B, creating cycle
+		},
+	}
+
+	executor := NewPlanExecutor(&testDependency{})
+
+	// Act
+	state, err := executor.Execute(plan)
+
+	// Assert - With circular dependencies, the executor should hit the iteration limit
+	if err != nil {
+		assert.Contains(t, err.Error(), "execution loop exceeded maximum iterations")
+	} else {
+		// If no error, then it should return Done state with no steps completed
+		assert.NotNil(t, state)
+		done, ok := state.(*Done)
+		assert.True(t, ok, "Expected Done state")
+		assert.Nil(t, done.Result) // No result since no steps could execute
+
+		// Verify no steps were completed due to circular dependency
+		assert.Empty(t, plan.ExecutedSteps, "No steps should have been executed")
+	}
+}

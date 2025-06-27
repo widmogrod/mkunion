@@ -2,7 +2,6 @@ package workflow
 
 import (
 	"fmt"
-
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
@@ -232,7 +231,7 @@ func (g *planGenerator) generateStepsForExpr(expr Expr) []PlanStep {
 			},
 		}
 	default:
-		// TODO: Handle other expression types
+		// TODO: Handle other expression types (see issue #167)
 		return []PlanStep{}
 	}
 }
@@ -274,7 +273,13 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 	}
 
 	// Execute steps in order (respecting dependencies)
+	maxIterations := len(plan.Steps) * 10 // Reasonable upper bound
+	iterations := 0
 	for i := 0; i < len(plan.Steps); i++ {
+		iterations++
+		if iterations > maxIterations {
+			return nil, fmt.Errorf("execution loop exceeded maximum iterations (%d), possible circular dependencies", maxIterations)
+		}
 		step := plan.Steps[i]
 
 		// Check if all dependencies are satisfied using exhaustive pattern matching
@@ -445,48 +450,6 @@ func (e *planExecutor) executeStepInternal(step PlanStep, plan *ExecutionPlan, b
 				return &stepResult{state: state, result: result}, nil
 			}
 			return nil, fmt.Errorf("step %s not found in results", s.FromStep)
-		},
-	)
-}
-
-// executeStep executes a single plan step
-func (e *planExecutor) executeStep(step PlanStep, plan *ExecutionPlan, baseState BaseState) (schema.Schema, []PlanStep, error) {
-	return MatchPlanStepR3(
-		step,
-		func(s *ExecuteStep) (schema.Schema, []PlanStep, error) {
-			// Execute the expression
-			state := ExecuteExpr(baseState, s.Expr, e.dep)
-
-			// Update the base state from the result
-			baseState = GetBaseState(state)
-
-			// Extract result from state
-			switch st := state.(type) {
-			case *Done:
-				return st.Result, nil, nil
-			case *NextOperation:
-				return st.Result, nil, nil
-			case *Error:
-				return nil, nil, fmt.Errorf("error executing step %s: %s", s.StepID, st.Reason)
-			default:
-				return nil, nil, fmt.Errorf("unexpected state type: %T", state)
-			}
-		},
-		func(s *AssignStep) (schema.Schema, []PlanStep, error) {
-			// Get result from the source step
-			if result, ok := plan.Results[s.FromStep]; ok {
-				// Update variables in base state
-				baseState.Variables[s.VarName] = result
-				return result, nil, nil
-			}
-			return nil, nil, fmt.Errorf("step %s not found in results", s.FromStep)
-		},
-		func(s *ReturnStep) (schema.Schema, []PlanStep, error) {
-			// Return result from another step
-			if result, ok := plan.Results[s.FromStep]; ok {
-				return result, nil, nil
-			}
-			return nil, nil, fmt.Errorf("step %s not found in results", s.FromStep)
 		},
 	)
 }
