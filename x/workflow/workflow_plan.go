@@ -190,11 +190,13 @@ func (g *planGenerator) generateStepsForExpr(expr Expr) []PlanStep {
 		// Get the step ID from the value expression
 		var fromStepID string
 		if len(valSteps) > 0 {
-			// Get the last step's ID
-			switch s := valSteps[len(valSteps)-1].(type) {
-			case *ExecuteStep:
-				fromStepID = s.StepID
-			}
+			// Get the last step's ID using exhaustive pattern matching
+			fromStepID = MatchPlanStepR1(
+				valSteps[len(valSteps)-1],
+				func(s *ExecuteStep) string { return s.StepID },
+				func(s *AssignStep) string { return s.StepID },
+				func(s *ReturnStep) string { return s.StepID },
+			)
 		}
 
 		// Then add the assign step
@@ -275,24 +277,31 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 	for i := 0; i < len(plan.Steps); i++ {
 		step := plan.Steps[i]
 
-		// Check if all dependencies are satisfied
-		if execStep, ok := step.(*ExecuteStep); ok {
-			canExecute := true
-			for _, dep := range execStep.DependsOn {
-				if !plan.Completed[dep] {
-					canExecute = false
-					break
+		// Check if all dependencies are satisfied using exhaustive pattern matching
+		canExecute := MatchPlanStepR1(
+			step,
+			func(execStep *ExecuteStep) bool {
+				// Check all dependencies for ExecuteStep
+				for _, dep := range execStep.DependsOn {
+					if !plan.Completed[dep] {
+						return false
+					}
 				}
-			}
-			if !canExecute {
-				// Skip this step for now, we'll come back to it
-				continue
-			}
-		} else if assignStep, ok := step.(*AssignStep); ok {
-			// AssignStep depends on its FromStep
-			if !plan.Completed[assignStep.FromStep] {
-				continue
-			}
+				return true
+			},
+			func(assignStep *AssignStep) bool {
+				// AssignStep depends on its FromStep
+				return plan.Completed[assignStep.FromStep]
+			},
+			func(returnStep *ReturnStep) bool {
+				// ReturnStep depends on its FromStep
+				return plan.Completed[returnStep.FromStep]
+			},
+		)
+
+		if !canExecute {
+			// Skip this step for now, we'll come back to it
+			continue
 		}
 
 		state, result, newSteps, err := e.executeStepWithState(step, plan, baseState)
@@ -303,31 +312,42 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 		// Update base state from execution
 		baseState = GetBaseState(state)
 
-		// Handle step completion
-		switch s := step.(type) {
-		case *ExecuteStep:
-			if result != nil {
-				plan.Results[s.StepID] = result
-			}
-			plan.Completed[s.StepID] = true
-			plan.ExecutedSteps = append(plan.ExecutedSteps, s.StepID)
+		// Handle step completion using exhaustive pattern matching
+		doneState := MatchPlanStepR1(
+			step,
+			func(s *ExecuteStep) State {
+				if result != nil {
+					plan.Results[s.StepID] = result
+				}
+				plan.Completed[s.StepID] = true
+				plan.ExecutedSteps = append(plan.ExecutedSteps, s.StepID)
 
-			// If we got a Done state, return it
-			if done, isDone := state.(*Done); isDone {
-				return done, nil
-			}
-		case *AssignStep:
-			// AssignStep doesn't produce a result in plan.Results
-			// but updates variables which is handled in executeStepInternal
-			plan.Completed[s.StepID] = true
-			plan.ExecutedSteps = append(plan.ExecutedSteps, s.StepID)
-		case *ReturnStep:
-			plan.Completed[s.StepID] = true
-			plan.ExecutedSteps = append(plan.ExecutedSteps, s.StepID)
-			// ReturnStep always produces Done state
-			if done, isDone := state.(*Done); isDone {
-				return done, nil
-			}
+				// If we got a Done state, return it
+				if done, isDone := state.(*Done); isDone {
+					return done
+				}
+				return nil
+			},
+			func(s *AssignStep) State {
+				// AssignStep doesn't produce a result in plan.Results
+				// but updates variables which is handled in executeStepInternal
+				plan.Completed[s.StepID] = true
+				plan.ExecutedSteps = append(plan.ExecutedSteps, s.StepID)
+				return nil
+			},
+			func(s *ReturnStep) State {
+				plan.Completed[s.StepID] = true
+				plan.ExecutedSteps = append(plan.ExecutedSteps, s.StepID)
+				// ReturnStep always produces Done state
+				if done, isDone := state.(*Done); isDone {
+					return done
+				}
+				return nil
+			},
+		)
+
+		if doneState != nil {
+			return doneState, nil
 		}
 
 		// Add any new steps (for dynamic execution)
@@ -339,15 +359,13 @@ func (e *planExecutor) Execute(plan *ExecutionPlan) (State, error) {
 		if i == len(plan.Steps)-1 {
 			hasUncompleted := false
 			for j := 0; j < len(plan.Steps); j++ {
-				stepID := ""
-				switch s := plan.Steps[j].(type) {
-				case *ExecuteStep:
-					stepID = s.StepID
-				case *AssignStep:
-					stepID = s.StepID
-				case *ReturnStep:
-					stepID = s.StepID
-				}
+				// Get step ID using exhaustive pattern matching
+				stepID := MatchPlanStepR1(
+					plan.Steps[j],
+					func(s *ExecuteStep) string { return s.StepID },
+					func(s *AssignStep) string { return s.StepID },
+					func(s *ReturnStep) string { return s.StepID },
+				)
 				if stepID != "" && !plan.Completed[stepID] {
 					hasUncompleted = true
 					break
