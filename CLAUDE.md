@@ -171,3 +171,6 @@ suite.SelfDocumentStateDiagram(t, "filename.go")
 - The type registry can be disabled with `//go:tag mkunion:",no-type-registry"`
 - When running tests that use AWS services, ensure the development environment is bootstrapped
 - On Mac with Colima: ensure Colima is running before executing `dev/bootstrap.sh`
+
+## Best Practices and Development Tips
+- Always run go fmt ./... before committing and pushing changes
