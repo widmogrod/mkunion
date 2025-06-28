@@ -19,19 +19,19 @@ A traffic light is a classic example of a state machine with three states: Red, 
 ### Transition Function
 
 ```go title="example/traffic/traffic_light.go"
---8<-- "example/traffic/traffic_light.go:17:33"
+--8<-- "example/traffic/traffic_light.go:transition"
 ```
 
 ### Testing
 
 ```go title="example/traffic/traffic_light_test.go"
---8<-- "example/traffic/traffic_light_test.go:11:29"
+--8<-- "example/traffic/traffic_light_test.go:basic-test"
 ```
 
 ### Complete Test Suite
 
 ```go title="example/traffic/traffic_light_test.go"
---8<-- "example/traffic/traffic_light_test.go:31:55"
+--8<-- "example/traffic/traffic_light_test.go:test-suite"
 ```
 
 ### Example Usage
@@ -39,7 +39,7 @@ A traffic light is a classic example of a state machine with three states: Red, 
 The traffic light state machine can be used in applications:
 
 ```go title="example/traffic/traffic_light.go"
---8<-- "example/traffic/traffic_light.go:35:58"
+--8<-- "example/traffic/traffic_light.go:example"
 ```
 
 ## Key Concepts Demonstrated
@@ -55,5 +55,5 @@ The traffic light example illustrates fundamental state machine concepts:
 ## Next Steps
 
 - Review the [comprehensive Order Service example](state_machine.md) for a more complex scenario
-- Learn about [testing strategies](state_machine.md#testing-state-machines--self-documenting) for state machines
-- Explore [advanced patterns](state_machine.md#advanced-patterns) for composition and async operations
+- Learn about [testing strategies](state_machine.md#testing-state-machines-self-documenting) for state machines
+- Explore [advanced patterns](state_machine_best_practices.md#advanced-patterns) for composition and async operations
