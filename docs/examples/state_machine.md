@@ -197,8 +197,507 @@ Now we have all the pieces in place, and we can start building our application.
 - We have tests that will ensure that our state machine is correct; fuzzy tests help discover edge cases, and lastly, we get diagrams showing which paths we tested and covered.
 - We saw how this approach focuses on business logic and keeps it separate from other concerns like the database or API clients. This is one of the principles of clean architecture.
 
+## Best Practices
+
+When building state machines with mkunion, following these practices will help you create maintainable and robust systems:
+
+### Naming Conventions
+
+1. **States**: Use descriptive nouns that clearly indicate the state (e.g., `OrderPending`, `PaymentProcessing`)
+2. **Commands**: Suffix with `CMD` for clarity (e.g., `CreateOrderCMD`, `CancelOrderCMD`)
+3. **Packages**: Keep state machines in dedicated packages named after the domain (e.g., `order`, `payment`)
+
+### State Design
+
+1. **Keep States Focused**: Each state should represent one clear condition
+2. **Immutable Data**: States should contain immutable data; create new states instead of modifying
+3. **Minimal State Data**: Only store data that's essential for the state's identity
+4. **Use Zero Values**: Design states so Go's zero values are meaningful defaults
+
+### Command Validation
+
+```go
+// Good: Validate commands in the transition function
+func Transition(ctx context.Context, deps Dependencies, cmd Command, state State) (State, error) {
+    return MatchCommandR2(cmd,
+        func(c *CreateOrderCMD) (State, error) {
+            // Validate command first
+            if c.CustomerID == "" {
+                return nil, fmt.Errorf("customer ID is required")
+            }
+            if len(c.Items) == 0 {
+                return nil, fmt.Errorf("order must contain at least one item")
+            }
+            // Then check state
+            // ...
+        },
+    )
+}
+```
+
+### Dependency Management
+
+1. **Define Clear Interfaces**: Dependencies should be interfaces, not concrete types
+2. **Keep Dependencies Minimal**: Only inject what's absolutely necessary
+3. **Mock Dependencies in Tests**: Use generated mocks for thorough testing
+
+## Common Pitfalls
+
+Avoid these common mistakes when implementing state machines:
+
+### 1. State Explosion
+
+**Problem**: Creating too many states for every minor variation
+```go
+// Bad: Too granular
+type (
+    OrderPendingWithOneItem struct{}
+    OrderPendingWithTwoItems struct{}
+    OrderPendingWithThreeItems struct{}
+    // ... and so on
+)
+```
+
+**Solution**: Use state data instead
+```go
+// Good: Single state with data
+type OrderPending struct {
+    Items []OrderItem
+}
+```
+
+### 2. Circular Dependencies
+
+**Problem**: States that can transition in circles without progress
+```go
+// Problematic: A -> B -> C -> A without any business value
+```
+
+**Solution**: Ensure each transition represents meaningful progress or explicitly document allowed cycles
+
+### 3. Missing Error States
+
+**Problem**: Not modeling error conditions as explicit states
+```go
+// Bad: Errors only in transition function
+return nil, fmt.Errorf("payment failed")
+```
+
+**Solution**: Model error conditions as states when they need handling
+```go
+// Good: Explicit error state
+type PaymentFailed struct {
+    Reason string
+    FailedAt time.Time
+}
+```
+
+### 4. Ignoring Concurrency
+
+**Problem**: Not considering concurrent command execution
+```go
+// Risky: No concurrency control
+machine.Handle(ctx, cmd1) // From goroutine 1
+machine.Handle(ctx, cmd2) // From goroutine 2 simultaneously
+```
+
+**Solution**: Use proper synchronization or event sourcing patterns (see [state storage](state_storage.md))
+
+### 5. Overloading Transitions
+
+**Problem**: Putting too much business logic in transition functions
+```go
+// Bad: Transition function doing too much
+func Transition(...) (State, error) {
+    // Send emails
+    // Update inventory
+    // Calculate prices
+    // Log to external systems
+    // ... 200 lines later
+}
+```
+
+**Solution**: Keep transitions focused on state changes; delegate side effects to dependencies
+
+## Advanced Patterns
+
+### State Machine Composition
+
+For complex systems, compose multiple state machines:
+
+```go
+// Order state machine
+type OrderMachine struct {
+    *machine.Machine[OrderDeps, OrderCommand, OrderState]
+}
+
+// Payment state machine  
+type PaymentMachine struct {
+    *machine.Machine[PaymentDeps, PaymentCommand, PaymentState]
+}
+
+// Composed e-commerce flow
+type ECommerceMachine struct {
+    Order   *OrderMachine
+    Payment *PaymentMachine
+}
+
+func (e *ECommerceMachine) ProcessOrder(ctx context.Context, orderCmd OrderCommand) error {
+    // Handle order state change
+    if err := e.Order.Handle(ctx, orderCmd); err != nil {
+        return err
+    }
+    
+    // If order is confirmed, trigger payment
+    if _, ok := e.Order.State().(*OrderConfirmed); ok {
+        return e.Payment.Handle(ctx, &InitiatePaymentCMD{})
+    }
+    
+    return nil
+}
+```
+
+### Async Operations with Callbacks
+
+Handle long-running operations without blocking:
+
+```go
+//go:tag mkunion:"AsyncState"
+type (
+    OperationPending struct {
+        ID        string
+        StartedAt time.Time
+    }
+    OperationComplete struct {
+        ID       string
+        Result   interface{}
+        Duration time.Duration
+    }
+)
+
+//go:tag mkunion:"AsyncCommand"
+type (
+    StartAsyncCMD struct {
+        ID string
+    }
+    CompleteAsyncCMD struct {
+        ID     string
+        Result interface{}
+    }
+)
+
+// Transition starts async operation
+func Transition(ctx context.Context, deps AsyncDeps, cmd AsyncCommand, state AsyncState) (AsyncState, error) {
+    return MatchAsyncCommandR2(cmd,
+        func(c *StartAsyncCMD) (AsyncState, error) {
+            // Start async operation
+            go deps.AsyncWorker(c.ID, func(result interface{}, err error) {
+                // Callback to complete
+                completeCMD := &CompleteAsyncCMD{
+                    ID:     c.ID,
+                    Result: result,
+                }
+                deps.CommandQueue.Enqueue(completeCMD)
+            })
+            
+            return &OperationPending{
+                ID:        c.ID,
+                StartedAt: time.Now(),
+            }, nil
+        },
+        // ... handle completion
+    )
+}
+```
+
+### Time-Based Transitions
+
+Implement timeouts and scheduled transitions:
+
+```go
+//go:tag mkunion:"TimerCommand"  
+type (
+    TimeoutCMD struct {
+        Reason string
+    }
+)
+
+// Set up timeout when entering a state
+func SetupStateTimeouts(m *machine.Machine[Deps, Command, State], timeout time.Duration) {
+    go func() {
+        timer := time.NewTimer(timeout)
+        defer timer.Stop()
+        
+        select {
+        case <-timer.C:
+            m.Handle(context.Background(), &TimeoutCMD{
+                Reason: "operation timeout",
+            })
+        case <-m.Done():
+            return
+        }
+    }()
+}
+```
+
+## Debugging and Observability
+
+### Structured Logging
+
+Implement comprehensive logging for state transitions:
+
+```go
+type LoggingDependencies struct {
+    Logger *slog.Logger
+    // ... other deps
+}
+
+func Transition(ctx context.Context, deps LoggingDependencies, cmd Command, state State) (State, error) {
+    // Log command received
+    deps.Logger.Info("command received",
+        "command_type", fmt.Sprintf("%T", cmd),
+        "current_state", fmt.Sprintf("%T", state),
+        "trace_id", ctx.Value("trace_id"),
+    )
+    
+    startTime := time.Now()
+    newState, err := performTransition(ctx, deps, cmd, state)
+    duration := time.Since(startTime)
+    
+    if err != nil {
+        deps.Logger.Error("transition failed",
+            "error", err,
+            "duration_ms", duration.Milliseconds(),
+        )
+        return nil, err
+    }
+    
+    deps.Logger.Info("transition completed",
+        "new_state", fmt.Sprintf("%T", newState),
+        "duration_ms", duration.Milliseconds(),
+    )
+    
+    return newState, nil
+}
+```
+
+### State History Tracking
+
+Keep a history of state transitions for debugging:
+
+```go
+type StateHistory struct {
+    Transitions []TransitionRecord
+    mu          sync.RWMutex
+}
+
+type TransitionRecord struct {
+    From      string
+    To        string
+    Command   string
+    Timestamp time.Time
+    Error     error
+}
+
+func (h *StateHistory) Record(from, to State, cmd Command, err error) {
+    h.mu.Lock()
+    defer h.mu.Unlock()
+    
+    h.Transitions = append(h.Transitions, TransitionRecord{
+        From:      fmt.Sprintf("%T", from),
+        To:        fmt.Sprintf("%T", to),
+        Command:   fmt.Sprintf("%T", cmd),
+        Timestamp: time.Now(),
+        Error:     err,
+    })
+}
+```
+
+### Metrics and Monitoring
+
+Export metrics for monitoring:
+
+```go
+type MetricsDependencies struct {
+    TransitionCounter   *prometheus.CounterVec
+    TransitionDuration  *prometheus.HistogramVec
+    StateGauge         *prometheus.GaugeVec
+    // ... other deps
+}
+
+func instrumentedTransition(deps MetricsDependencies, transition TransitionFunc) TransitionFunc {
+    return func(ctx context.Context, cmd Command, state State) (State, error) {
+        timer := prometheus.NewTimer(deps.TransitionDuration.WithLabelValues(
+            fmt.Sprintf("%T", cmd),
+            fmt.Sprintf("%T", state),
+        ))
+        defer timer.ObserveDuration()
+        
+        newState, err := transition(ctx, cmd, state)
+        
+        labels := prometheus.Labels{
+            "from_state": fmt.Sprintf("%T", state),
+            "to_state":   fmt.Sprintf("%T", newState),
+            "command":    fmt.Sprintf("%T", cmd),
+            "status":     "success",
+        }
+        
+        if err != nil {
+            labels["status"] = "error"
+        }
+        
+        deps.TransitionCounter.With(labels).Inc()
+        
+        return newState, err
+    }
+}
+```
+
+## Evolution and Versioning
+
+### Backward Compatible Changes
+
+When evolving state machines, maintain compatibility:
+
+```go
+// Version 1
+//go:tag mkunion:"OrderState"
+type (
+    OrderCreated struct {
+        ID    string
+        Items []Item
+    }
+)
+
+// Version 2 - Added field with default
+//go:tag mkunion:"OrderState"
+type (
+    OrderCreated struct {
+        ID       string
+        Items    []Item
+        Discount float64 `json:"discount,omitempty"` // New field
+    }
+)
+```
+
+### State Migration Strategies
+
+Handle state structure changes:
+
+```go
+// Migration function
+func MigrateOrderState(old json.RawMessage) (State, error) {
+    // Try to unmarshal as current version
+    var current OrderState
+    if err := json.Unmarshal(old, &current); err == nil {
+        return current, nil
+    }
+    
+    // Try older version
+    var v1 OrderStateV1
+    if err := json.Unmarshal(old, &v1); err == nil {
+        // Convert v1 to current
+        return convertV1ToCurrent(v1), nil
+    }
+    
+    return nil, fmt.Errorf("unknown state version")
+}
+```
+
+### Deprecating States and Commands
+
+Gracefully phase out old states:
+
+```go
+//go:tag mkunion:"OrderState"
+type (
+    // Deprecated: Use OrderPending instead
+    OrderCreated struct {
+        // ... fields
+    }
+    
+    OrderPending struct {
+        // New state structure
+    }
+)
+
+func Transition(ctx context.Context, deps Dependencies, cmd Command, state State) (State, error) {
+    // Handle deprecated state
+    if old, ok := state.(*OrderCreated); ok {
+        // Automatically migrate to new state
+        state = &OrderPending{
+            // Map old fields to new
+        }
+    }
+    
+    // Continue with normal processing
+    // ...
+}
+```
+
+## Performance Considerations
+
+### Memory Optimization
+
+1. **Reuse State Instances**: For states without data, use singletons
+```go
+var (
+    pendingState = &Pending{}
+    activeState  = &Active{}
+)
+```
+
+2. **Lazy Loading**: Don't load unnecessary data in states
+```go
+type OrderDetails struct {
+    ID       string
+    // Don't embed full customer, just reference
+    CustomerID string `json:"customer_id"`
+}
+```
+
+### Persistence Strategies
+
+1. **Event Sourcing**: Store commands instead of states for better performance
+2. **Snapshotting**: Periodically save full state to avoid replaying all events
+3. **Compression**: Compress state data before persistence
+
+### Concurrent Processing
+
+1. **Partition by ID**: Process different entities in parallel
+```go
+// Each order gets its own state machine instance
+machines := make(map[string]*Machine)
+var mu sync.RWMutex
+
+func GetMachine(orderID string) *Machine {
+    mu.RLock()
+    if m, exists := machines[orderID]; exists {
+        mu.RUnlock()
+        return m
+    }
+    mu.RUnlock()
+    
+    // Create new machine for this order
+    mu.Lock()
+    defer mu.Unlock()
+    
+    if m, exists := machines[orderID]; exists {
+        return m
+    }
+    
+    m := NewMachine(deps, loadState(orderID))
+    machines[orderID] = m
+    return m
+}
+```
+
+2. **Batch Processing**: Process multiple commands together
+3. **Async Side Effects**: Don't block transitions on external calls
+
 ## Next steps
 
+- **[Simple Examples](simple_state_machines.md)** - Start with basic state machines before tackling complex scenarios
 - **[Persisting union in database](../examples/state_storage.md)** will help answer the question of how to persist state in a database and how to handle concurrency conflicts.
 - **[Handling errors in state machines](../examples/state_storage.md)** will help answer the question of how to handle errors in state machines and how to build self-healing systems.
 
