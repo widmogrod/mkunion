@@ -1,0 +1,106 @@
+# Issue Quality Validation Rules
+# These rules define minimum quality standards for different issue types
+
+standard:
+  minTitleLength: 10
+  maxTitleLength: 100
+  minBodyLength: 50
+  requiredLabels:
+    - inbox
+  forbiddenPhrases:
+    - "TODO"
+    - "FIXME"
+    - "lorem ipsum"
+    - "test test"
+  placeholderPatterns:
+    - "fill in"
+    - "replace this"
+    - "your text here"
+    - "example:"
+
+feature:
+  minTitleLength: 15
+  maxTitleLength: 100
+  minBodyLength: 100
+  requiredSections:
+    - "Problem Description"
+    - "Proposed Solution"
+    - "Use Cases"
+  optionalSections:
+    - "Alternatives Considered"
+    - "Success Criteria"
+  requiredLabels:
+    - feature
+    - inbox
+  minAcceptanceCriteria: 2
+  requiresPriority: true
+
+bug:
+  minTitleLength: 15
+  maxTitleLength: 100
+  minBodyLength: 100
+  requiredSections:
+    - "Bug Description"
+    - "Steps to Reproduce"
+    - "Expected Behavior"
+    - "Actual Behavior"
+  optionalSections:
+    - "Error Output"
+    - "Workaround"
+  requiredLabels:
+    - bug
+    - inbox
+  requiresEnvironmentInfo: true
+  requiresVersionInfo: true
+
+ai_generated:
+  minTitleLength: 20
+  maxTitleLength: 100
+  minBodyLength: 200
+  requiredSections:
+    - "Problem Statement"
+    - "Proposed Solution"
+    - "Acceptance Criteria"
+    - "Technical Implementation Details"
+    - "Potential Risks"
+    - "Areas Requiring Human Review"
+  requiredLabels:
+    - ai-generated
+    - needs-human-review
+    - inbox
+  minAcceptanceCriteria: 3
+  requiresComplexityEstimate: true
+  requiresFileList: true
+
+# Scoring weights for issue quality
+qualityScoring:
+  hasAllRequiredSections: 30
+  meetsLengthRequirements: 20
+  hasAcceptanceCriteria: 20
+  hasProperLabels: 10
+  noPlaceholderText: 10
+  hasLinkedReferences: 10
+
+# Auto-labeling rules based on content
+autoLabeling:
+  performance:
+    keywords:
+      - "slow"
+      - "performance"
+      - "optimize"
+      - "latency"
+      - "speed up"
+  security:
+    keywords:
+      - "security"
+      - "vulnerability"
+      - "authentication"
+      - "authorization"
+      - "exploit"
+  documentation:
+    keywords:
+      - "docs"
+      - "documentation"
+      - "readme"
+      - "comments"
+      - "explain"

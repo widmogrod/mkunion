@@ -1,0 +1,240 @@
+name: Workload Balancer
+
+on:
+  issues:
+    types: [opened, labeled]
+  schedule:
+    # Run every day at 10 AM UTC
+    - cron: '0 10 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  balance-workload:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Analyze and balance workload
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Configuration
+            const MAX_TASKS_PER_PERSON = 2;
+            const TEAM_MEMBERS = process.env.TEAM_MEMBERS ? process.env.TEAM_MEMBERS.split(',') : [];
+            
+            // Get current workload
+            async function getWorkload() {
+              const workload = {};
+              
+              // Initialize all team members
+              for (const member of TEAM_MEMBERS) {
+                workload[member] = { issues: [], count: 0, skills: [] };
+              }
+              
+              // Get in-progress issues
+              const { data: inProgressIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'in-progress',
+                state: 'open',
+                per_page: 100
+              });
+              
+              // Count assignments
+              for (const issue of inProgressIssues) {
+                if (issue.assignees && issue.assignees.length > 0) {
+                  for (const assignee of issue.assignees) {
+                    if (!workload[assignee.login]) {
+                      workload[assignee.login] = { issues: [], count: 0, skills: [] };
+                    }
+                    workload[assignee.login].issues.push(issue);
+                    workload[assignee.login].count++;
+                  }
+                }
+              }
+              
+              return workload;
+            }
+            
+            // Find best assignee based on workload and skills
+            function findBestAssignee(workload, issue) {
+              const candidates = [];
+              
+              // Extract required skills from issue labels
+              const requiredSkills = issue.labels
+                .filter(l => l.name.startsWith('area:'))
+                .map(l => l.name.replace('area:', ''));
+              
+              // Score each potential assignee
+              for (const [user, data] of Object.entries(workload)) {
+                if (data.count >= MAX_TASKS_PER_PERSON) continue;
+                
+                const score = {
+                  user,
+                  availableCapacity: MAX_TASKS_PER_PERSON - data.count,
+                  skillMatch: 0,
+                  totalScore: 0
+                };
+                
+                // Calculate skill match (would need to be configured per team member)
+                // For now, we'll use a simple heuristic based on past work
+                const pastAreas = new Set();
+                for (const pastIssue of data.issues) {
+                  pastIssue.labels
+                    .filter(l => l.name.startsWith('area:'))
+                    .forEach(l => pastAreas.add(l.name.replace('area:', '')));
+                }
+                
+                for (const skill of requiredSkills) {
+                  if (pastAreas.has(skill)) {
+                    score.skillMatch++;
+                  }
+                }
+                
+                // Calculate total score
+                score.totalScore = score.availableCapacity * 2 + score.skillMatch;
+                
+                if (score.totalScore > 0) {
+                  candidates.push(score);
+                }
+              }
+              
+              // Sort by score and return best candidate
+              candidates.sort((a, b) => b.totalScore - a.totalScore);
+              return candidates.length > 0 ? candidates[0].user : null;
+            }
+            
+            // Handle new issues
+            if (context.eventName === 'issues' && 
+                (context.payload.action === 'opened' || context.payload.action === 'labeled')) {
+              const issue = context.payload.issue;
+              
+              // Check if issue needs assignment
+              if (issue.labels.some(l => l.name === 'ready') && 
+                  (!issue.assignees || issue.assignees.length === 0)) {
+                
+                const workload = await getWorkload();
+                const bestAssignee = findBestAssignee(workload, issue);
+                
+                if (bestAssignee) {
+                  // Assign the issue
+                  await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    assignees: [bestAssignee]
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `🤖 **Auto-Assignment**
+                    
+                    This issue has been automatically assigned to @${bestAssignee} based on:
+                    - Current workload: ${workload[bestAssignee].count}/${MAX_TASKS_PER_PERSON} tasks
+                    - Skill match with issue requirements
+                    
+                    If this assignment needs to be changed, please reassign manually.`
+                  });
+                } else {
+                  // No available assignee
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `⚠️ **No Available Assignee**
+                    
+                    All team members are at capacity. This issue will remain unassigned until capacity becomes available.
+                    
+                    Consider:
+                    - Completing in-progress work first
+                    - Re-prioritizing existing work
+                    - Adding more team members`
+                  });
+                  
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: ['blocked:capacity']
+                  });
+                }
+              }
+            }
+            
+            // Daily workload rebalancing
+            if (context.eventName === 'schedule' || context.eventName === 'workflow_dispatch') {
+              const workload = await getWorkload();
+              
+              // Find unassigned ready issues
+              const { data: readyIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'ready',
+                state: 'open',
+                assignee: 'none',
+                per_page: 100
+              });
+              
+              // Sort by priority
+              const priorityOrder = { 'priority:high': 0, 'priority:medium': 1, 'priority:low': 2 };
+              readyIssues.sort((a, b) => {
+                const aPriority = a.labels.find(l => l.name.startsWith('priority:'))?.name || 'priority:low';
+                const bPriority = b.labels.find(l => l.name.startsWith('priority:'))?.name || 'priority:low';
+                return priorityOrder[aPriority] - priorityOrder[bPriority];
+              });
+              
+              // Assign issues to available team members
+              const assignments = [];
+              for (const issue of readyIssues) {
+                const bestAssignee = findBestAssignee(workload, issue);
+                if (bestAssignee) {
+                  assignments.push({ issue: issue.number, assignee: bestAssignee });
+                  workload[bestAssignee].count++;
+                }
+              }
+              
+              // Generate rebalancing report
+              let report = '# 🔄 Workload Rebalancing Report\n\n';
+              report += `Generated: ${new Date().toISOString()}\n\n`;
+              
+              if (assignments.length > 0) {
+                report += '## Recommended Assignments\n\n';
+                report += '| Issue | Title | Assignee | Priority |\n';
+                report += '|-------|-------|----------|----------|\n';
+                
+                for (const assignment of assignments) {
+                  const issue = readyIssues.find(i => i.number === assignment.issue);
+                  const priority = issue.labels.find(l => l.name.startsWith('priority:'))?.name || 'priority:low';
+                  report += `| #${issue.number} | ${issue.title} | @${assignment.assignee} | ${priority} |\n`;
+                }
+                
+                report += '\n**Note**: These are recommendations based on current capacity and skills. ';
+                report += 'Review and approve assignments manually.\n';
+              } else {
+                report += '## No Assignments Possible\n\n';
+                report += 'All team members are at capacity or no ready issues available.\n';
+              }
+              
+              // Add capacity summary
+              report += '\n## Current Team Capacity\n\n';
+              report += '| Team Member | Current Tasks | Available Capacity |\n';
+              report += '|-------------|---------------|-------------------|\n';
+              
+              for (const [user, data] of Object.entries(workload)) {
+                const available = MAX_TASKS_PER_PERSON - data.count;
+                const status = available > 0 ? `${available} slots` : 'Full';
+                report += `| @${user} | ${data.count} | ${status} |\n`;
+              }
+              
+              // Create rebalancing issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Workload Rebalancing - ${new Date().toLocaleDateString()}`,
+                body: report,
+                labels: ['workload-rebalancing', 'metrics']
+              });
+            }

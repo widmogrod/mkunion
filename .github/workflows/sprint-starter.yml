@@ -1,0 +1,264 @@
+name: Sprint Management
+
+on:
+  schedule:
+    # Run every other Monday at 7 AM UTC (start of sprint)
+    - cron: '0 7 */14 * 1'
+  workflow_dispatch:
+    inputs:
+      sprint_action:
+        description: 'Sprint action to perform'
+        required: true
+        default: 'start'
+        type: choice
+        options:
+          - 'start'
+          - 'end'
+          - 'report'
+
+jobs:
+  manage-sprint:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+      projects: write
+    steps:
+      - name: Sprint management
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const action = context.eventName === 'workflow_dispatch' ? 
+                          context.payload.inputs.sprint_action : 'start';
+            const now = new Date();
+            const sprintNumber = Math.floor((now.getTime() - new Date('2024-01-01').getTime()) / (14 * 24 * 60 * 60 * 1000)) + 1;
+            
+            console.log(`Sprint action: ${action}, Sprint number: ${sprintNumber}`);
+            
+            // Start new sprint
+            if (action === 'start') {
+              // Get todo issues
+              const { data: todoIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'ready',
+                state: 'open',
+                per_page: 100
+              });
+              
+              // Calculate sprint capacity
+              const teamSize = parseInt(process.env.TEAM_SIZE || '5');
+              const sprintCapacity = teamSize * 2 * 10; // 2 issues per person per day, 10 working days
+              
+              // Sort by priority
+              const priorityOrder = { 'priority:high': 0, 'priority:medium': 1, 'priority:low': 2 };
+              todoIssues.sort((a, b) => {
+                const aPriority = a.labels.find(l => l.name.startsWith('priority:'))?.name || 'priority:low';
+                const bPriority = b.labels.find(l => l.name.startsWith('priority:'))?.name || 'priority:low';
+                return priorityOrder[aPriority] - priorityOrder[bPriority];
+              });
+              
+              // Select issues for sprint
+              const sprintIssues = [];
+              let committedPoints = 0;
+              
+              for (const issue of todoIssues) {
+                // Extract story points
+                const spLabel = issue.labels.find(l => l.name.startsWith('sp:'));
+                const points = spLabel ? parseInt(spLabel.name.split(':')[1]) : 3; // default 3 points
+                
+                if (committedPoints + points <= sprintCapacity) {
+                  sprintIssues.push(issue);
+                  committedPoints += points;
+                }
+              }
+              
+              // Create sprint milestone
+              const milestoneName = `Sprint ${sprintNumber}`;
+              let milestone;
+              
+              try {
+                const { data: existingMilestone } = await github.rest.issues.getMilestone({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  milestone_number: sprintNumber
+                });
+                milestone = existingMilestone;
+              } catch (e) {
+                // Create new milestone
+                const { data: newMilestone } = await github.rest.issues.createMilestone({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: milestoneName,
+                  due_on: new Date(now.getTime() + (14 * 24 * 60 * 60 * 1000)).toISOString(),
+                  description: `Sprint ${sprintNumber} - ${now.toLocaleDateString()} to ${new Date(now.getTime() + (14 * 24 * 60 * 60 * 1000)).toLocaleDateString()}`
+                });
+                milestone = newMilestone;
+              }
+              
+              // Assign issues to sprint
+              for (const issue of sprintIssues) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  milestone: milestone.number
+                });
+                
+                // Add sprint label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: [`sprint:${sprintNumber}`]
+                });
+              }
+              
+              // Create sprint kickoff report
+              let report = `# 🚀 Sprint ${sprintNumber} Kickoff\n\n`;
+              report += `**Duration**: ${now.toLocaleDateString()} - ${new Date(now.getTime() + (14 * 24 * 60 * 60 * 1000)).toLocaleDateString()}\n`;
+              report += `**Team Capacity**: ${sprintCapacity} story points\n`;
+              report += `**Committed**: ${committedPoints} story points\n`;
+              report += `**Utilization**: ${Math.round((committedPoints / sprintCapacity) * 100)}%\n\n`;
+              
+              report += '## Sprint Goals\n\n';
+              report += '<!-- Add sprint goals here after team discussion -->\n\n';
+              
+              report += '## Committed Issues\n\n';
+              report += '| Issue | Title | Points | Priority | Assignee |\n';
+              report += '|-------|-------|--------|----------|----------|\n';
+              
+              for (const issue of sprintIssues) {
+                const spLabel = issue.labels.find(l => l.name.startsWith('sp:'));
+                const points = spLabel ? spLabel.name.split(':')[1] : '3';
+                const priority = issue.labels.find(l => l.name.startsWith('priority:'))?.name || 'priority:medium';
+                const assignee = issue.assignees.length > 0 ? `@${issue.assignees[0].login}` : 'Unassigned';
+                
+                report += `| #${issue.number} | ${issue.title} | ${points} | ${priority} | ${assignee} |\n`;
+              }
+              
+              report += '\n## Sprint Ceremonies\n\n';
+              report += '- [ ] Sprint Planning (Today)\n';
+              report += '- [ ] Daily Standups (Every day at 10 AM)\n';
+              report += '- [ ] Sprint Review (Last Friday)\n';
+              report += '- [ ] Sprint Retrospective (Last Friday)\n';
+              
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Sprint ${sprintNumber} Kickoff`,
+                body: report,
+                labels: ['sprint-management', 'sprint-kickoff'],
+                milestone: milestone.number
+              });
+            }
+            
+            // End sprint
+            else if (action === 'end') {
+              const currentSprint = sprintNumber - 1; // Ending previous sprint
+              
+              // Get sprint issues
+              const { data: sprintIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: `sprint:${currentSprint}`,
+                state: 'all',
+                per_page: 100
+              });
+              
+              // Calculate metrics
+              const metrics = {
+                total: sprintIssues.length,
+                completed: sprintIssues.filter(i => i.state === 'closed').length,
+                inProgress: sprintIssues.filter(i => i.state === 'open' && i.labels.some(l => l.name === 'in-progress')).length,
+                notStarted: sprintIssues.filter(i => i.state === 'open' && !i.labels.some(l => l.name === 'in-progress')).length,
+                completedPoints: 0,
+                committedPoints: 0
+              };
+              
+              // Calculate story points
+              for (const issue of sprintIssues) {
+                const spLabel = issue.labels.find(l => l.name.startsWith('sp:'));
+                const points = spLabel ? parseInt(spLabel.name.split(':')[1]) : 3;
+                metrics.committedPoints += points;
+                if (issue.state === 'closed') {
+                  metrics.completedPoints += points;
+                }
+              }
+              
+              // Create sprint review
+              let report = `# 📊 Sprint ${currentSprint} Review\n\n`;
+              report += `**Ended**: ${now.toLocaleDateString()}\n\n`;
+              
+              report += '## Sprint Metrics\n\n';
+              report += `- **Completion Rate**: ${Math.round((metrics.completed / metrics.total) * 100)}% (${metrics.completed}/${metrics.total} issues)\n`;
+              report += `- **Story Points Delivered**: ${metrics.completedPoints}/${metrics.committedPoints} (${Math.round((metrics.completedPoints / metrics.committedPoints) * 100)}%)\n`;
+              report += `- **In Progress**: ${metrics.inProgress} issues\n`;
+              report += `- **Not Started**: ${metrics.notStarted} issues\n\n`;
+              
+              report += '## Completed Work\n\n';
+              const completedIssues = sprintIssues.filter(i => i.state === 'closed');
+              if (completedIssues.length > 0) {
+                report += '| Issue | Title | Points | Completed By |\n';
+                report += '|-------|-------|--------|-------------|\n';
+                
+                for (const issue of completedIssues) {
+                  const spLabel = issue.labels.find(l => l.name.startsWith('sp:'));
+                  const points = spLabel ? spLabel.name.split(':')[1] : '3';
+                  const completedBy = issue.assignees.length > 0 ? issue.assignees.map(a => `@${a.login}`).join(', ') : 'Team';
+                  
+                  report += `| #${issue.number} | ${issue.title} | ${points} | ${completedBy} |\n`;
+                }
+              }
+              
+              report += '\n## Carryover Work\n\n';
+              const carryoverIssues = sprintIssues.filter(i => i.state === 'open');
+              if (carryoverIssues.length > 0) {
+                report += '| Issue | Title | Status | Reason |\n';
+                report += '|-------|-------|--------|--------|\n';
+                
+                for (const issue of carryoverIssues) {
+                  const status = issue.labels.some(l => l.name === 'in-progress') ? 'In Progress' : 'Not Started';
+                  const reason = issue.labels.some(l => l.name === 'blocked') ? 'Blocked' : 'TBD';
+                  
+                  report += `| #${issue.number} | ${issue.title} | ${status} | ${reason} |\n`;
+                }
+              }
+              
+              report += '\n## Action Items\n\n';
+              report += '- [ ] Move carryover items to next sprint\n';
+              report += '- [ ] Update estimates based on actual work\n';
+              report += '- [ ] Document lessons learned\n';
+              report += '- [ ] Plan improvement actions\n';
+              
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Sprint ${currentSprint} Review`,
+                body: report,
+                labels: ['sprint-management', 'sprint-review']
+              });
+              
+              // Move incomplete issues to next sprint
+              for (const issue of carryoverIssues) {
+                // Remove old sprint label
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    name: `sprint:${currentSprint}`
+                  });
+                } catch (e) {
+                  console.log(`Could not remove label from #${issue.number}`);
+                }
+                
+                // Add carryover label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['carryover']
+                });
+              }
+            }

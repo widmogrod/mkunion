@@ -1,0 +1,214 @@
+name: Stale Backlog Management
+
+on:
+  schedule:
+    # Run every Monday at 8 AM UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  mark-stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Find and mark stale backlog items
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const STALE_DAYS = 60; // 2 months
+            const now = new Date();
+            const staleDate = new Date(now.getTime() - (STALE_DAYS * 24 * 60 * 60 * 1000));
+            
+            // Get backlog issues
+            const { data: backlogIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'approved',
+              state: 'open',
+              sort: 'updated',
+              direction: 'asc',
+              per_page: 100
+            });
+            
+            const staleIssues = [];
+            const recentlyStale = [];
+            
+            for (const issue of backlogIssues) {
+              const lastUpdated = new Date(issue.updated_at);
+              const daysSinceUpdate = Math.floor((now - lastUpdated) / (1000 * 60 * 60 * 24));
+              
+              // Skip if already marked as stale
+              if (issue.labels.some(l => l.name === 'stale')) {
+                continue;
+              }
+              
+              if (lastUpdated < staleDate) {
+                staleIssues.push({
+                  number: issue.number,
+                  title: issue.title,
+                  daysOld: daysSinceUpdate,
+                  lastUpdated: issue.updated_at
+                });
+                
+                // Add stale label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['stale']
+                });
+                
+                // Add comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `## 🕰️ This Issue Has Become Stale
+                  
+                  This issue has been in the backlog for **${daysSinceUpdate} days** without updates.
+                  
+                  **Required Action:**
+                  - Product Owner should review if this is still relevant
+                  - If yes, please add a comment with updated priority and any new context
+                  - If no, please close the issue with an explanation
+                  
+                  **Options:**
+                  1. Remove \`stale\` label and add comment to keep active
+                  2. Close as "Won't Do" if no longer relevant
+                  3. Move to an "Ideas" or "Future" milestone if not immediate priority
+                  
+                  ⏰ **This issue will be automatically closed in 14 days if no action is taken.**`
+                });
+                
+                if (daysSinceUpdate < 75) {
+                  recentlyStale.push(issue);
+                }
+              }
+            }
+            
+            // Check for issues that have been stale for 2 weeks
+            const { data: oldStaleIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'stale',
+              state: 'open',
+              per_page: 100
+            });
+            
+            const toClose = [];
+            for (const issue of oldStaleIssues) {
+              // Find the stale comment
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                per_page: 100
+              });
+              
+              const staleComment = comments.find(c => 
+                c.body.includes('This Issue Has Become Stale')
+              );
+              
+              if (staleComment) {
+                const staleCommentDate = new Date(staleComment.created_at);
+                const daysSinceStale = Math.floor((now - staleCommentDate) / (1000 * 60 * 60 * 24));
+                
+                if (daysSinceStale >= 14) {
+                  toClose.push({
+                    number: issue.number,
+                    title: issue.title,
+                    daysSinceStale
+                  });
+                  
+                  // Close the issue
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed',
+                    state_reason: 'not_planned'
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `🔒 **Automatically Closed Due to Inactivity**
+                    
+                    This issue has been closed after being stale for 14 days with no updates.
+                    
+                    If this issue is still relevant, please:
+                    1. Reopen with updated context
+                    2. Explain why it should be prioritized now
+                    3. Remove the \`stale\` label
+                    
+                    Thank you for understanding! This helps us maintain a clean, actionable backlog.`
+                  });
+                }
+              }
+            }
+            
+            // Generate summary report
+            if (staleIssues.length > 0 || toClose.length > 0) {
+              let report = '# 📊 Stale Issue Report\n\n';
+              report += `Generated: ${new Date().toISOString()}\n\n`;
+              
+              if (staleIssues.length > 0) {
+                report += `## Newly Stale Issues (${staleIssues.length})\n\n`;
+                report += '| Issue | Title | Days Since Update |\n';
+                report += '|-------|-------|------------------|\n';
+                
+                for (const issue of staleIssues) {
+                  report += `| #${issue.number} | ${issue.title} | ${issue.daysOld} days |\n`;
+                }
+              }
+              
+              if (toClose.length > 0) {
+                report += `\n## Auto-Closed Issues (${toClose.length})\n\n`;
+                report += '| Issue | Title | Days Since Marked Stale |\n';
+                report += '|-------|-------|------------------------|\n';
+                
+                for (const issue of toClose) {
+                  report += `| #${issue.number} | ${issue.title} | ${issue.daysSinceStale} days |\n`;
+                }
+              }
+              
+              // Create summary issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Stale Issue Report - ${new Date().toLocaleDateString()}`,
+                body: report,
+                labels: ['stale-report', 'metrics']
+              });
+              
+              // If there are recently stale high-priority issues, create an alert
+              const highPriorityStale = recentlyStale.filter(issue => 
+                issue.labels.some(l => l.name === 'priority:high')
+              );
+              
+              if (highPriorityStale.length > 0) {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `⚠️ High Priority Issues Becoming Stale`,
+                  body: `The following high-priority issues have recently become stale and need immediate attention:\n\n${
+                    highPriorityStale.map(i => `- #${i.number}: ${i.title}`).join('\n')
+                  }\n\nPlease review these issues urgently.`,
+                  labels: ['urgent', 'stale-alert'],
+                  assignees: process.env.PRODUCT_OWNER ? [process.env.PRODUCT_OWNER] : []
+                });
+              }
+            }
+            
+            // Output metrics
+            console.log('Stale Issue Metrics:', JSON.stringify({
+              timestamp: now.toISOString(),
+              newlyStale: staleIssues.length,
+              autoClosed: toClose.length,
+              highPriorityStale: recentlyStale.filter(i => 
+                i.labels.some(l => l.name === 'priority:high')
+              ).length
+            }));

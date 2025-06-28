@@ -1,0 +1,134 @@
+name: Issue Inbox Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+
+jobs:
+  triage-to-inbox:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Add to project board
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/${{ github.repository_owner }}/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labeled: inbox
+
+      - name: Assign to tech lead for AI issues
+        if: contains(github.event.issue.labels.*.name, 'ai-generated')
+        uses: actions-ecosystem/action-add-assignees@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          assignees: ${{ vars.TECH_LEAD_USERNAME || 'widmogrod' }}
+
+      - name: Comment on AI-generated issue
+        if: contains(github.event.issue.labels.*.name, 'ai-generated')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: `## 🤖 AI-Generated Issue Review Required
+              
+              This issue was created by an AI assistant and requires human review before proceeding.
+              
+              **Review Checklist:**
+              - [ ] Problem statement is clear and valid
+              - [ ] Proposed solution aligns with project architecture
+              - [ ] Acceptance criteria are testable
+              - [ ] Complexity estimate seems accurate
+              - [ ] No security or performance concerns
+              
+              **Next Steps:**
+              1. Tech lead reviews and validates the issue
+              2. If approved, remove \`needs-human-review\` label and add \`approved\`
+              3. If changes needed, add \`needs-ai-refinement\` label with feedback
+              4. If rejected, close with explanation
+              
+              @${assignees[0]} - Please review at your earliest convenience.`
+            });
+
+      - name: Auto-label based on content
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = issue.body ? issue.body.toLowerCase() : '';
+            const labels = [];
+            
+            // Feature area detection
+            if (title.includes('state machine') || body.includes('state machine')) {
+              labels.push('area:state-machine');
+            }
+            if (title.includes('code gen') || body.includes('code generation')) {
+              labels.push('area:codegen');
+            }
+            if (title.includes('type') || body.includes('type system')) {
+              labels.push('area:type-system');
+            }
+            if (title.includes('storage') || body.includes('storage')) {
+              labels.push('area:storage');
+            }
+            if (title.includes('workflow') || body.includes('workflow')) {
+              labels.push('area:workflow');
+            }
+            
+            // Priority detection based on keywords
+            if (title.includes('critical') || title.includes('urgent') || body.includes('blocking')) {
+              labels.push('priority:high');
+            } else if (title.includes('important')) {
+              labels.push('priority:medium');
+            } else {
+              labels.push('priority:low');
+            }
+            
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labels
+              });
+            }
+
+      - name: Check for similar issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const searchTerms = issue.title.split(' ').filter(word => word.length > 3).join(' ');
+            
+            const { data: similar } = await github.rest.search.issuesAndPullRequests({
+              q: `${searchTerms} repo:${context.repo.owner}/${context.repo.repo} is:issue`,
+              sort: 'relevance',
+              per_page: 5
+            });
+            
+            const potentialDuplicates = similar.items.filter(item => 
+              item.number !== issue.number && 
+              item.state === 'open'
+            );
+            
+            if (potentialDuplicates.length > 0) {
+              const links = potentialDuplicates.map(dup => 
+                `- #${dup.number}: ${dup.title}`
+              ).join('\n');
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `## 🔍 Potentially Similar Issues\n\nI found some issues that might be related:\n\n${links}\n\nPlease check if this is a duplicate before proceeding.`
+              });
+            }
