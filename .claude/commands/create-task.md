@@ -1,0 +1,1 @@
+Your goal is to create GitHub issue, following instructions defined in [ai-generated.yml](../../.github/ISSUE_TEMPLATE/ai-generated.yml)

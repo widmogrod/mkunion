@@ -1,57 +1,63 @@
 stateDiagram
- %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
-	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.CancelOrderCMD"
- %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
-	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.CancelOrderCMD"
- %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
-	"*state.OrderError" --> "*state.OrderError": "❌*state.CancelOrderCMD"
- %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
-	"*state.OrderPending" --> "*state.OrderPending": "❌*state.CancelOrderCMD"
-	"*state.OrderProcessing" --> "*state.OrderCancelled": "*state.CancelOrderCMD"
- %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
-	[*] --> [*]: "❌*state.CancelOrderCMD"
- %% error=cannot attemp order creation, order exists: invalid transition 
-	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.CreateOrderCMD"
- %% error=cannot attemp order creation, order exists: invalid transition 
-	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.CreateOrderCMD"
- %% error=cannot attemp order creation, order exists: invalid transition 
-	"*state.OrderError" --> "*state.OrderError": "❌*state.CreateOrderCMD"
- %% error=cannot attemp order creation, order exists: invalid transition 
-	"*state.OrderPending" --> "*state.OrderPending": "❌*state.CreateOrderCMD"
- %% error=cannot attemp order creation, order exists: invalid transition 
-	"*state.OrderProcessing" --> "*state.OrderProcessing": "❌*state.CreateOrderCMD"
-	[*] --> "*state.OrderPending": "*state.CreateOrderCMD"
- %% error=invalid transition 
-	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.MarkAsProcessingCMD"
- %% error=invalid transition 
-	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.MarkAsProcessingCMD"
- %% error=invalid transition 
-	"*state.OrderError" --> "*state.OrderError": "❌*state.MarkAsProcessingCMD"
-	"*state.OrderPending" --> "*state.OrderProcessing": "*state.MarkAsProcessingCMD"
- %% error=invalid transition 
-	"*state.OrderProcessing" --> "*state.OrderProcessing": "❌*state.MarkAsProcessingCMD"
- %% error=invalid transition 
-	[*] --> [*]: "❌*state.MarkAsProcessingCMD"
- %% error=cannot mark order as complete, order is not being process; invalid transition 
-	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.MarkOrderCompleteCMD"
- %% error=cannot mark order as complete, order is not being process; invalid transition 
-	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.MarkOrderCompleteCMD"
- %% error=cannot mark order as complete, order is not being process; invalid transition 
-	"*state.OrderError" --> "*state.OrderError": "❌*state.MarkOrderCompleteCMD"
- %% error=cannot mark order as complete, order is not being process; invalid transition 
-	"*state.OrderPending" --> "*state.OrderPending": "❌*state.MarkOrderCompleteCMD"
-	"*state.OrderProcessing" --> "*state.OrderCompleted": "*state.MarkOrderCompleteCMD"
-	"*state.OrderProcessing" --> "*state.OrderError": "*state.MarkOrderCompleteCMD"
- %% error=cannot mark order as complete, order is not being process; invalid transition 
-	[*] --> [*]: "❌*state.MarkOrderCompleteCMD"
- %% error=cannot recover from non error state; invalid transition 
-	"*state.OrderCancelled" --> "*state.OrderCancelled": "❌*state.TryRecoverErrorCMD"
- %% error=cannot recover from non error state; invalid transition 
-	"*state.OrderCompleted" --> "*state.OrderCompleted": "❌*state.TryRecoverErrorCMD"
-	"*state.OrderError" --> "*state.OrderCompleted": "*state.TryRecoverErrorCMD"
- %% error=cannot recover from non error state; invalid transition 
-	"*state.OrderPending" --> "*state.OrderPending": "❌*state.TryRecoverErrorCMD"
- %% error=cannot recover from non error state; invalid transition 
-	"*state.OrderProcessing" --> "*state.OrderProcessing": "❌*state.TryRecoverErrorCMD"
- %% error=cannot recover from non error state; invalid transition 
-	[*] --> [*]: "❌*state.TryRecoverErrorCMD"
+	OrderCancelled: *state.OrderCancelled
+	OrderCompleted: *state.OrderCompleted
+	OrderError: *state.OrderError
+	OrderPending: *state.OrderPending
+	OrderProcessing: *state.OrderProcessing
+
+	%% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	OrderCancelled --> OrderCancelled: ❌*state.CancelOrderCMD
+	%% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	OrderCompleted --> OrderCompleted: ❌*state.CancelOrderCMD
+	%% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	OrderError --> OrderError: ❌*state.CancelOrderCMD
+	%% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	OrderPending --> OrderPending: ❌*state.CancelOrderCMD
+	OrderProcessing --> OrderCancelled: *state.CancelOrderCMD
+	%% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+	[*] --> [*]: ❌*state.CancelOrderCMD
+	%% error=cannot attemp order creation, order exists: invalid transition 
+	OrderCancelled --> OrderCancelled: ❌*state.CreateOrderCMD
+	%% error=cannot attemp order creation, order exists: invalid transition 
+	OrderCompleted --> OrderCompleted: ❌*state.CreateOrderCMD
+	%% error=cannot attemp order creation, order exists: invalid transition 
+	OrderError --> OrderError: ❌*state.CreateOrderCMD
+	%% error=cannot attemp order creation, order exists: invalid transition 
+	OrderPending --> OrderPending: ❌*state.CreateOrderCMD
+	%% error=cannot attemp order creation, order exists: invalid transition 
+	OrderProcessing --> OrderProcessing: ❌*state.CreateOrderCMD
+	[*] --> OrderPending: *state.CreateOrderCMD
+	%% error=invalid transition 
+	OrderCancelled --> OrderCancelled: ❌*state.MarkAsProcessingCMD
+	%% error=invalid transition 
+	OrderCompleted --> OrderCompleted: ❌*state.MarkAsProcessingCMD
+	%% error=invalid transition 
+	OrderError --> OrderError: ❌*state.MarkAsProcessingCMD
+	OrderPending --> OrderProcessing: *state.MarkAsProcessingCMD
+	%% error=invalid transition 
+	OrderProcessing --> OrderProcessing: ❌*state.MarkAsProcessingCMD
+	%% error=invalid transition 
+	[*] --> [*]: ❌*state.MarkAsProcessingCMD
+	%% error=cannot mark order as complete, order is not being process; invalid transition 
+	OrderCancelled --> OrderCancelled: ❌*state.MarkOrderCompleteCMD
+	%% error=cannot mark order as complete, order is not being process; invalid transition 
+	OrderCompleted --> OrderCompleted: ❌*state.MarkOrderCompleteCMD
+	%% error=cannot mark order as complete, order is not being process; invalid transition 
+	OrderError --> OrderError: ❌*state.MarkOrderCompleteCMD
+	%% error=cannot mark order as complete, order is not being process; invalid transition 
+	OrderPending --> OrderPending: ❌*state.MarkOrderCompleteCMD
+	OrderProcessing --> OrderCompleted: *state.MarkOrderCompleteCMD
+	OrderProcessing --> OrderError: *state.MarkOrderCompleteCMD
+	%% error=cannot mark order as complete, order is not being process; invalid transition 
+	[*] --> [*]: ❌*state.MarkOrderCompleteCMD
+	%% error=cannot recover from non error state; invalid transition 
+	OrderCancelled --> OrderCancelled: ❌*state.TryRecoverErrorCMD
+	%% error=cannot recover from non error state; invalid transition 
+	OrderCompleted --> OrderCompleted: ❌*state.TryRecoverErrorCMD
+	OrderError --> OrderCompleted: *state.TryRecoverErrorCMD
+	%% error=cannot recover from non error state; invalid transition 
+	OrderPending --> OrderPending: ❌*state.TryRecoverErrorCMD
+	%% error=cannot recover from non error state; invalid transition 
+	OrderProcessing --> OrderProcessing: ❌*state.TryRecoverErrorCMD
+	%% error=cannot recover from non error state; invalid transition 
+	[*] --> [*]: ❌*state.TryRecoverErrorCMD

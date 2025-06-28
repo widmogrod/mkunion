@@ -87,7 +87,8 @@ Our function must return either a new state or an error if something went wrong 
 Below is a snippet of the implementation of the `Transition` function for our Order Service:
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:30:81"
+--8<-- "example/state/machine.go:create-order"
+--8<-- "example/state/machine.go:transition-partial"
 // ...
 // rest removed for brevity 
 // ...
@@ -122,7 +123,7 @@ and discover transitions that we didn't think about, that should or shouldn't be
 Here is how you can test a state machine in a declarative way, using the `mkunion/x/machine` package:
 
 ```go title="example/state/machine_test.go"
---8<-- "example/state/machine_test.go:15:151"
+--8<-- "example/state/machine_test.go:test-suite"
 ```
 A few things to notice in this test:
 
@@ -186,7 +187,7 @@ Another good practice is that every package that defines a state machine in the 
 should provide a `NewMachine` function that will return a bootstrapped machine with package types, like so:
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:9:12"
+--8<-- "example/state/machine.go:new-machine"
 ```
 
 ## Conclusion
@@ -197,10 +198,11 @@ Now we have all the pieces in place, and we can start building our application.
 - We have tests that will ensure that our state machine is correct; fuzzy tests help discover edge cases, and lastly, we get diagrams showing which paths we tested and covered.
 - We saw how this approach focuses on business logic and keeps it separate from other concerns like the database or API clients. This is one of the principles of clean architecture.
 
+For a comprehensive guide on best practices, patterns, and advanced techniques, see our **[State Machine Best Practices](state_machine_best_practices.md)** guide.
+
 ## Next steps
 
-- **[Persisting union in database](../examples/state_storage.md)** will help answer the question of how to persist state in a database and how to handle concurrency conflicts.
-- **[Handling errors in state machines](../examples/state_storage.md)** will help answer the question of how to handle errors in state machines and how to build self-healing systems.
-
-
-
+- **[State Machine Best Practices](state_machine_best_practices.md)** - Learn about file organization, naming conventions, testing strategies, and advanced patterns
+- **[Simple Examples](simple_state_machines.md)** - Start with basic state machines before tackling complex scenarios
+- **[Persisting union in database](../examples/state_storage.md)** - Learn how to persist state in a database and handle concurrency conflicts
+- **[Handling errors in state machines](../examples/state_storage.md)** - Build self-healing systems by treating errors as states

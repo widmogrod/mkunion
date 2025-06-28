@@ -14,6 +14,8 @@ func TestInferStateMachine(t *testing.T) {
 	result := infer.ToMermaid()
 
 	assert.Equal(t, `stateDiagram
-	"int" --> "int": "string"
+	int: int
+
+	int --> int: string
 `, result)
 }
