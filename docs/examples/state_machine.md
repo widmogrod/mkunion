@@ -87,7 +87,8 @@ Our function must return either a new state or an error if something went wrong 
 Below is a snippet of the implementation of the `Transition` function for our Order Service:
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:30:81"
+--8<-- "example/state/machine.go:create-order"
+--8<-- "example/state/machine.go:transition-partial"
 // ...
 // rest removed for brevity 
 // ...
@@ -122,7 +123,7 @@ and discover transitions that we didn't think about, that should or shouldn't be
 Here is how you can test a state machine in a declarative way, using the `mkunion/x/machine` package:
 
 ```go title="example/state/machine_test.go"
---8<-- "example/state/machine_test.go:15:151"
+--8<-- "example/state/machine_test.go:test-suite"
 ```
 A few things to notice in this test:
 
@@ -186,7 +187,7 @@ Another good practice is that every package that defines a state machine in the 
 should provide a `NewMachine` function that will return a bootstrapped machine with package types, like so:
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:9:12"
+--8<-- "example/state/machine.go:new-machine"
 ```
 
 ## Conclusion
