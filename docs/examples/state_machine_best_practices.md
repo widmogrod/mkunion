@@ -200,7 +200,7 @@ This approach scales well because:
 3. **Generate Mocks with moq**: Use `//go:generate moq` to automatically generate mocks
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:3:8"
+--8<-- "example/state/machine.go:imports"
 ```
 
 Running `go generate ./...` creates `machine_mock.go` with a `DependencyMock` type (generated from the `Dependency` interface shown in the File Organization section above). This mock can then be used in tests:
@@ -705,7 +705,7 @@ mkunion uses state storage pattern where the current state of the state machine 
 Example using typed repository:
 
 ```go title="example/machine/state_storage.go"
---8<-- "example/machine/state_storage.go:9:26"
+--8<-- "example/machine/state_storage.go:example"
 ```
 
 ### Concurrent Processing
@@ -713,7 +713,7 @@ Example using typed repository:
 When multiple processes might update the same state, use optimistic concurrency control provided by the schemaless repository:
 
 ```go title="example/machine/concurrent_processing.go" 
---8<-- "example/machine/concurrent_processing.go:25:75"
+--8<-- "example/machine/concurrent_processing.go:retry-loop"
 ```
 
 Key strategies:
@@ -737,7 +737,7 @@ The `x/storage/schemaless` package provides built-in optimistic concurrency cont
 ### Complete Example
 
 ```go title="example/machine/concurrent_processing.go"
---8<-- "example/machine/concurrent_processing.go:15:83"
+--8<-- "example/machine/concurrent_processing.go:process-order"
 ```
 
 ### Batch Operations with Concurrency Control
@@ -745,13 +745,13 @@ The `x/storage/schemaless` package provides built-in optimistic concurrency cont
 When updating multiple records:
 
 ```go title="example/machine/concurrent_processing.go"
---8<-- "example/machine/concurrent_processing.go:85:135"
+--8<-- "example/machine/concurrent_processing.go:batch-operations"
 ```
 
 ### Testing Concurrent Access
 
 ```go title="example/machine/concurrent_processing_test.go"
---8<-- "example/machine/concurrent_processing_test.go:43:98"
+--8<-- "example/machine/concurrent_processing_test.go:concurrent-test"
 ```
 
 ### Retry Helper Function
@@ -759,5 +759,5 @@ When updating multiple records:
 The retry logic can be extracted into a reusable helper:
 
 ```go title="example/machine/concurrent_processing.go"
---8<-- "example/machine/concurrent_processing.go:137:154"
+--8<-- "example/machine/concurrent_processing.go:retry-helper"
 ```
