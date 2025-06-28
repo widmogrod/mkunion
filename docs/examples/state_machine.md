@@ -201,6 +201,66 @@ Now we have all the pieces in place, and we can start building our application.
 
 When building state machines with mkunion, following these practices will help you create maintainable and robust systems:
 
+### File Organization
+
+Organize your state machine code across files for better maintainability:
+
+1. **`model.go`**: State and command definitions
+   ```go
+   //go:tag mkunion:"State"
+   type (
+       OrderPending struct { /* ... */ }
+       OrderProcessing struct { /* ... */ }
+   )
+   
+   //go:tag mkunion:"Command"
+   type (
+       CreateOrderCMD struct { /* ... */ }
+       CancelOrderCMD struct { /* ... */ }
+   )
+   ```
+
+2. **`machine.go`**: Core state machine logic
+   ```go
+   package order
+   
+   //go:generate mkunion watch -g .
+   //go:generate moq -skip-ensure -out machine_mock.go . Dependency
+   
+   // Dependency interface - moq will generate DependencyMock from this
+   type Dependency interface {
+       TimeNow() *time.Time
+       StockService() StockService
+       PaymentService() PaymentService
+   }
+   
+   // Common errors
+   var (
+       ErrInvalidTransition = errors.New("invalid state transition")
+       ErrOrderNotFound     = errors.New("order not found")
+   )
+   
+   // Machine constructor
+   func NewMachine(deps Dependency, state State) *machine.Machine[Dependency, Command, State] {
+       if state == nil {
+           state = &OrderPending{} // Default initial state
+       }
+       return machine.NewMachine(deps, Transition, state)
+   }
+   
+   // Transition function
+   func Transition(ctx context.Context, deps Dependency, cmd Command, state State) (State, error) {
+       // Implementation
+   }
+   ```
+
+3. **`machine_test.go`**: Tests and state diagrams
+4. **`machine_database_test.go`**: Persistence examples
+5. **Generated files** (created by `go generate`):
+   - `*_union_gen.go` - Union type definitions from mkunion
+   - `*_shape_gen.go` - Shape definitions for introspection
+   - `machine_mock.go` - Mock implementation of Dependency interface from moq
+
 ### Naming Conventions
 
 1. **States**: Use descriptive nouns that clearly indicate the state (e.g., `OrderPending`, `PaymentProcessing`)
@@ -239,7 +299,41 @@ func Transition(ctx context.Context, deps Dependencies, cmd Command, state State
 
 1. **Define Clear Interfaces**: Dependencies should be interfaces, not concrete types
 2. **Keep Dependencies Minimal**: Only inject what's absolutely necessary
-3. **Mock Dependencies in Tests**: Use generated mocks for thorough testing
+3. **Generate Mocks with moq**: Use `//go:generate moq` to automatically generate mocks
+
+```go title="example/state/machine.go"
+--8<-- "example/state/machine.go:3:8"
+```
+
+Running `go generate ./...` creates `machine_mock.go` with a `DependencyMock` type (generated from the `Dependency` interface shown in the File Organization section above). This mock can then be used in tests:
+
+```go
+func TestStateMachine(t *testing.T) {
+    // DependencyMock is generated from the Dependency interface
+    dep := &DependencyMock{
+        TimeNowFunc: func() *time.Time {
+            now := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+            return &now
+        },
+        StockServiceFunc: func() StockService {
+            return &StockServiceMock{
+                ReserveFunc: func(items []Item) error {
+                    return nil
+                },
+            }
+        },
+    }
+    
+    machine := NewMachine(dep, nil)
+    // Test the machine...
+}
+```
+
+Benefits of using moq:
+- **Reduces boilerplate**: No need to manually write mock implementations
+- **Type safety**: Generated mocks always match the interface
+- **Easy maintenance**: Mocks automatically update when interface changes
+- **Better test readability**: Focus on behavior, not mock implementation
 
 ## Common Pitfalls
 
@@ -656,44 +750,74 @@ type OrderDetails struct {
 }
 ```
 
-### Persistence Strategies
+### State Storage
 
-1. **Event Sourcing**: Store commands instead of states for better performance
-2. **Snapshotting**: Periodically save full state to avoid replaying all events
-3. **Compression**: Compress state data before persistence
+mkunion uses state storage pattern where the current state of the state machine is persisted directly to the database. This approach:
+
+- Stores the complete state after each transition
+- Provides immediate access to current state without replay
+- Supports optimistic concurrency control through versioning
+- Works seamlessly with the `x/storage/schemaless` package
+
+Example using typed repository:
+
+```go title="example/machine/state_storage.go"
+--8<-- "example/machine/state_storage.go:9:26"
+```
 
 ### Concurrent Processing
 
-1. **Partition by ID**: Process different entities in parallel
-```go
-// Each order gets its own state machine instance
-machines := make(map[string]*Machine)
-var mu sync.RWMutex
+When multiple processes might update the same state, use optimistic concurrency control provided by the schemaless repository:
 
-func GetMachine(orderID string) *Machine {
-    mu.RLock()
-    if m, exists := machines[orderID]; exists {
-        mu.RUnlock()
-        return m
-    }
-    mu.RUnlock()
-    
-    // Create new machine for this order
-    mu.Lock()
-    defer mu.Unlock()
-    
-    if m, exists := machines[orderID]; exists {
-        return m
-    }
-    
-    m := NewMachine(deps, loadState(orderID))
-    machines[orderID] = m
-    return m
-}
+```go title="example/machine/concurrent_processing.go" 
+--8<-- "example/machine/concurrent_processing.go:25:75"
 ```
 
-2. **Batch Processing**: Process multiple commands together
-3. **Async Side Effects**: Don't block transitions on external calls
+Key strategies:
+1. **Optimistic Concurrency**: Use version checking to detect conflicts
+2. **Retry Logic**: Implement exponential backoff for version conflicts  
+3. **Partition by ID**: Process different entities in parallel safely
+
+See the [Optimistic Concurrency Control](#optimistic-concurrency-control) section for detailed examples.
+
+## Optimistic Concurrency Control
+
+The `x/storage/schemaless` package provides built-in optimistic concurrency control using version fields. This ensures data consistency when multiple processes work with the same state.
+
+### How It Works
+
+1. Each record has a `Version` field that increments on updates
+2. Updates specify the expected version in the record
+3. If versions don't match, `ErrVersionConflict` is returned
+4. Applications retry with the latest version
+
+### Complete Example
+
+```go title="example/machine/concurrent_processing.go"
+--8<-- "example/machine/concurrent_processing.go:15:83"
+```
+
+### Batch Operations with Concurrency Control
+
+When updating multiple records:
+
+```go title="example/machine/concurrent_processing.go"
+--8<-- "example/machine/concurrent_processing.go:85:135"
+```
+
+### Testing Concurrent Access
+
+```go title="example/machine/concurrent_processing_test.go"
+--8<-- "example/machine/concurrent_processing_test.go:43:98"
+```
+
+### Retry Helper Function
+
+The retry logic can be extracted into a reusable helper:
+
+```go title="example/machine/concurrent_processing.go"
+--8<-- "example/machine/concurrent_processing.go:137:154"
+```
 
 ## Next steps
 
