@@ -228,6 +228,7 @@ func TestStateMachine(t *testing.T) {
 ```
 
 Benefits of using moq:
+
 - **Reduces boilerplate**: No need to manually write mock implementations
 - **Type safety**: Generated mocks always match the interface
 - **Easy maintenance**: Mocks automatically update when interface changes
@@ -275,15 +276,26 @@ type OrderPending struct {
 return nil, fmt.Errorf("payment failed")
 ```
 
-**Solution**: Model error conditions as states when they need handling. Crucially, embed the previous valid state to enable recovery:
+**Solution**: Model error conditions as states when they need handling. Crucially, store both the command that failed and the previous valid state to enable recovery or debugging:
 
 ```go
-// Better: Error state with previous state for recovery
-type PaymentFailed struct {
+// Best practice: Error state with command and previous state
+type OrderError struct {
+    // Error metadata
     Reason       string
     FailedAt     time.Time
-    PreviousState State  // Embed previous valid state
+    RetryCount   int
+    
+    // Critical for debugging and recovery
+    FailedCommand Command  // The exact command that failed
+    PreviousState State    // State before the failed transition
 }
+
+// This pattern enables:
+// 1. Perfect reproduction of the failure
+// 2. Automatic retry with the same command
+// 3. Debugging with full context
+// 4. Recovery to previous valid state
 
 // Or use a shared BaseState pattern like in workflow
 type BaseState struct {
@@ -307,8 +319,12 @@ type (
 // Recovery becomes straightforward
 func Transition(ctx context.Context, deps Dependencies, cmd Command, state State) (State, error) {
     return MatchCommandR2(cmd,
-        func(c *RetryPaymentCMD) (State, error) {
+        func(c *RetryFailedCMD) (State, error) {
             switch s := state.(type) {
+            case *OrderError:
+                // Retry the exact command that failed
+                return Transition(ctx, deps, s.FailedCommand, s.PreviousState)
+                
             case *PaymentFailed:
                 // Can access previous state data for retry
                 if s.PreviousState != nil {
@@ -321,7 +337,7 @@ func Transition(ctx context.Context, deps Dependencies, cmd Command, state State
                     Amount:    s.PreviousAmount,
                 }, nil
             }
-            return nil, fmt.Errorf("can only retry failed payments")
+            return nil, fmt.Errorf("can only retry from error states")
         },
     )
 }
@@ -329,16 +345,52 @@ func Transition(ctx context.Context, deps Dependencies, cmd Command, state State
 
 This approach preserves critical information needed for recovery without losing the context of what failed.
 
+!!! tip "Real Implementation Example"
+    The order state machine example demonstrates this pattern perfectly. See how `OrderError` in [`example/state/model.go`](https://github.com/widmogrod/mkunion/blob/main/example/state/model.go#L47) stores both `ProblemCommand` and `ProblemState`. The retry logic in [`machine.go`](https://github.com/widmogrod/mkunion/blob/main/example/state/machine.go#L180) shows how to use this information to retry the exact failed operation.
+
 ### 4. Ignoring Concurrency
 
-**Problem**: Not considering concurrent command execution
+**Problem**: Misunderstanding the state machine concurrency model
 ```go
-// Risky: No concurrency control
-machine.Handle(ctx, cmd1) // From goroutine 1
-machine.Handle(ctx, cmd2) // From goroutine 2 simultaneously
+// Wrong: Sharing a machine instance across goroutines
+sharedMachine := NewMachine(deps, currentState)
+go sharedMachine.Handle(ctx, cmd1) // Goroutine 1
+go sharedMachine.Handle(ctx, cmd2) // Goroutine 2 - DON'T DO THIS!
 ```
 
-**Solution**: Use proper synchronization or event sourcing patterns (see [state storage](state_storage.md))
+**Solution**: State machines are designed to be created per request. This isolation prevents accidental state mutations:
+
+```go
+// Correct: Create a new machine instance for each operation
+func ProcessCommand(ctx context.Context, deps Dependencies, cmd Command) error {
+    // 1. Load current state from storage
+    record, err := repo.Get(ctx, orderID)
+    if err != nil {
+        return err
+    }
+    
+    // 2. Create a fresh machine instance with the current state
+    machine := NewMachine(deps, record.State)
+    
+    // 3. Handle the command
+    if err := machine.Handle(ctx, cmd); err != nil {
+        return err
+    }
+    
+    // 4. Save the new state (with optimistic concurrency control)
+    record.State = machine.State()
+    return repo.Update(ctx, record)
+}
+```
+
+This pattern ensures:
+
+- Each request gets an isolated machine instance
+- No shared mutable state between concurrent operations
+- Failures don't affect other requests
+- Retries start with a clean machine instance
+
+For handling concurrent updates to the same entity, see the [Optimistic Concurrency Control](#optimistic-concurrency-control) section below.
 
 ### 5. Overloading Transitions
 
