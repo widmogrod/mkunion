@@ -187,6 +187,7 @@ func Transition(ctx context.Context, deps Dependencies, cmd Command, state State
 ```
 
 This approach scales well because:
+
 - Structural validation is declarative (struct tags)
 - Business rules are explicit and testable
 - External validations are isolated in dependencies
@@ -378,7 +379,7 @@ func ProcessCommand(ctx context.Context, deps Dependencies, cmd Command) error {
     }
     
     // 4. Save the new state (with optimistic concurrency control)
-    record.State = machine.State()
+    record.Data = machine.State()
     return repo.Update(ctx, record)
 }
 ```
@@ -412,55 +413,130 @@ func Transition(...) (State, error) {
 
 ### State Machine Composition
 
-For complex systems, compose multiple state machines:
+For complex systems, compose multiple state machines as a service layer:
 
 ```go
-// Order state machine
-type OrderMachine struct {
-    *machine.Machine[OrderDeps, OrderCommand, OrderState]
+// Each domain has its own package with machine constructor
+// order/machine.go
+func NewMachine(deps OrderDeps, state OrderState) *machine.Machine[OrderDeps, OrderCommand, OrderState] {
+    return machine.NewMachine(deps, Transition, state)
 }
 
-// Payment state machine  
-type PaymentMachine struct {
-    *machine.Machine[PaymentDeps, PaymentCommand, PaymentState]
+// order/service.go - Domain service encapsulates repository and machine logic
+type OrderService struct {
+    repo schemaless.Repository[OrderState]
+    deps OrderDeps
 }
 
-// Composed e-commerce flow
-type ECommerceMachine struct {
-    Order   *OrderMachine
-    Payment *PaymentMachine
+func NewOrderService(repo schemaless.Repository[OrderState], deps OrderDeps) *OrderService {
+    return &OrderService{repo: repo, deps: deps}
 }
 
-func (e *ECommerceMachine) ProcessOrder(ctx context.Context, orderCmd OrderCommand) error {
-    // Handle order state change
-    if err := e.Order.Handle(ctx, orderCmd); err != nil {
+func (s *OrderService) HandleCommand(ctx context.Context, cmd OrderCommand) (OrderState, error) {
+    // Extract order ID from command for state loading
+    orderID := extractOrderID(cmd)
+    
+    // Load current state
+    record, err := s.repo.Get(ctx, orderID)
+    if err != nil && !errors.Is(err, schemaless.ErrNotFound) {
+        return nil, err
+    }
+    
+    var currentState OrderState
+    if record != nil {
+        currentState = record.Data
+    }
+    
+    // Create fresh machine instance
+    machine := NewMachine(s.deps, currentState)
+    
+    // Handle command
+    if err := machine.Handle(ctx, cmd); err != nil {
+        return nil, err
+    }
+    
+    // Save new state with optimistic concurrency control
+    newState := machine.State()
+    record.Data = newState
+    _, err = s.repo.UpdateRecords(schemaless.Save(*record))
+    
+    return newState, err
+}
+
+// payment/service.go - Similar pattern for payment domain
+type PaymentService struct {
+    repo schemaless.Repository[PaymentState]
+    deps PaymentDeps
+}
+
+func (s *PaymentService) HandleCommand(ctx context.Context, cmd PaymentCommand) (PaymentState, error) {
+    // Same pattern as OrderService...
+}
+
+// Composed e-commerce service using domain services
+type ECommerceService struct {
+    orderService   *OrderService
+    paymentService *PaymentService
+}
+
+func NewECommerceService(orderSvc *OrderService, paymentSvc *PaymentService) *ECommerceService {
+    return &ECommerceService{
+        orderService:   orderSvc,
+        paymentService: paymentSvc,
+    }
+}
+
+func (s *ECommerceService) ProcessOrder(ctx context.Context, orderCmd OrderCommand) error {
+    // 1. Handle order command through order service
+    newOrderState, err := s.orderService.HandleCommand(ctx, orderCmd)
+    if err != nil {
         return err
     }
     
-    // If order is confirmed, trigger payment
-    if _, ok := e.Order.State().(*OrderConfirmed); ok {
-        return e.Payment.Handle(ctx, &InitiatePaymentCMD{})
+    // 2. If order is confirmed, trigger payment through payment service
+    if confirmed, ok := newOrderState.(*OrderConfirmed); ok {
+        _, err := s.paymentService.HandleCommand(ctx, &InitiatePaymentCMD{
+            OrderID: confirmed.OrderID,
+            Amount:  confirmed.TotalAmount,
+        })
+        return err
     }
     
     return nil
 }
 ```
 
+Key principles:
+
+- **Domain services**: Each domain encapsulates its repository, dependencies, and machine logic
+- **Schemaless repositories**: Use `schemaless.Repository[StateType]` for type-safe state storage
+- **Service composition**: Compose domain services, avoiding direct repository/machine access
+- **Single responsibility**: Each service handles one domain's state machine lifecycle
+- **Optimistic concurrency**: Built-in through `schemaless.Repository` version handling
+- **No duplication**: State loading, machine creation, and saving logic exists once per domain
+
 ### Async Operations with Callbacks
 
-Handle long-running operations without blocking:
+Handle long-running operations without blocking using a state-first approach:
 
 ```go
 //go:tag mkunion:"AsyncState"
 type (
     OperationPending struct {
-        ID        string
-        StartedAt time.Time
+        ID            string
+        CallbackID    string  // For async completion
+        StartedAt     time.Time
+        TimeoutAt     time.Time
     }
     OperationComplete struct {
         ID       string
         Result   interface{}
         Duration time.Duration
+    }
+    OperationError struct {
+        ID     string
+        Reason string
+        Code   string  // "TIMEOUT", "WORKER_FAILED", etc.
     }
 )
 
@@ -469,178 +545,229 @@ type (
     StartAsyncCMD struct {
         ID string
     }
-    CompleteAsyncCMD struct {
-        ID     string
-        Result interface{}
+    CallbackCMD struct {
+        CallbackID string
+        Result     interface{}
+        Error      string
     }
 )
 
-// Transition starts async operation
+// Pure transition function - NO side effects
 func Transition(ctx context.Context, deps AsyncDeps, cmd AsyncCommand, state AsyncState) (AsyncState, error) {
     return MatchAsyncCommandR2(cmd,
         func(c *StartAsyncCMD) (AsyncState, error) {
-            // Start async operation
-            go deps.AsyncWorker(c.ID, func(result interface{}, err error) {
-                // Callback to complete
-                completeCMD := &CompleteAsyncCMD{
-                    ID:     c.ID,
-                    Result: result,
-                }
-                deps.CommandQueue.Enqueue(completeCMD)
-            })
-            
+            // ONLY return new state - no async operations here
             return &OperationPending{
-                ID:        c.ID,
-                StartedAt: time.Now(),
+                ID:         c.ID,
+                CallbackID: deps.GenerateCallbackID(),
+                StartedAt:  time.Now(),
+                TimeoutAt:  time.Now().Add(5 * time.Minute),
             }, nil
         },
-        // ... handle completion
+        func(c *CallbackCMD) (AsyncState, error) {
+            switch s := state.(type) {
+            case *OperationPending:
+                if c.Error != "" {
+                    return &OperationError{
+                        ID:     s.ID,
+                        Reason: c.Error,
+                        Code:   "WORKER_FAILED",
+                    }, nil
+                }
+                return &OperationComplete{
+                    ID:       s.ID,
+                    Result:   c.Result,
+                    Duration: time.Since(s.StartedAt),
+                }, nil
+            }
+            return nil, fmt.Errorf("invalid state for callback: %T", state)
+        },
     )
 }
-```
 
-### Time-Based Transitions
-
-Implement timeouts and scheduled transitions:
-
-```go
-//go:tag mkunion:"TimerCommand"  
-type (
-    TimeoutCMD struct {
-        Reason string
-    }
-)
-
-// Set up timeout when entering a state
-func SetupStateTimeouts(m *machine.Machine[Deps, Command, State], timeout time.Duration) {
-    go func() {
-        timer := time.NewTimer(timeout)
-        defer timer.Stop()
-        
-        select {
-        case <-timer.C:
-            m.Handle(context.Background(), &TimeoutCMD{
-                Reason: "operation timeout",
-            })
-        case <-m.Done():
-            return
-        }
-    }()
-}
-```
-
-## Debugging and Observability
-
-### Structured Logging
-
-Implement comprehensive logging for state transitions:
-
-```go
-type LoggingDependencies struct {
-    Logger *slog.Logger
-    // ... other deps
-}
-
-func Transition(ctx context.Context, deps LoggingDependencies, cmd Command, state State) (State, error) {
-    // Log command received
-    deps.Logger.Info("command received",
-        "command_type", fmt.Sprintf("%T", cmd),
-        "current_state", fmt.Sprintf("%T", state),
-        "trace_id", ctx.Value("trace_id"),
-    )
+// Service layer handles async operations AFTER state persistence
+func (s *AsyncService) HandleCommand(ctx context.Context, cmd AsyncCommand) (AsyncState, error) {
+    // 1. Load current state
+    record, err := s.repo.Get(ctx, extractID(cmd))
+    // ... error handling
     
-    startTime := time.Now()
-    newState, err := performTransition(ctx, deps, cmd, state)
-    duration := time.Since(startTime)
-    
-    if err != nil {
-        deps.Logger.Error("transition failed",
-            "error", err,
-            "duration_ms", duration.Milliseconds(),
-        )
+    // 2. Apply command to state machine
+    machine := NewMachine(s.deps, record.Data)
+    if err := machine.Handle(ctx, cmd); err != nil {
         return nil, err
     }
     
-    deps.Logger.Info("transition completed",
-        "new_state", fmt.Sprintf("%T", newState),
-        "duration_ms", duration.Milliseconds(),
-    )
+    // 3. PERSIST STATE FIRST
+    newState := machine.State()
+    record.Data = newState
+    _, err = s.repo.UpdateRecords(schemaless.Save(*record))
+    if err != nil {
+        return nil, err
+    }
+    
+    // 4. ONLY AFTER successful persistence, trigger async work
+    if pending, ok := newState.(*OperationPending); ok {
+        // Enqueue for background processing
+        s.asyncQueue.Enqueue(AsyncWorkItem{
+            OperationID: pending.ID,
+            CallbackID:  pending.CallbackID,
+            TimeoutAt:   pending.TimeoutAt,
+        })
+    }
     
     return newState, nil
 }
-```
 
-### State History Tracking
-
-Keep a history of state transitions for debugging:
-
-```go
-type StateHistory struct {
-    Transitions []TransitionRecord
-    mu          sync.RWMutex
-}
-
-type TransitionRecord struct {
-    From      string
-    To        string
-    Command   string
-    Timestamp time.Time
-    Error     error
-}
-
-func (h *StateHistory) Record(from, to State, cmd Command, err error) {
-    h.mu.Lock()
-    defer h.mu.Unlock()
+// Background processor handles actual async work
+func (processor *AsyncProcessor) ProcessWork(ctx context.Context, item AsyncWorkItem) {
+    // Perform the actual async work
+    result, err := processor.worker.DoWork(ctx, item.OperationID)
     
-    h.Transitions = append(h.Transitions, TransitionRecord{
-        From:      fmt.Sprintf("%T", from),
-        To:        fmt.Sprintf("%T", to),
-        Command:   fmt.Sprintf("%T", cmd),
-        Timestamp: time.Now(),
-        Error:     err,
-    })
+    // Create callback command
+    callbackCMD := &CallbackCMD{
+        CallbackID: item.CallbackID,
+        Result:     result,
+    }
+    if err != nil {
+        callbackCMD.Error = err.Error()
+    }
+    
+    // Send callback through proper channel (HTTP endpoint, queue, etc.)
+    processor.callbackHandler.HandleCallback(ctx, callbackCMD)
 }
 ```
 
-### Metrics and Monitoring
+**Key principles:**
+- **Pure transitions**: No side effects in transition functions
+- **State-first persistence**: Save state before triggering async work
+- **Background processing**: Separate system handles async operations
+- **Callback mechanism**: Async completion creates new commands
+- **Timeout handling**: Built into state for automatic cleanup
+- **No race conditions**: State is always consistent with async operation status
 
-Export metrics for monitoring:
+### Time-Based Transitions
+
+Handle timeouts properly based on the operation context:
+
+**Request-scoped operations**: `machine.Handle(ctx, cmd)` and the `Transition` function respect context cancellation for standard Go timeout handling.
+
+**Long-running process timeouts**: Model timeouts as explicit states for operations that exceed request boundaries:
 
 ```go
-type MetricsDependencies struct {
-    TransitionCounter   *prometheus.CounterVec
-    TransitionDuration  *prometheus.HistogramVec
-    StateGauge         *prometheus.GaugeVec
-    // ... other deps
-}
+//go:tag mkunion:"State"
+type (
+    // States that can timeout should track when timeout expires
+    AwaitingApproval struct {
+        OrderID              string
+        ExpectedTimeoutAt    time.Time  // When this will timeout
+        BaseState
+    }
+    
+    // Use Error state with standardized timeout code
+    ProcessError struct {
+        Code          string  // "TIMEOUT", "API_ERROR", etc.
+        Reason        string
+        FailedCommand Command
+        PreviousState State
+        RetryCount    int
+        BaseState
+    }
+)
 
-func instrumentedTransition(deps MetricsDependencies, transition TransitionFunc) TransitionFunc {
-    return func(ctx context.Context, cmd Command, state State) (State, error) {
-        timer := prometheus.NewTimer(deps.TransitionDuration.WithLabelValues(
-            fmt.Sprintf("%T", cmd),
-            fmt.Sprintf("%T", state),
-        ))
-        defer timer.ObserveDuration()
-        
-        newState, err := transition(ctx, cmd, state)
-        
-        labels := prometheus.Labels{
-            "from_state": fmt.Sprintf("%T", state),
-            "to_state":   fmt.Sprintf("%T", newState),
-            "command":    fmt.Sprintf("%T", cmd),
-            "status":     "success",
-        }
-        
-        if err != nil {
-            labels["status"] = "error"
-        }
-        
-        deps.TransitionCounter.With(labels).Inc()
-        
-        return newState, err
+// Background process finds and transitions timed-out states
+func ProcessTimeouts(ctx context.Context, repo Repository) error {
+    // Find all states that should timeout
+    records, err := repo.FindRecords(
+        predicate.Where(`
+            Data["order.AwaitingApproval"].ExpectedTimeoutAt < :now
+        `, predicate.ParamBinds{
+            ":now": schema.MkInt(time.Now().Unix()),
+        }),
+    )
+    
+    for _, record := range records.Items {
+        machine := NewMachine(deps, record.Data)
+        err := machine.Handle(ctx, &ExpireTimeoutCMD{
+            RunID: record.ID,
+        })
+        // Save updated state...
     }
 }
 ```
+
+#### 3. Benefits of State-Based Timeouts
+
+This approach enables powerful querying and recovery:
+
+```go
+// Find all timeout errors for retry
+timeoutErrors, _ := repo.FindRecords(
+    predicate.Where(`Data["order.ProcessError"].Code = :code`, 
+        predicate.ParamBinds{":code": schema.MkString("TIMEOUT")},
+    ),
+)
+
+// Find long-waiting approvals
+longWaiting, _ := repo.FindRecords(
+    predicate.Where(`
+        Type = :type 
+        AND Data["order.AwaitingApproval"].ExpectedTimeoutAt > :soon
+    `, predicate.ParamBinds{
+        ":type": schema.MkString("process"),
+        ":soon": schema.MkInt(time.Now().Add(1*time.Hour).Unix()),
+    }),
+)
+```
+
+!!! tip "Real Implementation"
+    See the workflow engine implementation where:
+    - [`Await` state](https://github.com/widmogrod/mkunion/blob/main/x/workflow/workflow_machine.go#L80) tracks `ExpectedTimeoutTimestamp`
+    - [`Error` state](https://github.com/widmogrod/mkunion/blob/main/x/workflow/workflow_machine.go#L73) uses standardized error codes including `ProblemCallbackTimeout`
+    - [Background timeout processor](https://github.com/widmogrod/mkunion/blob/main/example/my-app/background.go) and [task queue setup](https://github.com/widmogrod/mkunion/blob/main/example/my-app/server.go#L613) demonstrate how to process timeouts asynchronously
+
+## Debugging and Observability
+
+### State History Tracking
+
+The mkunion state machine pattern leverages Change Data Capture (CDC) for automatic state history tracking. Since every state transition is persisted with versioning through optimistic concurrency control, you get a complete audit trail without modifying your state machine logic.
+
+The `schemaless.Repository` creates an append log of all state changes with version numbers, providing ordering guarantees and enabling powerful history tracking capabilities. CDC processors consume this stream asynchronously to build history aggregates, analytics, and debugging tools - all without impacting state machine performance. The system automatically handles failures through persistent, replayable streams that survive crashes and allow processors to resume from their last position.
+
+This approach integrates seamlessly with other mkunion patterns like retry processors and timeout handlers, creating a unified system where every state change is tracked, queryable, and analyzable.
+
+!!! tip "Real Implementation"
+    The example app demonstrates CDC integration with `taskRetry.RunCDC(ctx)` and `store.AppendLog()`. Detailed examples of building history processors, analytics pipelines, and debugging tools will be added in future updates.
+
+### Metrics and Monitoring
+
+Currently, metrics collection is the responsibility of the user. If you need Prometheus metrics or other monitoring, include them in your dependency interface and use them within your `Transition` function:
+
+```go
+type Dependencies interface {
+    // Your business dependencies
+    StockService() StockService
+    
+    // Metrics dependencies - user's responsibility to provide
+    Metrics() *prometheus.Registry
+    TransitionCounter() prometheus.Counter
+}
+
+func Transition(ctx context.Context, deps Dependencies, cmd Command, state State) (State, error) {
+    // Manual metrics collection
+    startTime := time.Now()
+    defer func() {
+        deps.TransitionCounter().Inc()
+        // Record duration, state types, etc.
+    }()
+    
+    // Your transition logic here
+}
+```
+
+There's no automatic metrics injection - you must explicitly add metrics to your dependencies and instrument your transitions manually.
+
+!!! note "Future Enhancement"
+    Automatic metrics collection would be a valuable addition to `machine.Machine`. This could include built-in counters for transitions, error rates, and timing histograms without requiring manual instrumentation.
 
 ## Evolution and Versioning
 
@@ -675,16 +802,16 @@ Handle state structure changes:
 
 ```go
 // Migration function
-func MigrateOrderState(old json.RawMessage) (State, error) {
+func MigrateOrderState(old []byte) (State, error) {
     // Try to unmarshal as current version
-    var current OrderState
-    if err := json.Unmarshal(old, &current); err == nil {
+    current, err := shared.JSONUnmarshal[OrderState](old)
+    if err == nil {
         return current, nil
     }
     
     // Try older version
-    var v1 OrderStateV1
-    if err := json.Unmarshal(old, &v1); err == nil {
+    v1, err := shared.JSONUnmarshal[OrderStateV1](old)
+    if err == nil {
         // Convert v1 to current
         return convertV1ToCurrent(v1), nil
     }
@@ -798,18 +925,4 @@ When updating multiple records:
 
 ```go title="example/machine/concurrent_processing.go"
 --8<-- "example/machine/concurrent_processing.go:batch-operations"
-```
-
-### Testing Concurrent Access
-
-```go title="example/machine/concurrent_processing_test.go"
---8<-- "example/machine/concurrent_processing_test.go:concurrent-test"
-```
-
-### Retry Helper Function
-
-The retry logic can be extracted into a reusable helper:
-
-```go title="example/machine/concurrent_processing.go"
---8<-- "example/machine/concurrent_processing.go:retry-helper"
 ```
