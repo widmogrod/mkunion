@@ -79,21 +79,40 @@ Run in your terminal to generate union types for your code and watch for changes
 mkunion watch ./...
 ```
 
-To generate unions without watching for changes, you can run:
+This command will:
+1. Generate union types and shapes from your code
+2. Automatically run `go generate ./...` to trigger any other code generators
+3. Continue watching for file changes and repeat the process
+
+To generate unions without watching for changes (one-time generation):
 ```
 mkunion watch -g ./...
 ```
 
-Alternatively, you can run the `mkunion` command directly:
+If you want to skip the automatic `go generate` step:
+```
+mkunion watch -G ./...
+# or
+mkunion watch --dont-run-go-generate ./...
+```
+
+Alternatively, you can run the `mkunion` command directly on specific files:
 ```
 mkunion -i example/vehicle.go
 ```
 
 
-#### What order you should run `mkunion watch` and `go generate`?
-First, run `mkunion watch ./...` to generate union types, and then run `go generate ./...` to generate code that uses union types.
+#### Automatic `go generate` execution
+As of the latest version, `mkunion watch` automatically runs `go generate ./...` after generating union types and shapes. This eliminates the need to run two separate commands.
 
-I found that this order works best, especially with extensions like `moq` that will fail to generate mocks when a type is not defined, which is the case for union types, until you run `mkunion watch`.
+If you need to skip the automatic `go generate` step (for example, if you want to run it manually with specific flags), use the `--dont-run-go-generate` flag:
+```
+mkunion watch --dont-run-go-generate ./...
+# or use the short form
+mkunion watch -G ./...
+```
+
+This automatic execution works well with extensions like `moq` that depend on union types being defined first.
 
 ### Match over union type
 When you run the `mkunion` command, it will generate a file alongside your original file with the `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go)).
