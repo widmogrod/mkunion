@@ -204,6 +204,83 @@ func Handle(rq Request, response Response) {
 }
 ```
 
+### PersistentMachine - A Reusable Pattern
+
+The above pattern is common enough that `mkunion` provides a generic `PersistentMachine` that handles the storage lifecycle automatically. It provides:
+
+- **Storage abstraction** through the `StateStore` interface - works with any backend
+- **Command routing** to determine whether to load existing state or create new
+- **State identification** for extracting IDs from states
+- **Optimistic locking** with version tracking
+- **Machine factory** with dependency injection support
+
+Example using PersistentMachine:
+
+```go
+// Define your storage adapter (or use provided ones)
+store := adapters.NewTypedRepoAdapter[MyState](repo, "my-record-type")
+
+// Create the persistent machine
+pm := machine.NewPersistentMachine[MyDeps, MyCommand, MyState](
+    store,
+    // Route commands to determine if we need to load state
+    machine.CommandRouterFunc[MyCommand](func(cmd MyCommand) (query interface{}, shouldLoad bool) {
+        switch c := cmd.(type) {
+        case *CreateCmd:
+            return nil, false // Don't load, create new
+        case *UpdateCmd:
+            return c.ID, true // Load by ID
+        default:
+            return nil, false
+        }
+    }),
+    // Extract ID from state for persistence
+    machine.StateIdentifierFunc[MyState](func(state MyState) (id string, ok bool) {
+        return state.ID, state.ID != ""
+    }),
+    // Factory to create machines
+    machine.MachineProviderFunc[MyDeps, MyCommand, MyState](func(state MyState) *machine.Machine[MyDeps, MyCommand, MyState] {
+        return machine.NewMachine(deps, transition, state)
+    }),
+)
+
+// Use it - handles all storage lifecycle
+newState, err := pm.CreateOrUpdate(ctx, cmd)
+
+// Or retrieve by ID
+state, err := pm.StateByID(ctx, "some-id")
+```
+
+#### Storage Adapters
+
+The package provides adapters for common storage patterns:
+
+**TypedRepoAdapter** - For existing `typedful.TypedRepoWithAggregator` repositories:
+```go
+store := adapters.NewTypedRepoAdapter[State](typedRepo, "record-type")
+```
+
+**InMemoryStore** - For testing and development:
+```go
+store := adapters.NewInMemoryStore[State]().
+    WithQueryHandler(func(query interface{}, records map[string]*machine.StateRecord[State]) []machine.StateRecord[State] {
+        // Custom query logic
+    })
+```
+
+#### Builder Pattern
+
+For complex configurations, use the builder:
+
+```go
+pm, err := machine.NewPersistentMachineBuilder[Deps, Cmd, State]().
+    WithStore(store).
+    WithRouterFunc(routerFunc).
+    WithIdentifierFunc(idFunc).
+    WithProviderFunc(providerFunc).
+    Build()
+```
+
 ## Error as state. Self-healing systems.
 In a request-response situation, handling errors is easy, but what if something goes wrong in some long-lived process?
 How should errors be handled in such a situation? Without making what we've learned about state machines useless or hard to use?

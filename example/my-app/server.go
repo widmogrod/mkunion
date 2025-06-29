@@ -505,7 +505,7 @@ func main() {
 	e.GET("/workflow-to-str-from-run/:id", func(c echo.Context) error {
 		runID := c.Param("id")
 
-		state, err := srv.StateByID(runID)
+		state, err := srv.StateByID(context.Background(), runID)
 		if err != nil {
 			log.Errorf("workflow-to-str-from-run: id=%s failed to get state: %v", runID, err)
 			return err
@@ -684,93 +684,6 @@ func TypedJSONRequest[A, B any](handle func(ctx context.Context, x A) (B, error)
 	}
 }
 
-func NewService[Dep any, CMD any, State any](
-	recordType string,
-	statesRepo *typedful.TypedRepoWithAggregator[State, any],
-	newMachine func(state State) *machine.Machine[Dep, CMD, State],
-	extractWhere func(CMD) (*predicate.WherePredicates, bool),
-	extractIDFromState func(State) (string, bool),
-) *Service[Dep, CMD, State] {
-	return &Service[Dep, CMD, State]{
-		repo:                     statesRepo,
-		extractWhereFromCommandF: extractWhere,
-		recordType:               recordType,
-		newMachine:               newMachine,
-		extractIDFromStateF:      extractIDFromState,
-	}
-}
-
-type Service[Dep any, CMD any, State any] struct {
-	repo                     *typedful.TypedRepoWithAggregator[State, any]
-	extractWhereFromCommandF func(CMD) (*predicate.WherePredicates, bool)
-	extractIDFromStateF      func(State) (string, bool)
-	recordType               string
-	newMachine               func(state State) *machine.Machine[Dep, CMD, State]
-}
-
-func (service *Service[Dep, CMD, State]) CreateOrUpdate(ctx context.Context, cmd CMD) (res State, err error) {
-	version := uint16(0)
-	recordID := ""
-	where, foundAndUpdate := service.extractWhereFromCommandF(cmd)
-	if foundAndUpdate {
-		records, err := service.repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[State]]{
-			RecordType: service.recordType,
-			Where:      where,
-			Limit:      1,
-		})
-		if err != nil {
-			return res, err
-		}
-		if len(records.Items) == 0 {
-			return res, fmt.Errorf("expected at least one record")
-		}
-
-		record := records.Items[0]
-		res = record.Data
-		version = record.Version
-		recordID = record.ID
-	}
-
-	work := service.newMachine(res)
-	err = work.Handle(ctx, cmd)
-	if err != nil {
-		log.Errorf("failed to handle command: %v", err)
-		return res, err
-	}
-
-	newState := work.State()
-	if !foundAndUpdate {
-		saveId, ok := service.extractIDFromStateF(newState)
-		if !ok {
-			return res, fmt.Errorf("expected recordID in state")
-		}
-		recordID = saveId
-	}
-
-	if recordID == "" {
-		return res, fmt.Errorf("expected recordID in state")
-	}
-
-	_, err = service.repo.UpdateRecords(schemaless.Save(schemaless.Record[State]{
-		ID:      recordID,
-		Type:    service.recordType,
-		Data:    newState,
-		Version: version,
-	}))
-
-	if err != nil {
-		return res, err
-	}
-
-	return newState, nil
-}
-
-func (service *Service[Dep, CMD, State]) StateByID(id string) (res State, err error) {
-	record, err := service.repo.Get(id, service.recordType)
-	if err != nil {
-		err = fmt.Errorf("service.Service.StateByID(%s) err=%w", id, err)
-		return
-	}
-
-	return record.Data, nil
-}
+// Service implementation has been replaced by machine.PersistentMachine
+// The functionality is now provided through the new generic architecture
+// using adapters.TypedRepoAdapter for storage integration
