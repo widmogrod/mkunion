@@ -24,18 +24,22 @@ go install github.com/widmogrod/mkunion/cmd/mkunion@latest
 
 ### Code Generation Workflow
 ```bash
-# Step 1: Generate union types and shapes (run from project root)
+# Generate union types and shapes, then automatically run go generate (run from project root)
 mkunion watch ./...
 
-# Step 2: Run other code generators that depend on union types
-go generate ./...
-
-# For one-time generation without watching
+# For one-time generation without watching (also runs go generate automatically)
 mkunion watch -g ./...
+
+# Skip running go generate after mkunion generation
+mkunion watch -G ./...
+# or
+mkunion watch --dont-run-go-generate ./...
 
 # Generate TypeScript types
 mkunion shape-export --language typescript --output-dir ./output -i file.go
 ```
+
+**Note:** As of the latest version, `mkunion watch` automatically runs `go generate ./...` after generating union types and shapes. This eliminates the need to run two separate commands. Use the `-G` flag if you want to skip the automatic `go generate` step.
 
 ### Testing
 ```bash

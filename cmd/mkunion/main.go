@@ -5,15 +5,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"go/format"
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion/x/generators"
 	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
+	"go/format"
 	"io/fs"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path"
 	"path/filepath"
@@ -177,6 +178,13 @@ func main() {
 						Required: false,
 						Value:    false,
 					},
+					&cli.BoolFlag{
+						Name:     "dont-run-go-generate",
+						Aliases:  []string{"G"},
+						Required: false,
+						Value:    false,
+						Usage:    "Skip running 'go generate ./...' after mkunion generation (default: false)",
+					},
 				},
 				Action: func(c *cli.Context) error {
 					log.SetLevel(log.InfoLevel)
@@ -197,6 +205,7 @@ func main() {
 					justGenerated := sync.Map{}
 					justChanged := sync.Map{}
 					justRemoved := sync.Map{}
+					dontRunGoGenerate := c.Bool("dont-run-go-generate")
 
 					// Start a goroutine to handle events
 					go func() {
@@ -316,6 +325,24 @@ func main() {
 
 									if len(savedFiles) > 0 {
 										log.Infof("re-generated: done for changed files")
+
+										// Run go generate if not disabled and there were changes
+										if !dontRunGoGenerate {
+											// Extract directories from changed files
+											dirsMap := make(map[string]bool)
+											for _, file := range changedSourcePaths {
+												dir := filepath.Dir(file)
+												dirsMap[dir] = true
+											}
+
+											dirs := make([]string, 0, len(dirsMap))
+											for dir := range dirsMap {
+												dirs = append(dirs, dir)
+											}
+
+											// Errors are already logged by runGoGenerate
+											_ = runGoGenerate(dirs)
+										}
 									} else {
 										log.Infof("re-generated: change not resulted in any new files")
 									}
@@ -353,6 +380,12 @@ func main() {
 
 					for _, x := range savedFiles {
 						log.Infof("   generated:\t%s", x)
+					}
+
+					// Run go generate if not disabled
+					if !c.Bool("dont-run-go-generate") {
+						// Errors are already logged by runGoGenerate
+						_ = runGoGenerate(paths)
 					}
 
 					if c.Bool("generate-only") {
@@ -1002,4 +1035,107 @@ func GenerateMatch(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 
 	result.Write(b)
 	return result, nil
+}
+
+func runGoGenerate(dirs []string) error {
+	if len(dirs) == 0 {
+		return nil
+	}
+
+	// Extract unique directories from the provided paths
+	uniqueDirs := make(map[string]bool)
+	for _, dir := range dirs {
+		uniqueDirs[dir] = true
+	}
+
+	// Filter directories that actually contain Go files with generate directives
+	dirsToProcess := []string{}
+	for dir := range uniqueDirs {
+		if hasGoGenerateDirectives(dir) {
+			dirsToProcess = append(dirsToProcess, dir)
+		}
+	}
+
+	if len(dirsToProcess) == 0 {
+		log.Debug("No directories with go:generate directives found, skipping go generate")
+		return nil
+	}
+
+	// Run go generate for each directory with generate directives
+	hasErrors := false
+	for _, dir := range dirsToProcess {
+		log.Infof("Running 'go generate ./...' in %s", dir)
+
+		cmd := exec.Command("go", "generate", "./...")
+		cmd.Dir = dir
+
+		// Capture output to filter out non-error messages
+		output, err := cmd.CombinedOutput()
+
+		if err != nil {
+			// Check if it's a real error or just "no packages" warning
+			outputStr := string(output)
+			if strings.Contains(outputStr, "matched no packages") {
+				log.Debugf("No packages to generate in %s", dir)
+				continue
+			}
+
+			// Real error - log it as warning
+			log.Warnf("'go generate ./...' failed in %s: %v\n%s", dir, err, outputStr)
+			hasErrors = true
+			continue
+		}
+
+		// Log output if any (successful generation)
+		if len(output) > 0 {
+			log.Debugf("go generate output for %s:\n%s", dir, string(output))
+		}
+	}
+
+	if hasErrors {
+		// Return error silently - we already logged specific warnings
+		return fmt.Errorf("go generate failed in one or more directories")
+	}
+
+	if len(dirsToProcess) > 0 {
+		log.Info("Finished running 'go generate ./...'")
+	}
+	return nil
+}
+
+// hasGoGenerateDirectives checks if a directory contains any Go files with //go:generate directives
+func hasGoGenerateDirectives(dir string) bool {
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil || len(files) == 0 {
+		return false
+	}
+
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+
+		// Quick check for go:generate directive
+		if bytes.Contains(content, []byte("//go:generate")) {
+			return true
+		}
+	}
+
+	// Also check subdirectories (for "./..." pattern)
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+
+		if filepath.Ext(path) == ".go" {
+			content, err := os.ReadFile(path)
+			if err == nil && bytes.Contains(content, []byte("//go:generate")) {
+				return fmt.Errorf("found") // Use error to stop walking
+			}
+		}
+		return nil
+	})
+
+	return err != nil && err.Error() == "found"
 }
