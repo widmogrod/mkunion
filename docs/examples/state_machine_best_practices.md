@@ -884,7 +884,7 @@ mkunion uses state storage pattern where the current state of the state machine 
 Example using typed repository:
 
 ```go title="example/machine/state_storage.go"
---8<-- "example/machine/state_storage.go:example"
+--8<-- "example/state_machine/state_storage.go:example"
 ```
 
 ### Concurrent Processing
@@ -892,7 +892,7 @@ Example using typed repository:
 When multiple processes might update the same state, use optimistic concurrency control provided by the schemaless repository:
 
 ```go title="example/machine/concurrent_processing.go" 
---8<-- "example/machine/concurrent_processing.go:retry-loop"
+--8<-- "example/state_machine/concurrent_processing.go:retry-loop"
 ```
 
 Key strategies:
@@ -916,7 +916,7 @@ The `x/storage/schemaless` package provides built-in optimistic concurrency cont
 ### Complete Example
 
 ```go title="example/machine/concurrent_processing.go"
---8<-- "example/machine/concurrent_processing.go:process-order"
+--8<-- "example/state_machine/concurrent_processing.go:process-order"
 ```
 
 ### Batch Operations with Concurrency Control
@@ -924,5 +924,5 @@ The `x/storage/schemaless` package provides built-in optimistic concurrency cont
 When updating multiple records:
 
 ```go title="example/machine/concurrent_processing.go"
---8<-- "example/machine/concurrent_processing.go:batch-operations"
+--8<-- "example/state_machine/concurrent_processing.go:batch-operations"
 ```

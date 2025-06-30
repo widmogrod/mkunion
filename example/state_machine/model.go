@@ -1,4 +1,4 @@
-package machine
+package state_machine
 
 //go:tag mkunion:"State,no-type-registry"
 type (

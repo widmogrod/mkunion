@@ -1,4 +1,4 @@
-package machine
+package state_machine
 
 import (
 	"github.com/widmogrod/mkunion/x/schema"
