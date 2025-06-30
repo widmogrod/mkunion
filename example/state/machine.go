@@ -1,5 +1,6 @@
 package state
 
+// --8<-- [start:imports]
 import (
 	"context"
 	"fmt"
@@ -7,9 +8,14 @@ import (
 	"time"
 )
 
+// --8<-- [end:imports]
+
+// --8<-- [start:new-machine]
 func NewMachine(di Dependency, init State) *machine.Machine[Dependency, Command, State] {
 	return machine.NewMachine(di, Transition, init)
 }
+
+// --8<-- [end:new-machine]
 
 var (
 	ErrInvalidTransition                = fmt.Errorf("invalid transition")
@@ -28,6 +34,8 @@ var (
 	ErrWorkerIDRequired = fmt.Errorf("worker ID required; %w", ErrValidationFailed)
 )
 
+// --8<-- [start:dependency]
+//
 //go:generate moq -with-resets -stub -out machine_mock.go . Dependency
 type Dependency interface {
 	TimeNow() *time.Time
@@ -35,9 +43,13 @@ type Dependency interface {
 	PaymentCharge(ctx context.Context, price Price) error
 }
 
+// --8<-- [end:dependency]
+
+// --8<-- [start:transition]
 func Transition(ctx context.Context, di Dependency, cmd Command, state State) (State, error) {
 	return MatchCommandR2(
 		cmd,
+		// --8<-- [start:create-order]
 		func(x *CreateOrderCMD) (State, error) {
 			if x.OrderID == "" {
 				return nil, ErrOrderIDRequired
@@ -56,6 +68,7 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 
 			return nil, ErrOrderAlreadyExist
 		},
+		// --8<-- [end:create-order]
 		func(x *MarkAsProcessingCMD) (State, error) {
 			if x.OrderID == "" {
 				return nil, ErrOrderIDRequired
@@ -81,6 +94,7 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 			return nil, ErrInvalidTransition
 
 		},
+		// --8<-- [end:transition-partial]
 		func(x *CancelOrderCMD) (State, error) {
 			if x.OrderID == "" {
 				return nil, ErrOrderIDRequired
@@ -187,3 +201,5 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 		},
 	)
 }
+
+// --8<-- [end:transition]

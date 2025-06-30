@@ -12,6 +12,7 @@ import (
 
 func TestSuite(t *testing.T) {
 	now := time.Now()
+	// --8<-- [start:test-suite]
 	var di Dependency = &DependencyMock{
 		TimeNowFunc: func() *time.Time {
 			return &now
@@ -146,6 +147,7 @@ func TestSuite(t *testing.T) {
 	if suite.AssertSelfDocumentStateDiagram(t, "machine_test.go") {
 		suite.SelfDocumentStateDiagram(t, "machine_test.go")
 	}
+	// --8<-- [end:test-suite]
 }
 
 func TestStateTransition_UsingTableTests(t *testing.T) {
