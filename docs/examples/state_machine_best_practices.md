@@ -33,7 +33,6 @@ Organize your state machine code across files for better maintainability:
    ```go
    package order
    
-   //go:generate mkunion watch -g .
    //go:generate moq -skip-ensure -out machine_mock.go . Dependency
    
    // Dependency interface - moq will generate DependencyMock from this
