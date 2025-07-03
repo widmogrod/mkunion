@@ -71,7 +71,7 @@ For complex validation requirements demonstrate
 --8<-- "example/state/machine.go:advanced-handling"
 ```
 
-This approach scales well because of separation of state from IO and business logic.
+This approach scales well because of the separation of state from IO and business logic.
 
 ### Dependency Management
 
