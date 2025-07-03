@@ -50,7 +50,12 @@ type (
 	// OrderError is a special state that represent an error
 	// during order processing, you can have different "self-healing jobs" based on the error code
 	// like retrying the order, cancel the order, etc.
-	// treating error as state is a good practice in state machine, it allow you to centralise the error handling
+	//
+	// This pattern enables:
+	// 1. Perfect reproduction of the failure
+	// 2. Automatic retry with the same command
+	// 3. Debugging with full context
+	// 4. Recovery to previous valid state
 	OrderError struct {
 		// error information
 		Retried   int
