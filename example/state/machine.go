@@ -32,10 +32,12 @@ var (
 	ErrOrderIDMismatch = fmt.Errorf("order ID mismatch; %w", ErrValidationFailed)
 
 	ErrWorkerIDRequired = fmt.Errorf("worker ID required; %w", ErrValidationFailed)
+
+	ErrWorkerSelfApprove = fmt.Errorf("cannot self approve order; %w", ErrValidationFailed)
 )
 
 // --8<-- [start:dependency]
-//
+
 //go:generate moq -with-resets -stub -out machine_mock.go . Dependency
 type Dependency interface {
 	TimeNow() *time.Time
@@ -46,11 +48,14 @@ type Dependency interface {
 // --8<-- [end:dependency]
 
 // --8<-- [start:transition]
+// --8<-- [start:transition-fragment]
+
 func Transition(ctx context.Context, di Dependency, cmd Command, state State) (State, error) {
 	return MatchCommandR2(
 		cmd,
 		// --8<-- [start:create-order]
 		func(x *CreateOrderCMD) (State, error) {
+			// 1. Structural validation as simple checks and explicit error type
 			if x.OrderID == "" {
 				return nil, ErrOrderIDRequired
 			}
@@ -68,6 +73,7 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 
 			return nil, ErrOrderAlreadyExist
 		},
+		// --8<-- [end:transition-fragment]
 		// --8<-- [end:create-order]
 		func(x *MarkAsProcessingCMD) (State, error) {
 			if x.OrderID == "" {
@@ -113,56 +119,76 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 
 			return nil, ErrCannotCancelNonProcessingOrder
 		},
+		// --8<-- [start:advanced-handling]
 		func(x *MarkOrderCompleteCMD) (State, error) {
+			//  1. Structural validation of commands (you could use go-validate library):
+			//
+			//     if err := di.Validator().Struct(x); err != nil {
+			//        return nil, fmt.Errorf("validation failed: %w. %s", err, ErrValidationFailed)
+			//     }
+			//
+			//    or do it manually like in this example:
 			if x.OrderID == "" {
 				return nil, ErrOrderIDRequired
 			}
-
-			switch s := state.(type) {
-			case *OrderProcessing:
-				if s.Order.StockRemovedAt == nil {
-					// we need to remove stock first
-					// we can retry this operation (if warehouse is idempotent)
-					// OrderID could be used to deduplicate operation
-					// it's not required in this example
-					err := di.WarehouseRemoveStock(ctx, s.Order.OrderAttr.Quantity)
-					if err != nil {
-						return &OrderError{
-							ProblemCode:    ProblemWarehouseAPIUnreachable,
-							ProblemCommand: x,
-							ProblemState:   s,
-						}, nil
-					}
-
-					s.Order.StockRemovedAt = di.TimeNow()
-				}
-
-				if s.Order.PaymentChargedAt == nil {
-					// we need to charge payment first
-					// we can retry this operation (if payment gateway is idempotent)
-					// OrderID could be used to deduplicate operation
-					// it's not required in this example
-					err := di.PaymentCharge(ctx, s.Order.OrderAttr.Price)
-					if err != nil {
-						return &OrderError{
-							ProblemCode:    ProblemPaymentAPIUnreachable,
-							ProblemCommand: x,
-							ProblemState:   s,
-						}, nil
-					}
-
-					s.Order.PaymentChargedAt = di.TimeNow()
-				}
-
-				s.Order.DeliveredAt = di.TimeNow()
-
-				return &OrderCompleted{
-					Order: s.Order,
-				}, nil
+			if x.WorkerID == "" {
+				return nil, ErrWorkerIDRequired
 			}
 
-			return nil, ErrCannotCompleteNonProcessingOrder
+			// 2. Ensure valid transitions
+			s, ok := state.(*OrderProcessing)
+			if !ok {
+				return nil, ErrCannotCompleteNonProcessingOrder
+			}
+
+			// 3. Business rule validation:
+			//    Worker cannot approve it's own order
+			if s.Order.WorkerID == x.WorkerID {
+				return nil, ErrWorkerSelfApprove
+			}
+
+			// 4. External validation or mutations:
+			if s.Order.StockRemovedAt == nil {
+				// We need to remove stock first
+				// We can retry this operation (assuming warehouse is idempotent, see TryRecoverErrorCMD)
+				// OrderID could be used to deduplicate operation
+				// it's not required in this example
+				err := di.WarehouseRemoveStock(ctx, s.Order.OrderAttr.Quantity)
+				if err != nil {
+					return &OrderError{
+						ProblemCode:    ProblemWarehouseAPIUnreachable,
+						ProblemCommand: x,
+						ProblemState:   s,
+					}, nil
+				}
+
+				s.Order.StockRemovedAt = di.TimeNow()
+			}
+
+			if s.Order.PaymentChargedAt == nil {
+				// We need to charge payment first
+				// We can retry this operation (assuming payment gateway is idempotent, see TryRecoverErrorCMD))
+				// OrderID could be used to deduplicate operation
+				// it's not required in this example
+				err := di.PaymentCharge(ctx, s.Order.OrderAttr.Price)
+				if err != nil {
+					return &OrderError{
+						ProblemCode:    ProblemPaymentAPIUnreachable,
+						ProblemCommand: x,
+						ProblemState:   s,
+					}, nil
+				}
+
+				s.Order.PaymentChargedAt = di.TimeNow()
+			}
+
+			s.Order.DeliveredAt = di.TimeNow()
+
+			return &OrderCompleted{
+				Order: s.Order,
+			}, nil
 		},
+		// --8<-- [end:advanced-handling]
 		func(x *TryRecoverErrorCMD) (State, error) {
 			if x.OrderID == "" {
 				return nil, ErrOrderIDRequired

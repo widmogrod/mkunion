@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+// --8<-- [start:example-store-state]
 // Example_storeStateInDatabase is an example how to store state in database
 func Example_storeStateInDatabase() {
 	now := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -44,6 +45,8 @@ func Example_storeStateInDatabase() {
 	//Output: <nil>
 	//state.OrderCompleted{Order:state.Order{ID:"123", OrderAttr:state.OrderAttr{Price:100, Quantity:3}, WorkerID:"", StockRemovedAt:<nil>, PaymentChargedAt:<nil>, DeliveredAt:time.Date(2021, time.January, 1, 0, 0, 0, 0, time.UTC), CancelledAt:<nil>, CancelledReason:""}}
 }
+
+// --8<-- [end:example-store-state]
 
 func TestPersistMachine(t *testing.T) {
 	orderId := "123"

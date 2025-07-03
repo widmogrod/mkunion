@@ -15,51 +15,17 @@ When building state machines with mkunion, following these practices will help y
 Organize your state machine code across files for better maintainability:
 
 1. **`model.go`**: State and command definitions
-   ```go
-   //go:tag mkunion:"State"
-   type (
-       OrderPending struct { /* ... */ }
-       OrderProcessing struct { /* ... */ }
-   )
-   
-   //go:tag mkunion:"Command"
-   type (
-       CreateOrderCMD struct { /* ... */ }
-       CancelOrderCMD struct { /* ... */ }
-   )
+   ```go title="example/state/model.go"
+   --8<-- "example/state/model.go:commands"
+   --8<-- "example/state/model.go:states"
    ```
 
 2. **`machine.go`**: Core state machine logic
-   ```go
-   package order
-   
-   //go:generate moq -skip-ensure -out machine_mock.go . Dependency
-   
-   // Dependency interface - moq will generate DependencyMock from this
-   type Dependency interface {
-       TimeNow() *time.Time
-       StockService() StockService
-       PaymentService() PaymentService
-   }
-   
-   // Common errors
-   var (
-       ErrInvalidTransition = errors.New("invalid state transition")
-       ErrOrderNotFound     = errors.New("order not found")
-   )
-   
-   // Machine constructor
-   func NewMachine(deps Dependency, state State) *machine.Machine[Dependency, Command, State] {
-       if state == nil {
-           state = &OrderPending{} // Default initial state
-       }
-       return machine.NewMachine(deps, Transition, state)
-   }
-   
-   // Transition function
-   func Transition(ctx context.Context, deps Dependency, cmd Command, state State) (State, error) {
-       // Implementation
-   }
+   ```go title="example/state/machine.go"
+   --8<-- "example/state/machine.go:dependency"
+   --8<-- "example/state/machine.go:new-machine"
+   --8<-- "example/state/machine.go:transition-fragment"
+   // ... and so on
    ```
 
 3. **`machine_test.go`**: Tests and state diagrams
@@ -93,105 +59,25 @@ Centralizing validation in the Transition function provides significant benefits
 
 #### Basic Validation
 
-```go
-func Transition(ctx context.Context, deps Dependencies, cmd Command, state State) (State, error) {
-    return MatchCommandR2(cmd,
-        func(c *CreateOrderCMD) (State, error) {
-            // Validate command first
-            if c.CustomerID == "" {
-                return nil, fmt.Errorf("customer ID is required")
-            }
-            if len(c.Items) == 0 {
-                return nil, fmt.Errorf("order must contain at least one item")
-            }
-            // Then check state
-            // ...
-        },
-    )
-}
+```go title="example/state/machine.go"
+--8<-- "example/state/machine.go:create-order"
 ```
 
 #### Advanced Validation with go-validate
 
-For complex validation requirements, combine the Transition function with validation libraries:
-
-```go
-import "github.com/go-playground/validator/v10"
-
-//go:tag mkunion:"Command"
-type (
-    CreateOrderCMD struct {
-        CustomerID string      `validate:"required,uuid"`
-        Items      []OrderItem `validate:"required,min=1,dive"`
-        Email      string      `validate:"required,email"`
-        Phone      string      `validate:"omitempty,e164"`
-    }
-    
-    OrderItem struct {
-        SKU      string  `validate:"required,alphanum"`
-        Quantity int     `validate:"required,min=1,max=100"`
-        Price    float64 `validate:"required,min=0.01"`
-    }
-)
-
-type Dependencies interface {
-    Validator() *validator.Validate
-    CustomerService() CustomerService
-}
-
-func Transition(ctx context.Context, deps Dependencies, cmd Command, state State) (State, error) {
-    return MatchCommandR2(cmd,
-        func(c *CreateOrderCMD) (State, error) {
-            // 1. Structural validation with go-validate
-            if err := deps.Validator().Struct(c); err != nil {
-                return nil, fmt.Errorf("validation failed: %w", err)
-            }
-            
-            // 2. Business rule validation
-            totalAmount := 0.0
-            for _, item := range c.Items {
-                totalAmount += item.Price * float64(item.Quantity)
-            }
-            if totalAmount > 10000 {
-                return nil, fmt.Errorf("order total %.2f exceeds maximum allowed", totalAmount)
-            }
-            
-            // 3. External validation (e.g., customer exists)
-            customer, err := deps.CustomerService().Get(ctx, c.CustomerID)
-            if err != nil {
-                return nil, fmt.Errorf("customer validation failed: %w", err)
-            }
-            if !customer.Active {
-                return nil, fmt.Errorf("customer %s is not active", c.CustomerID)
-            }
-            
-            // 4. State-based validation
-            switch state.(type) {
-            case nil, *OrderPending:
-                // Valid initial states
-            default:
-                return nil, fmt.Errorf("cannot create order in current state %T", state)
-            }
-            
-            // All validations passed, create new state
-            return &OrderPending{
-                OrderID:    generateOrderID(),
-                CustomerID: c.CustomerID,
-                Items:      c.Items,
-                CreatedAt:  deps.TimeNow(),
-            }, nil
-        },
-    )
-}
-```
-
-This approach scales well because:
+For complex validation requirements demonstrate
 
 - Structural validation is declarative (struct tags)
 - Business rules are explicit and testable
 - External validations are isolated in dependencies
 - State validations ensure valid transitions
-- All validation happens before any state change
+- All validation happens before any state change:
+
+```go title="example/state/machine.go"
+--8<-- "example/state/machine.go:advanced-handling"
+```
+
+This approach scales well because of separation of state from IO and business logic.
 
 ### Dependency Management
 
@@ -200,31 +86,13 @@ This approach scales well because:
 3. **Generate Mocks with moq**: Use `//go:generate moq` to automatically generate mocks
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:imports"
+--8<-- "example/state/machine.go:dependency"
 ```
 
-Running `go generate ./...` creates `machine_mock.go` with a `DependencyMock` type (generated from the `Dependency` interface shown in the File Organization section above). This mock can then be used in tests:
+Running `go generate ./...` creates `machine_mock.go` with a `DependencyMock` type. This mock can then be used in tests:
 
-```go
-func TestStateMachine(t *testing.T) {
-    // DependencyMock is generated from the Dependency interface
-    dep := &DependencyMock{
-        TimeNowFunc: func() *time.Time {
-            now := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-            return &now
-        },
-        StockServiceFunc: func() StockService {
-            return &StockServiceMock{
-                ReserveFunc: func(items []Item) error {
-                    return nil
-                },
-            }
-        },
-    }
-    
-    machine := NewMachine(dep, nil)
-    // Test the machine...
-}
+```go title="example/state/machine_test.go"
+--8<-- "example/state/machine_test.go:test-suite-example"
 ```
 
 Benefits of using moq:
@@ -278,75 +146,27 @@ return nil, fmt.Errorf("payment failed")
 
 **Solution**: Model error conditions as states when they need handling. Crucially, store both the command that failed and the previous valid state to enable recovery or debugging:
 
-```go
-// Best practice: Error state with command and previous state
-type OrderError struct {
-    // Error metadata
-    Reason       string
-    FailedAt     time.Time
-    RetryCount   int
-    
-    // Critical for debugging and recovery
-    FailedCommand Command  // The exact command that failed
-    PreviousState State    // State before the failed transition
-}
+```go title="example/state/model.go"
+--8<-- "example/state/model.go:states"
+```
 
-// This pattern enables:
-// 1. Perfect reproduction of the failure
-// 2. Automatic retry with the same command
-// 3. Debugging with full context
-// 4. Recovery to previous valid state
+The error state pattern enables recovery:
 
-// Or use a shared BaseState pattern like in workflow
-type BaseState struct {
-    ID        string
-    Metadata  map[string]string
-    UpdatedAt time.Time
-}
+```go title="example/state/machine.go"
+--8<-- "example/state/machine.go:transition"
+```
 
-type (
-    PaymentPending struct {
-        BaseState
-        Amount float64
-    }
-    PaymentFailed struct {
-        BaseState
-        Reason string
-        PreviousAmount float64  // Store critical data from previous state
-    }
-)
+For a more advanced pattern with BaseState:
 
-// Recovery becomes straightforward
-func Transition(ctx context.Context, deps Dependencies, cmd Command, state State) (State, error) {
-    return MatchCommandR2(cmd,
-        func(c *RetryFailedCMD) (State, error) {
-            switch s := state.(type) {
-            case *OrderError:
-                // Retry the exact command that failed
-                return Transition(ctx, deps, s.FailedCommand, s.PreviousState)
-                
-            case *PaymentFailed:
-                // Can access previous state data for retry
-                if s.PreviousState != nil {
-                    // Retry with original state
-                    return processPayment(s.PreviousState)
-                }
-                // Or use BaseState data if using that pattern
-                return &PaymentPending{
-                    BaseState: s.BaseState,
-                    Amount:    s.PreviousAmount,
-                }, nil
-            }
-            return nil, fmt.Errorf("can only retry from error states")
-        },
-    )
-}
+```go title="example/state/model_with_base.go"
+--8<-- "example/state/model_with_base.go:base-state-pattern"
+```
+
+```go title="example/state/model_with_base.go"
+--8<-- "example/state/model_with_base.go:states-with-base"
 ```
 
 This approach preserves critical information needed for recovery without losing the context of what failed.
-
-!!! tip "Real Implementation Example"
-    The order state machine example demonstrates this pattern perfectly. See how `OrderError` in [`example/state/model.go`](https://github.com/widmogrod/mkunion/blob/main/example/state/model.go#L47) stores both `ProblemCommand` and `ProblemState`. The retry logic in [`machine.go`](https://github.com/widmogrod/mkunion/blob/main/example/state/machine.go#L180) shows how to use this information to retry the exact failed operation.
 
 ### 4. Ignoring Concurrency
 
@@ -414,95 +234,16 @@ func Transition(...) (State, error) {
 
 For complex systems, compose multiple state machines as a service layer:
 
-```go
-// Each domain has its own package with machine constructor
-// order/machine.go
-func NewMachine(deps OrderDeps, state OrderState) *machine.Machine[OrderDeps, OrderCommand, OrderState] {
-    return machine.NewMachine(deps, Transition, state)
-}
+```go title="example/state/service.go"
+--8<-- "example/state/service.go:service-definition"
+```
 
-// order/service.go - Domain service encapsulates repository and machine logic
-type OrderService struct {
-    repo schemaless.Repository[OrderState]
-    deps OrderDeps
-}
+```go title="example/state/service.go"
+--8<-- "example/state/service.go:handle-command"
+```
 
-func NewOrderService(repo schemaless.Repository[OrderState], deps OrderDeps) *OrderService {
-    return &OrderService{repo: repo, deps: deps}
-}
-
-func (s *OrderService) HandleCommand(ctx context.Context, cmd OrderCommand) (OrderState, error) {
-    // Extract order ID from command for state loading
-    orderID := extractOrderID(cmd)
-    
-    // Load current state
-    record, err := s.repo.Get(ctx, orderID)
-    if err != nil && !errors.Is(err, schemaless.ErrNotFound) {
-        return nil, err
-    }
-    
-    var currentState OrderState
-    if record != nil {
-        currentState = record.Data
-    }
-    
-    // Create fresh machine instance
-    machine := NewMachine(s.deps, currentState)
-    
-    // Handle command
-    if err := machine.Handle(ctx, cmd); err != nil {
-        return nil, err
-    }
-    
-    // Save new state with optimistic concurrency control
-    newState := machine.State()
-    record.Data = newState
-    _, err = s.repo.UpdateRecords(schemaless.Save(*record))
-    
-    return newState, err
-}
-
-// payment/service.go - Similar pattern for payment domain
-type PaymentService struct {
-    repo schemaless.Repository[PaymentState]
-    deps PaymentDeps
-}
-
-func (s *PaymentService) HandleCommand(ctx context.Context, cmd PaymentCommand) (PaymentState, error) {
-    // Same pattern as OrderService...
-}
-
-// Composed e-commerce service using domain services
-type ECommerceService struct {
-    orderService   *OrderService
-    paymentService *PaymentService
-}
-
-func NewECommerceService(orderSvc *OrderService, paymentSvc *PaymentService) *ECommerceService {
-    return &ECommerceService{
-        orderService:   orderSvc,
-        paymentService: paymentSvc,
-    }
-}
-
-func (s *ECommerceService) ProcessOrder(ctx context.Context, orderCmd OrderCommand) error {
-    // 1. Handle order command through order service
-    newOrderState, err := s.orderService.HandleCommand(ctx, orderCmd)
-    if err != nil {
-        return err
-    }
-    
-    // 2. If order is confirmed, trigger payment through payment service
-    if confirmed, ok := newOrderState.(*OrderConfirmed); ok {
-        _, err := s.paymentService.HandleCommand(ctx, &InitiatePaymentCMD{
-            OrderID: confirmed.OrderID,
-            Amount:  confirmed.TotalAmount,
-        })
-        return err
-    }
-    
-    return nil
-}
+```go title="example/state/service.go"
+--8<-- "example/state/service.go:service-composition"
 ```
 
 Key principles:
@@ -518,122 +259,24 @@ Key principles:
 
 Handle long-running operations without blocking using a state-first approach:
 
-```go
-//go:tag mkunion:"AsyncState"
-type (
-    OperationPending struct {
-        ID            string
-        CallbackID    string  // For async completion
-        StartedAt     time.Time
-        TimeoutAt     time.Time
-    }
-    OperationComplete struct {
-        ID       string
-        Result   interface{}
-        Duration time.Duration
-    }
-    OperationError struct {
-        ID     string
-        Reason string
-        Code   string  // "TIMEOUT", "WORKER_FAILED", etc.
-    }
-)
+```go title="example/state/async_operations.go"
+--8<-- "example/state/async_operations.go:async-states"
+```
 
-//go:tag mkunion:"AsyncCommand"
-type (
-    StartAsyncCMD struct {
-        ID string
-    }
-    CallbackCMD struct {
-        CallbackID string
-        Result     interface{}
-        Error      string
-    }
-)
+```go title="example/state/async_operations.go"
+--8<-- "example/state/async_operations.go:async-commands"
+```
 
-// Pure transition function - NO side effects
-func Transition(ctx context.Context, deps AsyncDeps, cmd AsyncCommand, state AsyncState) (AsyncState, error) {
-    return MatchAsyncCommandR2(cmd,
-        func(c *StartAsyncCMD) (AsyncState, error) {
-            // ONLY return new state - no async operations here
-            return &OperationPending{
-                ID:         c.ID,
-                CallbackID: deps.GenerateCallbackID(),
-                StartedAt:  time.Now(),
-                TimeoutAt:  time.Now().Add(5 * time.Minute),
-            }, nil
-        },
-        func(c *CallbackCMD) (AsyncState, error) {
-            switch s := state.(type) {
-            case *OperationPending:
-                if c.Error != "" {
-                    return &OperationError{
-                        ID:     s.ID,
-                        Reason: c.Error,
-                        Code:   "WORKER_FAILED",
-                    }, nil
-                }
-                return &OperationComplete{
-                    ID:       s.ID,
-                    Result:   c.Result,
-                    Duration: time.Since(s.StartedAt),
-                }, nil
-            }
-            return nil, fmt.Errorf("invalid state for callback: %T", state)
-        },
-    )
-}
+```go title="example/state/async_operations.go"
+--8<-- "example/state/async_operations.go:async-transition"
+```
 
-// Service layer handles async operations AFTER state persistence
-func (s *AsyncService) HandleCommand(ctx context.Context, cmd AsyncCommand) (AsyncState, error) {
-    // 1. Load current state
-    record, err := s.repo.Get(ctx, extractID(cmd))
-    // ... error handling
-    
-    // 2. Apply command to state machine
-    machine := NewMachine(s.deps, record.Data)
-    if err := machine.Handle(ctx, cmd); err != nil {
-        return nil, err
-    }
-    
-    // 3. PERSIST STATE FIRST
-    newState := machine.State()
-    record.Data = newState
-    _, err = s.repo.UpdateRecords(schemaless.Save(*record))
-    if err != nil {
-        return nil, err
-    }
-    
-    // 4. ONLY AFTER successful persistence, trigger async work
-    if pending, ok := newState.(*OperationPending); ok {
-        // Enqueue for background processing
-        s.asyncQueue.Enqueue(AsyncWorkItem{
-            OperationID: pending.ID,
-            CallbackID:  pending.CallbackID,
-            TimeoutAt:   pending.TimeoutAt,
-        })
-    }
-    
-    return newState, nil
-}
+```go title="example/state/async_operations.go"
+--8<-- "example/state/async_operations.go:async-service"
+```
 
-// Background processor handles actual async work
-func (processor *AsyncProcessor) ProcessWork(ctx context.Context, item AsyncWorkItem) {
-    // Perform the actual async work
-    result, err := processor.worker.DoWork(ctx, item.OperationID)
-    
-    // Create callback command
-    callbackCMD := &CallbackCMD{
-        CallbackID: item.CallbackID,
-        Result:     result,
-    }
-    if err != nil {
-        callbackCMD.Error = err.Error()
-    }
-    
-    // Send callback through proper channel (HTTP endpoint, queue, etc.)
-    processor.callbackHandler.HandleCallback(ctx, callbackCMD)
-}
+```go title="example/state/async_operations.go"
+--8<-- "example/state/async_operations.go:background-processor"
 ```
 
 **Key principles:**
@@ -882,16 +525,16 @@ mkunion uses state storage pattern where the current state of the state machine 
 
 Example using typed repository:
 
-```go title="example/machine/state_storage.go"
---8<-- "example/state_machine/state_storage.go:example"
+```go title="example/state/machine_database_test.go"
+--8<-- "example/state/machine_database_test.go:example-store-state"
 ```
 
 ### Concurrent Processing
 
 When multiple processes might update the same state, use optimistic concurrency control provided by the schemaless repository:
 
-```go title="example/machine/concurrent_processing.go" 
---8<-- "example/state_machine/concurrent_processing.go:retry-loop"
+```go title="example/state/service.go" 
+--8<-- "example/state/service.go:handle-with-retry"
 ```
 
 Key strategies:
@@ -912,16 +555,3 @@ The `x/storage/schemaless` package provides built-in optimistic concurrency cont
 3. If versions don't match, `ErrVersionConflict` is returned
 4. Applications retry with the latest version
 
-### Complete Example
-
-```go title="example/machine/concurrent_processing.go"
---8<-- "example/state_machine/concurrent_processing.go:process-order"
-```
-
-### Batch Operations with Concurrency Control
-
-When updating multiple records:
-
-```go title="example/machine/concurrent_processing.go"
---8<-- "example/state_machine/concurrent_processing.go:batch-operations"
-```

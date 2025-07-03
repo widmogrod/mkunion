@@ -2,6 +2,8 @@ package state
 
 import "time"
 
+// --8<-- [start:commands]
+//
 //go:tag mkunion:"Command"
 type (
 	CreateOrderCMD struct {
@@ -17,7 +19,8 @@ type (
 		Reason  string
 	}
 	MarkOrderCompleteCMD struct {
-		OrderID OrderID
+		OrderID  OrderID
+		WorkerID WorkerID
 	}
 	// TryRecoverErrorCMD is a special command that can be used to recover from error state
 	// you can have different "self-healing" rules based on the error code or even return to previous healthy state
@@ -26,6 +29,10 @@ type (
 	}
 )
 
+// --8<-- [end:commands]
+
+// --8<-- [start:states]
+//
 //go:tag mkunion:"State"
 type (
 	OrderPending struct {
@@ -56,6 +63,9 @@ type (
 	}
 )
 
+// --8<-- [end:states]
+
+// --8<-- [start:value-objects]
 type (
 	// OrderID Price, Quantity are placeholders for value objects, to ensure better data semantic and type safety
 	OrderID  = string
@@ -93,3 +103,5 @@ const (
 	ProblemWarehouseAPIUnreachable ProblemCode = iota
 	ProblemPaymentAPIUnreachable
 )
+
+// --8<-- [end:value-objects]
