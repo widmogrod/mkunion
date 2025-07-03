@@ -189,6 +189,7 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 			}, nil
 		},
 		// --8<-- [end:advanced-handling]
+		// --8<-- [start:error-recovery]
 		func(x *TryRecoverErrorCMD) (State, error) {
 			if x.OrderID == "" {
 				return nil, ErrOrderIDRequired
@@ -225,6 +226,7 @@ func Transition(ctx context.Context, di Dependency, cmd Command, state State) (S
 
 			return nil, ErrCannotRecoverNonErrorState
 		},
+		// --8<-- [end:error-recovery]
 	)
 }
 

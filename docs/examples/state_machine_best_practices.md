@@ -154,20 +154,11 @@ return nil, fmt.Errorf("payment failed")
 The error state pattern enables recovery:
 
 ```go title="example/state/machine.go"
---8<-- "example/state/machine.go:transition"
+--8<-- "example/state/machine.go:error-recovery"
 ```
 
-For a more advanced pattern with BaseState:
-
-```go title="example/state/model_with_base.go"
---8<-- "example/state/model_with_base.go:base-state-pattern"
-```
-
-```go title="example/state/model_with_base.go"
---8<-- "example/state/model_with_base.go:states-with-base"
-```
-
-This approach preserves critical information needed for recovery without losing the context of what failed.
+This approach preserves critical information needed for recovery 
+without losing the context of what failed (look at `Transition(ctx, di, s.ProblemCommand, s.ProblemState)`)
 
 ### 4. Ignoring Concurrency
 
