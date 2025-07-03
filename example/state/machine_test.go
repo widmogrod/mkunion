@@ -2,9 +2,13 @@ package state
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/machine"
+	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/storage/predicate"
+	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"testing"
 	"time"
 )
@@ -172,4 +176,64 @@ func TestSuite(t *testing.T) {
 	if suite.AssertSelfDocumentStateDiagram(t, "machine_test.go") {
 		suite.SelfDocumentStateDiagram(t, "machine_test.go")
 	}
+}
+
+func TestStorage(t *testing.T) {
+	orderId := "123"
+	recordType := "orders"
+
+	now := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	ctx := context.Background()
+
+	// 0. Setup dependencies
+	dep := &DependencyMock{
+		TimeNowFunc: func() *time.Time {
+			return &now
+		},
+	}
+	// --8<-- [start:example-store-state]
+	storage := schemaless.NewInMemoryRepository[State]()
+
+	// 1. Load current state from storage
+	records, err := storage.FindingRecords(schemaless.FindingRecords[schemaless.Record[State]]{
+		RecordType: recordType,
+		Where: predicate.MustWhere("ID = :id", predicate.ParamBinds{
+			":id": schema.MkString(orderId),
+		}, nil),
+		Limit: 1,
+	})
+	assert.NoError(t, err)
+	assert.Len(t, records.Items, 0)
+
+	// 2. Create a fresh machine instance with the current state
+	var state State
+	m := NewMachine(dep, state)
+
+	// 3. Handle the command
+	cmd := &CreateOrderCMD{OrderID: "123", Attr: OrderAttr{Price: 100, Quantity: 3}}
+	err = m.Handle(ctx, cmd)
+	assert.NoError(t, err)
+
+	// 4. Save the new state (with optimistic concurrency control)
+	result, err := storage.UpdateRecords(schemaless.Save(schemaless.Record[State]{
+		ID:   orderId,
+		Type: recordType,
+		Data: m.State(),
+	}))
+	assert.NoError(t, err)
+	assert.Len(t, result.Saved, 1)
+
+	if errors.Is(err, schemaless.ErrVersionConflict) {
+		// handle error conflicts, usually retry from step 1.
+	}
+
+	assert.Equal(t,
+		&OrderPending{
+			Order: Order{
+				ID:        "123",
+				OrderAttr: OrderAttr{Price: 100, Quantity: 3},
+			},
+		}, m.State(),
+	)
+	// --8<-- [end:example-store-state]
 }

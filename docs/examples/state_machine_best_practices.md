@@ -14,27 +14,21 @@ When building state machines with mkunion, following these practices will help y
 
 Organize your state machine code across files for better maintainability:
 
-1. **`model.go`**: State and command definitions
+1. **`model.go`**: State and command definitions with other model types like value objects, etc.
    ```go title="example/state/model.go"
    --8<-- "example/state/model.go:commands"
    --8<-- "example/state/model.go:states"
+   --8<-- "example/state/model.go:value-objects"
    ```
 
-2. **`machine.go`**: Core state machine logic
+2. **`machine.go`**: Core state machine initialization, and most importantly transition logic:
    ```go title="example/state/machine.go"
    --8<-- "example/state/machine.go:dependency"
    --8<-- "example/state/machine.go:new-machine"
    --8<-- "example/state/machine.go:transition-fragment"
    // ... and so on
    ```
-
-3. **`machine_test.go`**: Tests and state diagrams
-4. **`machine_database_test.go`**: Persistence examples
-5. **Generated files** (created by `go generate`):
-   - `*_union_gen.go` - Union type definitions from mkunion
-   - `*_shape_gen.go` - Shape definitions for introspection
-   - `machine_mock.go` - Mock implementation of Dependency interface from moq
-
+   
 ### Naming Conventions
 
 1. **States**: Use descriptive nouns that clearly indicate the state (e.g., `OrderPending`, `PaymentProcessing`)
@@ -93,15 +87,74 @@ Running `go generate ./...` creates `machine_mock.go` with a `DependencyMock` ty
 
 ```go title="example/state/machine_test.go"
 --8<-- "example/state/machine_test.go:moq-init"
+
+// ... and some time later in assertion functions
 --8<-- "example/state/machine_test.go:moq-usage"
 ```
 
-Benefits of using moq:
+Benefits of generating mocks:
 
 - **Reduces boilerplate**: No need to manually write mock implementations
 - **Type safety**: Generated mocks always match the interface
 - **Easy maintenance**: Mocks automatically update when interface changes
 - **Better test readability**: Focus on behavior, not mock implementation
+
+### State Machine Composition
+
+For complex systems, compose multiple state machines as a service layer:
+
+```go
+type OrderService struct {
+    repo schemaless.Repository[State]
+    deps Dependency
+}
+```
+
+```go
+type ECommerceService struct {
+    orderService   *OrderService
+    paymentService *PaymentService
+}
+
+func NewECommerceService(orderSvc *OrderService, paymentSvc *PaymentService) *ECommerceService {
+    return &ECommerceService{
+        orderService:   orderSvc,
+        paymentService: paymentSvc,
+    }
+}
+
+func (s *ECommerceService) ProcessOrder(ctx context.Context, orderCmd Command) error {
+    // 1. Handle order command through order service
+    newOrderState, err := s.orderService.HandleCommand(ctx, orderCmd)
+    if err != nil {
+        return fmt.Errorf("order processing failed: %w", err)
+    }
+
+    // 2. If order is confirmed, trigger payment through payment service
+    if processing, ok := newOrderState.(*OrderProcessing); ok {
+        paymentCmd := &InitiatePaymentCMD{
+            OrderID: processing.Order.ID,
+            Amount:  processing.Order.OrderAttr.Price,
+        }
+        _, err := s.paymentService.HandleCommand(ctx, paymentCmd)
+        if err != nil {
+            return fmt.Errorf("payment initiation failed: %w", err)
+        }
+    }
+
+    return nil
+}
+```
+
+
+**Key principles:**
+
+- **Domain services**: Each domain encapsulates its repository, dependencies, and machine logic
+- **Schemaless repositories**: Use `schemaless.Repository[StateType]` for type-safe state storage
+- **Service composition**: Compose domain services, avoiding direct repository/machine access
+- **Single responsibility**: Each service handles one domain's state machine lifecycle
+- **Optimistic concurrency**: Built-in through `schemaless.Repository` version handling
+- **No duplication**: State loading, machine creation, and saving logic exists once per domain
 
 ## Common Pitfalls
 
@@ -170,39 +223,7 @@ go sharedMachine.Handle(ctx, cmd1) // Goroutine 1
 go sharedMachine.Handle(ctx, cmd2) // Goroutine 2 - DON'T DO THIS!
 ```
 
-**Solution**: State machines are designed to be created per request. This isolation prevents accidental state mutations:
-
-```go
-// Correct: Create a new machine instance for each operation
-func ProcessCommand(ctx context.Context, deps Dependencies, cmd Command) error {
-    // 1. Load current state from storage
-    record, err := repo.Get(ctx, orderID)
-    if err != nil {
-        return err
-    }
-    
-    // 2. Create a fresh machine instance with the current state
-    machine := NewMachine(deps, record.State)
-    
-    // 3. Handle the command
-    if err := machine.Handle(ctx, cmd); err != nil {
-        return err
-    }
-    
-    // 4. Save the new state (with optimistic concurrency control)
-    record.Data = machine.State()
-    return repo.Update(ctx, record)
-}
-```
-
-This pattern ensures:
-
-- Each request gets an isolated machine instance
-- No shared mutable state between concurrent operations
-- Failures don't affect other requests
-- Retries start with a clean machine instance
-
-For handling concurrent updates to the same entity, see the [Optimistic Concurrency Control](#optimistic-concurrency-control) section below.
+**Solution**: For handling concurrent updates to the same entity, see the [Optimistic Concurrency Control](#optimistic-concurrency-control) section below.
 
 ### 5. Overloading Transitions
 
@@ -220,144 +241,7 @@ func Transition(...) (State, error) {
 
 **Solution**: Keep transitions focused on state changes; delegate side effects to dependencies
 
-## Advanced Patterns
 
-### State Machine Composition
-
-For complex systems, compose multiple state machines as a service layer:
-
-```go title="example/state/service.go"
---8<-- "example/state/service.go:service-definition"
-```
-
-```go title="example/state/service.go"
---8<-- "example/state/service.go:handle-command"
-```
-
-```go title="example/state/service.go"
---8<-- "example/state/service.go:service-composition"
-```
-
-Key principles:
-
-- **Domain services**: Each domain encapsulates its repository, dependencies, and machine logic
-- **Schemaless repositories**: Use `schemaless.Repository[StateType]` for type-safe state storage
-- **Service composition**: Compose domain services, avoiding direct repository/machine access
-- **Single responsibility**: Each service handles one domain's state machine lifecycle
-- **Optimistic concurrency**: Built-in through `schemaless.Repository` version handling
-- **No duplication**: State loading, machine creation, and saving logic exists once per domain
-
-### Async Operations with Callbacks
-
-Handle long-running operations without blocking using a state-first approach:
-
-```go title="example/state/async_operations.go"
---8<-- "example/state/async_operations.go:async-states"
-```
-
-```go title="example/state/async_operations.go"
---8<-- "example/state/async_operations.go:async-commands"
-```
-
-```go title="example/state/async_operations.go"
---8<-- "example/state/async_operations.go:async-transition"
-```
-
-```go title="example/state/async_operations.go"
---8<-- "example/state/async_operations.go:async-service"
-```
-
-```go title="example/state/async_operations.go"
---8<-- "example/state/async_operations.go:background-processor"
-```
-
-**Key principles:**
-- **Pure transitions**: No side effects in transition functions
-- **State-first persistence**: Save state before triggering async work
-- **Background processing**: Separate system handles async operations
-- **Callback mechanism**: Async completion creates new commands
-- **Timeout handling**: Built into state for automatic cleanup
-- **No race conditions**: State is always consistent with async operation status
-
-### Time-Based Transitions
-
-Handle timeouts properly based on the operation context:
-
-**Request-scoped operations**: `machine.Handle(ctx, cmd)` and the `Transition` function respect context cancellation for standard Go timeout handling.
-
-**Long-running process timeouts**: Model timeouts as explicit states for operations that exceed request boundaries:
-
-```go
-//go:tag mkunion:"State"
-type (
-    // States that can timeout should track when timeout expires
-    AwaitingApproval struct {
-        OrderID              string
-        ExpectedTimeoutAt    time.Time  // When this will timeout
-        BaseState
-    }
-    
-    // Use Error state with standardized timeout code
-    ProcessError struct {
-        Code          string  // "TIMEOUT", "API_ERROR", etc.
-        Reason        string
-        FailedCommand Command
-        PreviousState State
-        RetryCount    int
-        BaseState
-    }
-)
-
-// Background process finds and transitions timed-out states
-func ProcessTimeouts(ctx context.Context, repo Repository) error {
-    // Find all states that should timeout
-    records, err := repo.FindRecords(
-        predicate.Where(`
-            Data["order.AwaitingApproval"].ExpectedTimeoutAt < :now
-        `, predicate.ParamBinds{
-            ":now": schema.MkInt(time.Now().Unix()),
-        }),
-    )
-    
-    for _, record := range records.Items {
-        machine := NewMachine(deps, record.Data)
-        err := machine.Handle(ctx, &ExpireTimeoutCMD{
-            RunID: record.ID,
-        })
-        // Save updated state...
-    }
-}
-```
-
-#### 3. Benefits of State-Based Timeouts
-
-This approach enables powerful querying and recovery:
-
-```go
-// Find all timeout errors for retry
-timeoutErrors, _ := repo.FindRecords(
-    predicate.Where(`Data["order.ProcessError"].Code = :code`, 
-        predicate.ParamBinds{":code": schema.MkString("TIMEOUT")},
-    ),
-)
-
-// Find long-waiting approvals
-longWaiting, _ := repo.FindRecords(
-    predicate.Where(`
-        Type = :type 
-        AND Data["order.AwaitingApproval"].ExpectedTimeoutAt > :soon
-    `, predicate.ParamBinds{
-        ":type": schema.MkString("process"),
-        ":soon": schema.MkInt(time.Now().Add(1*time.Hour).Unix()),
-    }),
-)
-```
-
-!!! tip "Real Implementation"
-    See the workflow engine implementation where:
-    - [`Await` state](https://github.com/widmogrod/mkunion/blob/main/x/workflow/workflow_machine.go#L80) tracks `ExpectedTimeoutTimestamp`
-    - [`Error` state](https://github.com/widmogrod/mkunion/blob/main/x/workflow/workflow_machine.go#L73) uses standardized error codes including `ProblemCallbackTimeout`
-    - [Background timeout processor](https://github.com/widmogrod/mkunion/blob/main/example/my-app/background.go) and [task queue setup](https://github.com/widmogrod/mkunion/blob/main/example/my-app/server.go#L613) demonstrate how to process timeouts asynchronously
 
 ## Debugging and Observability
 
@@ -506,41 +390,15 @@ type OrderDetails struct {
 }
 ```
 
-### State Storage
-
-mkunion uses state storage pattern where the current state of the state machine is persisted directly to the database. This approach:
-
-- Stores the complete state after each transition
-- Provides immediate access to current state without replay
-- Supports optimistic concurrency control through versioning
-- Works seamlessly with the `x/storage/schemaless` package
-
-Example using typed repository:
-
-```go title="example/state/machine_database_test.go"
---8<-- "example/state/machine_database_test.go:example-store-state"
-```
-
-### Concurrent Processing
-
-When multiple processes might update the same state, use optimistic concurrency control provided by the schemaless repository:
-
-```go title="example/state/service.go" 
---8<-- "example/state/service.go:handle-with-retry"
-```
-
-Key strategies:
-1. **Optimistic Concurrency**: Use version checking to detect conflicts
-2. **Retry Logic**: Implement exponential backoff for version conflicts  
-3. **Partition by ID**: Process different entities in parallel safely
-
-See the [Optimistic Concurrency Control](#optimistic-concurrency-control) section for detailed examples.
-
 ## Optimistic Concurrency Control
 
 The `x/storage/schemaless` package provides built-in optimistic concurrency control using version fields. This ensures data consistency when multiple processes work with the same state.
 
-### How It Works
+```go title="example/state/machine_test.go"
+--8<-- "example/state/machine_test.go:example-store-state"
+```
+
+**How It Works**:
 
 1. Each record has a `Version` field that increments on updates
 2. Updates specify the expected version in the record
