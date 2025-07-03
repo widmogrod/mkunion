@@ -48,6 +48,8 @@ stateDiagram
 	OrderPending --> OrderPending: ❌*state.MarkOrderCompleteCMD
 	OrderProcessing --> OrderCompleted: *state.MarkOrderCompleteCMD
 	OrderProcessing --> OrderError: *state.MarkOrderCompleteCMD
+	%% error=cannot self approve order; validation failed 
+	OrderProcessing --> OrderProcessing: ❌*state.MarkOrderCompleteCMD
 	%% error=cannot mark order as complete, order is not being process; invalid transition 
 	[*] --> [*]: ❌*state.MarkOrderCompleteCMD
 	%% error=cannot recover from non error state; invalid transition 
