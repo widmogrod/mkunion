@@ -192,3 +192,95 @@ func createAlias(stateName string) string {
 
 	return alias
 }
+
+// ParsedTransition represents a transition parsed from a mermaid diagram
+type ParsedTransition struct {
+	FromState string
+	ToState   string
+	Command   string
+	IsError   bool
+}
+
+// ParseMermaid parses a mermaid diagram and extracts transitions
+func ParseMermaid(mermaidContent string) ([]ParsedTransition, error) {
+	transitions := []ParsedTransition{}
+	lines := strings.Split(mermaidContent, "\n")
+
+	// Maps to store state aliases to full names
+	stateAliases := make(map[string]string)
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "%%") {
+			continue
+		}
+
+		// Parse state alias definitions (e.g., "State1: *example.StateType")
+		if strings.Contains(line, ": ") && !strings.Contains(line, "-->") {
+			parts := strings.SplitN(line, ": ", 2)
+			if len(parts) == 2 {
+				alias := strings.TrimSpace(parts[0])
+				fullName := strings.TrimSpace(parts[1])
+				stateAliases[alias] = fullName
+			}
+			continue
+		}
+
+		// Parse transitions (e.g., "State1 --> State2: Command")
+		if strings.Contains(line, "-->") {
+			// Check if this is an error transition
+			isError := false
+			if strings.Contains(line, "❌") {
+				isError = true
+			}
+
+			// Split into from, to, and command parts
+			arrowParts := strings.Split(line, "-->")
+			if len(arrowParts) != 2 {
+				continue
+			}
+
+			fromState := strings.TrimSpace(arrowParts[0])
+
+			// Split the right side by colon to get state and command
+			colonParts := strings.SplitN(arrowParts[1], ":", 2)
+			if len(colonParts) != 2 {
+				continue
+			}
+
+			toState := strings.TrimSpace(colonParts[0])
+			command := strings.TrimSpace(colonParts[1])
+
+			// Remove error indicator from command if present
+			command = strings.TrimPrefix(command, "❌")
+
+			// Resolve aliases to full state names
+			if fromState != "[*]" {
+				if fullName, ok := stateAliases[fromState]; ok {
+					fromState = fullName
+				}
+			} else {
+				fromState = ""
+			}
+
+			if toState != "[*]" {
+				if fullName, ok := stateAliases[toState]; ok {
+					toState = fullName
+				}
+			} else {
+				toState = ""
+			}
+
+			transitions = append(transitions, ParsedTransition{
+				FromState: fromState,
+				ToState:   toState,
+				Command:   command,
+				IsError:   isError,
+			})
+		}
+	}
+
+	return transitions, nil
+}
