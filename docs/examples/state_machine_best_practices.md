@@ -92,7 +92,8 @@ This approach scales well because of separation of state from IO and business lo
 Running `go generate ./...` creates `machine_mock.go` with a `DependencyMock` type. This mock can then be used in tests:
 
 ```go title="example/state/machine_test.go"
---8<-- "example/state/machine_test.go:test-suite-example"
+--8<-- "example/state/machine_test.go:moq-init"
+--8<-- "example/state/machine_test.go:moq-usage"
 ```
 
 Benefits of using moq:

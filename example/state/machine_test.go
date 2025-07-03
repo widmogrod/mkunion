@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// --8<-- [start:test-suite-example]
+// --8<-- [start:moq-init]
 func TestSuite(t *testing.T) {
 	now := time.Now()
 	var di Dependency = &DependencyMock{
@@ -17,6 +17,7 @@ func TestSuite(t *testing.T) {
 			return &now
 		},
 	}
+	// --8<-- [end:moq-init]
 
 	order := OrderAttr{
 		Price:    100,
@@ -135,6 +136,7 @@ func TestSuite(t *testing.T) {
 										},
 									},
 								}).
+								// --8<-- [start:moq-usage]
 								ForkCase(t, "successfully recover", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 									c.
 										GivenCommand(&TryRecoverErrorCMD{OrderID: "123"}).
@@ -160,6 +162,7 @@ func TestSuite(t *testing.T) {
 												PaymentChargedAt: &now,
 											},
 										})
+									// --8<-- [end:moq-usage]
 								})
 						})
 				})
@@ -170,5 +173,3 @@ func TestSuite(t *testing.T) {
 		suite.SelfDocumentStateDiagram(t, "machine_test.go")
 	}
 }
-
-// --8<-- [end:test-suite-example]
