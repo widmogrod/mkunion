@@ -86,7 +86,10 @@ func TestPersistMachine(t *testing.T) {
 	err = m.Handle(nil, &MarkAsProcessingCMD{OrderID: "123", WorkerID: "worker-1"})
 	assert.NoError(t, err)
 
-	err = m.Handle(nil, &MarkOrderCompleteCMD{OrderID: "123"})
+	err = m.Handle(nil, &MarkOrderCompleteCMD{
+		OrderID:  "123",
+		WorkerID: "worker-2",
+	})
 	assert.NoError(t, err)
 
 	state := m.State()
