@@ -12,7 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.35.0
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.5
-	github.com/confluentinc/confluent-kafka-go/v2 v2.10.0
+	github.com/confluentinc/confluent-kafka-go/v2 v2.10.1
 	github.com/fatih/structtag v1.2.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/go-cmp v0.7.0
