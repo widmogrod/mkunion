@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="5b3a46df-18f3-4524-9da4-86f280bd8e07" name="Changes" comment="docs: add best practices section to CLAUDE.md&#10;&#10;Added &quot;Best Practices and Development Tips&quot; section to provide guidelines for maintaining code quality, including running `go fmt ./...` before committing changes.">
+      <change beforePath="$PROJECT_DIR$/x/workflow/workflow_plan.go" beforeDir="false" afterPath="$PROJECT_DIR$/x/workflow/workflow_plan.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x/workflow/workflow_plan_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/x/workflow/workflow_plan_test.go" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager">
+    <option name="groupingKeys">
+      <option value="directory" />
+    </option>
+  </component>
+  <component name="ComposerSettings">
+    <execution />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
+  </component>
+  <component name="GOROOT" url="file:///opt/homebrew/opt/go/libexec" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {}
+}</component>
+  <component name="GitHubPullRequestState">{
+  &quot;prStates&quot;: [
+    {
+      &quot;id&quot;: {
+        &quot;id&quot;: &quot;PR_kwDOIEb8A86X_puS&quot;,
+        &quot;number&quot;: 149
+      },
+      &quot;lastSeen&quot;: 1748449839165
+    }
+  ]
+}</component>
+  <component name="GithubProjectSettings">
+    <option name="branchProtectionPatterns">
+      <list>
+        <option value="main" />
+      </list>
+    </option>
+  </component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;git@github.com:widmogrod/mkunion.git&quot;,
+    &quot;accountId&quot;: &quot;4b21ab8b-731d-474c-b9c2-41a2a8432d7c&quot;
+  }
+}</component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$USER_HOME$/go/pkg/mod/google.golang.org/grpc@v1.64.1/internal/xds/bootstrap/tlscreds/bundle_ext_test.go" root0="SKIP_INSPECTION" />
+  </component>
+  <component name="PhpWorkspaceProjectConfiguration" interpreter_name="php" />
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 5
+}</component>
+  <component name="ProjectId" id="2hCIwKsSEZbStkNtxpPvLxssv5F" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultGoTemplateProperty": "Go File",
+    "Go Build.go build github.com/widmogrod/mkunion/exammple/my-app.executor": "Debug",
+    "Go Test.ExampleMatchPairs in github.com/widmogrod/mkunion/example.executor": "Run",
+    "Go Test.TestAggregate in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestAggregate/should_trigger_window_emitting_every_period_100ms,_and_10_items_arrives_as_1_item,_late_arrivals_use_past_aggregation_as_base,_and_retract_last_change in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestAggregate/should_trigger_window_emitting_evey_period_100ms,_and_10_items_arrives_as_1_item,_late_arrivals_are_new_aggregations in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestAggregate/should_trigger_window_emitting_evey_period_100ms,_and_10_items_arrives_as_1_item,_late_arrivals_use_past_aggregation_as_base in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestAppendLog in github.com/widmogrod/mkunion/x/storage/schemaless.executor": "Run",
+    "Go Test.TestAstSyntaxSugar in github.com/widmogrod/mkunion/example/ast.executor": "Run",
+    "Go Test.TestDefaultInMemoryInterpreter2 in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestDeriveFuncMatchGenerator_Generate in github.com/widmogrod/mkunion/x/generators.executor": "Run",
+    "Go Test.TestExecution in github.com/widmogrod/mkunion/x/workflow.executor": "Run",
+    "Go Test.TestFromGoDoubleWrapping in github.com/widmogrod/mkunion/x/storage/schemaless/typedful.executor": "Run",
+    "Go Test.TestFromGoo in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestGet in github.com/widmogrod/mkunion/x/schema.executor": "Run",
+    "Go Test.TestGet/nested_serialised_union_#_accessor in github.com/widmogrod/mkunion/x/schema.executor": "Run",
+    "Go Test.TestGet/non_existen_path in github.com/widmogrod/mkunion/x/schema.executor": "Run",
+    "Go Test.TestInMemoryRepository_DeterministicIteration in github.com/widmogrod/mkunion/x/storage/schemaless.executor": "Run",
+    "Go Test.TestIndexedTypeWalker_ExpandedShapes/expanded_should_have_variant_of_a_union in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestIndexedTypeWalker_Visit in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestIndexedTypeWalker_Visit/contrastive_example,_pointer_to_type_parameter_is_not_initialisation in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestIndexedTypeWalker_Visit/from_interface_declaration in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestInferDeriveFuncMatchFromFile in github.com/widmogrod/mkunion/x/generators.executor": "Run",
+    "Go Test.TestInferFromFile in github.com/widmogrod/mkunion/x/shape.executor": "Debug",
+    "Go Test.TestInferFromFile/should_found_tagged_ast.Node in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestInferFromFile/variant_types_should_be_marked_as_union in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestMachine in github.com/widmogrod/mkunion/x/workflow.executor": "Run",
+    "Go Test.TestMatchBuilding in github.com/widmogrod/mkunion/x/generators.executor": "Run",
+    "Go Test.TestMyNameMatch in github.com/widmogrod/mkunion/example.executor": "Run",
+    "Go Test.TestNewRepository2Typed in github.com/widmogrod/mkunion/x/storage/schemaless/typedful.executor": "Run",
+    "Go Test.TestNewRepository2WithSchema in github.com/widmogrod/mkunion/x/storage/schemaless.executor": "Run",
+    "Go Test.TestNewRepositoryInMemory in github.com/widmogrod/mkunion/x/storage/schemaless/typedful.executor": "Run",
+    "Go Test.TestParseLocation in github.com/widmogrod/mkunion/x/schema.executor": "Run",
+    "Go Test.TestPersistMachine in github.com/widmogrod/mkunion/example/state.executor": "Run",
+    "Go Test.TestProjection_Recovery in github.com/widmogrod/mkunion/x/projection.executor": "Run",
+    "Go Test.TestPubSubChan in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestSchemaGetWithRecordSchema in github.com/widmogrod/mkunion/x/storage/schemaless.executor": "Run",
+    "Go Test.TestShapeLocationConversion in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/After.Data[\"testutil.ExampleTree\"].Items[0][\"$type\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data.Ptr in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data.Ptr#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.TestShapeLocationConversion/Data[\"$type\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"$type\"]#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"]#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"]#02 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Alias1#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Any#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Items[0] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Items[0]#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Items[0][\"$type\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Items[0][\"$type\"]#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Map.mykey[\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValu in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Map.mykey[\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Map[\"mykey\"][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValu in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeLocationConversion/Data[\"testutil.ExampleTree\"].Map[\"mykey\"][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.TestShapeTagged_ListOfAliasAny_Generic in github.com/widmogrod/mkunion/x/generators.executor": "Run",
+    "Go Test.TestSortFunction in github.com/widmogrod/mkunion/x/storage/schemaless/typedful.executor": "Run",
+    "Go Test.TestStateTransition_UsingTableTests in github.com/widmogrod/mkunion/example/state.executor": "Run",
+    "Go Test.TestToOpenAIFunctionDefinition in github.com/widmogrod/mkunion/x/shape.executor": "Run",
+    "Go Test.TestToStrWorkflow in github.com/widmogrod/mkunion/x/workflow.executor": "Run",
+    "Go Test.TestToStrWorkflow/Workflow_with_error_context in github.com/widmogrod/mkunion/x/workflow.executor": "Run",
+    "Go Test.TestToStrWorkflow/Workflow_without_context in github.com/widmogrod/mkunion/x/workflow.executor": "Run",
+    "Go Test.TestToStrWorkflow_Ok in github.com/widmogrod/mkunion/x/workflow.executor": "Run",
+    "Go Test.TestTriggers in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestTriggers/should_trigger_window_emitting_once_at_period_100ms,_and_10_items_arrives_as_1_item in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestTriggers/should_trigger_window_emitting_when_window_size_reach_2_item in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestTriggers/should_trigger_window_flush_at_watermark in github.com/widmogrod/mkunion/x/storage/schemaless/projection.executor": "Run",
+    "Go Test.TestVerifyStorageTypes in github.com/widmogrod/mkunion/x/storage/schemaless/typedful.executor": "Run",
+    "Go Test.Test_GetShapeLocation in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_GetShapeLocation_Complex in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.Test_NewTypedLocation/After.Data.Items in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data.Items[0] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"$type\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Alias1 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Alias2 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Any in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0].TwoData in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTree\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTree\"].TwoData in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTree\"]TwoData in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTwo\"].TwoNext in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue#01 in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[0][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue[\"schema.String\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Items[10000] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"my-key\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"my-key\"][\"testutil.ExampleTwo\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"my-key\"][\"testutil.ExampleTwo\"]. in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"my-key\"][\"testutil.ExampleTwo\"].TwoNext in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"my-key\"][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"my-key\"][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"mykey\"][\"testutil.ExampleTwo\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTree\"].Map[\"mykey\"][\"testutil.ExampleTwo\"].TwoNext[\"testutil.ExampleOne\"].OneValue in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Run",
+    "Go Test.Test_NewTypedLocation/After.Data[\"testutil.ExampleTwo\"] in github.com/widmogrod/mkunion/x/schema/testutil.executor": "Debug",
+    "Go Test.go test generators.executor": "Run",
+    "Go Test.go test predicate.executor": "Run",
+    "Go Test.go test projection.executor": "Run",
+    "Go Test.go test schema.executor": "Run",
+    "Go Test.go test shape.executor": "Run",
+    "Go Test.go test state.executor": "Run",
+    "Go Test.go test storage.executor": "Run",
+    "Go Test.go test testasset.executor": "Run",
+    "Go Test.go test testutil.executor": "Run",
+    "Go Test.go test workflow.executor": "Run",
+    "Go Test.go test x.executor": "Run",
+    "Go Test.gocheck typedful.executor": "Run",
+    "Go Test.location_path_test.go.executor": "Run",
+    "Go Test.machine_test.go.executor": "Run",
+    "Go Test.nested_recursive_model_test.go.executor": "Run",
+    "Go Test.triggering_test.go.executor": "Run",
+    "Go Test.utils_flaky_test.go.executor": "Run",
+    "Go Test.utils_test.go.executor": "Run",
+    "Go Test.with_aggregator_test.go.executor": "Run",
+    "Go Test.workflow_machine_test.go.executor": "Run",
+    "Go Test.workflow_tostr_test.go.executor": "Run",
+    "Python.t.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "RunOnceActivity.go.modules.automatic.dependencies.download": "true",
+    "SHELLCHECK.PATH": "I do mind",
+    "git-widget-placeholder": "#166 on feature/execution-plan-issue-165",
+    "go.import.settings.migrated": "true",
+    "go.sdk.automatically.set": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/gabrielhabryn/Work/gh/mkunion/example/my-app/public",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "advanced.settings",
+    "ts.external.directory.path": "/Users/gabrielhabryn/Work/gh/mkunion/example/my-app/node_modules/typescript/lib"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/example/my-app/public" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Go Test.go test workflow">
+    <configuration name="go build github.com/widmogrod/mkunion/exammple/my-app" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+      <module name="mkunion" />
+      <working_directory value="$PROJECT_DIR$" />
+      <EXTENSION ID="com.fapiko.jetbrains.plugins.better_direnv.runconfigs.GolandRunConfigurationExtension">
+        <option name="DIRENV_ENABLED" value="false" />
+        <option name="DIRENV_TRUSTED" value="false" />
+      </EXTENSION>
+      <kind value="PACKAGE" />
+      <package value="github.com/widmogrod/mkunion/exammple/my-app" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build model_spec.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="mkunion" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="FILE" />
+      <package value="github.com/widmogrod/mkunion" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$/x/stream/model_spec.go" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestDefaultInMemoryInterpreter2 in github.com/widmogrod/mkunion/x/storage/schemaless/projection" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="mkunion" />
+      <working_directory value="$PROJECT_DIR$/x/storage/schemaless/projection" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/widmogrod/mkunion/x/storage/schemaless/projection" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestDefaultInMemoryInterpreter2\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestExecution in github.com/widmogrod/mkunion/x/workflow" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="mkunion" />
+      <working_directory value="$PROJECT_DIR$/x/workflow" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/widmogrod/mkunion/x/workflow" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestExecution\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go test workflow" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="mkunion" />
+      <working_directory value="$PROJECT_DIR$/x/workflow" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="DIRECTORY" />
+      <package value="github.com/widmogrod/mkunion/x/workflow" />
+      <directory value="$PROJECT_DIR$/x/workflow" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <configuration name="triggering_test.go" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="mkunion" />
+      <working_directory value="$PROJECT_DIR$/x/storage/schemaless/projection" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="FILE" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$/x/storage/schemaless/projection/triggering_test.go" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Test.go test workflow" />
+        <item itemvalue="Go Test.TestExecution in github.com/widmogrod/mkunion/x/workflow" />
+        <item itemvalue="Go Test.TestDefaultInMemoryInterpreter2 in github.com/widmogrod/mkunion/x/storage/schemaless/projection" />
+        <item itemvalue="Go Build.go build model_spec.go" />
+        <item itemvalue="Go Test.triggering_test.go" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.26094.121" />
+        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-IU-251.26094.121" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5b3a46df-18f3-4524-9da4-86f280bd8e07" name="Changes" comment="cmd/mkunion: batch regeneration" />
+      <created>1748449812249</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1748449812249</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="chore: add GitHub issue templates for AI-generated issues, feature requests, and bug reports" />
+    <MESSAGE value="chore: add GitHub project board and labels configuration for agile workflow management" />
+    <MESSAGE value="chore: normalize formatting in GitHub project and labels configuration" />
+    <MESSAGE value="chore: normalize newline formatting in GitHub project and labels configuration" />
+    <MESSAGE value="refactor: improve TestPubSubChan synchronization to reduce flakiness&#10;&#10;Added `HasSubscribers` method to `PubSubChan` for safely checking active subscribers. Replaced arbitrary sleep with a proper wait mechanism during subscriber setup in tests, ensuring reliable synchronization.&#10;&#10;This resolves race conditions and reduces test flakiness." />
+    <MESSAGE value="refactor: replace testify assertions with go-cmp in projection utils&#10;&#10;Switched from `testify/assert` to `go-cmp` for more readable and informative diff output when assertions fail in `ListAssert` methods. Updated failure messages for improved clarity and debugging." />
+    <MESSAGE value="refactor: rename test fields and update assertions in TestTriggers&#10;&#10;Renamed `expected` -&gt; `expectedToContain` in `TestTriggers` for improved clarity. Updated assertions to `.Contains()` to accommodate unordered results, ensuring more robust test validations." />
+    <MESSAGE value="chore: bump go-openai dependency to v1.40.1 in go.mod" />
+    <MESSAGE value="chore: remove outdated note about skipping experimental tests in CI" />
+    <MESSAGE value="refactor: update assertion in TestPubSubChan to check error equality" />
+    <MESSAGE value="refactor: add timeout handling to TestPubSubChan for improved test reliability&#10;&#10;Introduced a timeout mechanism while waiting for subscribers to ensure tests fail gracefully instead of hanging indefinitely. Adjusted sleep interval for better efficiency." />
+    <MESSAGE value="refactor: add RWMutex to WindowBuffer for thread-safe access&#10;&#10;Introduced `sync.RWMutex` to ensure thread-safe operations on `WindowBuffer`. Updated methods to use read/write locks when accessing or modifying `windowGroups`, preventing potential race conditions in concurrent scenarios." />
+    <MESSAGE value="refactor: add windowOrder to preserve group iteration order in WindowBuffer&#10;&#10;Introduced `windowOrder` slice to maintain deterministic iteration order over `windowGroups`. Updated addition, deletion, and iteration logic to ensure `windowOrder` stays in sync with `windowGroups`." />
+    <MESSAGE value="refactor: remove unnecessary sleep in event projection loop" />
+    <MESSAGE value="refactor: update triggering tests to include wider window coverage and remove unnecessary ticker registration&#10;&#10;Expanded test cases with larger time windows (200ms) to validate triggering behaviors more effectively. Removed redundant `TimeTicker` registration for streamlined setup. Improved comments for readability." />
+    <MESSAGE value="chore: clean up unused debug commands in CI workflow&#10;&#10;Removed unnecessary debug commands, including file searches, directory listings, and file tree outputs, to streamline the CI pipeline." />
+    <MESSAGE value="refactor: trigger final window flush with max watermark in DoWindow&#10;&#10;Added a signal to emit a final window flush using `math.MaxInt64`, ensuring proper handling of remaining data during the processing cycle." />
+    <MESSAGE value="refactor: bypass accumulation logic for non-windowed items in in-memory projection&#10;&#10;Added a conditional check to directly process and publish items without a window, improving handling of non-windowed items during processing." />
+    <MESSAGE value="chore: improve logging in DoWindow and DoMap for enhanced traceability&#10;&#10;Updated log messages in `DoWindow` and `DoMap` to include additional context, improving clarity and debugging capabilities during in-memory projection operations." />
+    <MESSAGE value="refactor: enhance in-memory projection test with improved windowing logic and result validation&#10;&#10;Updated windowing configuration to use fixed windows with watermark-based triggers. Added result validation with `assert.ElementsMatch` to ensure expected outcomes." />
+    <MESSAGE value="refactor: remove obsolete retract-and-aggregate logic from DoMap in in-memory projection  &#10;&#10;Eliminated unused code handling `ItemRetractAndAggregate` in `DoMap`, simplifying processing logic and removing redundant operations." />
+    <MESSAGE value="refactor: add WaitReady method and improve Process readiness in PubSub implementations&#10;&#10;Introduced `WaitReady` method to `PubSub` implementations to ensure `Process` goroutines are ready before publishing or subscribing. Updated `Register` method to immediately start `Process` and use `WaitReady` for synchronization. Added corresponding test coverage for `WaitReady` behavior." />
+    <MESSAGE value="docs: add advanced orchestration patterns to workflow README&#10;&#10;Expanded the workflow README to include detailed examples of advanced orchestration patterns. Added practical use cases, such as parallel execution, dynamic parallelism, saga pattern, event-driven workflows, sub-workflows, conditional branching, product delivery, A/B testing, and continuous delivery. Each pattern includes Go-based pseudocode for better understanding and application." />
+    <MESSAGE value="chore(workflow): remove generated union shape code&#10;&#10;Deleted the `workflow_machine_union_gen_shape_gen.go` file, as it contained auto-generated code that is no longer needed. Cleans up redundant files from the codebase." />
+    <MESSAGE value="docs: add best practices section to CLAUDE.md&#10;&#10;Added &quot;Best Practices and Development Tips&quot; section to provide guidelines for maintaining code quality, including running `go fmt ./...` before committing changes." />
+    <option name="LAST_COMMIT_MESSAGE" value="docs: add best practices section to CLAUDE.md&#10;&#10;Added &quot;Best Practices and Development Tips&quot; section to provide guidelines for maintaining code quality, including running `go fmt ./...` before committing changes." />
+  </component>
+  <component name="VgoProject">
+    <settings-migrated>true</settings-migrated>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/x/storage/schemaless/schema_test.go</url>
+          <line>18</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/x/storage/schemaless/typedful/with_aggregator_test.go</url>
+          <line>76</line>
+          <option name="timeStamp" value="10" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/x/storage/schemaless/schema.go</url>
+          <line>277</line>
+          <option name="timeStamp" value="12" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/mkunion$t.coverage" NAME="t Coverage Results" MODIFIED="1718700682930" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/mkunion$Test_NewTypedLocation_in_github_com_widmogrod_mkunion_x_schema_testutil.out" NAME="Test_NewTypedLocation in github.com/widmogrod/mkunion/x/schema/testutil Coverage Results" MODIFIED="1718731870514" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
+    <SUITE FILE_PATH="coverage/mkunion$go_build_github_com_widmogrod_mkunion_exammple_my_app.out" NAME="go build github.com/widmogrod/mkunion/exammple/my-app Coverage Results" MODIFIED="1717939717174" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
+  </component>
+</project>

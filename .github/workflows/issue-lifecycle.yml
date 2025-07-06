@@ -1,0 +1,192 @@
+name: Issue Lifecycle Management
+
+on:
+  issues:
+    types: [labeled, unlabeled, closed]
+  issue_comment:
+    types: [created]
+
+jobs:
+  manage-state-transitions:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+      projects: write
+    steps:
+      - name: Handle label-based state transitions
+        if: github.event_name == 'issues' && (github.event.action == 'labeled' || github.event.action == 'unlabeled')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const label = context.payload.label;
+            const action = context.payload.action;
+            
+            // Define state transitions
+            const transitions = {
+              'needs-human-review': { column: 'Human Review', removeLabels: ['inbox'] },
+              'needs-ai-refinement': { column: 'AI Refinement', removeLabels: ['needs-human-review'] },
+              'approved': { column: 'Backlog', removeLabels: ['needs-human-review', 'needs-ai-refinement'] },
+              'ready': { column: 'TODO', removeLabels: [] },
+              'in-progress': { column: 'In Progress', removeLabels: ['ready'] },
+              'blocked': { addLabels: ['priority:high'], comment: '⚠️ This issue is now blocked. Please add details about what is blocking progress.' }
+            };
+            
+            if (action === 'labeled' && transitions[label.name]) {
+              const transition = transitions[label.name];
+              
+              // Remove conflicting labels
+              if (transition.removeLabels && transition.removeLabels.length > 0) {
+                for (const removeLabel of transition.removeLabels) {
+                  if (issue.labels.some(l => l.name === removeLabel)) {
+                    await github.rest.issues.removeLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      name: removeLabel
+                    });
+                  }
+                }
+              }
+              
+              // Add new labels
+              if (transition.addLabels && transition.addLabels.length > 0) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: transition.addLabels
+                });
+              }
+              
+              // Add comment if specified
+              if (transition.comment) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: transition.comment
+                });
+              }
+              
+              // Log state transition for metrics
+              console.log(`State transition: ${issue.number} -> ${label.name}`);
+            }
+
+      - name: Handle AI refinement requests
+        if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '/ai-refine')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const comment = context.payload.comment;
+            
+            // Check if user has permission to request AI refinement
+            const { data: { permission } } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: comment.user.login
+            });
+            
+            if (['admin', 'maintain', 'write'].includes(permission)) {
+              // Extract refinement instructions
+              const instructions = comment.body.replace('/ai-refine', '').trim();
+              
+              // Add labels
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['needs-ai-refinement']
+              });
+              
+              // Add comment with instructions for AI
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `## 🤖 AI Refinement Requested
+                
+                **Requested by:** @${comment.user.login}
+                **Instructions:** ${instructions || 'Please refine this issue based on standard guidelines.'}
+                
+                The AI assistant should:
+                1. Review the feedback and instructions
+                2. Update the issue description with refined details
+                3. Ensure all acceptance criteria are clear and testable
+                4. Add any missing technical implementation details
+                5. Remove the \`needs-ai-refinement\` label when complete`
+              });
+              
+              // Store refinement request metadata
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: issue.body + `\n\n---\n**Latest Refinement Request:**\n${instructions}\n*Requested by @${comment.user.login} at ${new Date().toISOString()}*`
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ @${comment.user.login} - You don't have permission to request AI refinement. Please ask a maintainer.`
+              });
+            }
+
+      - name: Track time in state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const now = new Date().toISOString();
+            
+            // This would ideally persist to a database or metrics system
+            // For now, we'll add it as a comment for tracking
+            if (context.payload.action === 'labeled') {
+              const label = context.payload.label;
+              const stateLabels = ['inbox', 'needs-human-review', 'needs-ai-refinement', 'approved', 'ready', 'in-progress'];
+              
+              if (stateLabels.includes(label.name)) {
+                // Add hidden comment with metrics data
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `<!-- METRICS:STATE_CHANGE:${label.name}:${now} -->`
+                });
+              }
+            }
+
+      - name: Handle issue closure
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            
+            // Calculate cycle time
+            const created = new Date(issue.created_at);
+            const closed = new Date(issue.closed_at);
+            const cycleTimeHours = Math.round((closed - created) / (1000 * 60 * 60));
+            const cycleTimeDays = Math.round(cycleTimeHours / 24);
+            
+            // Add summary comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `## 📊 Issue Closed
+              
+              **Cycle Time:** ${cycleTimeDays} days (${cycleTimeHours} hours)
+              **Final Labels:** ${issue.labels.map(l => l.name).join(', ')}
+              
+              Thank you for your contribution! 🎉`
+            });
+            
+            // Log metrics
+            console.log(`Issue ${issue.number} closed. Cycle time: ${cycleTimeDays} days`);
+            
+            // Move to Done column in project board
+            // This would require project board API integration

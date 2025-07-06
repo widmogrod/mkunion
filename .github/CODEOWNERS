@@ -1,0 +1,47 @@
+# Code Owners for mkunion
+# This file defines who is automatically requested for review of pull requests
+
+# Default owners for everything in the repo
+*                                       @widmogrod
+
+# Documentation
+*.md                                    @widmogrod
+/docs/                                  @widmogrod
+/README.md                              @widmogrod
+
+# Core mkunion tool
+/cmd/mkunion/                          @widmogrod
+/cmd/mkfunc/                           @widmogrod
+
+# State machine framework
+/x/machine/                            @widmogrod
+/x/workflow/                           @widmogrod
+/example/state/                        @widmogrod
+/example/tic_tac_toe_machine/          @widmogrod
+
+# Type system and shape inference
+/x/shape/                              @widmogrod
+/x/schema/                             @widmogrod
+/x/generators/                         @widmogrod
+
+# Storage layer
+/x/storage/                            @widmogrod
+/x/storage/schemaless/                 @widmogrod
+/x/storage/predicate/                  @widmogrod
+
+# Project infrastructure
+/.github/                              @widmogrod
+/dev/                                  @widmogrod
+/go.mod                                @widmogrod
+/go.sum                                @widmogrod
+
+# Examples
+/example/                              @widmogrod
+
+# Generated files (no owner needed, but included for completeness)
+# These should generally not be edited manually
+*_gen.go                               @widmogrod
+*_shape_gen.go                         @widmogrod
+*_union_gen.go                         @widmogrod
+*_serde_gen.go                         @widmogrod
+*_match_gen.go                         @widmogrod

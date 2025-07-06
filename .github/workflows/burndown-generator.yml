@@ -1,0 +1,237 @@
+name: Burndown Chart Generator
+
+on:
+  schedule:
+    # Run every evening at 6 PM UTC
+    - cron: '0 18 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  generate-burndown:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Generate burndown chart
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            const sprintNumber = Math.floor((now.getTime() - new Date('2024-01-01').getTime()) / (14 * 24 * 60 * 60 * 1000)) + 1;
+            
+            // Find metrics tracking issue
+            const { data: trackingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'sprint-metrics-tracking',
+              state: 'open',
+              per_page: 1
+            });
+            
+            if (trackingIssues.length === 0) {
+              console.log('No metrics tracking issue found');
+              return;
+            }
+            
+            // Get all metrics comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: trackingIssues[0].number,
+              per_page: 100
+            });
+            
+            // Parse metrics from comments
+            const dailyMetrics = [];
+            for (const comment of comments) {
+              if (comment.body.includes('<!-- METRICS:')) {
+                const jsonMatch = comment.body.match(/```json\n([\s\S]+?)\n```/);
+                if (jsonMatch) {
+                  try {
+                    const metrics = JSON.parse(jsonMatch[1]);
+                    dailyMetrics.push(metrics);
+                  } catch (e) {
+                    console.log('Failed to parse metrics:', e);
+                  }
+                }
+              }
+            }
+            
+            // Sort by date
+            dailyMetrics.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Generate burndown chart data
+            const sprintDays = 10; // Working days in sprint
+            const chartData = {
+              labels: [],
+              ideal: [],
+              actual: [],
+              todo: [],
+              inProgress: [],
+              done: []
+            };
+            
+            // Calculate ideal burndown
+            const totalPoints = dailyMetrics.length > 0 ? dailyMetrics[0].totalPoints : 0;
+            for (let day = 0; day <= sprintDays; day++) {
+              chartData.labels.push(`Day ${day}`);
+              chartData.ideal.push(Math.round(totalPoints - (totalPoints / sprintDays * day)));
+            }
+            
+            // Fill actual data
+            let dayCounter = 0;
+            for (const metrics of dailyMetrics) {
+              if (dayCounter < chartData.labels.length) {
+                chartData.actual[dayCounter] = metrics.remainingPoints;
+                chartData.todo[dayCounter] = metrics.todo;
+                chartData.inProgress[dayCounter] = metrics.inProgress;
+                chartData.done[dayCounter] = metrics.done;
+                dayCounter++;
+              }
+            }
+            
+            // Generate ASCII burndown chart (simplified)
+            const maxPoints = totalPoints;
+            const chartHeight = 15;
+            const chartWidth = sprintDays + 1;
+            
+            let chart = '```\n';
+            chart += 'Sprint Burndown Chart\n';
+            chart += '═'.repeat(chartWidth * 4) + '\n';
+            
+            // Y-axis labels
+            for (let y = chartHeight; y >= 0; y--) {
+              const value = Math.round(maxPoints * y / chartHeight);
+              chart += value.toString().padStart(4, ' ') + ' │';
+              
+              // Plot points
+              for (let x = 0; x < chartWidth; x++) {
+                const idealValue = chartData.ideal[x];
+                const actualValue = chartData.actual[x];
+                
+                const idealY = Math.round(idealValue * chartHeight / maxPoints);
+                const actualY = actualValue ? Math.round(actualValue * chartHeight / maxPoints) : null;
+                
+                if (y === idealY && y === actualY) {
+                  chart += ' ◆ '; // Both lines intersect
+                } else if (y === idealY) {
+                  chart += ' ─ '; // Ideal line
+                } else if (y === actualY) {
+                  chart += ' ● '; // Actual line
+                } else {
+                  chart += '   ';
+                }
+              }
+              chart += '\n';
+            }
+            
+            // X-axis
+            chart += '    └' + '───'.repeat(chartWidth) + '\n';
+            chart += '     ';
+            for (let x = 0; x < chartWidth; x++) {
+              chart += ` ${x}`.padEnd(3, ' ');
+            }
+            chart += '\n```\n';
+            
+            // Generate detailed report
+            let report = `# 📊 Sprint ${sprintNumber} Burndown Report\n\n`;
+            report += `**Generated**: ${now.toLocaleString()}\n\n`;
+            
+            report += '## Burndown Chart\n\n';
+            report += chart;
+            report += '\n**Legend**: ─ Ideal | ● Actual | ◆ Intersection\n\n';
+            
+            // Current status
+            const latestMetrics = dailyMetrics[dailyMetrics.length - 1];
+            if (latestMetrics) {
+              report += '## Current Status\n\n';
+              report += `- **Total Story Points**: ${latestMetrics.totalPoints}\n`;
+              report += `- **Completed**: ${latestMetrics.completedPoints} (${Math.round(latestMetrics.completedPoints / latestMetrics.totalPoints * 100)}%)\n`;
+              report += `- **Remaining**: ${latestMetrics.remainingPoints}\n`;
+              report += `- **Sprint Progress**: ${latestMetrics.sprintProgress}%\n`;
+              report += `- **Status**: ${latestMetrics.isOnTrack ? '✅ On Track' : '⚠️ Behind Schedule'}\n\n`;
+              
+              report += '## Issue Distribution\n\n';
+              report += `- **To Do**: ${latestMetrics.todo} issues\n`;
+              report += `- **In Progress**: ${latestMetrics.inProgress} issues\n`;
+              report += `- **In Review**: ${latestMetrics.inReview} issues\n`;
+              report += `- **Done**: ${latestMetrics.done} issues\n`;
+              report += `- **Blocked**: ${latestMetrics.blockedIssues} issues\n\n`;
+              
+              // Velocity trend
+              if (dailyMetrics.length > 3) {
+                const recentMetrics = dailyMetrics.slice(-3);
+                const dailyVelocity = [];
+                
+                for (let i = 1; i < recentMetrics.length; i++) {
+                  const pointsCompleted = recentMetrics[i].completedPoints - recentMetrics[i-1].completedPoints;
+                  dailyVelocity.push(pointsCompleted);
+                }
+                
+                const avgVelocity = dailyVelocity.length > 0 ?
+                  Math.round(dailyVelocity.reduce((a, b) => a + b, 0) / dailyVelocity.length) : 0;
+                
+                report += '## Velocity Analysis\n\n';
+                report += `- **Average Daily Velocity**: ${avgVelocity} points/day\n`;
+                report += `- **Required Velocity**: ${Math.round(latestMetrics.remainingPoints / Math.max(1, (10 - latestMetrics.sprintProgress / 10)))} points/day\n`;
+                
+                if (avgVelocity > 0) {
+                  const projectedCompletion = Math.round(latestMetrics.remainingPoints / avgVelocity);
+                  report += `- **Projected Completion**: ${projectedCompletion} days\n`;
+                  
+                  if (projectedCompletion > (10 - latestMetrics.sprintProgress / 10)) {
+                    report += '\n⚠️ **Warning**: At current velocity, not all work will be completed this sprint.\n';
+                  }
+                }
+              }
+              
+              // Cycle time analysis
+              if (latestMetrics.avgCycleTime > 0) {
+                report += '\n## Cycle Time\n\n';
+                report += `- **Average Cycle Time**: ${latestMetrics.avgCycleTime} days\n`;
+                report += `- **Completed Issues**: ${latestMetrics.done}\n`;
+              }
+            }
+            
+            // Recommendations
+            report += '\n## Recommendations\n\n';
+            if (latestMetrics && !latestMetrics.isOnTrack) {
+              report += '### To Get Back on Track:\n\n';
+              report += '1. **Focus on Blocked Issues**: Resolve blockers immediately\n';
+              report += '2. **Limit WIP**: Ensure team members finish current tasks before starting new ones\n';
+              report += '3. **Re-scope Sprint**: Consider moving low-priority items to next sprint\n';
+              report += '4. **Pair Programming**: Accelerate complex issues with collaboration\n';
+            } else {
+              report += '✅ Sprint is progressing well. Keep up the good work!\n';
+            }
+            
+            // Find or create burndown report issue
+            const { data: burndownIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'burndown-report',
+              state: 'open',
+              per_page: 1
+            });
+            
+            if (burndownIssues.length > 0) {
+              // Update existing report
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: burndownIssues[0].number,
+                body: report
+              });
+            } else {
+              // Create new report
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Sprint ${sprintNumber} Burndown Chart`,
+                body: report,
+                labels: ['burndown-report', 'sprint-management', 'metrics']
+              });
+            }
+            
+            console.log('Burndown report generated successfully');

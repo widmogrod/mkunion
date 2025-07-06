@@ -1,0 +1,167 @@
+# PR Quality Standards
+# Defines minimum requirements for pull requests
+
+general:
+  minDescriptionLength: 50
+  maxFilesChanged: 50
+  maxLinesChanged: 1000
+  requiresLinkedIssue: true
+  requiresTests: true
+  
+  # Required PR template sections
+  requiredSections:
+    - "Description"
+    - "Related Issues"
+    - "Type of Change"
+    - "Checklist"
+    - "Testing"
+
+  # Files that should not be modified directly
+  protectedFiles:
+    - "go.mod"  # Should use go get
+    - "go.sum"  # Auto-generated
+    - "*_gen.go"  # Generated files
+    - "*.pb.go"  # Protocol buffer files
+
+sizeCategories:
+  xs:
+    maxLines: 50
+    reviewers: 1
+    fastTrackEligible: true
+  small:
+    maxLines: 200
+    reviewers: 1
+    fastTrackEligible: true
+  medium:
+    maxLines: 500
+    reviewers: 2
+    fastTrackEligible: false
+  large:
+    maxLines: 1000
+    reviewers: 2
+    fastTrackEligible: false
+  xl:
+    maxLines: 9999999
+    reviewers: 3
+    fastTrackEligible: false
+    requiresArchitectureReview: true
+
+# Type-specific requirements
+typeRequirements:
+  feature:
+    requiresTests: true
+    requiresDocs: true
+    requiresChangeLog: true
+    minTestCoverage: 80
+  
+  bugfix:
+    requiresTests: true
+    requiresRegressionTest: true
+    requiresRootCauseAnalysis: true
+  
+  refactor:
+    requiresTests: true
+    requiresPerformanceCheck: true
+    maintainsCoverage: true
+  
+  documentation:
+    requiresTests: false
+    requiresReview: true
+  
+  chore:
+    requiresTests: false
+    fastTrackEligible: true
+
+# Code quality checks
+codeQuality:
+  # File-specific rules
+  goFiles:
+    pattern: "*.go"
+    checks:
+      - noTodoComments
+      - noDebugPrints
+      - hasPackageComment
+      - importsGrouped
+    forbiddenPatterns:
+      - "fmt.Println"
+      - "panic("
+      - "// HACK"
+      - "// FIXME"
+  
+  testFiles:
+    pattern: "*_test.go"
+    checks:
+      - hasTestCases
+      - usesTestify
+      - hasTableDrivenTests
+    requiredPatterns:
+      - "t.Run("
+      - "assert."
+
+# Review requirements based on paths
+pathBasedReview:
+  ".github/":
+    reviewers: ["devops-team", "tech-lead"]
+    requiresApproval: true
+  
+  "x/machine/":
+    reviewers: ["state-machine-experts"]
+    requiresApproval: true
+  
+  "x/storage/":
+    reviewers: ["database-team"]
+    requiresApproval: true
+  
+  "docs/":
+    reviewers: ["documentation-team"]
+    requiresApproval: false
+
+# Automated checks
+automatedChecks:
+  - name: "Lint Check"
+    required: true
+    command: "golangci-lint run"
+  
+  - name: "Test Coverage"
+    required: true
+    minCoverage: 70
+    command: "go test -cover ./..."
+  
+  - name: "Security Scan"
+    required: true
+    command: "gosec ./..."
+  
+  - name: "Build Check"
+    required: true
+    command: "go build ./..."
+
+# Fast-track criteria
+fastTrackCriteria:
+  maxFiles: 3
+  maxLines: 50
+  eligiblePaths:
+    - "docs/"
+    - "*.md"
+    - ".github/"
+  eligibleTypes:
+    - "chore"
+    - "docs"
+    - "typo"
+  forbiddenChanges:
+    - "*.go"
+    - "go.mod"
+    - "Dockerfile"
+
+# Merge requirements
+mergeRequirements:
+  minApprovals: 1
+  requiresCI: true
+  requiresUpToDate: true
+  dismissStaleReviews: true
+  requiresCodeOwnerReview: true
+  
+  # Additional requirements for large PRs
+  largepr:
+    minApprovals: 2
+    requiresArchitectureReview: true
+    requiresQAApproval: true

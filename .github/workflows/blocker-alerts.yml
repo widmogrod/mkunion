@@ -1,0 +1,269 @@
+name: Blocker Alerts
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+  schedule:
+    # Check for stale blockers every 4 hours during work hours
+    - cron: '0 9,13,17 * * 1-5'
+
+jobs:
+  handle-blockers:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Handle new blocker
+        if: github.event_name == 'issues' && github.event.label.name == 'blocked'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const now = new Date();
+            
+            // Extract blocker details from recent comments or issue body
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              per_page: 10
+            });
+            
+            // Look for blocker context
+            let blockerContext = '';
+            const recentComment = comments.reverse().find(c => 
+              c.body.toLowerCase().includes('block') || 
+              c.body.toLowerCase().includes('stuck')
+            );
+            
+            if (recentComment) {
+              blockerContext = recentComment.body.substring(0, 500);
+            }
+            
+            // Generate alert
+            let alert = `## 🚨 New Blocker Alert\n\n`;
+            alert += `**Issue**: #${issue.number} - ${issue.title}\n`;
+            alert += `**Blocked By**: @${context.payload.sender.login}\n`;
+            alert += `**Time**: ${now.toLocaleString()}\n`;
+            alert += `**Assignees**: ${issue.assignees.map(a => `@${a.login}`).join(', ') || 'None'}\n\n`;
+            
+            if (blockerContext) {
+              alert += `### Context\n${blockerContext}\n\n`;
+            }
+            
+            alert += `### Required Actions\n`;
+            alert += `1. Identify the root cause of the blocker\n`;
+            alert += `2. Tag relevant team members who can help\n`;
+            alert += `3. Create action items to resolve\n`;
+            alert += `4. Update this issue with resolution plan\n\n`;
+            
+            alert += `### Escalation Path\n`;
+            alert += `- **Immediate** (0-2 hours): Team members collaborate\n`;
+            alert += `- **Short-term** (2-4 hours): Tech lead involvement\n`;
+            alert += `- **Extended** (4+ hours): Management escalation\n`;
+            
+            // Post alert comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: alert
+            });
+            
+            // Add metadata for tracking
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `<!-- BLOCKER_START:${now.toISOString()} -->`
+            });
+            
+            // Check priority and notify accordingly
+            const isHighPriority = issue.labels.some(l => l.name === 'priority:high');
+            const isCritical = issue.labels.some(l => l.name === 'critical');
+            
+            if (isHighPriority || isCritical) {
+              // Create urgent notification issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 URGENT: High Priority Issue #${issue.number} is Blocked`,
+                body: `## Immediate Action Required\n\n${issue.assignees.map(a => `@${a.login}`).join(', ')} - High priority issue #${issue.number} "${issue.title}" has been blocked.\n\n**Blocker Context**:\n${blockerContext}\n\n[View Issue](${issue.html_url})`,
+                labels: ['urgent', 'blocker-alert'],
+                assignees: [...issue.assignees.map(a => a.login), process.env.TECH_LEAD].filter(Boolean)
+              });
+            }
+
+      - name: Check blocker resolution
+        if: github.event_name == 'issues' && github.event.action == 'unlabeled' && github.event.label.name == 'blocked'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const now = new Date();
+            
+            // Find blocker start time
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              per_page: 100
+            });
+            
+            const blockerStart = comments.find(c => 
+              c.body.includes('<!-- BLOCKER_START:')
+            );
+            
+            let blockedDuration = 'Unknown';
+            if (blockerStart) {
+              const startMatch = blockerStart.body.match(/BLOCKER_START:(.+?) -->/);
+              if (startMatch) {
+                const startTime = new Date(startMatch[1]);
+                const durationMs = now - startTime;
+                const hours = Math.round(durationMs / (1000 * 60 * 60));
+                blockedDuration = hours < 1 ? '< 1 hour' : `${hours} hours`;
+              }
+            }
+            
+            // Post resolution message
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `✅ **Blocker Resolved**\n\n**Duration**: ${blockedDuration}\n**Resolved by**: @${context.payload.sender.login}\n\nGreat job unblocking this issue! 🎉`
+            });
+
+      - name: Monitor stale blockers
+        if: github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            const STALE_HOURS = 4;
+            
+            // Get all blocked issues
+            const { data: blockedIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'blocked',
+              state: 'open',
+              per_page: 100
+            });
+            
+            const staleBlockers = [];
+            const criticalBlockers = [];
+            
+            for (const issue of blockedIssues) {
+              // Get blocker metadata
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                per_page: 100
+              });
+              
+              const blockerStart = comments.find(c => 
+                c.body.includes('<!-- BLOCKER_START:')
+              );
+              
+              if (blockerStart) {
+                const startMatch = blockerStart.body.match(/BLOCKER_START:(.+?) -->/);
+                if (startMatch) {
+                  const startTime = new Date(startMatch[1]);
+                  const hoursBlocked = (now - startTime) / (1000 * 60 * 60);
+                  
+                  if (hoursBlocked > STALE_HOURS) {
+                    staleBlockers.push({
+                      issue,
+                      hoursBlocked: Math.round(hoursBlocked),
+                      startTime
+                    });
+                    
+                    if (issue.labels.some(l => l.name === 'priority:high' || l.name === 'critical')) {
+                      criticalBlockers.push({
+                        issue,
+                        hoursBlocked: Math.round(hoursBlocked)
+                      });
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Generate escalation report
+            if (staleBlockers.length > 0) {
+              let report = `# ⏰ Stale Blocker Report\n\n`;
+              report += `**Generated**: ${now.toLocaleString()}\n`;
+              report += `**Threshold**: ${STALE_HOURS} hours\n\n`;
+              
+              report += `## Blockers Requiring Escalation (${staleBlockers.length})\n\n`;
+              
+              // Group by duration
+              const groupedByDuration = {
+                '4-8 hours': [],
+                '8-24 hours': [],
+                '24+ hours': []
+              };
+              
+              for (const blocker of staleBlockers) {
+                const group = blocker.hoursBlocked <= 8 ? '4-8 hours' :
+                             blocker.hoursBlocked <= 24 ? '8-24 hours' : '24+ hours';
+                groupedByDuration[group].push(blocker);
+              }
+              
+              for (const [duration, blockers] of Object.entries(groupedByDuration)) {
+                if (blockers.length > 0) {
+                  report += `### ${duration} (${blockers.length} issues)\n\n`;
+                  for (const blocker of blockers) {
+                    const assignees = blocker.issue.assignees.map(a => `@${a.login}`).join(', ') || 'Unassigned';
+                    report += `- #${blocker.issue.number}: ${blocker.issue.title}\n`;
+                    report += `  - Blocked for: ${blocker.hoursBlocked} hours\n`;
+                    report += `  - Assignees: ${assignees}\n`;
+                  }
+                  report += '\n';
+                }
+              }
+              
+              report += `## Recommended Actions\n\n`;
+              report += `1. **Immediate**: Contact assignees of 24+ hour blockers\n`;
+              report += `2. **Today**: Schedule meetings for 8-24 hour blockers\n`;
+              report += `3. **Monitor**: Check in on 4-8 hour blockers\n\n`;
+              
+              report += `## Escalation Required\n\n`;
+              if (criticalBlockers.length > 0) {
+                report += `### ⚠️ Critical/High Priority Blockers\n\n`;
+                for (const blocker of criticalBlockers) {
+                  report += `- #${blocker.issue.number}: ${blocker.issue.title} (${blocker.hoursBlocked}h)\n`;
+                }
+                report += `\n**These require immediate management attention.**\n`;
+              }
+              
+              // Create escalation issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `⏰ Blocker Escalation - ${staleBlockers.length} Stale Blockers`,
+                body: report,
+                labels: ['blocker-escalation', 'urgent'],
+                assignees: [process.env.TECH_LEAD, process.env.ENGINEERING_MANAGER].filter(Boolean)
+              });
+              
+              // Add escalation comments to individual issues
+              for (const blocker of staleBlockers.filter(b => b.hoursBlocked > 8)) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: blocker.issue.number,
+                  body: `⏰ **Escalation Notice**\n\nThis issue has been blocked for ${blocker.hoursBlocked} hours and has been escalated.\n\n${blocker.issue.assignees.map(a => `@${a.login}`).join(', ')} - Please provide an update on the blocker status and resolution plan.`
+                });
+              }
+            }
+            
+            console.log('Blocker monitoring complete:', {
+              totalBlocked: blockedIssues.length,
+              staleBlockers: staleBlockers.length,
+              criticalBlockers: criticalBlockers.length
+            });

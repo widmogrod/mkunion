@@ -1,0 +1,284 @@
+name: PR Lifecycle and Automation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types: [completed]
+
+jobs:
+  pr-automation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Auto-link issues
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            
+            // Find issue references in PR body
+            const issuePattern = /#(\d+)/g;
+            const fixes = /(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s*#(\d+)/gi;
+            
+            const linkedIssues = [];
+            const fixedIssues = [];
+            
+            let match;
+            while ((match = fixes.exec(body)) !== null) {
+              fixedIssues.push(match[1]);
+            }
+            while ((match = issuePattern.exec(body)) !== null) {
+              if (!fixedIssues.includes(match[1])) {
+                linkedIssues.push(match[1]);
+              }
+            }
+            
+            // Update linked issues to Code Review state
+            for (const issueNum of [...linkedIssues, ...fixedIssues]) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNum),
+                  labels: ['in-code-review']
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNum),
+                  body: `🔗 Linked PR #${pr.number} has been opened by @${pr.user.login}`
+                });
+              } catch (e) {
+                console.log(`Could not update issue #${issueNum}: ${e.message}`);
+              }
+            }
+
+      - name: Check PR size and complexity
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Get PR diff stats
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const stats = {
+              files: files.length,
+              additions: pr.additions,
+              deletions: pr.deletions,
+              changes: pr.additions + pr.deletions
+            };
+            
+            // Determine PR size
+            let size, reviewers;
+            if (stats.changes < 50) {
+              size = 'XS';
+              reviewers = 1;
+            } else if (stats.changes < 200) {
+              size = 'S';
+              reviewers = 1;
+            } else if (stats.changes < 500) {
+              size = 'M';
+              reviewers = 2;
+            } else if (stats.changes < 1000) {
+              size = 'L';
+              reviewers = 2;
+            } else {
+              size = 'XL';
+              reviewers = 3;
+            }
+            
+            // Add size label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: [`size:${size}`]
+            });
+            
+            // Add comment with PR analysis
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `## 📊 PR Analysis
+              
+              **Size:** ${size} (${stats.changes} lines changed)
+              **Files:** ${stats.files}
+              **Additions:** +${stats.additions}
+              **Deletions:** -${stats.deletions}
+              
+              **Recommended Reviewers:** ${reviewers}
+              
+              ${stats.changes > 500 ? '⚠️ **Large PR Alert:** Consider breaking this into smaller PRs for easier review.' : ''}
+              ${stats.files > 20 ? '⚠️ **Many Files Changed:** This PR touches many files. Ensure all changes are related.' : ''}`
+            });
+
+      - name: Check for AI code review
+        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ai-review-requested')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `## 🤖 AI Code Review Requested
+              
+              An AI assistant will review this PR for:
+              - Code quality and best practices
+              - Potential bugs or issues
+              - Performance implications
+              - Security considerations
+              - Test coverage
+              
+              The AI review will be posted as a comment. Human reviewers should still perform their own review.`
+            });
+
+      - name: Handle review approvals
+        if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const review = context.payload.review;
+            
+            // Check if PR has enough approvals based on size
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const approvals = reviews.filter(r => r.state === 'APPROVED').length;
+            const sizeLabel = pr.labels.find(l => l.name.startsWith('size:'));
+            const requiredApprovals = sizeLabel && ['size:L', 'size:XL'].includes(sizeLabel.name) ? 2 : 1;
+            
+            if (approvals >= requiredApprovals) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['ready-to-merge']
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `✅ This PR has received ${approvals} approval(s) and is ready to merge!`
+              });
+            }
+
+      - name: Handle PR merge
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Extract fixed issues
+            const body = pr.body || '';
+            const fixes = /(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s*#(\d+)/gi;
+            const fixedIssues = [];
+            
+            let match;
+            while ((match = fixes.exec(body)) !== null) {
+              fixedIssues.push(match[1]);
+            }
+            
+            // Update fixed issues to Acceptance state
+            for (const issueNum of fixedIssues) {
+              try {
+                // Remove in-code-review label
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNum),
+                  name: 'in-code-review'
+                });
+                
+                // Add acceptance label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNum),
+                  labels: ['in-acceptance']
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNum),
+                  body: `🚀 PR #${pr.number} has been merged! This issue is now in acceptance testing.
+                  
+                  **Deployment Information:**
+                  - Merged by: @${pr.merged_by.login}
+                  - Merge commit: ${pr.merge_commit_sha}
+                  - Deploy status: Pending
+                  
+                  @${context.payload.pull_request.user.login} - Please verify the implementation meets all acceptance criteria.`
+                });
+              } catch (e) {
+                console.log(`Could not update issue #${issueNum}: ${e.message}`);
+              }
+            }
+            
+            // Calculate PR metrics
+            const created = new Date(pr.created_at);
+            const merged = new Date(pr.merged_at);
+            const timeToMergeHours = Math.round((merged - created) / (1000 * 60 * 60));
+            
+            console.log(`PR #${pr.number} merged. Time to merge: ${timeToMergeHours} hours`);
+
+      - name: Fast-track small changes
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Check if this qualifies for fast-track
+            const isFastTrack = pr.additions < 20 && 
+                               pr.deletions < 20 && 
+                               pr.changed_files <= 3 &&
+                               (pr.title.includes('[chore]') || 
+                                pr.title.includes('[docs]') || 
+                                pr.title.includes('[typo]'));
+            
+            if (isFastTrack) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['fast-track']
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `🏃 **Fast Track PR**
+                
+                This PR qualifies for fast-track review due to its small size and low risk.
+                Only one reviewer needed, and can be merged after basic CI passes.`
+              });
+            }

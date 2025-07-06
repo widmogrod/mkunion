@@ -1,0 +1,226 @@
+name: Done Column Cleanup
+
+on:
+  schedule:
+    # Run every other Monday at 6 AM UTC
+    - cron: '0 6 */14 * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no actual cleanup)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  cleanup-done:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Archive completed items
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const DRY_RUN = context.eventName === 'workflow_dispatch' && 
+                           context.payload.inputs.dry_run === 'true';
+            const ARCHIVE_AFTER_DAYS = 14;
+            const now = new Date();
+            const archiveDate = new Date(now.getTime() - (ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000));
+            
+            console.log(`Running cleanup ${DRY_RUN ? '(DRY RUN)' : ''}`);
+            
+            // Get all closed issues with 'done' label
+            const { data: doneIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'done',
+              state: 'closed',
+              sort: 'updated',
+              direction: 'asc',
+              per_page: 100
+            });
+            
+            const toArchive = [];
+            const metrics = {
+              features: 0,
+              bugs: 0,
+              other: 0,
+              totalStoryPoints: 0
+            };
+            
+            for (const issue of doneIssues) {
+              const closedDate = new Date(issue.closed_at);
+              
+              if (closedDate < archiveDate) {
+                toArchive.push({
+                  number: issue.number,
+                  title: issue.title,
+                  closedAt: issue.closed_at,
+                  labels: issue.labels.map(l => l.name),
+                  assignees: issue.assignees.map(a => a.login)
+                });
+                
+                // Collect metrics
+                if (issue.labels.some(l => l.name === 'feature')) metrics.features++;
+                else if (issue.labels.some(l => l.name === 'bug')) metrics.bugs++;
+                else metrics.other++;
+                
+                // Extract story points if available (assuming format like "sp:3")
+                const spLabel = issue.labels.find(l => l.name.startsWith('sp:'));
+                if (spLabel) {
+                  const points = parseInt(spLabel.name.split(':')[1]);
+                  if (!isNaN(points)) metrics.totalStoryPoints += points;
+                }
+                
+                if (!DRY_RUN) {
+                  // Remove 'done' label (archiving)
+                  try {
+                    await github.rest.issues.removeLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      name: 'done'
+                    });
+                    
+                    // Add 'archived' label
+                    await github.rest.issues.addLabels({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      labels: ['archived']
+                    });
+                  } catch (e) {
+                    console.log(`Error archiving issue #${issue.number}: ${e.message}`);
+                  }
+                }
+              }
+            }
+            
+            // Generate completion report
+            if (toArchive.length > 0) {
+              let report = '# 🗄️ Done Column Archive Report\n\n';
+              report += `Generated: ${now.toISOString()}\n`;
+              report += `Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}\n\n`;
+              
+              // Summary
+              report += '## Summary\n\n';
+              report += `- **Total Archived**: ${toArchive.length} issues\n`;
+              report += `- **Features**: ${metrics.features}\n`;
+              report += `- **Bugs**: ${metrics.bugs}\n`;
+              report += `- **Other**: ${metrics.other}\n`;
+              report += `- **Total Story Points**: ${metrics.totalStoryPoints}\n\n`;
+              
+              // Team contributions
+              const contributions = {};
+              for (const issue of toArchive) {
+                for (const assignee of issue.assignees) {
+                  if (!contributions[assignee]) {
+                    contributions[assignee] = 0;
+                  }
+                  contributions[assignee]++;
+                }
+              }
+              
+              report += '## Team Contributions\n\n';
+              report += '| Team Member | Issues Completed |\n';
+              report += '|-------------|------------------|\n';
+              
+              const sortedContributors = Object.entries(contributions)
+                .sort((a, b) => b[1] - a[1]);
+              
+              for (const [user, count] of sortedContributors) {
+                report += `| @${user} | ${count} |\n`;
+              }
+              
+              // Detailed list
+              report += '\n## Archived Issues\n\n';
+              report += '| Issue | Title | Type | Closed | Assignees |\n';
+              report += '|-------|-------|------|--------|-----------|';
+              
+              for (const issue of toArchive.slice(0, 50)) { // Limit to 50 for readability
+                const type = issue.labels.includes('feature') ? '✨ Feature' :
+                            issue.labels.includes('bug') ? '🐛 Bug' : '📝 Other';
+                const closedDate = new Date(issue.closedAt).toLocaleDateString();
+                const assignees = issue.assignees.join(', ') || 'Unassigned';
+                
+                report += `\n| #${issue.number} | ${issue.title.substring(0, 40)}... | ${type} | ${closedDate} | ${assignees} |`;
+              }
+              
+              if (toArchive.length > 50) {
+                report += `\n\n*... and ${toArchive.length - 50} more issues*`;
+              }
+              
+              // Calculate velocity
+              const uniqueWeeks = new Set();
+              for (const issue of toArchive) {
+                const closedDate = new Date(issue.closedAt);
+                const weekNum = Math.floor(closedDate.getTime() / (7 * 24 * 60 * 60 * 1000));
+                uniqueWeeks.add(weekNum);
+              }
+              
+              const avgVelocity = uniqueWeeks.size > 0 ? 
+                (toArchive.length / uniqueWeeks.size).toFixed(1) : 0;
+              
+              report += `\n\n## Velocity Metrics\n\n`;
+              report += `- **Period**: ${ARCHIVE_AFTER_DAYS} days\n`;
+              report += `- **Average Weekly Velocity**: ${avgVelocity} issues/week\n`;
+              
+              if (metrics.totalStoryPoints > 0) {
+                const avgPointsPerWeek = uniqueWeeks.size > 0 ?
+                  (metrics.totalStoryPoints / uniqueWeeks.size).toFixed(1) : 0;
+                report += `- **Average Story Points/Week**: ${avgPointsPerWeek}\n`;
+              }
+              
+              // Create report issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Done Column Archive - ${now.toLocaleDateString()} ${DRY_RUN ? '(DRY RUN)' : ''}`,
+                body: report,
+                labels: ['archive-report', 'metrics']
+              });
+              
+              // Create velocity tracking data (for historical tracking)
+              if (!DRY_RUN) {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `Velocity Data - ${now.toISOString()}`,
+                  body: `\`\`\`json\n${JSON.stringify({
+                    date: now.toISOString(),
+                    period: `${archiveDate.toISOString()} to ${now.toISOString()}`,
+                    metrics: {
+                      ...metrics,
+                      issuesCompleted: toArchive.length,
+                      weeklyVelocity: parseFloat(avgVelocity),
+                      contributors: Object.keys(contributions).length
+                    }
+                  }, null, 2)}\n\`\`\``,
+                  labels: ['velocity-data', 'metrics', 'automated']
+                });
+              }
+            } else {
+              console.log('No issues to archive');
+              
+              // Still create a report showing no archival needed
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Done Column Archive - ${now.toLocaleDateString()} (No Issues to Archive)`,
+                body: `No completed issues older than ${ARCHIVE_AFTER_DAYS} days found in the Done column.\n\nAll recent work has already been archived. Great job keeping the board clean! 🎉`,
+                labels: ['archive-report', 'metrics']
+              });
+            }
+            
+            // Output metrics for monitoring
+            console.log('Archive Metrics:', JSON.stringify({
+              timestamp: now.toISOString(),
+              archived: toArchive.length,
+              dryRun: DRY_RUN,
+              metrics
+            }));

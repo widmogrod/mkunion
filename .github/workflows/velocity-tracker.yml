@@ -1,0 +1,264 @@
+name: Team Velocity Tracker
+
+on:
+  schedule:
+    # Run every Sunday at 10 PM UTC
+    - cron: '0 22 * * 0'
+  workflow_dispatch:
+
+jobs:
+  track-velocity:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Calculate team velocity
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            const WEEKS_TO_ANALYZE = 8; // Analyze last 8 weeks
+            
+            // Calculate date ranges
+            const weekRanges = [];
+            for (let i = 0; i < WEEKS_TO_ANALYZE; i++) {
+              const weekEnd = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+              const weekStart = new Date(weekEnd.getTime() - (7 * 24 * 60 * 60 * 1000));
+              weekRanges.push({ start: weekStart, end: weekEnd, weekNum: i });
+            }
+            
+            // Get closed issues for velocity calculation
+            const { data: closedIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              since: weekRanges[WEEKS_TO_ANALYZE - 1].start.toISOString(),
+              per_page: 100
+            });
+            
+            // Calculate velocity per week
+            const weeklyVelocity = {};
+            const individualVelocity = {};
+            const typeBreakdown = {};
+            
+            for (const week of weekRanges) {
+              weeklyVelocity[week.weekNum] = {
+                issues: 0,
+                points: 0,
+                bugs: 0,
+                features: 0,
+                contributors: new Set()
+              };
+            }
+            
+            // Analyze each closed issue
+            for (const issue of closedIssues) {
+              if (!issue.closed_at) continue;
+              
+              const closedDate = new Date(issue.closed_at);
+              
+              // Find which week this issue belongs to
+              const week = weekRanges.find(w => 
+                closedDate >= w.start && closedDate <= w.end
+              );
+              
+              if (!week) continue;
+              
+              // Count the issue
+              weeklyVelocity[week.weekNum].issues++;
+              
+              // Extract story points
+              const spLabel = issue.labels.find(l => l.name.startsWith('sp:'));
+              const points = spLabel ? parseInt(spLabel.name.split(':')[1]) : 3;
+              weeklyVelocity[week.weekNum].points += points;
+              
+              // Track issue type
+              if (issue.labels.some(l => l.name === 'bug')) {
+                weeklyVelocity[week.weekNum].bugs++;
+              } else if (issue.labels.some(l => l.name === 'feature')) {
+                weeklyVelocity[week.weekNum].features++;
+              }
+              
+              // Track individual contributions
+              if (issue.assignees && issue.assignees.length > 0) {
+                for (const assignee of issue.assignees) {
+                  weeklyVelocity[week.weekNum].contributors.add(assignee.login);
+                  
+                  if (!individualVelocity[assignee.login]) {
+                    individualVelocity[assignee.login] = {
+                      totalIssues: 0,
+                      totalPoints: 0,
+                      weeklyAvg: 0
+                    };
+                  }
+                  
+                  individualVelocity[assignee.login].totalIssues++;
+                  individualVelocity[assignee.login].totalPoints += points;
+                }
+              }
+            }
+            
+            // Calculate averages and trends
+            const velocityData = Object.entries(weeklyVelocity)
+              .map(([week, data]) => ({
+                week: parseInt(week),
+                ...data,
+                contributors: data.contributors.size
+              }))
+              .sort((a, b) => b.week - a.week); // Most recent first
+            
+            // Calculate moving averages
+            const recentVelocity = velocityData.slice(0, 4);
+            const olderVelocity = velocityData.slice(4, 8);
+            
+            const recentAvg = {
+              issues: Math.round(recentVelocity.reduce((sum, w) => sum + w.issues, 0) / 4),
+              points: Math.round(recentVelocity.reduce((sum, w) => sum + w.points, 0) / 4)
+            };
+            
+            const olderAvg = {
+              issues: Math.round(olderVelocity.reduce((sum, w) => sum + w.issues, 0) / 4),
+              points: Math.round(olderVelocity.reduce((sum, w) => sum + w.points, 0) / 4)
+            };
+            
+            // Calculate trends
+            const trend = {
+              issues: ((recentAvg.issues - olderAvg.issues) / olderAvg.issues * 100).toFixed(1),
+              points: ((recentAvg.points - olderAvg.points) / olderAvg.points * 100).toFixed(1)
+            };
+            
+            // Calculate individual averages
+            for (const [user, data] of Object.entries(individualVelocity)) {
+              data.weeklyAvg = (data.totalPoints / WEEKS_TO_ANALYZE).toFixed(1);
+            }
+            
+            // Generate velocity report
+            let report = `# 📈 Team Velocity Report\n\n`;
+            report += `**Generated**: ${now.toLocaleDateString()}\n`;
+            report += `**Period**: Last ${WEEKS_TO_ANALYZE} weeks\n\n`;
+            
+            report += '## Team Velocity Trend\n\n';
+            report += `### Last 4 Weeks Average\n`;
+            report += `- **Issues**: ${recentAvg.issues}/week ${trend.issues > 0 ? '📈' : '📉'} ${trend.issues}%\n`;
+            report += `- **Story Points**: ${recentAvg.points}/week ${trend.points > 0 ? '📈' : '📉'} ${trend.points}%\n\n`;
+            
+            report += '### Weekly Breakdown\n\n';
+            report += '| Week | Issues | Points | Features | Bugs | Contributors |\n';
+            report += '|------|--------|--------|----------|------|-------------|\n';
+            
+            for (const week of velocityData) {
+              const weekDate = new Date(now.getTime() - (week.week * 7 * 24 * 60 * 60 * 1000));
+              const weekLabel = week.week === 0 ? 'This Week' : 
+                               week.week === 1 ? 'Last Week' : 
+                               `${week.week} weeks ago`;
+              
+              report += `| ${weekLabel} | ${week.issues} | ${week.points} | ${week.features} | ${week.bugs} | ${week.contributors} |\n`;
+            }
+            
+            // Velocity chart (ASCII)
+            report += '\n### Story Points Trend\n\n```\n';
+            const maxPoints = Math.max(...velocityData.map(w => w.points));
+            const chartHeight = 10;
+            
+            for (let y = chartHeight; y >= 0; y--) {
+              const value = Math.round(maxPoints * y / chartHeight);
+              report += value.toString().padStart(3, ' ') + ' │';
+              
+              for (const week of velocityData.reverse()) {
+                const barHeight = Math.round(week.points * chartHeight / maxPoints);
+                report += y <= barHeight ? ' █ ' : '   ';
+              }
+              report += '\n';
+            }
+            report += '    └' + '───'.repeat(velocityData.length) + '\n';
+            report += '     ';
+            for (let i = velocityData.length - 1; i >= 0; i--) {
+              report += ` ${i}`.padEnd(3, ' ');
+            }
+            report += '\n     (weeks ago)\n```\n';
+            
+            // Individual contributor velocity
+            report += '\n## Individual Velocity\n\n';
+            report += '| Contributor | Total Issues | Total Points | Avg Points/Week |\n';
+            report += '|-------------|--------------|--------------|----------------|\n';
+            
+            const sortedContributors = Object.entries(individualVelocity)
+              .sort((a, b) => b[1].totalPoints - a[1].totalPoints)
+              .slice(0, 10); // Top 10
+            
+            for (const [user, data] of sortedContributors) {
+              report += `| @${user} | ${data.totalIssues} | ${data.totalPoints} | ${data.weeklyAvg} |\n`;
+            }
+            
+            // Insights and recommendations
+            report += '\n## Insights\n\n';
+            
+            // Velocity consistency
+            const pointsValues = velocityData.map(w => w.points);
+            const avgPoints = pointsValues.reduce((a, b) => a + b, 0) / pointsValues.length;
+            const variance = pointsValues.reduce((sum, val) => sum + Math.pow(val - avgPoints, 2), 0) / pointsValues.length;
+            const stdDev = Math.sqrt(variance);
+            const coefficientOfVariation = (stdDev / avgPoints * 100).toFixed(1);
+            
+            report += `### Velocity Consistency\n`;
+            report += `- **Coefficient of Variation**: ${coefficientOfVariation}%\n`;
+            
+            if (coefficientOfVariation < 20) {
+              report += '- ✅ **Highly Consistent**: Team velocity is very predictable\n';
+            } else if (coefficientOfVariation < 40) {
+              report += '- 🟡 **Moderately Consistent**: Some variation in team output\n';
+            } else {
+              report += '- ⚠️ **Inconsistent**: High variation in team velocity\n';
+            }
+            
+            // Team size stability
+            const avgContributors = velocityData.reduce((sum, w) => sum + w.contributors, 0) / velocityData.length;
+            report += `\n### Team Stability\n`;
+            report += `- **Average Active Contributors**: ${avgContributors.toFixed(1)}/week\n`;
+            
+            // Bug vs Feature ratio
+            const totalBugs = velocityData.reduce((sum, w) => sum + w.bugs, 0);
+            const totalFeatures = velocityData.reduce((sum, w) => sum + w.features, 0);
+            const bugRatio = totalBugs + totalFeatures > 0 ? (totalBugs / (totalBugs + totalFeatures) * 100).toFixed(1) : 0;
+            
+            report += `\n### Work Type Distribution\n`;
+            report += `- **Bug Fix Ratio**: ${bugRatio}%\n`;
+            
+            if (bugRatio > 40) {
+              report += '- ⚠️ High bug ratio may indicate quality issues\n';
+            } else if (bugRatio < 10) {
+              report += '- ✅ Low bug ratio indicates good code quality\n';
+            }
+            
+            // Recommendations
+            report += '\n## Recommendations\n\n';
+            
+            if (trend.points < -10) {
+              report += '1. **Velocity Declining**: Investigate blockers and team morale\n';
+            } else if (trend.points > 20) {
+              report += '1. **Velocity Increasing**: Great! Ensure quality isn't compromised\n';
+            }
+            
+            if (coefficientOfVariation > 40) {
+              report += '2. **Improve Consistency**: Focus on better estimation and planning\n';
+            }
+            
+            if (bugRatio > 40) {
+              report += '3. **Reduce Bugs**: Invest in testing and code reviews\n';
+            }
+            
+            // Create or update velocity report
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Team Velocity Report - ${now.toLocaleDateString()}`,
+              body: report,
+              labels: ['velocity-report', 'metrics']
+            });
+            
+            console.log('Velocity report generated:', {
+              recentAvg,
+              trend,
+              contributors: Object.keys(individualVelocity).length
+            });
