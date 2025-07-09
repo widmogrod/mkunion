@@ -157,6 +157,52 @@ func (suite *Suite[D, C, S]) fuzzy() {
 	}
 }
 
+// findMatchingCommands returns all command steps that match the given command name
+func (suite *Suite[D, C, S]) findMatchingCommands(commandSteps map[string][]Step[D, C, S], commandName string) []C {
+	var commands []C
+	if steps, ok := commandSteps[commandName]; ok {
+		for _, step := range steps {
+			if any(step.GivenCommand) != nil {
+				commands = append(commands, step.GivenCommand)
+			}
+		}
+	}
+	return commands
+}
+
+// findMatchingStates returns all states that match the given state name
+func (suite *Suite[D, C, S]) findMatchingStates(stateSteps map[string][]Step[D, C, S], stateName string) []S {
+	var states []S
+	seen := make(map[string]bool) // Track unique states by content
+
+	if steps, ok := stateSteps[stateName]; ok {
+		for _, step := range steps {
+			state := suite.extractStateFromStep(step)
+			if any(state) != nil {
+				// Use content-based uniqueness
+				key := suite.getStateKey(state)
+				if !seen[key] {
+					seen[key] = true
+					states = append(states, state)
+				}
+			}
+		}
+	}
+	return states
+}
+
+// extractStateFromStep extracts a state from a step, preferring ExpectedState over InitState
+func (suite *Suite[D, C, S]) extractStateFromStep(step Step[D, C, S]) S {
+	if any(step.ExpectedState) != nil {
+		return step.ExpectedState
+	}
+	if any(step.InitState) != nil {
+		return step.InitState
+	}
+	var zeroState S
+	return zeroState
+}
+
 // fuzzyWithKnownTransitions runs fuzzy testing with a feedback loop that prioritizes known transitions
 func (suite *Suite[D, C, S]) fuzzyWithKnownTransitions(knownTransitions []ParsedTransition) {
 	// First, build maps to find steps by command and state names
@@ -182,35 +228,36 @@ func (suite *Suite[D, C, S]) fuzzyWithKnownTransitions(knownTransitions []Parsed
 
 	// Execute all known transitions first to ensure coverage
 	for _, knownTrans := range knownTransitions {
-		// Find a command step that matches
-		var commandStep *Step[D, C, S]
-		if steps, ok := commandSteps[knownTrans.Command]; ok && len(steps) > 0 {
-			commandStep = &steps[0]
-		}
-
-		if commandStep == nil || any(commandStep.GivenCommand) == nil {
+		// Find all matching commands
+		commands := suite.findMatchingCommands(commandSteps, knownTrans.Command)
+		if len(commands) == 0 {
 			continue
 		}
 
-		// Find or create the initial state
-		var initState S
+		// Find all matching initial states
+		var initStates []S
 		if knownTrans.FromState != "" {
-			if steps, ok := stateSteps[knownTrans.FromState]; ok && len(steps) > 0 {
-				// Use any state from the matching steps
-				if any(steps[0].ExpectedState) != nil {
-					initState = steps[0].ExpectedState
-				} else if any(steps[0].InitState) != nil {
-					initState = steps[0].InitState
-				}
+			initStates = suite.findMatchingStates(stateSteps, knownTrans.FromState)
+		}
+
+		// If no states found or FromState is empty, use zero state
+		if len(initStates) == 0 {
+			var zeroState S
+			initStates = append(initStates, zeroState)
+		}
+
+		// Try all combinations of commands and initial states
+		for _, command := range commands {
+			for _, initState := range initStates {
+				// Execute the transition
+				m := suite.mkMachine(suite.dep, initState)
+				err := m.Handle(context.Background(), command)
+				newState := m.State()
+
+				// Record the transition
+				suite.infer.Record(command, initState, newState, err)
 			}
 		}
-		// If FromState is empty or we couldn't find it, initState remains zero value
-
-		// Execute the transition
-		m := suite.mkMachine(suite.dep, initState)
-		err := m.Handle(context.Background(), commandStep.GivenCommand)
-		newState := m.State()
-		suite.infer.Record(commandStep.GivenCommand, initState, newState, err)
 	}
 
 	// Then run the regular fuzzy testing for additional exploration
