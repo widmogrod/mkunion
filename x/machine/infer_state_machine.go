@@ -175,20 +175,124 @@ func (t *InferTransition[Transition, State]) ToMermaid() string {
 
 // createAlias creates a valid mermaid identifier from a state name
 func createAlias(stateName string) string {
-	// Remove package prefix and special characters to create a simple alias
-	alias := stateName
-
-	// Remove pointer indicator
-	alias = strings.TrimPrefix(alias, "*")
-
-	// Replace dots with underscores
-	alias = strings.ReplaceAll(alias, ".", "_")
-
-	// Keep only the last part after the last underscore (the actual type name)
-	parts := strings.Split(alias, "_")
-	if len(parts) > 0 {
-		alias = parts[len(parts)-1]
+	if stateName == "" {
+		return ""
 	}
 
+	// Remove pointer indicator
+	alias := strings.TrimPrefix(stateName, "*")
+
+	// Replace dots and slashes with underscores for valid mermaid identifiers
+	alias = strings.ReplaceAll(alias, ".", "_")
+	alias = strings.ReplaceAll(alias, "/", "_")
+
+	// Simple approach: just return the cleaned up full path
+	// This ensures uniqueness for all cases
 	return alias
+}
+
+// ParsedTransition represents a transition parsed from a mermaid diagram
+type ParsedTransition struct {
+	FromState string
+	ToState   string
+	Command   string
+	IsError   bool
+}
+
+// ParseMermaid parses a mermaid diagram and extracts transitions
+func ParseMermaid(mermaidContent string) ([]ParsedTransition, error) {
+	transitions := []ParsedTransition{}
+	lines := strings.Split(mermaidContent, "\n")
+
+	// Maps to store state aliases to full names
+	stateAliases := make(map[string]string)
+
+	// Flag to track if we're inside the stateDiagram section
+	inStateDiagram := false
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "%%") {
+			continue
+		}
+
+		// Check for stateDiagram marker
+		if line == "stateDiagram" || line == "stateDiagram-v2" {
+			inStateDiagram = true
+			continue
+		}
+
+		// Skip lines until we find stateDiagram marker
+		if !inStateDiagram {
+			continue
+		}
+
+		// Parse state alias definitions (e.g., "State1: *example.StateType")
+		if strings.Contains(line, ": ") && !strings.Contains(line, "-->") {
+			parts := strings.SplitN(line, ": ", 2)
+			if len(parts) == 2 {
+				alias := strings.TrimSpace(parts[0])
+				fullName := strings.TrimSpace(parts[1])
+				stateAliases[alias] = fullName
+			}
+			continue
+		}
+
+		// Parse transitions (e.g., "State1 --> State2: Command")
+		if strings.Contains(line, "-->") {
+			// Check if this is an error transition
+			isError := false
+			if strings.Contains(line, "❌") {
+				isError = true
+			}
+
+			// Split into from, to, and command parts
+			arrowParts := strings.Split(line, "-->")
+			if len(arrowParts) != 2 {
+				continue
+			}
+
+			fromState := strings.TrimSpace(arrowParts[0])
+
+			// Split the right side by colon to get state and command
+			colonParts := strings.SplitN(arrowParts[1], ":", 2)
+			if len(colonParts) != 2 {
+				continue
+			}
+
+			toState := strings.TrimSpace(colonParts[0])
+			command := strings.TrimSpace(colonParts[1])
+
+			// Remove error indicator from command if present
+			command = strings.TrimPrefix(command, "❌")
+
+			// Resolve aliases to full state names
+			if fromState != "[*]" {
+				if fullName, ok := stateAliases[fromState]; ok {
+					fromState = fullName
+				}
+			} else {
+				fromState = ""
+			}
+
+			if toState != "[*]" {
+				if fullName, ok := stateAliases[toState]; ok {
+					toState = fullName
+				}
+			} else {
+				toState = ""
+			}
+
+			transitions = append(transitions, ParsedTransition{
+				FromState: fromState,
+				ToState:   toState,
+				Command:   command,
+				IsError:   isError,
+			})
+		}
+	}
+
+	return transitions, nil
 }

@@ -1,13 +1,13 @@
 stateDiagram
-	OrderCancelled: *state.OrderCancelled
-	OrderCompleted: *state.OrderCompleted
-	OrderError: *state.OrderError
-	OrderPending: *state.OrderPending
-	OrderProcessing: *state.OrderProcessing
+	state_OrderCancelled: *state.OrderCancelled
+	state_OrderCompleted: *state.OrderCompleted
+	state_OrderError: *state.OrderError
+	state_OrderPending: *state.OrderPending
+	state_OrderProcessing: *state.OrderProcessing
 
-	OrderProcessing --> OrderCancelled: *state.CancelOrderCMD
-	[*] --> OrderPending: *state.CreateOrderCMD
-	OrderPending --> OrderProcessing: *state.MarkAsProcessingCMD
-	OrderProcessing --> OrderCompleted: *state.MarkOrderCompleteCMD
-	OrderProcessing --> OrderError: *state.MarkOrderCompleteCMD
-	OrderError --> OrderCompleted: *state.TryRecoverErrorCMD
+	state_OrderProcessing --> state_OrderCancelled: *state.CancelOrderCMD
+	[*] --> state_OrderPending: *state.CreateOrderCMD
+	state_OrderPending --> state_OrderProcessing: *state.MarkAsProcessingCMD
+	state_OrderProcessing --> state_OrderCompleted: *state.MarkOrderCompleteCMD
+	state_OrderProcessing --> state_OrderError: *state.MarkOrderCompleteCMD
+	state_OrderError --> state_OrderCompleted: *state.TryRecoverErrorCMD

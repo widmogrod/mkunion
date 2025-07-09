@@ -1,18 +1,18 @@
 stateDiagram
-	Await: *workflow.Await
-	Done: *workflow.Done
-	Error: *workflow.Error
-	ScheduleStopped: *workflow.ScheduleStopped
-	Scheduled: *workflow.Scheduled
+	workflow_Await: *workflow.Await
+	workflow_Done: *workflow.Done
+	workflow_Error: *workflow.Error
+	workflow_ScheduleStopped: *workflow.ScheduleStopped
+	workflow_Scheduled: *workflow.Scheduled
 
-	Await --> Done: *workflow.Callback
-	Await --> Error: *workflow.ExpireAsync
-	ScheduleStopped --> Scheduled: *workflow.ResumeSchedule
-	Scheduled --> Done: *workflow.Run
-	[*] --> Await: *workflow.Run
-	[*] --> Done: *workflow.Run
-	[*] --> Error: *workflow.Run
-	[*] --> Scheduled: *workflow.Run
-	Scheduled --> ScheduleStopped: *workflow.StopSchedule
-	Error --> Done: *workflow.TryRecover
-	Error --> Error: *workflow.TryRecover
+	workflow_Await --> workflow_Done: *workflow.Callback
+	workflow_Await --> workflow_Error: *workflow.ExpireAsync
+	workflow_ScheduleStopped --> workflow_Scheduled: *workflow.ResumeSchedule
+	workflow_Scheduled --> workflow_Done: *workflow.Run
+	[*] --> workflow_Await: *workflow.Run
+	[*] --> workflow_Done: *workflow.Run
+	[*] --> workflow_Error: *workflow.Run
+	[*] --> workflow_Scheduled: *workflow.Run
+	workflow_Scheduled --> workflow_ScheduleStopped: *workflow.StopSchedule
+	workflow_Error --> workflow_Done: *workflow.TryRecover
+	workflow_Error --> workflow_Error: *workflow.TryRecover

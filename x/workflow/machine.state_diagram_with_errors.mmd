@@ -1,88 +1,88 @@
 stateDiagram
-	Await: *workflow.Await
-	Done: *workflow.Done
-	Error: *workflow.Error
-	ScheduleStopped: *workflow.ScheduleStopped
-	Scheduled: *workflow.Scheduled
+	workflow_Await: *workflow.Await
+	workflow_Done: *workflow.Done
+	workflow_Error: *workflow.Error
+	workflow_ScheduleStopped: *workflow.ScheduleStopped
+	workflow_Scheduled: *workflow.Scheduled
 
 	%% error=callback expired 
-	Await --> Await: ❌*workflow.Callback
+	workflow_Await --> workflow_Await: ❌*workflow.Callback
 	%% error=callback not match 
-	Await --> Await: ❌*workflow.Callback
-	Await --> Done: *workflow.Callback
+	workflow_Await --> workflow_Await: ❌*workflow.Callback
+	workflow_Await --> workflow_Done: *workflow.Callback
 	%% error=cannot apply commands, when workflow is completed 
-	Done --> Done: ❌*workflow.Callback
+	workflow_Done --> workflow_Done: ❌*workflow.Callback
 	%% error=invalid state transition 
-	Error --> Error: ❌*workflow.Callback
+	workflow_Error --> workflow_Error: ❌*workflow.Callback
 	%% error=invalid state transition 
-	ScheduleStopped --> ScheduleStopped: ❌*workflow.Callback
+	workflow_ScheduleStopped --> workflow_ScheduleStopped: ❌*workflow.Callback
 	%% error=invalid state transition 
-	Scheduled --> Scheduled: ❌*workflow.Callback
+	workflow_Scheduled --> workflow_Scheduled: ❌*workflow.Callback
 	%% error=invalid state transition 
 	[*] --> [*]: ❌*workflow.Callback
 	%% error=cannot expire async, timeout valid 
-	Await --> Await: ❌*workflow.ExpireAsync
-	Await --> Error: *workflow.ExpireAsync
+	workflow_Await --> workflow_Await: ❌*workflow.ExpireAsync
+	workflow_Await --> workflow_Error: *workflow.ExpireAsync
 	%% error=cannot apply commands, when workflow is completed 
-	Done --> Done: ❌*workflow.ExpireAsync
+	workflow_Done --> workflow_Done: ❌*workflow.ExpireAsync
 	%% error=invalid state transition 
-	Error --> Error: ❌*workflow.ExpireAsync
+	workflow_Error --> workflow_Error: ❌*workflow.ExpireAsync
 	%% error=invalid state transition 
-	ScheduleStopped --> ScheduleStopped: ❌*workflow.ExpireAsync
+	workflow_ScheduleStopped --> workflow_ScheduleStopped: ❌*workflow.ExpireAsync
 	%% error=invalid state transition 
-	Scheduled --> Scheduled: ❌*workflow.ExpireAsync
+	workflow_Scheduled --> workflow_Scheduled: ❌*workflow.ExpireAsync
 	%% error=invalid state transition 
 	[*] --> [*]: ❌*workflow.ExpireAsync
 	%% error=invalid state transition 
-	Await --> Await: ❌*workflow.ResumeSchedule
+	workflow_Await --> workflow_Await: ❌*workflow.ResumeSchedule
 	%% error=cannot apply commands, when workflow is completed 
-	Done --> Done: ❌*workflow.ResumeSchedule
+	workflow_Done --> workflow_Done: ❌*workflow.ResumeSchedule
 	%% error=invalid state transition 
-	Error --> Error: ❌*workflow.ResumeSchedule
-	ScheduleStopped --> Scheduled: *workflow.ResumeSchedule
+	workflow_Error --> workflow_Error: ❌*workflow.ResumeSchedule
+	workflow_ScheduleStopped --> workflow_Scheduled: *workflow.ResumeSchedule
 	%% error=invalid state transition 
-	Scheduled --> Scheduled: ❌*workflow.ResumeSchedule
+	workflow_Scheduled --> workflow_Scheduled: ❌*workflow.ResumeSchedule
 	%% error=invalid state transition 
 	[*] --> [*]: ❌*workflow.ResumeSchedule
 	%% error=invalid state transition 
-	Await --> Await: ❌*workflow.Run
+	workflow_Await --> workflow_Await: ❌*workflow.Run
 	%% error=cannot apply commands, when workflow is completed 
-	Done --> Done: ❌*workflow.Run
+	workflow_Done --> workflow_Done: ❌*workflow.Run
 	%% error=invalid state transition 
-	Error --> Error: ❌*workflow.Run
+	workflow_Error --> workflow_Error: ❌*workflow.Run
 	%% error=invalid state transition 
-	ScheduleStopped --> ScheduleStopped: ❌*workflow.Run
-	Scheduled --> Done: *workflow.Run
-	[*] --> Await: *workflow.Run
-	[*] --> Done: *workflow.Run
-	[*] --> Error: *workflow.Run
-	[*] --> Scheduled: *workflow.Run
+	workflow_ScheduleStopped --> workflow_ScheduleStopped: ❌*workflow.Run
+	workflow_Scheduled --> workflow_Done: *workflow.Run
+	[*] --> workflow_Await: *workflow.Run
+	[*] --> workflow_Done: *workflow.Run
+	[*] --> workflow_Error: *workflow.Run
+	[*] --> workflow_Scheduled: *workflow.Run
 	%% error=failed to find workflow hello_world_flow_non_existing: flow hello_world_flow_non_existing not found; flow not found 
 	[*] --> [*]: ❌*workflow.Run
 	%% error=flow not set 
 	[*] --> [*]: ❌*workflow.Run
 	%% error=invalid state transition 
-	Await --> Await: ❌*workflow.StopSchedule
+	workflow_Await --> workflow_Await: ❌*workflow.StopSchedule
 	%% error=cannot apply commands, when workflow is completed 
-	Done --> Done: ❌*workflow.StopSchedule
+	workflow_Done --> workflow_Done: ❌*workflow.StopSchedule
 	%% error=invalid state transition 
-	Error --> Error: ❌*workflow.StopSchedule
+	workflow_Error --> workflow_Error: ❌*workflow.StopSchedule
 	%% error=invalid state transition 
-	ScheduleStopped --> ScheduleStopped: ❌*workflow.StopSchedule
-	Scheduled --> ScheduleStopped: *workflow.StopSchedule
+	workflow_ScheduleStopped --> workflow_ScheduleStopped: ❌*workflow.StopSchedule
+	workflow_Scheduled --> workflow_ScheduleStopped: *workflow.StopSchedule
 	%% error=invalid state transition 
 	[*] --> [*]: ❌*workflow.StopSchedule
 	%% error=invalid state transition 
-	Await --> Await: ❌*workflow.TryRecover
+	workflow_Await --> workflow_Await: ❌*workflow.TryRecover
 	%% error=cannot apply commands, when workflow is completed 
-	Done --> Done: ❌*workflow.TryRecover
-	Error --> Done: *workflow.TryRecover
-	Error --> Error: *workflow.TryRecover
+	workflow_Done --> workflow_Done: ❌*workflow.TryRecover
+	workflow_Error --> workflow_Done: *workflow.TryRecover
+	workflow_Error --> workflow_Error: *workflow.TryRecover
 	%% error=max retries reached 
-	Error --> Error: ❌*workflow.TryRecover
+	workflow_Error --> workflow_Error: ❌*workflow.TryRecover
 	%% error=invalid state transition 
-	ScheduleStopped --> ScheduleStopped: ❌*workflow.TryRecover
+	workflow_ScheduleStopped --> workflow_ScheduleStopped: ❌*workflow.TryRecover
 	%% error=invalid state transition 
-	Scheduled --> Scheduled: ❌*workflow.TryRecover
+	workflow_Scheduled --> workflow_Scheduled: ❌*workflow.TryRecover
 	%% error=invalid state transition 
 	[*] --> [*]: ❌*workflow.TryRecover

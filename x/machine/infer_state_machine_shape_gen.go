@@ -7,6 +7,7 @@ import (
 
 func init() {
 	shape.Register(InferTransitionShape())
+	shape.Register(ParsedTransitionShape())
 	shape.Register(transitionShape())
 }
 
@@ -24,6 +25,33 @@ func InferTransitionShape() shape.Shape {
 			shape.TypeParam{
 				Name: "State",
 				Type: &shape.Any{},
+			},
+		},
+	}
+}
+
+//shape:shape
+func ParsedTransitionShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "ParsedTransition",
+		PkgName:       "machine",
+		PkgImportName: "github.com/widmogrod/mkunion/x/machine",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "FromState",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "ToState",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "Command",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+			{
+				Name: "IsError",
+				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
 			},
 		},
 	}

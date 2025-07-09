@@ -1,9 +1,9 @@
 stateDiagram
-	GreenLight: *traffic.GreenLight
-	RedLight: *traffic.RedLight
-	YellowLight: *traffic.YellowLight
+	traffic_GreenLight: *traffic.GreenLight
+	traffic_RedLight: *traffic.RedLight
+	traffic_YellowLight: *traffic.YellowLight
 
-	GreenLight --> YellowLight: *traffic.NextCMD
-	RedLight --> GreenLight: *traffic.NextCMD
-	YellowLight --> RedLight: *traffic.NextCMD
-	[*] --> GreenLight: *traffic.NextCMD
+	traffic_GreenLight --> traffic_YellowLight: *traffic.NextCMD
+	traffic_RedLight --> traffic_GreenLight: *traffic.NextCMD
+	traffic_YellowLight --> traffic_RedLight: *traffic.NextCMD
+	[*] --> traffic_GreenLight: *traffic.NextCMD

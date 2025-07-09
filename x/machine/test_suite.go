@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -44,8 +45,6 @@ func (suite *Suite[D, C, S]) Case(t *testing.T, name string, f func(t *testing.T
 }
 
 func (suite *Suite[D, C, S]) fuzzy() {
-	r := rand.New(rand.NewSource(0))
-
 	// Some commands or states can be more popular
 	// when we randomly select them, we can increase the chance of selecting them, and skip less popular ones, which is not desired
 	// we want to have a good coverage of all commands and states
@@ -53,11 +52,21 @@ func (suite *Suite[D, C, S]) fuzzy() {
 
 	states := make(map[string][]Step[D, C, S])
 	commands := make(map[string][]Step[D, C, S])
+	// Change: Use content-based uniqueness instead of type-based
+	uniqueStates := make(map[string]S)
+	uniqueStatesList := []S{} // Keep ordered list of unique states
 
 	for _, c := range suite.cases {
 		if any(c.step.ExpectedState) != nil {
 			stateName := reflect.TypeOf(c.step.ExpectedState).String()
 			states[stateName] = append(states[stateName], c.step)
+
+			// Use JSON marshalling for content-based uniqueness
+			stateKey := suite.getStateKey(c.step.ExpectedState)
+			if _, exists := uniqueStates[stateKey]; !exists {
+				uniqueStates[stateKey] = c.step.ExpectedState
+				uniqueStatesList = append(uniqueStatesList, c.step.ExpectedState)
+			}
 		}
 
 		if any(c.step.GivenCommand) != nil {
@@ -68,54 +77,191 @@ func (suite *Suite[D, C, S]) fuzzy() {
 		if any(c.step.InitState) != nil {
 			stateName := reflect.TypeOf(c.step.InitState).String()
 			states[stateName] = append(states[stateName], c.step)
+
+			// Use JSON marshalling for content-based uniqueness
+			stateKey := suite.getStateKey(c.step.InitState)
+			if _, exists := uniqueStates[stateKey]; !exists {
+				uniqueStates[stateKey] = c.step.InitState
+				uniqueStatesList = append(uniqueStatesList, c.step.InitState)
+			}
 		}
 	}
 
-	for _, seed := range rand.Perm(len(suite.cases) * 100) {
-		r.Seed(int64(seed))
+	// Sort command and state names for deterministic iteration
+	var commandNames []string
+	for name := range commands {
+		commandNames = append(commandNames, name)
+	}
+	sort.Strings(commandNames)
 
-		var step Step[D, C, S]
-		var state S
+	var stateNames []string
+	for name := range states {
+		stateNames = append(stateNames, name)
+	}
+	sort.Strings(stateNames)
 
-		// randomly select step with command
-		for _, steps := range commands {
-			if r.Float64() < 0.1 {
-				step = steps[r.Intn(len(steps))]
-				break
+	// Add empty state to the list
+	var zeroState S
+	zeroStateKey := suite.getStateKey(zeroState)
+	if _, exists := uniqueStates[zeroStateKey]; !exists {
+		uniqueStates[zeroStateKey] = zeroState
+		uniqueStatesList = append([]S{zeroState}, uniqueStatesList...) // Prepend zero state
+	}
+
+	// First, generate deterministic permutations of all state-command pairs
+	for _, state := range uniqueStatesList {
+		for _, commandName := range commandNames {
+			if steps, ok := commands[commandName]; ok && len(steps) > 0 {
+				// Try all command instances of this type
+				for _, step := range steps {
+					command := step.GivenCommand
+
+					// Execute this state-command combination
+					m := suite.mkMachine(suite.dep, state)
+					err := m.Handle(context.Background(), command)
+					newState := m.State()
+					suite.infer.Record(command, state, newState, err)
+				}
 			}
 		}
+	}
 
-		// randomly select step with state
-		for _, steps := range states {
-			if r.Float64() < 0.1 {
-				state = steps[r.Intn(len(steps))].ExpectedState
-				break
-			}
+	// Then add some controlled randomness for additional exploration
+	r := rand.New(rand.NewSource(0))
+	numRandomIterations := len(suite.cases) * 100
+
+	for i := 0; i < numRandomIterations; i++ {
+		// Select command deterministically based on index
+		commandIdx := i % len(commandNames)
+		commandName := commandNames[commandIdx]
+
+		var command C
+		if steps, ok := commands[commandName]; ok && len(steps) > 0 {
+			// Use deterministic selection instead of random
+			stepIdx := (i / len(commandNames)) % len(steps)
+			command = steps[stepIdx].GivenCommand
 		}
 
-		// with some chance keep previous state, or randomly select new state
-		// this helps to generate new states, that can succeed after applying command
-		prob := r.Float64()
-		if prob < 0.3 {
-			state = suite.cases[r.Intn(len(suite.cases))].step.ExpectedState
-		} else if prob < 0.6 {
-			// explore also initial states
+		// Select state with some controlled variation
+		if len(uniqueStatesList) > 0 {
+			stateIdx := (i + r.Intn(3)) % len(uniqueStatesList)
+			state := uniqueStatesList[stateIdx]
+
+			if any(command) != nil {
+				m := suite.mkMachine(suite.dep, state)
+				err := m.Handle(context.Background(), command)
+				newState := m.State()
+				suite.infer.Record(command, state, newState, err)
+			}
+		}
+	}
+}
+
+// findMatchingCommands returns all command steps that match the given command name
+func (suite *Suite[D, C, S]) findMatchingCommands(commandSteps map[string][]Step[D, C, S], commandName string) []C {
+	var commands []C
+	if steps, ok := commandSteps[commandName]; ok {
+		for _, step := range steps {
+			if any(step.GivenCommand) != nil {
+				commands = append(commands, step.GivenCommand)
+			}
+		}
+	}
+	return commands
+}
+
+// findMatchingStates returns all states that match the given state name
+func (suite *Suite[D, C, S]) findMatchingStates(stateSteps map[string][]Step[D, C, S], stateName string) []S {
+	var states []S
+	seen := make(map[string]bool) // Track unique states by content
+
+	if steps, ok := stateSteps[stateName]; ok {
+		for _, step := range steps {
+			state := suite.extractStateFromStep(step)
+			if any(state) != nil {
+				// Use content-based uniqueness
+				key := suite.getStateKey(state)
+				if !seen[key] {
+					seen[key] = true
+					states = append(states, state)
+				}
+			}
+		}
+	}
+	return states
+}
+
+// extractStateFromStep extracts a state from a step, preferring ExpectedState over InitState
+func (suite *Suite[D, C, S]) extractStateFromStep(step Step[D, C, S]) S {
+	if any(step.ExpectedState) != nil {
+		return step.ExpectedState
+	}
+	if any(step.InitState) != nil {
+		return step.InitState
+	}
+	var zeroState S
+	return zeroState
+}
+
+// fuzzyWithKnownTransitions runs fuzzy testing with a feedback loop that prioritizes known transitions
+func (suite *Suite[D, C, S]) fuzzyWithKnownTransitions(knownTransitions []ParsedTransition) {
+	// First, build maps to find steps by command and state names
+	commandSteps := make(map[string][]Step[D, C, S])
+	stateSteps := make(map[string][]Step[D, C, S])
+
+	for _, c := range suite.cases {
+		if any(c.step.GivenCommand) != nil {
+			commandName := reflect.TypeOf(c.step.GivenCommand).String()
+			commandSteps[commandName] = append(commandSteps[commandName], c.step)
+		}
+
+		if any(c.step.ExpectedState) != nil {
+			stateName := reflect.TypeOf(c.step.ExpectedState).String()
+			stateSteps[stateName] = append(stateSteps[stateName], c.step)
+		}
+
+		if any(c.step.InitState) != nil {
+			stateName := reflect.TypeOf(c.step.InitState).String()
+			stateSteps[stateName] = append(stateSteps[stateName], c.step)
+		}
+	}
+
+	// Execute all known transitions first to ensure coverage
+	for _, knownTrans := range knownTransitions {
+		// Find all matching commands
+		commands := suite.findMatchingCommands(commandSteps, knownTrans.Command)
+		if len(commands) == 0 {
+			continue
+		}
+
+		// Find all matching initial states
+		var initStates []S
+		if knownTrans.FromState != "" {
+			initStates = suite.findMatchingStates(stateSteps, knownTrans.FromState)
+		}
+
+		// If no states found or FromState is empty, use zero state
+		if len(initStates) == 0 {
 			var zeroState S
-			state = zeroState
+			initStates = append(initStates, zeroState)
 		}
 
-		m := suite.mkMachine(suite.dep, state)
-		// Before and After commands can have assertions, when we fuzzing we don't want to run them
-		if step.BeforeCommand != nil {
-			step.BeforeCommand(zeroT, suite.dep)
+		// Try all combinations of commands and initial states
+		for _, command := range commands {
+			for _, initState := range initStates {
+				// Execute the transition
+				m := suite.mkMachine(suite.dep, initState)
+				err := m.Handle(context.Background(), command)
+				newState := m.State()
+
+				// Record the transition
+				suite.infer.Record(command, initState, newState, err)
+			}
 		}
-		if step.AfterCommand != nil {
-			step.AfterCommand(zeroT, suite.dep)
-		}
-		err := m.Handle(context.Background(), step.GivenCommand)
-		newState := m.State()
-		suite.infer.Record(step.GivenCommand, state, newState, err)
 	}
+
+	// Then run the regular fuzzy testing for additional exploration
+	suite.fuzzy()
 }
 
 // AssertSelfDocumentStateDiagram help to self document state machine transitions, just by running tests.
@@ -126,12 +272,19 @@ func (suite *Suite[D, C, S]) fuzzy() {
 // If file does not exist, function will return true, to indicate that file should be created.
 // For this purpose call SelfDocumentStateDiagram.
 func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filename string) bool {
-	suite.fuzzy()
-
 	t.Helper()
 	// extract fine name from file, if there is extension remove it
 	fileName := filename + ".state_diagram.mmd"
 	fileNameWithErrorTransitions := filename + ".state_diagram_with_errors.mmd"
+
+	knownTransitions := suite.extractKnownTransitions(fileName, fileNameWithErrorTransitions)
+
+	// Run fuzzy testing with feedback loop if we have known transitions
+	if len(knownTransitions) > 0 {
+		suite.fuzzyWithKnownTransitions(knownTransitions)
+	} else {
+		suite.fuzzy()
+	}
 
 	for _, f := range []struct {
 		filename  string
@@ -144,7 +297,7 @@ func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filena
 		mermaidDiagram := suite.infer.ToMermaid()
 
 		// if file exists, read content and compare with mermaidDiagram
-		date, err := os.ReadFile(f.filename)
+		data, err := os.ReadFile(f.filename)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return true
@@ -154,7 +307,7 @@ func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filena
 		}
 
 		// if stored content is not equal, fail assertion
-		if diff := cmp.Diff(string(date), mermaidDiagram); diff != "" {
+		if diff := cmp.Diff(string(data), mermaidDiagram); diff != "" {
 			t.Fatalf("unexpected state diagram (-want +got):\n%s", diff)
 			return false
 		}
@@ -163,14 +316,47 @@ func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filena
 	return false
 }
 
+func (suite *Suite[D, C, S]) extractKnownTransitions(fileName string, fileNameWithErrorTransitions string) []ParsedTransition {
+	// Try to read existing diagrams and parse known transitions
+	var knownTransitions []ParsedTransition
+
+	// Read the main diagram file
+	if data, err := os.ReadFile(fileName); err == nil {
+		if parsed, err := ParseMermaid(string(data)); err == nil {
+			knownTransitions = append(knownTransitions, parsed...)
+		}
+	}
+
+	// Read the error transitions diagram if it exists
+	if data, err := os.ReadFile(fileNameWithErrorTransitions); err == nil {
+		if parsed, err := ParseMermaid(string(data)); err == nil {
+			// Add error transitions too
+			for _, t := range parsed {
+				if t.IsError {
+					knownTransitions = append(knownTransitions, t)
+				}
+			}
+		}
+	}
+
+	return knownTransitions
+}
+
 // SelfDocumentStateDiagram help to self document state machine transitions, just by running tests.
 // It will always overwrite stored state diagram files, useful in TDD loop, when tests are being written.
 func (suite *Suite[D, C, S]) SelfDocumentStateDiagram(t *testing.T, filename string) {
-	suite.fuzzy()
-
 	// extract fine name from file, if there is extension remove it
 	fileName := filename + ".state_diagram.mmd"
 	fileNameWithErrorTransitions := filename + ".state_diagram_with_errors.mmd"
+
+	knownTransitions := suite.extractKnownTransitions(fileName, fileNameWithErrorTransitions)
+
+	// Run fuzzy testing with feedback loop if we have known transitions
+	if len(knownTransitions) > 0 {
+		suite.fuzzyWithKnownTransitions(knownTransitions)
+	} else {
+		suite.fuzzy()
+	}
 
 	for _, f := range []struct {
 		filename  string
@@ -312,8 +498,22 @@ func (suitcase *Case[D, C, S]) deepCopy(state S) S {
 	return result
 }
 
-type TestingT interface {
-	Errorf(format string, args ...interface{})
+// getStateKey generates a unique key for a state based on its content
+func (suite *Suite[D, C, S]) getStateKey(state S) string {
+	// If state is nil, return a special key
+	if any(state) == nil {
+		return "<nil>"
+	}
+
+	// Try to marshal state to JSON for content-based comparison
+	data, err := shared.JSONMarshal[S](state)
+	if err != nil {
+		// Fallback to type name if marshalling fails
+		return reflect.TypeOf(state).String()
+	}
+
+	// Use the JSON representation as the unique key
+	return string(data)
 }
 
 // Step is a single test case that describe state machine transition
@@ -337,5 +537,3 @@ type Step[D, C, S any] struct {
 	// ExpectedErr is the expected error after command is executed. It's required, but can be nil
 	ExpectedErr error
 }
-
-var zeroT testing.TB = &testing.T{}
