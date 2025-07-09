@@ -99,6 +99,52 @@ Benefits of generating mocks:
 - **Easy maintenance**: Mocks automatically update when interface changes
 - **Better test readability**: Focus on behavior, not mock implementation
 
+### Testing Philosophy
+
+When testing state machines, mkunion's test suite enforces an important principle: **states can only be created through command sequences**. This design philosophy ensures:
+
+1. **Reachability Verification**: Every state used in tests is provably reachable through valid command sequences
+2. **Self-Documentation**: Tests document exactly how to reach each state, serving as executable documentation
+3. **Invariant Preservation**: Prevents testing impossible states that violate business rules
+4. **Realistic Testing**: Tests mirror real-world usage patterns
+
+#### Command-Only State Creation
+
+Instead of allowing direct state instantiation in tests:
+```go
+// ❌ Not supported - direct state creation
+c.InitState = &OrderProcessing{ID: "123", Items: []Item{...}}
+```
+
+Tests must build states through command sequences:
+```go
+// ✅ Correct - states created through commands
+suite.Case(t, "order lifecycle", func(t *testing.T, c *Case[...]) {
+    c.GivenCommand(&CreateOrderCMD{...}).
+      ThenState(t, &OrderPending{...}).
+      ForkCase(t, "process order", func(t *testing.T, c *Case[...]) {
+          c.GivenCommand(&ProcessOrderCMD{...}).
+            ThenState(t, &OrderProcessing{...})
+          // Now we have OrderProcessing state created through valid commands
+      })
+})
+```
+
+This constraint is intentional and powerful - if you cannot reach a state through commands, it likely shouldn't exist or indicates a missing command in your domain model.
+
+#### Testing Error States
+
+Error states require special consideration. If an error state seems unreachable through normal commands, consider:
+- Is this error state actually possible in production?
+- Should this be modeled as an explicit error state rather than just an error return?
+
+#### Benefits of This Approach
+
+1. **Prevents Invalid Test Scenarios**: You can't accidentally test states that are impossible to reach in production
+2. **Forces Complete Command Design**: If you need to test a state, you must provide a way to reach it
+3. **Living Documentation**: Test cases become a guide for how to use the state machine
+4. **Catches Design Issues Early**: Unreachable states are identified during test writing
+
 ### State Machine Composition
 
 For complex systems, compose multiple state machines as a service layer:

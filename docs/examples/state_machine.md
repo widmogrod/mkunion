@@ -136,6 +136,8 @@ A few things to notice in this test:
 
 I know it's subjective, but I find it very readable and easy to understand, even for non-programmers.
 
+> **Important Design Principle**: The test suite enforces that all states must be created through command sequences rather than direct instantiation. This ensures tests only work with reachable states and self-document valid state transitions. See [Testing Philosophy](state_machine_best_practices.md#testing-philosophy) in the best practices guide for details.
+
 ## Generating state diagram from tests
 The last bit is this line at the bottom of the test file:
 
