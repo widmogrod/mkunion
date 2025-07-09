@@ -209,11 +209,25 @@ func ParseMermaid(mermaidContent string) ([]ParsedTransition, error) {
 	// Maps to store state aliases to full names
 	stateAliases := make(map[string]string)
 
+	// Flag to track if we're inside the stateDiagram section
+	inStateDiagram := false
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
 		// Skip empty lines and comments
 		if line == "" || strings.HasPrefix(line, "%%") {
+			continue
+		}
+
+		// Check for stateDiagram marker
+		if line == "stateDiagram" || line == "stateDiagram-v2" {
+			inStateDiagram = true
+			continue
+		}
+
+		// Skip lines until we find stateDiagram marker
+		if !inStateDiagram {
 			continue
 		}
 

@@ -81,6 +81,31 @@ stateDiagram
 			input:    `stateDiagram`,
 			expected: []ParsedTransition{},
 		},
+		{
+			name: "ignores content before stateDiagram marker",
+			input: `---
+title: This should be ignored
+someKey: someValue
+---
+# This is a comment that should be ignored
+randomKey: randomValue
+
+stateDiagram
+	State1: *example.StateOne
+	State2: *example.StateTwo
+	
+	State1 --> State2: NextCmd`,
+			expected: []ParsedTransition{
+				{FromState: "*example.StateOne", ToState: "*example.StateTwo", Command: "NextCmd", IsError: false},
+			},
+		},
+		{
+			name: "no stateDiagram marker",
+			input: `State1: *example.StateOne
+State2: *example.StateTwo
+State1 --> State2: NextCmd`,
+			expected: []ParsedTransition{},
+		},
 	}
 
 	for _, tt := range tests {

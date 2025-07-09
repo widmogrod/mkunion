@@ -53,7 +53,6 @@ func (suite *Suite[D, C, S]) fuzzy() {
 	states := make(map[string][]Step[D, C, S])
 	commands := make(map[string][]Step[D, C, S])
 	uniqueStates := make(map[string]S)
-	uniqueCommands := make(map[string]C)
 
 	for _, c := range suite.cases {
 		if any(c.step.ExpectedState) != nil {
@@ -65,7 +64,6 @@ func (suite *Suite[D, C, S]) fuzzy() {
 		if any(c.step.GivenCommand) != nil {
 			commandName := reflect.TypeOf(c.step.GivenCommand).String()
 			commands[commandName] = append(commands[commandName], c.step)
-			uniqueCommands[commandName] = c.step.GivenCommand
 		}
 
 		if any(c.step.InitState) != nil {
@@ -253,7 +251,7 @@ func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filena
 		mermaidDiagram := suite.infer.ToMermaid()
 
 		// if file exists, read content and compare with mermaidDiagram
-		date, err := os.ReadFile(f.filename)
+		data, err := os.ReadFile(f.filename)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return true
@@ -263,7 +261,7 @@ func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filena
 		}
 
 		// if stored content is not equal, fail assertion
-		if diff := cmp.Diff(string(date), mermaidDiagram); diff != "" {
+		if diff := cmp.Diff(string(data), mermaidDiagram); diff != "" {
 			t.Fatalf("unexpected state diagram (-want +got):\n%s", diff)
 			return false
 		}
