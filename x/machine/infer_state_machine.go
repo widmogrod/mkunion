@@ -175,21 +175,19 @@ func (t *InferTransition[Transition, State]) ToMermaid() string {
 
 // createAlias creates a valid mermaid identifier from a state name
 func createAlias(stateName string) string {
-	// Remove package prefix and special characters to create a simple alias
-	alias := stateName
-
-	// Remove pointer indicator
-	alias = strings.TrimPrefix(alias, "*")
-
-	// Replace dots with underscores
-	alias = strings.ReplaceAll(alias, ".", "_")
-
-	// Keep only the last part after the last underscore (the actual type name)
-	parts := strings.Split(alias, "_")
-	if len(parts) > 0 {
-		alias = parts[len(parts)-1]
+	if stateName == "" {
+		return ""
 	}
 
+	// Remove pointer indicator
+	alias := strings.TrimPrefix(stateName, "*")
+
+	// Replace dots and slashes with underscores for valid mermaid identifiers
+	alias = strings.ReplaceAll(alias, ".", "_")
+	alias = strings.ReplaceAll(alias, "/", "_")
+
+	// Simple approach: just return the cleaned up full path
+	// This ensures uniqueness for all cases
 	return alias
 }
 

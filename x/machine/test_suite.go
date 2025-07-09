@@ -273,11 +273,38 @@ func (suite *Suite[D, C, S]) AssertSelfDocumentStateDiagram(t *testing.T, filena
 // SelfDocumentStateDiagram help to self document state machine transitions, just by running tests.
 // It will always overwrite stored state diagram files, useful in TDD loop, when tests are being written.
 func (suite *Suite[D, C, S]) SelfDocumentStateDiagram(t *testing.T, filename string) {
-	suite.fuzzy()
-
 	// extract fine name from file, if there is extension remove it
 	fileName := filename + ".state_diagram.mmd"
 	fileNameWithErrorTransitions := filename + ".state_diagram_with_errors.mmd"
+
+	// Try to read existing diagrams and parse known transitions
+	var knownTransitions []ParsedTransition
+
+	// Read the main diagram file
+	if data, err := os.ReadFile(fileName); err == nil {
+		if parsed, err := ParseMermaid(string(data)); err == nil {
+			knownTransitions = append(knownTransitions, parsed...)
+		}
+	}
+
+	// Read the error transitions diagram if it exists
+	if data, err := os.ReadFile(fileNameWithErrorTransitions); err == nil {
+		if parsed, err := ParseMermaid(string(data)); err == nil {
+			// Add error transitions too
+			for _, t := range parsed {
+				if t.IsError {
+					knownTransitions = append(knownTransitions, t)
+				}
+			}
+		}
+	}
+
+	// Run fuzzy testing with feedback loop if we have known transitions
+	if len(knownTransitions) > 0 {
+		suite.fuzzyWithKnownTransitions(knownTransitions)
+	} else {
+		suite.fuzzy()
+	}
 
 	for _, f := range []struct {
 		filename  string

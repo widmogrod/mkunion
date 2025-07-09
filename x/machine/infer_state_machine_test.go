@@ -158,11 +158,23 @@ func TestCreateAlias(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"*example.StateOne", "StateOne"},
-		{"example.StateTwo", "StateTwo"},
-		{"*github.com/example/pkg.ComplexState", "ComplexState"},
+		// Simple cases without package
 		{"SimpleState", "SimpleState"},
 		{"", ""},
+
+		// Same State name in different packages should produce different aliases
+		{"*example.State", "example_State"},
+		{"*another.State", "another_State"},
+		{"*github.com/user/pkg.State", "github_com_user_pkg_State"},
+		{"*github.com/user/other.State", "github_com_user_other_State"},
+
+		// Different state names
+		{"*example.StateOne", "example_StateOne"},
+		{"*example.StateTwo", "example_StateTwo"},
+
+		// Complex paths
+		{"*github.com/widmogrod/mkunion/x/workflow.State", "github_com_widmogrod_mkunion_x_workflow_State"},
+		{"*github.com/widmogrod/mkunion/x/machine.State", "github_com_widmogrod_mkunion_x_machine_State"},
 	}
 
 	for _, tt := range tests {
