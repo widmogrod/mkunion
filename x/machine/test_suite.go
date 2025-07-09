@@ -272,6 +272,7 @@ func (suite *Suite[D, C, S]) extractKnownTransitions(fileName string, fileNameWi
 			}
 		}
 	}
+
 	return knownTransitions
 }
 
