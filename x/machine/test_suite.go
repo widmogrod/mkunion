@@ -432,10 +432,6 @@ func (suitcase *Case[D, C, S]) deepCopy(state S) S {
 	return result
 }
 
-type TestingT interface {
-	Errorf(format string, args ...interface{})
-}
-
 // Step is a single test case that describe state machine transition
 type Step[D, C, S any] struct {
 	// Name human readable description of the test case. It's required
@@ -457,5 +453,3 @@ type Step[D, C, S any] struct {
 	// ExpectedErr is the expected error after command is executed. It's required, but can be nil
 	ExpectedErr error
 }
-
-var zeroT testing.TB = &testing.T{}
