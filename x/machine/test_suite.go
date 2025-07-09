@@ -52,13 +52,21 @@ func (suite *Suite[D, C, S]) fuzzy() {
 
 	states := make(map[string][]Step[D, C, S])
 	commands := make(map[string][]Step[D, C, S])
+	// Change: Use content-based uniqueness instead of type-based
 	uniqueStates := make(map[string]S)
+	uniqueStatesList := []S{} // Keep ordered list of unique states
 
 	for _, c := range suite.cases {
 		if any(c.step.ExpectedState) != nil {
 			stateName := reflect.TypeOf(c.step.ExpectedState).String()
 			states[stateName] = append(states[stateName], c.step)
-			uniqueStates[stateName] = c.step.ExpectedState
+
+			// Use JSON marshalling for content-based uniqueness
+			stateKey := suite.getStateKey(c.step.ExpectedState)
+			if _, exists := uniqueStates[stateKey]; !exists {
+				uniqueStates[stateKey] = c.step.ExpectedState
+				uniqueStatesList = append(uniqueStatesList, c.step.ExpectedState)
+			}
 		}
 
 		if any(c.step.GivenCommand) != nil {
@@ -69,7 +77,13 @@ func (suite *Suite[D, C, S]) fuzzy() {
 		if any(c.step.InitState) != nil {
 			stateName := reflect.TypeOf(c.step.InitState).String()
 			states[stateName] = append(states[stateName], c.step)
-			uniqueStates[stateName] = c.step.InitState
+
+			// Use JSON marshalling for content-based uniqueness
+			stateKey := suite.getStateKey(c.step.InitState)
+			if _, exists := uniqueStates[stateKey]; !exists {
+				uniqueStates[stateKey] = c.step.InitState
+				uniqueStatesList = append(uniqueStatesList, c.step.InitState)
+			}
 		}
 	}
 
@@ -88,22 +102,26 @@ func (suite *Suite[D, C, S]) fuzzy() {
 
 	// Add empty state to the list
 	var zeroState S
-	stateNames = append([]string{""}, stateNames...)
-	uniqueStates[""] = zeroState
+	zeroStateKey := suite.getStateKey(zeroState)
+	if _, exists := uniqueStates[zeroStateKey]; !exists {
+		uniqueStates[zeroStateKey] = zeroState
+		uniqueStatesList = append([]S{zeroState}, uniqueStatesList...) // Prepend zero state
+	}
 
 	// First, generate deterministic permutations of all state-command pairs
-	for _, stateName := range stateNames {
-		state := uniqueStates[stateName]
-
+	for _, state := range uniqueStatesList {
 		for _, commandName := range commandNames {
 			if steps, ok := commands[commandName]; ok && len(steps) > 0 {
-				command := steps[0].GivenCommand
+				// Try all command instances of this type
+				for _, step := range steps {
+					command := step.GivenCommand
 
-				// Execute this state-command combination
-				m := suite.mkMachine(suite.dep, state)
-				err := m.Handle(context.Background(), command)
-				newState := m.State()
-				suite.infer.Record(command, state, newState, err)
+					// Execute this state-command combination
+					m := suite.mkMachine(suite.dep, state)
+					err := m.Handle(context.Background(), command)
+					newState := m.State()
+					suite.infer.Record(command, state, newState, err)
+				}
 			}
 		}
 	}
@@ -125,15 +143,16 @@ func (suite *Suite[D, C, S]) fuzzy() {
 		}
 
 		// Select state with some controlled variation
-		stateIdx := (i + r.Intn(3)) % len(stateNames)
-		stateName := stateNames[stateIdx]
-		state := uniqueStates[stateName]
+		if len(uniqueStatesList) > 0 {
+			stateIdx := (i + r.Intn(3)) % len(uniqueStatesList)
+			state := uniqueStatesList[stateIdx]
 
-		if any(command) != nil {
-			m := suite.mkMachine(suite.dep, state)
-			err := m.Handle(context.Background(), command)
-			newState := m.State()
-			suite.infer.Record(command, state, newState, err)
+			if any(command) != nil {
+				m := suite.mkMachine(suite.dep, state)
+				err := m.Handle(context.Background(), command)
+				newState := m.State()
+				suite.infer.Record(command, state, newState, err)
+			}
 		}
 	}
 }
@@ -430,6 +449,24 @@ func (suitcase *Case[D, C, S]) deepCopy(state S) S {
 		panic(fmt.Errorf("failed deep copying state %T, reason: %w", state, err))
 	}
 	return result
+}
+
+// getStateKey generates a unique key for a state based on its content
+func (suite *Suite[D, C, S]) getStateKey(state S) string {
+	// If state is nil, return a special key
+	if any(state) == nil {
+		return "<nil>"
+	}
+
+	// Try to marshal state to JSON for content-based comparison
+	data, err := shared.JSONMarshal[S](state)
+	if err != nil {
+		// Fallback to type name if marshalling fails
+		return reflect.TypeOf(state).String()
+	}
+
+	// Use the JSON representation as the unique key
+	return string(data)
 }
 
 // Step is a single test case that describe state machine transition
