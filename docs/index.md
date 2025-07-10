@@ -91,5 +91,18 @@ mkunion watch -g ./...
 
 ## Next
 
-- Read [getting started](./getting_started.md)  to learn more.
+- Read [getting started](./getting_started.md) to learn more.
 - Or to understand better concepts jump and read [value proposition](./value_proposition.md)
+
+## Extended Packages (x/)
+
+MkUnion includes a rich set of extended packages that provide additional functionality beyond core union types:
+
+- **[API Documentation](./x/readme.md)** - Comprehensive guide to all x/ packages
+- **[State Machines](./x/machine.md)** - Type-safe state machine framework
+- **[Storage](./x/storage.md)** - Flexible storage abstractions with union type support
+- **[Workflows](./x/workflow.md)** - Workflow orchestration engine
+- **[Code Generation](./x/generators.md)** - Extensible code generation framework
+- **[Type System](./x/shape.md)** - Runtime type introspection and cross-language generation
+
+These packages are actively maintained but considered experimental - APIs may evolve between minor versions.

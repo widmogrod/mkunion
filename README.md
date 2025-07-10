@@ -84,3 +84,16 @@ func ExampleFromJSON() {
 
 - Read [getting started](https://widmogrod.github.io/mkunion/getting_started/) to learn more.
 - Or to understand better concepts jump and read [value proposition](./docs/value_proposition.md)
+
+## Extended Packages
+
+MkUnion includes powerful extended packages in the `x/` directory:
+
+- **[State Machines](https://widmogrod.github.io/mkunion/x/machine/)** - Type-safe state machine framework with exhaustive pattern matching
+- **[Storage](https://widmogrod.github.io/mkunion/x/storage/)** - Schemaless storage with union type support
+- **[Workflows](https://widmogrod.github.io/mkunion/x/workflow/)** - Workflow orchestration engine
+- **[Projections](https://widmogrod.github.io/mkunion/x/projection/)** - Event processing and stream analytics
+- **[Code Generation](https://widmogrod.github.io/mkunion/x/generators/)** - Extensible code generation framework
+- **[Type System](https://widmogrod.github.io/mkunion/x/shape/)** - Runtime type introspection
+
+See the [full documentation](https://widmogrod.github.io/mkunion/x/readme/) for all available packages.
