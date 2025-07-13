@@ -119,13 +119,13 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
       )
     })
     
-    // Text search
+    // Text search - exact ID match
     if (searchText.trim()) {
       predicates.push(
         createCompare(
           'ID',
-          'LIKE',
-          { "$type": "schema.String", "schema.String": `%${searchText.trim()}%` }
+          '==',
+          { "$type": "schema.String", "schema.String": searchText.trim() }
         )
       )
     }
@@ -332,50 +332,48 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden">
-      <CardHeader className="flex-shrink-0 border-b">
-        <div className="flex items-center justify-between mb-2">
-          <div>
+      <CardHeader className="flex-shrink-0 border-b py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-shrink-0">
             <CardTitle>States</CardTitle>
             <CardDescription>View workflow execution states</CardDescription>
           </div>
-        </div>
-        
-        {/* Filter Bar */}
-        <div className="flex items-center gap-3 min-h-[32px]">
-          {activeFilters.length > 0 && (
-            <>
-              <span className="text-xs text-muted-foreground">Filtering:</span>
-              <div className="flex items-center gap-2 flex-wrap flex-1">
-                {activeFilters.map((filter, index) => (
-                  <FilterPill
-                    key={`${filter.stateType}-${index}`}
-                    label={filter.label}
-                    color={filter.color}
-                    isExclude={filter.isExclude}
-                    onRemove={() => removeFilter(index)}
-                    onClick={() => toggleFilterMode(index)}
-                  />
-                ))}
-                {activeFilters.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllFilters}
-                    className="h-6 text-xs px-2"
-                  >
-                    Clear all
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
           
-          {/* Search */}
-          <div className="ml-auto flex items-center gap-2">
-            <div className="relative">
+          {/* Filter Bar and Search */}
+          <div className="flex items-center gap-3 flex-1 justify-end">
+            {activeFilters.length > 0 && (
+              <>
+                <span className="text-xs text-muted-foreground flex-shrink-0">Filtering:</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {activeFilters.map((filter, index) => (
+                    <FilterPill
+                      key={`${filter.stateType}-${index}`}
+                      label={filter.label}
+                      color={filter.color}
+                      isExclude={filter.isExclude}
+                      onRemove={() => removeFilter(index)}
+                      onClick={() => toggleFilterMode(index)}
+                    />
+                  ))}
+                  {activeFilters.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllFilters}
+                      className="h-6 text-xs px-2"
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+            
+            {/* Search */}
+            <div className="relative flex-shrink-0">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <Input
-                placeholder="Search by ID..."
+                placeholder="Search by exact ID"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 className="h-7 w-48 pl-7 text-xs"
