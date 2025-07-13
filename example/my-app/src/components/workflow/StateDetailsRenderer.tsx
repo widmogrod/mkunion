@@ -3,6 +3,7 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Code, FileText, Play, Pause, RotateCcw, Send } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { useToast } from '../../contexts/ToastContext'
 import { InteractiveStatusBadge } from '../tables/InteractiveStatusBadge'
 import { ResultPreview } from './ResultPreview'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
@@ -22,6 +23,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
   const [callbackResult, setCallbackResult] = useState('')
   const [callbackSubmitting, setCallbackSubmitting] = useState(false)
   const { workflowToStr, submitCallback, stopSchedule, resumeSchedule, tryRecover } = useWorkflowApi()
+  const toast = useToast()
 
   const loadWorkflowCode = async () => {
     if (!data.ID || workflowCode) return // Already loaded or no ID
@@ -56,7 +58,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
 
   const handleCallbackSubmit = async (callbackID: string) => {
     if (!callbackResult.trim()) {
-      alert('Please enter a callback result')
+      toast.warning('Missing Input', 'Please enter a callback result')
       return
     }
 
@@ -72,13 +74,13 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
       }
 
       await submitCallback(callbackID, parsedResult)
-      alert('Callback submitted successfully!')
+      toast.success('Callback Submitted', 'Callback submitted successfully!')
       setShowCallbackForm(false)
       setCallbackResult('')
       // Optionally refresh the parent component or notify success
     } catch (error) {
       console.error('Failed to submit callback:', error)
-      alert(`Failed to submit callback: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Submission Failed', `Failed to submit callback: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setCallbackSubmitting(false)
     }
@@ -87,33 +89,33 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
   const handleStopSchedule = async (parentRunID: string) => {
     try {
       await stopSchedule(parentRunID)
-      alert('Schedule paused successfully!')
+      toast.success('Schedule Paused', 'Schedule paused successfully!')
       // Optionally refresh the parent component or notify success
     } catch (error) {
       console.error('Failed to stop schedule:', error)
-      alert(`Failed to pause schedule: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Pause Failed', `Failed to pause schedule: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
   const handleResumeSchedule = async (parentRunID: string) => {
     try {
       await resumeSchedule(parentRunID)
-      alert('Schedule resumed successfully!')
+      toast.success('Schedule Resumed', 'Schedule resumed successfully!')
       // Optionally refresh the parent component or notify success
     } catch (error) {
       console.error('Failed to resume schedule:', error)
-      alert(`Failed to resume schedule: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Resume Failed', `Failed to resume schedule: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
   const handleRetry = async (runID: string) => {
     try {
       await tryRecover(runID)
-      alert('Recovery attempt initiated successfully!')
+      toast.success('Recovery Initiated', 'Recovery attempt initiated successfully!')
       // Optionally refresh the parent component or notify success
     } catch (error) {
       console.error('Failed to retry/recover state:', error)
-      alert(`Failed to retry: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Recovery Failed', `Failed to retry: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

@@ -4,6 +4,7 @@ import { Button } from '../ui/button'
 import { CalendarIcon } from 'lucide-react'
 import { useRefreshStore } from '../../stores/refresh-store'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { useToast } from '../../contexts/ToastContext'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
 
@@ -14,6 +15,7 @@ interface ScheduledOperationsDemoProps {
 export function ScheduledOperationsDemo({ input }: ScheduledOperationsDemoProps) {
   const { refreshAll } = useRefreshStore()
   const { runCommand, callFunction } = useWorkflowApi()
+  const toast = useToast()
 
   const handleConcatAwait = async () => {
     try {
@@ -50,7 +52,7 @@ export function ScheduledOperationsDemo({ input }: ScheduledOperationsDemoProps)
       refreshAll()
     } catch (error) {
       console.error('Failed to run concat await:', error)
-      alert(`Failed to run concat await: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Concat Await Failed', `Failed to run concat await: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -91,10 +93,10 @@ export function ScheduledOperationsDemo({ input }: ScheduledOperationsDemoProps)
 
       await runCommand(cmd)
       refreshAll()
-      alert('Scheduled workflow created! It will run every 10 seconds.')
+      toast.success('Scheduled Workflow Created', 'Workflow scheduled successfully! It will run every 10 seconds.')
     } catch (error) {
       console.error('Failed to create scheduled run:', error)
-      alert(`Failed to create scheduled run: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Scheduling Failed', `Failed to create scheduled run: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -110,13 +112,13 @@ export function ScheduledOperationsDemo({ input }: ScheduledOperationsDemoProps)
       
       // Show the result to the user
       if (result.Result) {
-        alert(`Function result: ${JSON.stringify(result.Result)}`)
+        toast.success('Function Result', JSON.stringify(result.Result))
       }
       
       refreshAll()
     } catch (error) {
       console.error('Failed to call func:', error)
-      alert(`Failed to call func: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Function Call Failed', `Failed to call func: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

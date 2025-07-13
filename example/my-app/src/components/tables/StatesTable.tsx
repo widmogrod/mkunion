@@ -10,6 +10,7 @@ import { usePagination } from './PaginatedTable/hooks/usePagination'
 import { TableContent } from './PaginatedTable/components/TableContent'
 import { StateDetailsRenderer } from '../workflow/StateDetailsRenderer'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { useToast } from '../../contexts/ToastContext'
 import { TableLoadState } from './TablesSection'
 import { FilterPill } from './FilterPill'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
@@ -79,6 +80,7 @@ const STATE_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
 export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteStates, tryRecover } = useWorkflowApi()
+  const toast = useToast()
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
   const [activeFilters, setActiveFilters] = React.useState<FilterItem[]>([])
   const [searchText, setSearchText] = React.useState('')
@@ -204,7 +206,7 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
     const selectedIDs = Object.keys(selected).filter(k => selected[k])
     
     if (selectedIDs.length === 0) {
-      alert('No states selected for deletion')
+      toast.warning('No Selection', 'Please select states to delete')
       return
     }
 
@@ -222,10 +224,10 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
       await deleteStates(statesToDelete)
       setSelected({}) // Clear selection
       refresh() // Refresh the table data
-      alert(`Successfully deleted ${statesToDelete.length} state(s)`)
+      toast.success('Deletion Complete', `Successfully deleted ${statesToDelete.length} state(s)`)
     } catch (error) {
       console.error('Failed to delete states:', error)
-      alert(`Failed to delete states: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Deletion Failed', `Failed to delete states: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -233,7 +235,7 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
     const selectedIDs = Object.keys(selected).filter(k => selected[k])
     
     if (selectedIDs.length === 0) {
-      alert('No states selected for recovery')
+      toast.warning('No Selection', 'Please select states to recover')
       return
     }
 
@@ -252,7 +254,7 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
     })
 
     if (statesToRecover.length === 0) {
-      alert('No recoverable states found. States must have a RunID to be recovered.')
+      toast.warning('No Recoverable States', 'States must have a RunID to be recovered.')
       return
     }
 
@@ -268,10 +270,10 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
       
       setSelected({}) // Clear selection
       refresh() // Refresh the table data
-      alert(`Successfully initiated recovery for ${statesToRecover.length} state(s)`)
+      toast.success('Recovery Initiated', `Successfully initiated recovery for ${statesToRecover.length} state(s)`)
     } catch (error) {
       console.error('Failed to recover states:', error)
-      alert(`Failed to recover states: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Recovery Failed', `Failed to recover states: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

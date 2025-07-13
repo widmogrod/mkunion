@@ -9,6 +9,7 @@ import { usePagination } from './PaginatedTable/hooks/usePagination'
 import { TableContent } from './PaginatedTable/components/TableContent'
 import { WorkflowDisplay } from '../workflow/WorkflowDisplay'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { useToast } from '../../contexts/ToastContext'
 import { TableLoadState } from './TablesSection'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
@@ -21,6 +22,7 @@ interface WorkflowsTableProps {
 export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteFlows } = useWorkflowApi()
+  const toast = useToast()
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
   
   // Adapt load function to work with the new hooks
@@ -47,7 +49,7 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
     const selectedIDs = Object.keys(selected).filter(k => selected[k])
     
     if (selectedIDs.length === 0) {
-      alert('No workflows selected for deletion')
+      toast.warning('No Selection', 'Please select workflows to delete')
       return
     }
 
@@ -65,10 +67,10 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
       await deleteFlows(flowsToDelete)
       setSelected({}) // Clear selection
       refresh() // Refresh the table data
-      alert(`Successfully deleted ${flowsToDelete.length} workflow(s)`)
+      toast.success('Deletion Complete', `Successfully deleted ${flowsToDelete.length} workflow(s)`)
     } catch (error) {
       console.error('Failed to delete workflows:', error)
-      alert(`Failed to delete workflows: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Deletion Failed', `Failed to delete workflows: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
