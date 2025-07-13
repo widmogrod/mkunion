@@ -1,10 +1,8 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
-import { Input } from '../ui/input'
 import { AppleCheckbox } from '../ui/AppleCheckbox'
-import { RefreshButton } from '../ui/RefreshButton'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTableData } from './PaginatedTable/hooks/useTableData'
 import { usePagination } from './PaginatedTable/hooks/usePagination'
 import { TableContent } from './PaginatedTable/components/TableContent'
@@ -12,7 +10,8 @@ import { StateDetailsRenderer } from '../workflow/StateDetailsRenderer'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import { TableLoadState } from './TablesSection'
-import { FilterPill } from './FilterPill'
+import { TableControls } from './PaginatedTable/components/TableControls'
+import { StatusIndicator } from '../ui/StatusIndicator'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
@@ -84,6 +83,10 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
   const [activeFilters, setActiveFilters] = React.useState<FilterItem[]>([])
   const [searchText, setSearchText] = React.useState('')
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isRecovering, setIsRecovering] = React.useState(false)
+  const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
+  const [recoverStatus, setRecoverStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
   
   // Build filter conditions based on current filters
   const buildWhereClause = React.useCallback((): predicate.Predicate | undefined => {
@@ -215,20 +218,38 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
       item.ID && selectedIDs.includes(item.ID)
     )
 
-    const confirmMessage = `Are you sure you want to delete ${statesToDelete.length} state(s)? This action cannot be undone.`
-    if (!window.confirm(confirmMessage)) {
-      return
-    }
-
-    try {
-      await deleteStates(statesToDelete)
-      setSelected({}) // Clear selection
-      refresh() // Refresh the table data
-      toast.success('Deletion Complete', `Successfully deleted ${statesToDelete.length} state(s)`)
-    } catch (error) {
-      console.error('Failed to delete states:', error)
-      toast.error('Deletion Failed', `Failed to delete states: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
+    // Use toast for confirmation instead of browser alert
+    toast.warning(
+      'Confirm Deletion',
+      `Are you sure you want to delete ${statesToDelete.length} state(s)? This action cannot be undone.`,
+      {
+        persistent: true,
+        action: {
+          label: 'Delete',
+          onClick: async () => {
+            setIsDeleting(true)
+            setDeleteStatus('idle')
+            try {
+              await deleteStates(statesToDelete)
+              setSelected({}) // Clear selection
+              refresh() // Refresh the table data
+              toast.success('Deletion Complete', `Successfully deleted ${statesToDelete.length} state(s)`)
+              setDeleteStatus('success')
+              // Clear status after 2 seconds
+              setTimeout(() => setDeleteStatus('idle'), 2000)
+            } catch (error) {
+              console.error('Failed to delete states:', error)
+              toast.error('Deletion Failed', `Failed to delete states: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              setDeleteStatus('error')
+              // Clear status after 3 seconds for errors
+              setTimeout(() => setDeleteStatus('idle'), 3000)
+            } finally {
+              setIsDeleting(false)
+            }
+          }
+        }
+      }
+    )
   }
 
   const handleRecoverStates = async () => {
@@ -258,23 +279,41 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
       return
     }
 
-    const confirmMessage = `Are you sure you want to attempt recovery for ${statesToRecover.length} state(s)?`
-    if (!window.confirm(confirmMessage)) {
-      return
-    }
-
-    try {
-      // Use tryRecover for each state with its actual RunID
-      const recoveryPromises = statesToRecover.map(runID => tryRecover(runID))
-      await Promise.all(recoveryPromises)
-      
-      setSelected({}) // Clear selection
-      refresh() // Refresh the table data
-      toast.success('Recovery Initiated', `Successfully initiated recovery for ${statesToRecover.length} state(s)`)
-    } catch (error) {
-      console.error('Failed to recover states:', error)
-      toast.error('Recovery Failed', `Failed to recover states: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
+    // Use toast for confirmation instead of browser alert
+    toast.warning(
+      'Confirm Recovery',
+      `Are you sure you want to attempt recovery for ${statesToRecover.length} state(s)?`,
+      {
+        persistent: true,
+        action: {
+          label: 'Recover',
+          onClick: async () => {
+            setIsRecovering(true)
+            setRecoverStatus('idle')
+            try {
+              // Use tryRecover for each state with its actual RunID
+              const recoveryPromises = statesToRecover.map(runID => tryRecover(runID))
+              await Promise.all(recoveryPromises)
+              
+              setSelected({}) // Clear selection
+              refresh() // Refresh the table data
+              toast.success('Recovery Initiated', `Successfully initiated recovery for ${statesToRecover.length} state(s)`)
+              setRecoverStatus('success')
+              // Clear status after 2 seconds
+              setTimeout(() => setRecoverStatus('idle'), 2000)
+            } catch (error) {
+              console.error('Failed to recover states:', error)
+              toast.error('Recovery Failed', `Failed to recover states: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              setRecoverStatus('error')
+              // Clear status after 3 seconds for errors
+              setTimeout(() => setRecoverStatus('idle'), 3000)
+            } finally {
+              setIsRecovering(false)
+            }
+          }
+        }
+      }
+    )
   }
 
   // Check if a state type is actively filtered
@@ -344,54 +383,19 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
             <CardDescription>View workflow execution states</CardDescription>
           </div>
           
-          {/* Filter Bar and Search */}
-          <div className="flex items-center gap-3 flex-1 justify-end">
-            {activeFilters.length > 0 && (
-              <>
-                <span className="text-xs text-muted-foreground flex-shrink-0">Filtering:</span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {activeFilters.map((filter, index) => (
-                    <FilterPill
-                      key={`${filter.stateType}-${index}`}
-                      label={filter.label}
-                      color={filter.color}
-                      isExclude={filter.isExclude}
-                      onRemove={() => removeFilter(index)}
-                      onClick={() => toggleFilterMode(index)}
-                    />
-                  ))}
-                  {activeFilters.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearAllFilters}
-                      className="h-6 text-xs px-2"
-                    >
-                      Clear all
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
-            
-            {/* Search and Refresh */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <Input
-                  placeholder="Search by exact ID"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  className="h-7 w-48 pl-7 text-xs"
-                />
-              </div>
-              <RefreshButton
-                onRefresh={refresh}
-                isLoading={loading}
-                title="Refresh states data"
-              />
-            </div>
-          </div>
+          {/* Table Controls */}
+          <TableControls
+            searchText={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="Search by exact ID"
+            onRefresh={refresh}
+            isLoading={loading}
+            refreshTitle="Refresh states data"
+            activeFilters={activeFilters}
+            onRemoveFilter={removeFilter}
+            onToggleFilterMode={toggleFilterMode}
+            onClearAllFilters={clearAllFilters}
+          />
         </div>
       </CardHeader>
       <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
@@ -433,18 +437,22 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={Object.keys(selected).filter(k => selected[k]).length === 0}
+                disabled={Object.keys(selected).filter(k => selected[k]).length === 0 || isDeleting || isRecovering}
                 onClick={handleDeleteStates}
+                className="flex items-center"
               >
-                Delete
+                {isDeleting ? 'Deleting...' : 'Delete'}
+                <StatusIndicator status={deleteStatus} />
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={Object.keys(selected).filter(k => selected[k]).length === 0}
+                disabled={Object.keys(selected).filter(k => selected[k]).length === 0 || isDeleting || isRecovering}
                 onClick={handleRecoverStates}
+                className="flex items-center"
               >
-                Try recover
+                {isRecovering ? 'Recovering...' : 'Try recover'}
+                <StatusIndicator status={recoverStatus} />
               </Button>
             </div>
             

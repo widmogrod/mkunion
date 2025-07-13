@@ -2,7 +2,6 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { AppleCheckbox } from '../ui/AppleCheckbox'
-import { RefreshButton } from '../ui/RefreshButton'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTableData } from './PaginatedTable/hooks/useTableData'
 import { usePagination } from './PaginatedTable/hooks/usePagination'
@@ -11,6 +10,8 @@ import { WorkflowDisplay } from '../workflow/WorkflowDisplay'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import { TableLoadState } from './TablesSection'
+import { TableControls } from './PaginatedTable/components/TableControls'
+import { StatusIndicator } from '../ui/StatusIndicator'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -24,6 +25,8 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
   const { deleteFlows } = useWorkflowApi()
   const toast = useToast()
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
   
   // Adapt load function to work with the new hooks
   const adaptedLoad = React.useCallback(async (state: any) => {
@@ -58,20 +61,38 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
       item.ID && selectedIDs.includes(item.ID)
     )
 
-    const confirmMessage = `Are you sure you want to delete ${flowsToDelete.length} workflow(s)? This action cannot be undone.`
-    if (!window.confirm(confirmMessage)) {
-      return
-    }
-
-    try {
-      await deleteFlows(flowsToDelete)
-      setSelected({}) // Clear selection
-      refresh() // Refresh the table data
-      toast.success('Deletion Complete', `Successfully deleted ${flowsToDelete.length} workflow(s)`)
-    } catch (error) {
-      console.error('Failed to delete workflows:', error)
-      toast.error('Deletion Failed', `Failed to delete workflows: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
+    // Use toast for confirmation instead of browser alert
+    toast.warning(
+      'Confirm Deletion',
+      `Are you sure you want to delete ${flowsToDelete.length} workflow(s)? This action cannot be undone.`,
+      {
+        persistent: true,
+        action: {
+          label: 'Delete',
+          onClick: async () => {
+            setIsDeleting(true)
+            setDeleteStatus('idle')
+            try {
+              await deleteFlows(flowsToDelete)
+              setSelected({}) // Clear selection
+              refresh() // Refresh the table data
+              toast.success('Deletion Complete', `Successfully deleted ${flowsToDelete.length} workflow(s)`)
+              setDeleteStatus('success')
+              // Clear status after 2 seconds
+              setTimeout(() => setDeleteStatus('idle'), 2000)
+            } catch (error) {
+              console.error('Failed to delete workflows:', error)
+              toast.error('Deletion Failed', `Failed to delete workflows: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              setDeleteStatus('error')
+              // Clear status after 3 seconds for errors
+              setTimeout(() => setDeleteStatus('idle'), 3000)
+            } finally {
+              setIsDeleting(false)
+            }
+          }
+        }
+      }
+    )
   }
 
   // Table columns configuration
@@ -132,14 +153,14 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
             <CardDescription>Manage your workflow definitions</CardDescription>
           </div>
           
-          {/* Refresh Button */}
-          <div className="flex items-center">
-            <RefreshButton
-              onRefresh={refresh}
-              isLoading={loading}
-              title="Refresh workflows data"
-            />
-          </div>
+          {/* Table Controls */}
+          <TableControls
+            onRefresh={refresh}
+            isLoading={loading}
+            refreshTitle="Refresh workflows data"
+            showSearch={false}
+            showFilters={false}
+          />
         </div>
       </CardHeader>
       <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
@@ -181,10 +202,12 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
               <Button
                 variant="outline"
                 size="sm"
-                disabled={Object.keys(selected).filter(k => selected[k]).length === 0}
+                disabled={Object.keys(selected).filter(k => selected[k]).length === 0 || isDeleting}
                 onClick={handleDeleteFlows}
+                className="flex items-center"
               >
-                Delete
+                {isDeleting ? 'Deleting...' : 'Delete'}
+                <StatusIndicator status={deleteStatus} />
               </Button>
             </div>
             

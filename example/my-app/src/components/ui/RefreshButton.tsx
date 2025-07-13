@@ -41,7 +41,7 @@ export function RefreshButton({
         "hover:bg-muted/50 active:bg-muted",
         
         // Active state with subtle scale feedback
-        "active:scale-95 transform",
+        "active:scale-95 hover:scale-105 transform",
         
         // Disabled state
         (disabled || isLoading) && "opacity-50 cursor-not-allowed",

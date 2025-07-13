@@ -20,7 +20,7 @@ export function AppleCheckbox({ checked, onChange, disabled = false, className }
       className={cn(
         // Base styling with Apple-inspired dimensions
         "relative inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm",
-        "border transition-all duration-150 ease-out",
+        "border transition-all duration-150 ease-out transform hover:scale-105 active:scale-95",
         "focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-1",
         
         // Unchecked state

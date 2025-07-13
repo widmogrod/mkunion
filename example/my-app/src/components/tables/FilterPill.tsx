@@ -36,7 +36,7 @@ export function FilterPill({ label, color, isExclude = false, onRemove, onClick 
       {!isExclude && <span>{label}</span>}
       <button
         className={cn(
-          "ml-1 rounded-full p-0.5 transition-colors -mr-0.5",
+          "ml-1 rounded-full p-0.5 transition-all duration-150 -mr-0.5 hover:scale-110",
           isExclude ? "hover:bg-muted-foreground/20" : "hover:bg-white/20"
         )}
         onClick={(e) => {
