@@ -1,6 +1,8 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
+import { AppleCheckbox } from '../ui/AppleCheckbox'
+import { RefreshButton } from '../ui/RefreshButton'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTableData } from './PaginatedTable/hooks/useTableData'
 import { usePagination } from './PaginatedTable/hooks/usePagination'
@@ -74,38 +76,39 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
   const columns = React.useMemo(() => [
     {
       key: 'selection',
+      className: 'w-12 px-3 py-3', // Optimized spacing for checkbox column
       header: (
-        <input
-          type="checkbox"
-          className="rounded border border-input"
-          checked={Object.keys(selected).length > 0 && Object.values(selected).every(v => v)}
-          onChange={(e) => {
-            const newSelected: { [key: string]: boolean } = {}
-            if (e.target.checked) {
-              data.items.forEach((item: any) => {
-                if (item.ID) newSelected[item.ID] = true
-              })
-            }
-            setSelected(newSelected)
-          }}
-        />
+        <div className="flex items-center justify-center">
+          <AppleCheckbox
+            checked={Object.keys(selected).length > 0 && Object.values(selected).every(v => v)}
+            onChange={(checked) => {
+              const newSelected: { [key: string]: boolean } = {}
+              if (checked) {
+                data.items.forEach((item: any) => {
+                  if (item.ID) newSelected[item.ID] = true
+                })
+              }
+              setSelected(newSelected)
+            }}
+          />
+        </div>
       ),
       render: (value: any, item: schemaless.Record<workflow.Flow>) => {
         const id = item.ID || ''
         return (
-          <input
-            type="checkbox"
-            className="rounded border border-input"
-            checked={selected[id] || false}
-            onChange={(e) => {
-              if (id) {
-                setSelected(prev => ({
-                  ...prev,
-                  [id]: e.target.checked
-                }))
-              }
-            }}
-          />
+          <div className="flex items-center justify-center">
+            <AppleCheckbox
+              checked={selected[id] || false}
+              onChange={(checked) => {
+                if (id) {
+                  setSelected(prev => ({
+                    ...prev,
+                    [id]: checked
+                  }))
+                }
+              }}
+            />
+          </div>
         )
       }
     },
@@ -120,9 +123,22 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden">
-      <CardHeader className="flex-shrink-0 border-b">
-        <CardTitle>Workflows</CardTitle>
-        <CardDescription>Manage your workflow definitions</CardDescription>
+      <CardHeader className="flex-shrink-0 border-b py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-shrink-0">
+            <CardTitle>Workflows</CardTitle>
+            <CardDescription>Manage your workflow definitions</CardDescription>
+          </div>
+          
+          {/* Refresh Button */}
+          <div className="flex items-center">
+            <RefreshButton
+              onRefresh={refresh}
+              isLoading={loading}
+              title="Refresh workflows data"
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
         {/* Scrollable table content */}

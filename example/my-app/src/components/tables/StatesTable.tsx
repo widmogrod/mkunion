@@ -2,6 +2,8 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { AppleCheckbox } from '../ui/AppleCheckbox'
+import { RefreshButton } from '../ui/RefreshButton'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react'
 import { useTableData } from './PaginatedTable/hooks/useTableData'
 import { usePagination } from './PaginatedTable/hooks/usePagination'
@@ -282,38 +284,39 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
   const columns = React.useMemo(() => [
     {
       key: 'selection',
+      className: 'w-12 px-3 py-3', // Optimized spacing for checkbox column
       header: (
-        <input
-          type="checkbox"
-          className="rounded border border-input"
-          checked={Object.keys(selected).length > 0 && Object.values(selected).every(v => v)}
-          onChange={(e) => {
-            const newSelected: { [key: string]: boolean } = {}
-            if (e.target.checked) {
-              data.items.forEach((item: any) => {
-                if (item.ID) newSelected[item.ID] = true
-              })
-            }
-            setSelected(newSelected)
-          }}
-        />
+        <div className="flex items-center justify-center">
+          <AppleCheckbox
+            checked={Object.keys(selected).length > 0 && Object.values(selected).every(v => v)}
+            onChange={(checked) => {
+              const newSelected: { [key: string]: boolean } = {}
+              if (checked) {
+                data.items.forEach((item: any) => {
+                  if (item.ID) newSelected[item.ID] = true
+                })
+              }
+              setSelected(newSelected)
+            }}
+          />
+        </div>
       ),
       render: (value: any, item: schemaless.Record<workflow.State>) => {
         const id = item.ID || ''
         return (
-          <input
-            type="checkbox"
-            className="rounded border border-input"
-            checked={selected[id] || false}
-            onChange={(e) => {
-              if (id) {
-                setSelected(prev => ({
-                  ...prev,
-                  [id]: e.target.checked
-                }))
-              }
-            }}
-          />
+          <div className="flex items-center justify-center">
+            <AppleCheckbox
+              checked={selected[id] || false}
+              onChange={(checked) => {
+                if (id) {
+                  setSelected(prev => ({
+                    ...prev,
+                    [id]: checked
+                  }))
+                }
+              }}
+            />
+          </div>
         )
       }
     },
@@ -369,14 +372,21 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
               </>
             )}
             
-            {/* Search */}
-            <div className="relative flex-shrink-0">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-              <Input
-                placeholder="Search by exact ID"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="h-7 w-48 pl-7 text-xs"
+            {/* Search and Refresh */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search by exact ID"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="h-7 w-48 pl-7 text-xs"
+                />
+              </div>
+              <RefreshButton
+                onRefresh={refresh}
+                isLoading={loading}
+                title="Refresh states data"
               />
             </div>
           </div>
