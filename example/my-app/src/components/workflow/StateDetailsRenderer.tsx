@@ -4,6 +4,7 @@ import { Button } from '../ui/button'
 import { Code, FileText, Play, Pause, RotateCcw, Send } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
+import { useRefreshStore } from '../../stores/refresh-store'
 import { InteractiveStatusBadge } from '../tables/InteractiveStatusBadge'
 import { ResultPreview } from './ResultPreview'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
@@ -24,6 +25,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
   const [callbackSubmitting, setCallbackSubmitting] = useState(false)
   const { workflowToStr, submitCallback, stopSchedule, resumeSchedule, tryRecover } = useWorkflowApi()
   const toast = useToast()
+  const { refreshAll } = useRefreshStore()
 
   const loadWorkflowCode = async () => {
     if (!data.ID || workflowCode) return // Already loaded or no ID
@@ -77,7 +79,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
       toast.success('Callback Submitted', 'Callback submitted successfully!')
       setShowCallbackForm(false)
       setCallbackResult('')
-      // Optionally refresh the parent component or notify success
+      refreshAll()
     } catch (error) {
       console.error('Failed to submit callback:', error)
       toast.error('Submission Failed', `Failed to submit callback: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -90,7 +92,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
     try {
       await stopSchedule(parentRunID)
       toast.success('Schedule Paused', 'Schedule paused successfully!')
-      // Optionally refresh the parent component or notify success
+      refreshAll()
     } catch (error) {
       console.error('Failed to stop schedule:', error)
       toast.error('Pause Failed', `Failed to pause schedule: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -101,7 +103,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
     try {
       await resumeSchedule(parentRunID)
       toast.success('Schedule Resumed', 'Schedule resumed successfully!')
-      // Optionally refresh the parent component or notify success
+      refreshAll()
     } catch (error) {
       console.error('Failed to resume schedule:', error)
       toast.error('Resume Failed', `Failed to resume schedule: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -112,7 +114,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
     try {
       await tryRecover(runID)
       toast.success('Recovery Initiated', 'Recovery attempt initiated successfully!')
-      // Optionally refresh the parent component or notify success
+      refreshAll()
     } catch (error) {
       console.error('Failed to retry/recover state:', error)
       toast.error('Recovery Failed', `Failed to retry: ${error instanceof Error ? error.message : 'Unknown error'}`)

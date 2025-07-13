@@ -173,6 +173,13 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
 
   const { data, loading, error, refresh } = useTableData(adaptedLoad, pagination.state)
 
+  // Refresh the table when refreshTrigger changes
+  React.useEffect(() => {
+    if (refreshTrigger > 0) {
+      refresh()
+    }
+  }, [refreshTrigger, refresh])
+
   // Filter management functions
   const addFilter = React.useCallback((stateType: string) => {
     // Check if filter already exists
@@ -219,7 +226,7 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
     )
 
     // Use toast for confirmation instead of browser alert
-    toast.warning(
+    const confirmToastId = toast.warning(
       'Confirm Deletion',
       `Are you sure you want to delete ${statesToDelete.length} state(s)? This action cannot be undone.`,
       {
@@ -227,6 +234,9 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
         action: {
           label: 'Delete',
           onClick: async () => {
+            // Dismiss the confirmation toast immediately when action starts
+            toast.removeToast(confirmToastId)
+            
             setIsDeleting(true)
             setDeleteStatus('idle')
             try {
@@ -280,7 +290,7 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
     }
 
     // Use toast for confirmation instead of browser alert
-    toast.warning(
+    const confirmToastId = toast.warning(
       'Confirm Recovery',
       `Are you sure you want to attempt recovery for ${statesToRecover.length} state(s)?`,
       {
@@ -288,6 +298,9 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
         action: {
           label: 'Recover',
           onClick: async () => {
+            // Dismiss the confirmation toast immediately when action starts
+            toast.removeToast(confirmToastId)
+            
             setIsRecovering(true)
             setRecoverStatus('idle')
             try {

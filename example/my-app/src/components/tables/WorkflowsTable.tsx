@@ -48,6 +48,13 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
 
   const { data, loading, error, refresh } = useTableData(adaptedLoad, pagination.state)
 
+  // Refresh the table when refreshTrigger changes
+  React.useEffect(() => {
+    if (refreshTrigger > 0) {
+      refresh()
+    }
+  }, [refreshTrigger, refresh])
+
   const handleDeleteFlows = async () => {
     const selectedIDs = Object.keys(selected).filter(k => selected[k])
     
@@ -62,7 +69,7 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
     )
 
     // Use toast for confirmation instead of browser alert
-    toast.warning(
+    const confirmToastId = toast.warning(
       'Confirm Deletion',
       `Are you sure you want to delete ${flowsToDelete.length} workflow(s)? This action cannot be undone.`,
       {
@@ -70,6 +77,9 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
         action: {
           label: 'Delete',
           onClick: async () => {
+            // Dismiss the confirmation toast immediately when action starts
+            toast.removeToast(confirmToastId)
+            
             setIsDeleting(true)
             setDeleteStatus('idle')
             try {
