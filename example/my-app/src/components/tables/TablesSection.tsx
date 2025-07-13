@@ -3,10 +3,17 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useRefreshStore } from '../../stores/refresh-store'
-import { PaginatedTableState } from './PaginatedTable/LegacyAdapter'
 import { WorkflowsTable } from './WorkflowsTable'
 import { StatesTable } from './StatesTable'
-import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
+import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
+
+// Shared type for table load state that matches API expectations
+export interface TableLoadState {
+  limit: number
+  offset: number
+  where?: predicate.Predicate
+  sort?: { [key: string]: boolean }
+}
 
 export function TablesSection() {
   const { listFlows, listStates, error } = useWorkflowApi()
@@ -14,12 +21,10 @@ export function TablesSection() {
   
   // Memoize the load functions to prevent infinite re-renders
   const loadFlows = React.useCallback(
-    (state: PaginatedTableState<workflow.Flow>) => {
+    (state: TableLoadState) => {
       return listFlows({
         limit: state.limit,
         where: state.where ? { Predicate: state.where } : undefined,
-        nextPage: state.nextPage,
-        prevPage: state.prevPage,
         sort: state.sort
       })
     },
@@ -27,12 +32,10 @@ export function TablesSection() {
   )
   
   const loadStates = React.useCallback(
-    (state: PaginatedTableState<workflow.State>) => {
+    (state: TableLoadState) => {
       return listStates({
         limit: state.limit,
         where: state.where ? { Predicate: state.where } : undefined,
-        nextPage: state.nextPage,
-        prevPage: state.prevPage,
         sort: state.sort
       })
     },

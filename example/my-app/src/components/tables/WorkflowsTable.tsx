@@ -1,20 +1,19 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
-import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { LegacyPaginatedTable as PaginatedTable, PaginatedTableState } from './PaginatedTable/LegacyAdapter'
 import { useTableData } from './PaginatedTable/hooks/useTableData'
 import { usePagination } from './PaginatedTable/hooks/usePagination'
 import { TableContent } from './PaginatedTable/components/TableContent'
 import { WorkflowDisplay } from '../workflow/WorkflowDisplay'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { TableLoadState } from './TablesSection'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
 interface WorkflowsTableProps {
   refreshTrigger: number
-  loadFlows: (state: PaginatedTableState<workflow.Flow>) => Promise<any>
+  loadFlows: (state: TableLoadState) => Promise<any>
 }
 
 export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProps) {
@@ -24,22 +23,21 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
   
   // Adapt load function to work with the new hooks
   const adaptedLoad = React.useCallback(async (state: any) => {
-    const legacyState: PaginatedTableState<workflow.Flow> = {
+    const tableState: TableLoadState = {
       limit: state.limit,
       offset: state.offset,
-      selected,
       sort: { ID: true },
       where: state.where
     }
 
-    const result = await loadFlows(legacyState)
+    const result = await loadFlows(tableState)
     
     return {
       items: result.Items || [],
       next: result.Next ? 'has-next' : undefined,
       total: undefined
     }
-  }, [loadFlows, selected])
+  }, [loadFlows])
 
   const { data, loading, error, refresh } = useTableData(adaptedLoad, pagination.state)
 
@@ -168,7 +166,7 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
                 disabled={Object.keys(selected).filter(k => selected[k]).length === 0}
                 onClick={handleDeleteFlows}
               >
-                Delete selected
+                Delete
               </Button>
             </div>
             

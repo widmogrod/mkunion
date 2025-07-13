@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import * as predicate from '../../../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
 import * as schemaless from '../../../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import { PaginatedTableState } from '../types'
@@ -82,18 +82,29 @@ export function usePagination<T = any>({
     }))
   }, [])
 
+  const actions = useMemo(() => ({
+    goToNextPage,
+    goToPreviousPage,
+    goToFirstPage,
+    goToLastPage,
+    setPageSize,
+    setWhere,
+    setSort,
+    updateState
+  }), [
+    goToNextPage,
+    goToPreviousPage,
+    goToFirstPage,
+    goToLastPage,
+    setPageSize,
+    setWhere,
+    setSort,
+    updateState
+  ])
+
   return {
     state,
-    actions: {
-      goToNextPage,
-      goToPreviousPage,
-      goToFirstPage,
-      goToLastPage,
-      setPageSize,
-      setWhere,
-      setSort,
-      updateState
-    },
+    actions,
     // Computed values
     currentPage: Math.floor(state.offset / state.limit) + 1,
     hasFilter: !!state.where,

@@ -68,12 +68,12 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
           {showCode ? (
             <>
               <FileText className="h-3 w-3 mr-1" />
-              Show JSON
+              JSON
             </>
           ) : (
             <>
               <Code className="h-3 w-3 mr-1" />
-              Show Code
+              Code
             </>
           )}
         </Button>

@@ -3,88 +3,179 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, X } from 'lucide-react'
-import { PaginatedTableState } from './PaginatedTable/LegacyAdapter'
 import { useTableData } from './PaginatedTable/hooks/useTableData'
 import { usePagination } from './PaginatedTable/hooks/usePagination'
 import { TableContent } from './PaginatedTable/components/TableContent'
 import { StateDetailsRenderer } from '../workflow/StateDetailsRenderer'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { TableLoadState } from './TablesSection'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
+import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
+import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
 
 interface StatesTableProps {
   refreshTrigger: number
-  loadStates: (state: PaginatedTableState<workflow.State>) => Promise<any>
+  loadStates: (state: TableLoadState) => Promise<any>
 }
+
+// Helper functions for creating predicates
+const createCompare = (location: string, operation: string, value: schema.Schema): predicate.Predicate => ({
+  "$type": "predicate.Compare",
+  "predicate.Compare": {
+    Location: location,
+    Operation: operation,
+    BindValue: {
+      "$type": "predicate.Literal",
+      "predicate.Literal": {
+        Value: value
+      }
+    }
+  }
+})
+
+const createOr = (predicates: predicate.Predicate[]): predicate.Predicate => ({
+  "$type": "predicate.Or",
+  "predicate.Or": {
+    L: predicates
+  }
+})
+
+const createAnd = (predicates: predicate.Predicate[]): predicate.Predicate => ({
+  "$type": "predicate.And",
+  "predicate.And": {
+    L: predicates
+  }
+})
+
+const createNot = (p: predicate.Predicate): predicate.Predicate => ({
+  "$type": "predicate.Not",
+  "predicate.Not": {
+    P: p
+  }
+})
 
 export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteStates, tryRecover } = useWorkflowApi()
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
   const [filters, setFilters] = React.useState({
-    stateType: 'all',
+    stateTypes: [] as string[], // Changed to array for multi-select
+    filterMode: 'include' as 'include' | 'exclude', // For NOT logic
     searchText: '',
+    searchField: 'id' as 'id' | 'all', // Where to search
     showFilters: false
   })
   
   // Build filter conditions based on current filters
-  const buildWhereClause = React.useCallback(() => {
-    const conditions: any = {}
+  const buildWhereClause = React.useCallback((): predicate.Predicate | undefined => {
+    const predicates: predicate.Predicate[] = []
     
-    // Filter by state type
-    if (filters.stateType !== 'all') {
-      conditions['Data.$type'] = filters.stateType
+    // Filter by state types
+    if (filters.stateTypes.length > 0) {
+      const typePredicates = filters.stateTypes.map(stateType => 
+        createCompare(
+          'Data["$type"]',
+          '==',
+          { "$type": "schema.String", "schema.String": stateType }
+        )
+      )
+      
+      // Combine state type filters with OR
+      const stateTypePredicate = typePredicates.length === 1 
+        ? typePredicates[0] 
+        : createOr(typePredicates)
+      
+      // Apply include/exclude mode
+      predicates.push(
+        filters.filterMode === 'exclude' 
+          ? createNot(stateTypePredicate)
+          : stateTypePredicate
+      )
     }
     
-    // Text search across multiple fields
+    // Text search
     if (filters.searchText.trim()) {
       const searchTerm = filters.searchText.trim()
-      // For now, search in ID field - could be expanded to other fields
-      conditions['ID'] = { $regex: searchTerm, $options: 'i' }
+      
+      if (filters.searchField === 'id') {
+        // Search in ID field using substring match
+        predicates.push(
+          createCompare(
+            'ID',
+            'LIKE',
+            { "$type": "schema.String", "schema.String": `%${searchTerm}%` }
+          )
+        )
+      } else {
+        // Search across multiple fields
+        const searchPredicates = [
+          createCompare('ID', 'LIKE', { "$type": "schema.String", "schema.String": `%${searchTerm}%` }),
+          // Could add more fields here if needed
+        ]
+        predicates.push(createOr(searchPredicates))
+      }
     }
     
-    return conditions
+    // Combine all predicates with AND
+    if (predicates.length === 0) return undefined
+    if (predicates.length === 1) return predicates[0]
+    const finalPredicate = createAnd(predicates)
+    
+    // Log the generated predicate for debugging
+    console.log('Generated predicate:', JSON.stringify(finalPredicate, null, 2))
+    console.log('Filters state:', filters)
+    
+    return finalPredicate
   }, [filters])
 
+  // Update pagination where clause when filters change
+  React.useEffect(() => {
+    const whereClause = buildWhereClause()
+    pagination.actions.setWhere(whereClause)
+  }, [filters, buildWhereClause, pagination.actions])
+  
   // Adapt load function to work with the new hooks
   const adaptedLoad = React.useCallback(async (state: any) => {
-    const whereClause = buildWhereClause()
-    
-    const legacyState: PaginatedTableState<workflow.State> = {
+    const tableState: TableLoadState = {
       limit: state.limit,
       offset: state.offset,
-      selected,
       sort: { ID: true },
-      where: Object.keys(whereClause).length > 0 ? whereClause : state.where
+      where: state.where
     }
 
-    const result = await loadStates(legacyState)
+    console.log('Sending tableState to API:', JSON.stringify(tableState, null, 2))
+    
+    const result = await loadStates(tableState)
+    
+    console.log('API returned items:', result.Items?.length, 'items')
     
     return {
       items: result.Items || [],
       next: result.Next ? 'has-next' : undefined,
       total: undefined
     }
-  }, [loadStates, selected, buildWhereClause])
+  }, [loadStates])
 
   const { data, loading, error, refresh } = useTableData(adaptedLoad, pagination.state)
 
   // Filter helper functions
   const clearFilters = () => {
     setFilters({
-      stateType: 'all',
+      stateTypes: [],
+      filterMode: 'include',
       searchText: '',
+      searchField: 'id',
       showFilters: false
     })
     pagination.actions.goToFirstPage()
   }
 
-  const hasActiveFilters = filters.stateType !== 'all' || filters.searchText.trim()
+  const hasActiveFilters = filters.stateTypes.length > 0 || filters.searchText.trim()
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
-    // Reset to first page when filters change
-    pagination.actions.goToFirstPage()
+    // Page reset is now handled by setWhere in the useEffect
   }
 
   const handleDeleteStates = async () => {
@@ -244,26 +335,60 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
         
         {/* Filter Controls */}
         {filters.showFilters && (
-          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-muted-foreground">State Type:</label>
-              <select
-                value={filters.stateType}
-                onChange={(e) => handleFilterChange('stateType', e.target.value)}
-                className="h-7 px-2 rounded border border-input bg-background text-xs text-foreground w-40"
-              >
-                <option value="all">All Types</option>
-                <option value="workflow.Done">Done</option>
-                <option value="workflow.Error">Error</option>
-                <option value="workflow.Await">Await</option>
-                <option value="workflow.Scheduled">Scheduled</option>
-                <option value="workflow.ScheduleStopped">Schedule Stopped</option>
-                <option value="workflow.Apply">Apply</option>
-                <option value="workflow.Choose">Choose</option>
-                <option value="workflow.Fork">Fork</option>
-              </select>
+          <div className="space-y-3 mt-3 pt-3 border-t">
+            {/* State Type Filters */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground">State Types:</label>
+                <select
+                  value={filters.filterMode}
+                  onChange={(e) => handleFilterChange('filterMode', e.target.value)}
+                  className="h-6 px-2 rounded border border-input bg-background text-xs text-foreground"
+                >
+                  <option value="include">Include selected</option>
+                  <option value="exclude">Exclude selected</option>
+                </select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'workflow.Done', label: 'Done' },
+                  { value: 'workflow.Error', label: 'Error' },
+                  { value: 'workflow.Await', label: 'Await' },
+                  { value: 'workflow.Scheduled', label: 'Scheduled' },
+                  { value: 'workflow.ScheduleStopped', label: 'Stopped' },
+                  { value: 'workflow.Apply', label: 'Apply' },
+                  { value: 'workflow.Choose', label: 'Choose' },
+                  { value: 'workflow.Fork', label: 'Fork' },
+                ].map(({ value, label }) => (
+                  <label
+                    key={value}
+                    className="flex items-center gap-1 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded border border-input"
+                      checked={filters.stateTypes.includes(value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFilters(prev => ({
+                            ...prev,
+                            stateTypes: [...prev.stateTypes, value]
+                          }))
+                        } else {
+                          setFilters(prev => ({
+                            ...prev,
+                            stateTypes: prev.stateTypes.filter(t => t !== value)
+                          }))
+                        }
+                      }}
+                    />
+                    <span className="text-xs">{label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             
+            {/* Search */}
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-muted-foreground">Search:</label>
               <Input

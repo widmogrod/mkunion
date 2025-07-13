@@ -150,8 +150,7 @@ describe('App Component', () => {
       render(<App />);
       
       await waitFor(() => {
-        expect(screen.getByText('Delete selected')).toBeInTheDocument();
-        expect(screen.getByText('Delete')).toBeInTheDocument();
+        expect(screen.getAllByText('Delete')).toHaveLength(2); // Two delete buttons (one for each table)
         expect(screen.getByText('Try recover')).toBeInTheDocument();
       });
     });
