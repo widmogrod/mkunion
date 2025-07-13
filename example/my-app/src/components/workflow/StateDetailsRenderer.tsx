@@ -3,16 +3,18 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Code, FileText, Play, Pause, RotateCcw, Send } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
-import { StatusBadge } from '../tables/StatusBadge'
+import { InteractiveStatusBadge } from '../tables/InteractiveStatusBadge'
 import { ResultPreview } from './ResultPreview'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
 interface StateDetailsRendererProps {
   data: schemaless.Record<workflow.State>
+  onAddFilter?: (stateType: string) => void
+  isFilterActive?: boolean
 }
 
-export function StateDetailsRenderer({ data }: StateDetailsRendererProps) {
+export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: StateDetailsRendererProps) {
   const [showCode, setShowCode] = useState(true) // Default to showing code
   const [workflowCode, setWorkflowCode] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -533,7 +535,11 @@ export function StateDetailsRenderer({ data }: StateDetailsRendererProps) {
       {/* Header with badges, actions, and toggle */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <StatusBadge state={state} />
+          <InteractiveStatusBadge 
+            state={state} 
+            onAddFilter={onAddFilter}
+            isFilterActive={isFilterActive}
+          />
           <Badge variant="secondary" className="text-xs">
             {data.Type}
           </Badge>
