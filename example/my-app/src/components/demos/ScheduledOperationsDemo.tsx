@@ -7,6 +7,7 @@ import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
+import * as builders from '../../workflows/builders'
 
 interface ScheduledOperationsDemoProps {
   input: string
@@ -14,39 +15,42 @@ interface ScheduledOperationsDemoProps {
 
 export function ScheduledOperationsDemo({ input }: ScheduledOperationsDemoProps) {
   const { refreshAll } = useRefreshStore()
-  const { runCommand, callFunction } = useWorkflowApi()
+  const { runCommand, callFunction, flowCreate } = useWorkflowApi()
   const toast = useToast()
 
   const handleConcatAwait = async () => {
     try {
-      const cmd: workflow.Command = {
-        $type: 'workflow.Run',
-        'workflow.Run': {
-          Flow: {
-            $type: 'workflow.Flow',
-            'workflow.Flow': {
-              Name: 'concat_await',
-              Arg: 'input',
-              Body: [
-                {
-                  $type: 'workflow.Apply',
-                  'workflow.Apply': {
-                    Name: 'concat',
-                    Args: [
-                      { $type: 'workflow.GetValue', 'workflow.GetValue': { Path: 'input' } },
-                      { $type: 'workflow.SetValue', 'workflow.SetValue': { Value: { 'schema.String': ' - awaited result' } } }
-                    ],
-                    Await: {
-                      TimeoutSeconds: 100
-                    }
-                  }
-                }
-              ]
+      // First create and register the workflow - with await functionality restored
+      const flow = builders.createFlow('concat_await', 'input', [
+        builders.assign(
+          'assign1',
+          'result',
+          {
+            $type: 'workflow.Apply',
+            'workflow.Apply': {
+              ID: 'apply1',
+              Name: 'concat',
+              Args: [
+                builders.getValue('input'),
+                builders.setValue(builders.stringValue(' - awaited result'))
+              ],
+              Await: {
+                TimeoutSeconds: 100
+              }
             }
-          },
-          Input: { 'schema.String': input || 'concat await demo' }
-        }
-      }
+          }
+        ),
+        builders.end('end1', builders.getValue('result'))
+      ])
+
+      // Register the workflow first
+      await flowCreate(flow)
+
+      // Then run it
+      const cmd = builders.createRunCommand(
+        flow,
+        builders.stringValue(input || 'concat await demo')
+      )
 
       await runCommand(cmd)
       refreshAll()
@@ -58,29 +62,35 @@ export function ScheduledOperationsDemo({ input }: ScheduledOperationsDemoProps)
 
   const handleScheduledRun = async () => {
     try {
+      // First create and register the workflow
+      const flow = builders.createFlow('scheduled_demo', 'input', [
+        builders.assign(
+          'assign1',
+          'result',
+          builders.apply(
+            'apply1',
+            'concat',
+            [
+              builders.getValue('input'),
+              builders.setValue(builders.stringValue(' - scheduled execution'))
+            ]
+          )
+        ),
+        builders.end('end1', builders.getValue('result'))
+      ])
+
+      // Register the workflow first
+      await flowCreate(flow)
+
+      // Then run it with scheduling - need to create command manually for scheduling
       const cmd: workflow.Command = {
         $type: 'workflow.Run',
         'workflow.Run': {
           Flow: {
             $type: 'workflow.Flow',
-            'workflow.Flow': {
-              Name: 'scheduled_demo',
-              Arg: 'input',
-              Body: [
-                {
-                  $type: 'workflow.Apply',
-                  'workflow.Apply': {
-                    Name: 'concat',
-                    Args: [
-                      { $type: 'workflow.GetValue', 'workflow.GetValue': { Path: 'input' } },
-                      { $type: 'workflow.SetValue', 'workflow.SetValue': { Value: { 'schema.String': ' - scheduled execution' } } }
-                    ]
-                  }
-                }
-              ]
-            }
+            'workflow.Flow': flow
           },
-          Input: { 'schema.String': input || 'scheduled run demo' },
+          Input: builders.stringValue(input || 'scheduled run demo'),
           RunOption: {
             $type: 'workflow.ScheduleRun',
             'workflow.ScheduleRun': {
