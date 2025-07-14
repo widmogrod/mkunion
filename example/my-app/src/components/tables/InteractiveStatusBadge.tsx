@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Badge } from '../ui/badge'
-import { cn } from '../../utils/cn'
+import { cn } from '../../lib/utils'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import { assertNever } from '../../utils/type-helpers'
 

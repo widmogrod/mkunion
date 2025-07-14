@@ -1,6 +1,6 @@
 import React from 'react'
 import { RotateCcw } from 'lucide-react'
-import { cn } from '../../utils/cn'
+import { cn } from '../../lib/utils'
 
 interface RefreshButtonProps {
   onRefresh: () => void

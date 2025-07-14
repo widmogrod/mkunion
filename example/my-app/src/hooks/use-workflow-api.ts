@@ -357,6 +357,23 @@ export function useWorkflowApi() {
     }
   }, [])
 
+  const workflowRun = useCallback(async (flow: workflow.Flow, input: schema.Schema): Promise<workflow.State> => {
+    // Wrap the Flow in a Workflow union type
+    const workflowData: workflow.Workflow = {
+      $type: 'workflow.Flow',
+      'workflow.Flow': flow
+    }
+    
+    const cmd: workflow.Command = {
+      $type: 'workflow.Run',
+      'workflow.Run': {
+        Flow: workflowData,
+        Input: input
+      }
+    }
+    return runCommand(cmd)
+  }, [runCommand])
+
   return {
     loading,
     error,
@@ -374,6 +391,7 @@ export function useWorkflowApi() {
     deleteStates,
     deleteFlows,
     callFunction,
+    workflowRun,
   }
 }
 
