@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { Plus } from 'lucide-react'
 import { Badge } from '../ui/badge'
 import { cn } from '../../lib/utils'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import { assertNever } from '../../utils/type-helpers'
+import { StatusIcon, Icon, ActionIcons } from '../ui/icons'
+import { STATUS_COLORS, SPACING, TRANSITIONS } from '../../design-system/constants'
 
 interface InteractiveStatusBadgeProps {
   state: workflow.State
@@ -26,29 +27,53 @@ export function InteractiveStatusBadge({ state, onAddFilter, isFilterActive }: I
   const getBadgeProps = () => {
     switch (stateType) {
       case 'workflow.Done':
-        return { label: 'Done', className: 'bg-green-500', color: '#10b981' }
+        return { 
+          label: 'Done', 
+          status: 'done' as const,
+          colorClasses: `${STATUS_COLORS.success.bg} ${STATUS_COLORS.success.border} ${STATUS_COLORS.success.text} border`
+        }
       
       case 'workflow.Error':
-        return { label: 'Error', className: 'bg-red-500', color: '#ef4444' }
+        return { 
+          label: 'Error', 
+          status: 'error' as const,
+          colorClasses: `${STATUS_COLORS.error.bg} ${STATUS_COLORS.error.border} ${STATUS_COLORS.error.text} border`
+        }
       
       case 'workflow.Await':
-        return { label: 'Await', className: 'bg-blue-500', color: '#3b82f6' }
+        return { 
+          label: 'Await', 
+          status: 'info' as const,
+          colorClasses: `${STATUS_COLORS.info.bg} ${STATUS_COLORS.info.border} ${STATUS_COLORS.info.text} border`
+        }
       
       case 'workflow.Scheduled':
-        return { label: 'Scheduled', className: 'bg-yellow-500', color: '#eab308' }
+        return { 
+          label: 'Scheduled', 
+          status: 'scheduled' as const,
+          colorClasses: `${STATUS_COLORS.warning.bg} ${STATUS_COLORS.warning.border} ${STATUS_COLORS.warning.text} border`
+        }
       
       case 'workflow.ScheduleStopped':
-        return { label: 'Paused', className: 'bg-gray-500', color: '#6b7280' }
+        return { 
+          label: 'Paused', 
+          status: 'paused' as const,
+          colorClasses: `${STATUS_COLORS.neutral.bg} ${STATUS_COLORS.neutral.border} ${STATUS_COLORS.neutral.text} border`
+        }
       
       case 'workflow.NextOperation':
-        return { label: 'Next', className: 'bg-purple-500', color: '#a855f7' }
+        return { 
+          label: 'Next Operation', 
+          status: 'info' as const,
+          colorClasses: `bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 border`
+        }
       
       default:
         return assertNever(stateType)
     }
   }
   
-  const { label, className } = getBadgeProps()
+  const { label, status, colorClasses } = getBadgeProps()
   const isInteractive = onAddFilter && !isFilterActive
   
   return (
@@ -59,18 +84,30 @@ export function InteractiveStatusBadge({ state, onAddFilter, isFilterActive }: I
     >
       <Badge 
         className={cn(
-          className,
-          "transition-all duration-200 relative overflow-hidden",
-          isInteractive && "cursor-pointer group-hover:pr-7",
-          isInteractive && isHovered && "shadow-md"
+          colorClasses,
+          TRANSITIONS.normal,
+          "relative overflow-hidden",
+          SPACING.xs,
+          isInteractive && "cursor-pointer group-hover:pr-8 hover:brightness-110",
+          isInteractive && isHovered && "shadow-md",
+          // Ensure text remains visible on hover
+          "hover:filter"
         )}
         onClick={isInteractive ? () => onAddFilter(stateType) : undefined}
       >
+        <StatusIcon 
+          status={status} 
+          size="xs" 
+          className="relative z-10"
+        />
         <span className="relative z-10">{label}</span>
         {isInteractive && (
-          <Plus 
+          <Icon
+            icon={ActionIcons.add}
+            size="xs"
             className={cn(
-              "ml-1 h-3 w-3 transition-all duration-200 absolute right-1.5 top-1/2 -translate-y-1/2",
+              "ml-1 absolute right-1.5 top-1/2 -translate-y-1/2",
+              TRANSITIONS.normal,
               isHovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
             )}
           />

@@ -3,11 +3,11 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import { Textarea } from '../ui/textarea'
-import { X, Calendar, Info } from 'lucide-react'
+import { X, Info } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import { CronExpressionBuilder } from './CronExpressionBuilder'
+import { WorkflowInputForm } from './WorkflowInputForm'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
 import * as builders from '../../workflows/builders'
@@ -19,21 +19,22 @@ interface CreateScheduleDialogProps {
 }
 
 export function CreateScheduleDialog({ isOpen, onClose, onSuccess }: CreateScheduleDialogProps) {
-  const { listFlows, runCommand, flowCreate } = useWorkflowApi()
+  const { listFlows, runCommand } = useWorkflowApi()
   const toast = useToast()
   
   const [flows, setFlows] = React.useState<workflow.Flow[]>([])
   const [selectedFlow, setSelectedFlow] = React.useState<string>('')
   const [cronExpression, setCronExpression] = React.useState('0 */5 * * * *') // Every 5 minutes
-  const [inputValue, setInputValue] = React.useState('')
+  const [inputSchema, setInputSchema] = React.useState<schema.Schema | undefined>(undefined)
   const [parentRunId, setParentRunId] = React.useState(`schedule_${Date.now()}`)
   const [loading, setLoading] = React.useState(false)
+  const [inputError, setInputError] = React.useState<string | undefined>(undefined)
 
   React.useEffect(() => {
     if (isOpen) {
       loadFlows()
     }
-  }, [isOpen])
+  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadFlows = async () => {
     try {
@@ -78,7 +79,7 @@ export function CreateScheduleDialog({ isOpen, onClose, onSuccess }: CreateSched
             $type: 'workflow.Flow',
             'workflow.Flow': flow
           },
-          Input: inputValue ? builders.stringValue(inputValue) : builders.stringValue(''),
+          Input: inputSchema || builders.stringValue(''),
           RunOption: {
             $type: 'workflow.ScheduleRun',
             'workflow.ScheduleRun': {
@@ -142,19 +143,18 @@ export function CreateScheduleDialog({ isOpen, onClose, onSuccess }: CreateSched
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="input">Workflow Input (Optional)</Label>
-            <Textarea
-              id="input"
-              placeholder="Enter input data for the workflow..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              rows={3}
+          {/* Workflow Input Form */}
+          {selectedFlow && (
+            <WorkflowInputForm
+              workflow={flows.find(f => f.Name === selectedFlow) || { Name: selectedFlow }}
+              value={inputSchema}
+              onChange={(value) => {
+                setInputSchema(value)
+                setInputError(undefined)
+              }}
+              error={inputError}
             />
-            <p className="text-sm text-muted-foreground">
-              This input will be passed to the workflow on each scheduled execution
-            </p>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="parentRunId">Parent Run ID</Label>

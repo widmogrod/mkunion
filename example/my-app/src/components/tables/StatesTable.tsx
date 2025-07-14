@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { ConfirmButton } from '../ui/ConfirmButton'
 import { AppleCheckbox } from '../ui/AppleCheckbox'
@@ -358,12 +358,9 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden">
-      <CardHeader className="flex-shrink-0 border-b py-4">
+      <CardHeader className="flex-shrink-0 border-b py-3">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex-shrink-0">
-            <CardTitle>States</CardTitle>
-            <CardDescription>View workflow execution states</CardDescription>
-          </div>
+          <CardTitle className="text-base">Execution States</CardTitle>
           
           {/* Table Controls */}
           <TableControls

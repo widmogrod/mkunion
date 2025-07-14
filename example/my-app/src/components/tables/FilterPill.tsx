@@ -1,6 +1,7 @@
 import React from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { StatusIcon, StatusType } from '../ui/icons'
 
 interface FilterPillProps {
   label: string
@@ -8,9 +9,27 @@ interface FilterPillProps {
   isExclude?: boolean
   onRemove: () => void
   onClick: () => void
+  stateType?: string
 }
 
-export function FilterPill({ label, color, isExclude = false, onRemove, onClick }: FilterPillProps) {
+export function FilterPill({ label, color, isExclude = false, onRemove, onClick, stateType }: FilterPillProps) {
+  // Map state types to status icon types
+  const getStatusFromStateType = (type?: string): StatusType | null => {
+    if (!type) return null
+    
+    const mapping: Record<string, StatusType> = {
+      'workflow.Done': 'done',
+      'workflow.Error': 'error',
+      'workflow.Await': 'info',
+      'workflow.Scheduled': 'scheduled',
+      'workflow.ScheduleStopped': 'paused',
+      'workflow.NextOperation': 'info'
+    }
+    
+    return mapping[type] as StatusType || null
+  }
+  
+  const status = getStatusFromStateType(stateType)
   return (
     <div
       className={cn(
@@ -32,6 +51,13 @@ export function FilterPill({ label, color, isExclude = false, onRemove, onClick 
       onClick={onClick}
       title={isExclude ? `Excluding ${label} - Click to include` : `Including ${label} - Click to exclude`}
     >
+      {status && (
+        <StatusIcon 
+          status={status} 
+          size="xs" 
+          colored={!isExclude}
+        />
+      )}
       {isExclude && <span className="line-through">{label}</span>}
       {!isExclude && <span>{label}</span>}
       <button

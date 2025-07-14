@@ -1,8 +1,7 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { Badge } from '../components/ui/badge'
 import { 
   CalendarIcon, 
   PauseCircle, 
@@ -20,6 +19,7 @@ import { CreateScheduleDialog } from '../components/schedule/CreateScheduleDialo
 import { NextRunDisplay } from '../components/schedule/NextRunDisplay'
 import { ScheduleStatusBadge } from '../components/schedule/ScheduleStatusBadge'
 import { ScheduleHistoryDialog } from '../components/schedule/ScheduleHistoryDialog'
+import { PageHeader } from '../components/layout/PageHeader'
 import * as workflow from '../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -36,7 +36,7 @@ interface ScheduledWorkflow {
 }
 
 export function SchedulesPage() {
-  const { listStates, stopSchedule, resumeSchedule, deleteStates } = useWorkflowApi()
+  const { listStates, listFlows, stopSchedule, resumeSchedule, deleteStates } = useWorkflowApi()
   const { refreshAll, schedulesRefreshTrigger } = useRefreshStore()
   const toast = useToast()
   
@@ -46,6 +46,7 @@ export function SchedulesPage() {
   const [showCreateDialog, setShowCreateDialog] = React.useState(false)
   const [selectedSchedule, setSelectedSchedule] = React.useState<ScheduledWorkflow | null>(null)
   const [showHistoryDialog, setShowHistoryDialog] = React.useState(false)
+  const [, setFlowNameCache] = React.useState<Map<string, string>>(new Map())
 
   // Load scheduled workflows
   React.useEffect(() => {
@@ -79,6 +80,20 @@ export function SchedulesPage() {
       setLoading(true)
       
       console.log('Loading scheduled workflows...')
+      
+      // First, load all flows to build a name cache
+      const flowsResponse = await listFlows({ limit: 1000 })
+      const flowMap = new Map<string, string>()
+      
+      if (flowsResponse.Items) {
+        flowsResponse.Items.forEach(flowRecord => {
+          if (flowRecord.ID && flowRecord.Data?.Name) {
+            flowMap.set(flowRecord.ID, flowRecord.Data.Name)
+          }
+        })
+      }
+      
+      setFlowNameCache(flowMap)
       
       // Query for both Scheduled and ScheduleStopped states
       const response = await listStates({
@@ -144,7 +159,19 @@ export function SchedulesPage() {
           
           if (baseState?.RunOption?.['workflow.ScheduleRun'] && item.ID) {
             const scheduleRun = baseState.RunOption['workflow.ScheduleRun']
-            const flowName = baseState.Flow?.['workflow.Flow']?.Name || 'Unknown'
+            
+            // Extract flow name - handle both Flow and FlowRef types
+            let flowName = 'Unknown'
+            if (baseState?.Flow) {
+              if (baseState.Flow.$type === 'workflow.Flow' && baseState.Flow['workflow.Flow']) {
+                flowName = baseState.Flow['workflow.Flow'].Name || 'Unknown'
+              } else if (baseState.Flow.$type === 'workflow.FlowRef' && baseState.Flow['workflow.FlowRef']) {
+                const flowID = baseState.Flow['workflow.FlowRef'].FlowID
+                if (flowID) {
+                  flowName = flowMap.get(flowID) || `FlowRef:${flowID}`
+                }
+              }
+            }
             
             workflows.push({
               id: item.ID,
@@ -207,21 +234,21 @@ export function SchedulesPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Scheduled Workflows</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage and monitor your scheduled workflow executions
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Schedule
-        </Button>
-      </div>
+    <div className="h-full flex flex-col">
+      <PageHeader
+        icon={CalendarIcon}
+        title="Scheduled Workflows"
+        description="Manage and monitor your scheduled workflow executions"
+        actions={
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Schedule
+          </Button>
+        }
+      />
 
-      <Card>
+      <div className="flex-1 p-6 overflow-auto">
+        <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Active Schedules</CardTitle>
@@ -331,7 +358,8 @@ export function SchedulesPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       {showCreateDialog && (
         <CreateScheduleDialog

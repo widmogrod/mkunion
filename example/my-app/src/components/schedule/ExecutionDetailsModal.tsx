@@ -1,8 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { X, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
+import { StatusIcon } from '../ui/icons'
+import { STATUS_COLORS, SPACING } from '../../design-system/constants'
 
 interface RunExecution {
   id: string
@@ -25,29 +27,33 @@ export function ExecutionDetailsModal({ isOpen, onClose, execution }: ExecutionD
   if (!isOpen || !execution) return null
 
   const getStatusIcon = () => {
-    switch (execution.status) {
-      case 'done':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'error':
-        return <XCircle className="h-5 w-5 text-red-500" />
-      case 'running':
-        return <Clock className="h-5 w-5 text-blue-500 animate-pulse" />
-      case 'scheduled':
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />
-    }
+    return (
+      <StatusIcon 
+        status={execution.status} 
+        size="md" 
+      />
+    )
   }
 
   const getStatusBadge = () => {
-    switch (execution.status) {
-      case 'done':
-        return <Badge className="bg-green-500 text-white">Done</Badge>
-      case 'error':
-        return <Badge className="bg-red-500 text-white">Error</Badge>
-      case 'running':
-        return <Badge className="bg-blue-500 text-white">Running</Badge>
-      case 'scheduled':
-        return <Badge className="bg-yellow-500 text-white">Scheduled</Badge>
+    const statusConfig = {
+      done: { colors: STATUS_COLORS.success, label: 'Done' },
+      error: { colors: STATUS_COLORS.error, label: 'Error' },
+      running: { colors: STATUS_COLORS.info, label: 'Running' },
+      scheduled: { colors: STATUS_COLORS.warning, label: 'Scheduled' }
     }
+    
+    const config = statusConfig[execution.status]
+    
+    return (
+      <Badge className={`${config.colors.bg} ${config.colors.border} ${config.colors.text} border ${SPACING.xs}`}>
+        <StatusIcon 
+          status={execution.status} 
+          size="xs" 
+        />
+        {config.label}
+      </Badge>
+    )
   }
 
   return ReactDOM.createPortal(

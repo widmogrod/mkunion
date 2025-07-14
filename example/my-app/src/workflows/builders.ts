@@ -18,15 +18,31 @@ export function setValue(value: schema.Schema): workflow.Reshaper {
 }
 
 export function stringValue(str: string): schema.Schema {
-  return { 'schema.String': str }
+  return { 
+    '$type': 'schema.String',
+    'schema.String': str 
+  }
 }
 
 export function numberValue(num: number): schema.Schema {
-  return { 'schema.Number': num }
+  return { 
+    '$type': 'schema.Number',
+    'schema.Number': num 
+  }
+}
+
+export function booleanValue(bool: boolean): schema.Schema {
+  return { 
+    '$type': 'schema.Bool',
+    'schema.Bool': bool 
+  }
 }
 
 export function mapValue(obj: { [key: string]: schema.Schema }): schema.Schema {
-  return { 'schema.Map': obj }
+  return { 
+    '$type': 'schema.Map',
+    'schema.Map': obj 
+  }
 }
 
 export function compare(

@@ -8,8 +8,10 @@ import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import { useRefreshStore } from '../../stores/refresh-store'
 import { SchedulePreview } from './SchedulePreview'
+import { WorkflowInputForm } from './WorkflowInputForm'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
+import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
 import * as builders from '../../workflows/builders'
 
 interface SchedulePopoverProps {
@@ -103,7 +105,8 @@ export function SchedulePopover({ workflow, children }: SchedulePopoverProps) {
   const [cronExpression, setCronExpression] = useState('')
   const [parsedDescription, setParsedDescription] = useState('')
   const [mode, setMode] = useState<'natural' | 'advanced'>('natural')
-  const [workflowInput, setWorkflowInput] = useState('')
+  const [workflowInput, setWorkflowInput] = useState<schema.Schema | undefined>(undefined)
+  const [inputError, setInputError] = useState<string | undefined>(undefined)
   const [isCreating, setIsCreating] = useState(false)
   
   const { runCommand } = useWorkflowApi()
@@ -133,12 +136,20 @@ export function SchedulePopover({ workflow, children }: SchedulePopoverProps) {
       return
     }
     
+    if (inputError) {
+      toast.error('Invalid Input', inputError)
+      return
+    }
+    
     try {
       setIsCreating(true)
       
+      // Use workflowInput or default to empty string
+      const inputSchema = workflowInput || builders.stringValue('')
+      
       const cmd = builders.createScheduledRunCommand(
         workflow.Data,
-        builders.stringValue(workflowInput || ''),
+        inputSchema,
         cronExpression,
         `schedule_${workflow.Data.Name}_${Date.now()}`
       )
@@ -152,7 +163,8 @@ export function SchedulePopover({ workflow, children }: SchedulePopoverProps) {
       setNaturalLanguageInput('')
       setCronExpression('')
       setParsedDescription('')
-      setWorkflowInput('')
+      setWorkflowInput(undefined)
+      setInputError(undefined)
     } catch (error) {
       console.error('Failed to create schedule:', error)
       toast.error('Scheduling Failed', error instanceof Error ? error.message : 'Unknown error')
@@ -236,15 +248,20 @@ export function SchedulePopover({ workflow, children }: SchedulePopoverProps) {
             </div>
           )}
           
-          <div className="space-y-2">
-            <Label htmlFor="workflow-input">Workflow Input (Optional)</Label>
-            <Input
-              id="workflow-input"
-              placeholder="Input data for each execution..."
-              value={workflowInput}
-              onChange={(e) => setWorkflowInput(e.target.value)}
-            />
-          </div>
+          {workflow.Data && (
+            <div className="space-y-2">
+              <Label>Workflow Input</Label>
+              <WorkflowInputForm
+                workflow={workflow.Data}
+                value={workflowInput}
+                onChange={(value) => {
+                  setWorkflowInput(value)
+                  setInputError(undefined)
+                }}
+                error={inputError}
+              />
+            </div>
+          )}
           
           {cronExpression && (
             <SchedulePreview cronExpression={cronExpression} />

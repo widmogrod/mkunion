@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronLeft, ChevronRight, MessageSquare, Image, Clock, Zap, Table, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MessageSquare, Image, Clock, Zap, Table, CalendarDays, Calendar } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useSidebar } from './SidebarContext'
 import { ThemeToggle } from '../theme/ThemeToggle'
@@ -7,8 +7,8 @@ import { ThemeToggle } from '../theme/ThemeToggle'
 interface MainLayoutProps {
   children: React.ReactNode
   sidebar?: React.ReactNode
-  activeTab?: 'tables' | 'schedules'
-  onTabChange?: (tab: 'tables' | 'schedules') => void
+  activeTab?: 'tables' | 'schedules' | 'calendar'
+  onTabChange?: (tab: 'tables' | 'schedules' | 'calendar') => void
 }
 
 export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLayoutProps) {
@@ -114,6 +114,16 @@ export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLa
                   <CalendarDays className="h-4 w-4" />
                   <span className="hidden sm:inline">Schedules</span>
                   <span className="sm:hidden">Schedules</span>
+                </Button>
+                <Button
+                  variant={activeTab === 'calendar' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => onTabChange('calendar')}
+                  className="flex items-center gap-2 h-8 px-3 rounded-md transition-all duration-200"
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span className="hidden sm:inline">Operations Calendar</span>
+                  <span className="sm:hidden">Calendar</span>
                 </Button>
               </div>
             )}

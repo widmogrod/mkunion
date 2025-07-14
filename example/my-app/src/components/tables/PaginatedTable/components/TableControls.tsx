@@ -77,6 +77,7 @@ export function TableControls({
                 isExclude={filter.isExclude}
                 onRemove={() => onRemoveFilter?.(index)}
                 onClick={() => onToggleFilterMode?.(index)}
+                stateType={filter.stateType}
               />
             ))}
             {activeFilters.length > 1 && onClearAllFilters && (

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { ConfirmButton } from '../ui/ConfirmButton'
 import { AppleCheckbox } from '../ui/AppleCheckbox'
@@ -142,12 +142,9 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden">
-      <CardHeader className="flex-shrink-0 border-b py-4">
+      <CardHeader className="flex-shrink-0 border-b py-3">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex-shrink-0">
-            <CardTitle>Workflows</CardTitle>
-            <CardDescription>Manage your workflow definitions</CardDescription>
-          </div>
+          <CardTitle className="text-base">Workflow Definitions</CardTitle>
           
           {/* Table Controls */}
           <TableControls

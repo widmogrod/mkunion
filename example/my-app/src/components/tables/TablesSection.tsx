@@ -1,10 +1,11 @@
 import React from 'react'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Database } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useRefreshStore } from '../../stores/refresh-store'
 import { WorkflowsTable } from './WorkflowsTable'
 import { StatesTable } from './StatesTable'
+import { PageHeader } from '../layout/PageHeader'
 import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
 
 // Shared type for table load state that matches API expectations
@@ -44,8 +45,14 @@ export function TablesSection() {
 
   return (
     <div className="h-full flex flex-col">
+      <PageHeader
+        icon={Database}
+        title="Workflows & States"
+        description="Manage workflow definitions and monitor their execution states"
+      />
+      
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mx-6 mt-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Backend Connection Error</AlertTitle>
           <AlertDescription>
@@ -55,7 +62,7 @@ export function TablesSection() {
         </Alert>
       )}
       
-      <div className="flex flex-col gap-6 flex-1 min-h-0">
+      <div className="flex flex-col gap-6 flex-1 min-h-0 p-6">
         <div className="flex-1 min-h-0 isolate">
           <WorkflowsTable 
             refreshTrigger={workflowsRefreshTrigger}
