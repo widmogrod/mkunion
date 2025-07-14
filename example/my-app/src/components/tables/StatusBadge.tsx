@@ -31,7 +31,7 @@ export function StatusBadge({ state }: StatusBadgeProps) {
       return <Badge className="bg-yellow-500">Scheduled</Badge>
     
     case 'workflow.ScheduleStopped':
-      return <Badge variant="outline">Stopped</Badge>
+      return <Badge variant="outline">Paused</Badge>
     
     case 'workflow.NextOperation':
       return <Badge className="bg-purple-500">Next Operation</Badge>

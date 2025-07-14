@@ -38,7 +38,7 @@ export function InteractiveStatusBadge({ state, onAddFilter, isFilterActive }: I
         return { label: 'Scheduled', className: 'bg-yellow-500', color: '#eab308' }
       
       case 'workflow.ScheduleStopped':
-        return { label: 'Stopped', className: 'bg-gray-500', color: '#6b7280' }
+        return { label: 'Paused', className: 'bg-gray-500', color: '#6b7280' }
       
       case 'workflow.NextOperation':
         return { label: 'Next', className: 'bg-purple-500', color: '#a855f7' }

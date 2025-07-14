@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronLeft, ChevronRight, MessageSquare, Image, Clock, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MessageSquare, Image, Clock, Zap, Table, CalendarDays } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useSidebar } from './SidebarContext'
 import { ThemeToggle } from '../theme/ThemeToggle'
@@ -7,9 +7,11 @@ import { ThemeToggle } from '../theme/ThemeToggle'
 interface MainLayoutProps {
   children: React.ReactNode
   sidebar?: React.ReactNode
+  activeTab?: 'tables' | 'schedules'
+  onTabChange?: (tab: 'tables' | 'schedules') => void
 }
 
-export function MainLayout({ children, sidebar }: MainLayoutProps) {
+export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLayoutProps) {
   const { isCollapsed, toggleSidebar, selectedDemo, setSelectedDemo } = useSidebar()
 
   // Demo icons for collapsed state
@@ -88,8 +90,35 @@ export function MainLayout({ children, sidebar }: MainLayoutProps) {
         
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto">
-          {/* Top bar with theme toggle */}
-          <div className="flex justify-end p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          {/* Top bar with navigation tabs and theme toggle */}
+          <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            {/* Navigation Tabs - Apple-inspired design */}
+            {activeTab && onTabChange && (
+              <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+                <Button
+                  variant={activeTab === 'tables' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => onTabChange('tables')}
+                  className="flex items-center gap-2 h-8 px-3 rounded-md transition-all duration-200"
+                >
+                  <Table className="h-4 w-4" />
+                  <span className="hidden sm:inline">Workflows & States</span>
+                  <span className="sm:hidden">Workflows</span>
+                </Button>
+                <Button
+                  variant={activeTab === 'schedules' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => onTabChange('schedules')}
+                  className="flex items-center gap-2 h-8 px-3 rounded-md transition-all duration-200"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="hidden sm:inline">Schedules</span>
+                  <span className="sm:hidden">Schedules</span>
+                </Button>
+              </div>
+            )}
+            
+            {/* Theme Toggle */}
             <ThemeToggle />
           </div>
           

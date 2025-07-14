@@ -19,6 +19,7 @@ import { useToast } from '../contexts/ToastContext'
 import { CreateScheduleDialog } from '../components/schedule/CreateScheduleDialog'
 import { NextRunDisplay } from '../components/schedule/NextRunDisplay'
 import { ScheduleStatusBadge } from '../components/schedule/ScheduleStatusBadge'
+import { ScheduleHistoryDialog } from '../components/schedule/ScheduleHistoryDialog'
 import * as workflow from '../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -44,6 +45,7 @@ export function SchedulesPage() {
   const [searchTerm, setSearchTerm] = React.useState('')
   const [showCreateDialog, setShowCreateDialog] = React.useState(false)
   const [selectedSchedule, setSelectedSchedule] = React.useState<ScheduledWorkflow | null>(null)
+  const [showHistoryDialog, setShowHistoryDialog] = React.useState(false)
 
   // Load scheduled workflows
   React.useEffect(() => {
@@ -292,7 +294,10 @@ export function SchedulesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setSelectedSchedule(schedule)}
+                        onClick={() => {
+                          setSelectedSchedule(schedule)
+                          setShowHistoryDialog(true)
+                        }}
                         title="View history"
                       >
                         <History className="h-4 w-4" />
@@ -337,6 +342,17 @@ export function SchedulesPage() {
             loadScheduledWorkflows()
             refreshAll()
           }}
+        />
+      )}
+
+      {showHistoryDialog && selectedSchedule && (
+        <ScheduleHistoryDialog
+          isOpen={showHistoryDialog}
+          onClose={() => {
+            setShowHistoryDialog(false)
+            setSelectedSchedule(null)
+          }}
+          schedule={selectedSchedule}
         />
       )}
     </div>

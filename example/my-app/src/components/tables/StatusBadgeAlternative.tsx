@@ -22,7 +22,7 @@ export function StatusBadgeAlternative({ state }: StatusBadgeProps) {
     'workflow.Error': () => <Badge variant="destructive">Error</Badge>,
     'workflow.Await': () => <Badge className="bg-blue-500">Await</Badge>,
     'workflow.Scheduled': () => <Badge className="bg-yellow-500">Scheduled</Badge>,
-    'workflow.ScheduleStopped': () => <Badge variant="outline">Stopped</Badge>,
+    'workflow.ScheduleStopped': () => <Badge variant="outline">Paused</Badge>,
     'workflow.NextOperation': () => <Badge className="bg-purple-500">Next Operation</Badge>,
   })
 }

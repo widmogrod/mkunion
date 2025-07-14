@@ -73,7 +73,7 @@ const STATE_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   'workflow.Error': { label: 'Error', color: '#ef4444' },
   'workflow.Await': { label: 'Await', color: '#3b82f6' },
   'workflow.Scheduled': { label: 'Scheduled', color: '#eab308' },
-  'workflow.ScheduleStopped': { label: 'Stopped', color: '#6b7280' },
+  'workflow.ScheduleStopped': { label: 'Paused', color: '#6b7280' },
   'workflow.NextOperation': { label: 'Next', color: '#a855f7' },
 }
 
