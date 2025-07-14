@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Code, FileText } from 'lucide-react'
+import { Code, FileText, Play } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { RunWorkflowDialog } from './RunWorkflowDialog'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -14,6 +15,7 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
   const [showCode, setShowCode] = useState(true) // Default to showing code
   const [workflowCode, setWorkflowCode] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [runDialogOpen, setRunDialogOpen] = useState(false)
   const { workflowAstToStr } = useWorkflowApi()
 
   const loadWorkflowCode = async () => {
@@ -45,6 +47,7 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
     if (showCode && !workflowCode && !loading) {
       loadWorkflowCode()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount
 
   const toggleDisplay = () => {
@@ -58,25 +61,36 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Badge variant="secondary" className="text-xs">{data.Type}</Badge>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleDisplay}
-          className="h-6 text-xs"
-          disabled={loading}
-        >
-          {showCode ? (
-            <>
-              <FileText className="h-3 w-3 mr-1" />
-              JSON
-            </>
-          ) : (
-            <>
-              <Code className="h-3 w-3 mr-1" />
-              Code
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setRunDialogOpen(true)}
+            className="h-6 w-6 p-0"
+            title="Run Workflow"
+          >
+            <Play className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleDisplay}
+            className="h-6 text-xs"
+            disabled={loading}
+          >
+            {showCode ? (
+              <>
+                <FileText className="h-3 w-3 mr-1" />
+                JSON
+              </>
+            ) : (
+              <>
+                <Code className="h-3 w-3 mr-1" />
+                Code
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {showCode ? (
@@ -92,6 +106,12 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
           {JSON.stringify(data.Data, null, 2)}
         </pre>
       )}
+      
+      <RunWorkflowDialog
+        isOpen={runDialogOpen}
+        onClose={() => setRunDialogOpen(false)}
+        workflow={data}
+      />
     </div>
   )
 }

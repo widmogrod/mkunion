@@ -12,7 +12,6 @@ import { useToast } from '../../contexts/ToastContext'
 import { TableLoadState } from './TablesSection'
 import { TableControls } from './PaginatedTable/components/TableControls'
 import { StatusIndicator } from '../ui/StatusIndicator'
-import { RunWorkflowDialog } from '../workflow/RunWorkflowDialog'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -28,8 +27,6 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
   const [isDeleting, setIsDeleting] = React.useState(false)
   const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
-  const [runDialogOpen, setRunDialogOpen] = React.useState(false)
-  const [selectedFlowForRun, setSelectedFlowForRun] = React.useState<schemaless.Record<workflow.Flow> | null>(null)
   
   // Adapt load function to work with the new hooks
   const adaptedLoad = React.useCallback(async (state: any) => {
@@ -58,29 +55,6 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
     }
   }, [refreshTrigger, refresh])
 
-  const handleRunFlow = () => {
-    const selectedIDs = Object.keys(selected).filter(k => selected[k])
-    
-    if (selectedIDs.length === 0) {
-      toast.warning('No Selection', 'Please select a workflow to run')
-      return
-    }
-    
-    if (selectedIDs.length > 1) {
-      toast.warning('Multiple Selection', 'Please select only one workflow to run')
-      return
-    }
-    
-    // Get the selected workflow
-    const selectedFlow = data.items.find((item: schemaless.Record<workflow.Flow>) => 
-      item.ID && selectedIDs.includes(item.ID)
-    )
-    
-    if (selectedFlow) {
-      setSelectedFlowForRun(selectedFlow)
-      setRunDialogOpen(true)
-    }
-  }
 
   const handleDeleteFlows = async () => {
     const selectedIDs = Object.keys(selected).filter(k => selected[k])
@@ -182,8 +156,7 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
   ], [selected, data.items])
 
   return (
-    <>
-      <Card className="w-full h-full flex flex-col overflow-hidden">
+    <Card className="w-full h-full flex flex-col overflow-hidden">
       <CardHeader className="flex-shrink-0 border-b py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-shrink-0">
@@ -237,14 +210,6 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
           <div className="flex items-center justify-between">
             {/* Left: Action buttons */}
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={Object.keys(selected).filter(k => selected[k]).length !== 1}
-                onClick={handleRunFlow}
-              >
-                Run
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -311,15 +276,5 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
         </div>
       </CardContent>
     </Card>
-      
-      <RunWorkflowDialog
-        isOpen={runDialogOpen}
-        onClose={() => {
-          setRunDialogOpen(false)
-          setSelectedFlowForRun(null)
-        }}
-        workflow={selectedFlowForRun}
-      />
-    </>
   )
 }
