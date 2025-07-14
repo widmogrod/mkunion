@@ -1,6 +1,7 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
+import { ConfirmButton } from '../ui/ConfirmButton'
 import { AppleCheckbox } from '../ui/AppleCheckbox'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTableData } from './PaginatedTable/hooks/useTableData'
@@ -225,41 +226,25 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
       item.ID && selectedIDs.includes(item.ID)
     )
 
-    // Use toast for confirmation instead of browser alert
-    const confirmToastId = toast.warning(
-      'Confirm Deletion',
-      `Are you sure you want to delete ${statesToDelete.length} state(s)? This action cannot be undone.`,
-      {
-        persistent: true,
-        action: {
-          label: 'Delete',
-          onClick: async () => {
-            // Dismiss the confirmation toast immediately when action starts
-            toast.removeToast(confirmToastId)
-            
-            setIsDeleting(true)
-            setDeleteStatus('idle')
-            try {
-              await deleteStates(statesToDelete)
-              setSelected({}) // Clear selection
-              refresh() // Refresh the table data
-              toast.success('Deletion Complete', `Successfully deleted ${statesToDelete.length} state(s)`)
-              setDeleteStatus('success')
-              // Clear status after 2 seconds
-              setTimeout(() => setDeleteStatus('idle'), 2000)
-            } catch (error) {
-              console.error('Failed to delete states:', error)
-              toast.error('Deletion Failed', `Failed to delete states: ${error instanceof Error ? error.message : 'Unknown error'}`)
-              setDeleteStatus('error')
-              // Clear status after 3 seconds for errors
-              setTimeout(() => setDeleteStatus('idle'), 3000)
-            } finally {
-              setIsDeleting(false)
-            }
-          }
-        }
-      }
-    )
+    setIsDeleting(true)
+    setDeleteStatus('idle')
+    try {
+      await deleteStates(statesToDelete)
+      setSelected({}) // Clear selection
+      refresh() // Refresh the table data
+      toast.success('Deletion Complete', `Successfully deleted ${statesToDelete.length} state(s)`)
+      setDeleteStatus('success')
+      // Clear status after 2 seconds
+      setTimeout(() => setDeleteStatus('idle'), 2000)
+    } catch (error) {
+      console.error('Failed to delete states:', error)
+      toast.error('Deletion Failed', `Failed to delete states: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setDeleteStatus('error')
+      // Clear status after 3 seconds for errors
+      setTimeout(() => setDeleteStatus('idle'), 3000)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleRecoverStates = async () => {
@@ -289,44 +274,28 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
       return
     }
 
-    // Use toast for confirmation instead of browser alert
-    const confirmToastId = toast.warning(
-      'Confirm Recovery',
-      `Are you sure you want to attempt recovery for ${statesToRecover.length} state(s)?`,
-      {
-        persistent: true,
-        action: {
-          label: 'Recover',
-          onClick: async () => {
-            // Dismiss the confirmation toast immediately when action starts
-            toast.removeToast(confirmToastId)
-            
-            setIsRecovering(true)
-            setRecoverStatus('idle')
-            try {
-              // Use tryRecover for each state with its actual RunID
-              const recoveryPromises = statesToRecover.map(runID => tryRecover(runID))
-              await Promise.all(recoveryPromises)
-              
-              setSelected({}) // Clear selection
-              refresh() // Refresh the table data
-              toast.success('Recovery Initiated', `Successfully initiated recovery for ${statesToRecover.length} state(s)`)
-              setRecoverStatus('success')
-              // Clear status after 2 seconds
-              setTimeout(() => setRecoverStatus('idle'), 2000)
-            } catch (error) {
-              console.error('Failed to recover states:', error)
-              toast.error('Recovery Failed', `Failed to recover states: ${error instanceof Error ? error.message : 'Unknown error'}`)
-              setRecoverStatus('error')
-              // Clear status after 3 seconds for errors
-              setTimeout(() => setRecoverStatus('idle'), 3000)
-            } finally {
-              setIsRecovering(false)
-            }
-          }
-        }
-      }
-    )
+    setIsRecovering(true)
+    setRecoverStatus('idle')
+    try {
+      // Use tryRecover for each state with its actual RunID
+      const recoveryPromises = statesToRecover.map(runID => tryRecover(runID))
+      await Promise.all(recoveryPromises)
+      
+      setSelected({}) // Clear selection
+      refresh() // Refresh the table data
+      toast.success('Recovery Initiated', `Successfully initiated recovery for ${statesToRecover.length} state(s)`)
+      setRecoverStatus('success')
+      // Clear status after 2 seconds
+      setTimeout(() => setRecoverStatus('idle'), 2000)
+    } catch (error) {
+      console.error('Failed to recover states:', error)
+      toast.error('Recovery Failed', `Failed to recover states: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setRecoverStatus('error')
+      // Clear status after 3 seconds for errors
+      setTimeout(() => setRecoverStatus('idle'), 3000)
+    } finally {
+      setIsRecovering(false)
+    }
   }
 
   // Check if a state type is actively filtered
@@ -447,26 +416,28 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
           <div className="flex items-center justify-between">
             {/* Left: Action buttons */}
             <div className="flex gap-2">
-              <Button
+              <ConfirmButton
                 variant="outline"
                 size="sm"
                 disabled={Object.keys(selected).filter(k => selected[k]).length === 0 || isDeleting || isRecovering}
-                onClick={handleDeleteStates}
+                onConfirm={handleDeleteStates}
+                confirmText={`Delete ${Object.keys(selected).filter(k => selected[k]).length} state(s)`}
                 className="flex items-center"
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? 'Deleting...' : `Delete${Object.keys(selected).filter(k => selected[k]).length > 0 ? ` (${Object.keys(selected).filter(k => selected[k]).length})` : ''}`}
                 <StatusIndicator status={deleteStatus} />
-              </Button>
-              <Button
+              </ConfirmButton>
+              <ConfirmButton
                 variant="outline"
                 size="sm"
                 disabled={Object.keys(selected).filter(k => selected[k]).length === 0 || isDeleting || isRecovering}
-                onClick={handleRecoverStates}
+                onConfirm={handleRecoverStates}
+                confirmText={`Recover ${Object.keys(selected).filter(k => selected[k]).length} state(s)`}
                 className="flex items-center"
               >
-                {isRecovering ? 'Recovering...' : 'Try recover'}
+                {isRecovering ? 'Recovering...' : `Try recover${Object.keys(selected).filter(k => selected[k]).length > 0 ? ` (${Object.keys(selected).filter(k => selected[k]).length})` : ''}`}
                 <StatusIndicator status={recoverStatus} />
-              </Button>
+              </ConfirmButton>
             </div>
             
             {/* Right: Pagination */}
