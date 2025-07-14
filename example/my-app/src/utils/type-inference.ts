@@ -1,6 +1,5 @@
 import { WorkflowParam } from './workflow-analyzer'
 import * as workflow from '../workflow/github_com_widmogrod_mkunion_x_workflow'
-import * as schema from '../workflow/github_com_widmogrod_mkunion_x_schema'
 
 /**
  * Type inference rules and constraints
@@ -101,8 +100,8 @@ function collectTypeConstraints(
     case 'workflow.End':
       const end = expr['workflow.End']
       if (end?.Result) {
-        // End result is a Reshaper
-        inferReshaperType(end.Result, constraints)
+        // End result is a Reshaper - currently no type inference needed
+        // as we don't know the expected return type
       }
       break
   }
@@ -130,31 +129,6 @@ function constrainReshaper(
   }
 }
 
-/**
- * Infer type from reshaper usage
- */
-function inferReshaperType(
-  reshaper: workflow.Reshaper,
-  constraints: Map<string, TypeConstraint>
-): void {
-  if (!reshaper.$type) return
-  
-  switch (reshaper.$type) {
-    case 'workflow.SetValue':
-      const setValue = reshaper['workflow.SetValue']
-      if (setValue?.Value?.$type === 'schema.String') {
-        // String literal indicates string type
-        if (setValue.Value['schema.String'] !== undefined) {
-          // This is a string value
-        }
-      } else if (setValue?.Value?.$type === 'schema.Number') {
-        // Number literal
-      } else if (setValue?.Value?.$type === 'schema.Bool') {
-        // Boolean literal
-      }
-      break
-  }
-}
 
 /**
  * Constrain predicate parameters
@@ -226,28 +200,6 @@ function inferComparisonTypes(
         case 'schema.Bool':
           constrainReshaper(left, 'boolean', constraints, 'Compared with boolean literal')
           break
-      }
-    }
-  }
-}
-
-/**
- * Constrain a reshaper as an object type
- */
-function constrainAsObject(
-  reshaper: workflow.Reshaper,
-  constraints: Map<string, TypeConstraint>
-): void {
-  if (reshaper.$type === 'workflow.GetValue') {
-    const getValue = reshaper['workflow.GetValue']
-    if (getValue?.Path) {
-      const constraint = constraints.get(getValue.Path)
-      if (constraint) {
-        // Remove non-object types
-        constraint.possibleTypes.delete('string')
-        constraint.possibleTypes.delete('number')
-        constraint.possibleTypes.delete('boolean')
-        constraint.evidence.push('Used as object (field access)')
       }
     }
   }
