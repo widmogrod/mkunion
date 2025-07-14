@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Code, FileText, Play } from 'lucide-react'
+import { Code, FileText, Play, Clock } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { RunWorkflowDialog } from './RunWorkflowDialog'
+import { SchedulePopover } from '../schedule/SchedulePopover'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -71,6 +72,16 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
           >
             <Play className="h-3 w-3" />
           </Button>
+          <SchedulePopover workflow={data}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              title="Schedule Workflow"
+            >
+              <Clock className="h-3 w-3" />
+            </Button>
+          </SchedulePopover>
           <Button
             variant="ghost"
             size="sm"

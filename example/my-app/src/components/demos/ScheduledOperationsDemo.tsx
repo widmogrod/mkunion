@@ -82,28 +82,17 @@ export function ScheduledOperationsDemo({ input }: ScheduledOperationsDemoProps)
       // Register the workflow first
       await flowCreate(flow)
 
-      // Then run it with scheduling - need to create command manually for scheduling
-      const cmd: workflow.Command = {
-        $type: 'workflow.Run',
-        'workflow.Run': {
-          Flow: {
-            $type: 'workflow.Flow',
-            'workflow.Flow': flow
-          },
-          Input: builders.stringValue(input || 'scheduled run demo'),
-          RunOption: {
-            $type: 'workflow.ScheduleRun',
-            'workflow.ScheduleRun': {
-              Interval: '*/10 * * * * *', // Every 10 seconds
-              ParentRunID: `parent_${Date.now()}`
-            }
-          }
-        }
-      }
+      // Use the new builder function for scheduled runs
+      const cmd = builders.createScheduledRunCommand(
+        flow,
+        builders.stringValue(input || 'scheduled run demo'),
+        '*/10 * * * * *', // Every 10 seconds
+        `parent_${Date.now()}`
+      )
 
       await runCommand(cmd)
       refreshAll()
-      toast.success('Scheduled Workflow Created', 'Workflow scheduled successfully! It will run every 10 seconds.')
+      toast.success('Scheduled Workflow Created', 'Workflow scheduled successfully! It will run every 10 seconds. View and manage it in the Schedules tab.')
     } catch (error) {
       console.error('Failed to create scheduled run:', error)
       toast.error('Scheduling Failed', `Failed to create scheduled run: ${error instanceof Error ? error.message : 'Unknown error'}`)

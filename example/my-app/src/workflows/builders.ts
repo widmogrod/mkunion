@@ -120,3 +120,51 @@ export function createRunCommand(flow: workflow.Flow, input: schema.Schema): wor
     }
   }
 }
+
+export function createScheduledRunCommand(
+  flow: workflow.Flow, 
+  input: schema.Schema,
+  cronExpression: string,
+  parentRunId?: string
+): workflow.Command {
+  return {
+    $type: 'workflow.Run',
+    'workflow.Run': {
+      Flow: {
+        $type: 'workflow.Flow',
+        'workflow.Flow': flow
+      },
+      Input: input,
+      RunOption: {
+        $type: 'workflow.ScheduleRun',
+        'workflow.ScheduleRun': {
+          Interval: cronExpression,
+          ParentRunID: parentRunId || `schedule_${Date.now()}`
+        }
+      }
+    }
+  }
+}
+
+export function createDelayedRunCommand(
+  flow: workflow.Flow,
+  input: schema.Schema,
+  delaySeconds: number
+): workflow.Command {
+  return {
+    $type: 'workflow.Run',
+    'workflow.Run': {
+      Flow: {
+        $type: 'workflow.Flow',
+        'workflow.Flow': flow
+      },
+      Input: input,
+      RunOption: {
+        $type: 'workflow.DelayRun',
+        'workflow.DelayRun': {
+          DelayBySeconds: delaySeconds
+        }
+      }
+    }
+  }
+}
