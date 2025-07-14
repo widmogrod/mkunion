@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom'
-import { X, Calendar, Table, Download, Filter } from 'lucide-react'
+import { X, Calendar, Table, Download, Filter, FileJson, FileText } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { Input } from '../ui/input'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
+import { RunHistoryCalendar } from './RunHistoryCalendar'
+import { ExecutionDetailsModal } from './ExecutionDetailsModal'
+import { exportToCSV, exportToJSON } from '../../utils/exportUtils'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -40,6 +43,9 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [selectedExecution, setSelectedExecution] = useState<RunExecution | null>(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
   
   const { listStates } = useWorkflowApi()
   const toast = useToast()
@@ -50,6 +56,20 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
       loadRunHistory()
     }
   }, [isOpen, schedule.parentRunId])
+
+  // Close export menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showExportMenu) {
+        setShowExportMenu(false)
+      }
+    }
+    
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showExportMenu])
 
   const loadRunHistory = async () => {
     try {
@@ -297,12 +317,26 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
     avgDuration: undefined // Duration tracking not implemented in workflow system
   }
 
+  const handleExportCSV = () => {
+    exportToCSV(filteredExecutions, schedule.flowName)
+    toast.success('Export Complete', `Exported ${filteredExecutions.length} executions to CSV`)
+    setShowExportMenu(false)
+  }
+
+  const handleExportJSON = () => {
+    exportToJSON(filteredExecutions, schedule.flowName)
+    toast.success('Export Complete', `Exported ${filteredExecutions.length} executions to JSON`)
+    setShowExportMenu(false)
+  }
+
   if (!isOpen) return null
 
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-background rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden z-[10000] border m-4">
+  return (
+    <>
+      {ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+          <div className="relative bg-background rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden z-[10000] border m-4">
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b bg-muted/30">
@@ -397,10 +431,38 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" />
-              Export
-            </Button>
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowExportMenu(!showExportMenu)
+                }}
+                disabled={filteredExecutions.length === 0}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Export
+              </Button>
+              {showExportMenu && (
+                <div className="absolute right-0 mt-1 w-40 bg-background border rounded-md shadow-lg z-10">
+                  <button
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-muted transition-colors flex items-center gap-2"
+                    onClick={handleExportCSV}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Export as CSV
+                  </button>
+                  <button
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-muted transition-colors flex items-center gap-2"
+                    onClick={handleExportJSON}
+                  >
+                    <FileJson className="h-4 w-4" />
+                    Export as JSON
+                  </button>
+                </div>
+              )}
+            </div>
             <Button variant="outline" size="sm" onClick={loadRunHistory} disabled={loading}>
               <Filter className="h-4 w-4 mr-1" />
               Refresh
@@ -443,7 +505,13 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
             /* Table View */
             <div className="space-y-4">
               {filteredExecutions.map((execution) => (
-                <div key={execution.id} className="border rounded-lg p-4 hover:bg-muted/30 transition-colors">
+                <div 
+                  key={execution.id} 
+                  className="border rounded-lg p-4 hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setSelectedExecution(execution)
+                    setShowDetailsModal(true)
+                  }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       {getStatusBadge(execution.status)}
@@ -472,18 +540,26 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
               ))}
             </div>
           ) : (
-            /* Calendar View - Placeholder */
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">Calendar View</p>
-                <p className="text-muted-foreground">Coming soon...</p>
-              </div>
-            </div>
+            /* Calendar View */
+            <RunHistoryCalendar 
+              executions={filteredExecutions}
+              onExecutionClick={(execution) => {
+                setSelectedExecution(execution)
+                setShowDetailsModal(true)
+              }}
+            />
           )}
         </div>
       </div>
-    </div>,
-    document.body
+        </div>,
+        document.body
+      )}
+      
+      <ExecutionDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        execution={selectedExecution}
+      />
+    </>
   )
 }
