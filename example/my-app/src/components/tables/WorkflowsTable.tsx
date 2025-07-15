@@ -46,6 +46,13 @@ const createAnd = (predicates: predicate.Predicate[]): predicate.Predicate => ({
   }
 })
 
+const createNot = (p: predicate.Predicate): predicate.Predicate => ({
+  "$type": "predicate.Not",
+  "predicate.Not": {
+    P: p
+  }
+})
+
 export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: WorkflowsTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteFlows } = useWorkflowApi()
@@ -77,14 +84,21 @@ export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: Wo
     // Add workflow filter if present
     if (activeFilters.length > 0) {
       activeFilters.forEach(filter => {
-        if (filter.stateType === 'workflow' && !filter.isExclude) {
-          predicates.push(
-            createCompare(
-              'ID',
-              '==',
-              { "$type": "schema.String", "schema.String": filter.label }
-            )
+        if (filter.stateType === 'workflow') {
+          // For workflows, filter by Data.Name (the workflow definition name)
+          const workflowPredicate = createCompare(
+            'Data["Name"]',
+            '==',
+            { "$type": "schema.String", "schema.String": filter.label }
           )
+          
+          if (!filter.isExclude) {
+            // Include: match the workflow name
+            predicates.push(workflowPredicate)
+          } else {
+            // Exclude: NOT match the workflow name
+            predicates.push(createNot(workflowPredicate))
+          }
         }
       })
     }
@@ -115,6 +129,12 @@ export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: Wo
   // Filter management functions
   const removeFilter = (index: number) => {
     setActiveFilters(prev => prev.filter((_, i) => i !== index))
+  }
+  
+  const toggleFilterMode = (index: number) => {
+    setActiveFilters(prev => prev.map((filter, i) => 
+      i === index ? { ...filter, isExclude: !filter.isExclude } : filter
+    ))
   }
   
   const clearAllFilters = () => {
@@ -250,6 +270,7 @@ export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: Wo
             refreshTitle="Refresh workflows data"
             activeFilters={activeFilters}
             onRemoveFilter={removeFilter}
+            onToggleFilterMode={toggleFilterMode}
             onClearAllFilters={clearAllFilters}
           />
         </div>
