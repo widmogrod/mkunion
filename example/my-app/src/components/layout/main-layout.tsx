@@ -2,7 +2,8 @@ import React, { useEffect } from 'react'
 import { ChevronLeft, ChevronRight, MessageSquare, Image, Clock, Zap, Layers, Menu } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useSidebar } from './SidebarContext'
-import { ThemeToggle } from '../theme/ThemeToggle'
+import { ThemeToggleCompact } from '../theme/ThemeToggleCompact'
+import { ThemeToggleSegmented } from '../theme/ThemeToggleSegmented'
 import { NavigationSection } from '../navigation/NavigationSection'
 import { CollapsibleSection } from './CollapsibleSection'
 import { cn } from '../../utils/cn'
@@ -104,67 +105,82 @@ export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLa
               <div className="flex-1 overflow-y-auto">
                 {isCollapsed && !isMobile ? (
                   /* Collapsed State - Icon Menu (Desktop only) */
-                  <div className="p-2 space-y-6">
-                    {/* Navigation Section */}
-                    <div className="space-y-1">
-                      <NavigationSection
-                        activeTab={activeTab}
-                        onTabChange={handleNavigationClick}
-                        isCollapsed={true}
-                      />
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1 p-2 space-y-6">
+                      {/* Navigation Section */}
+                      <div className="space-y-1">
+                        <NavigationSection
+                          activeTab={activeTab}
+                          onTabChange={handleNavigationClick}
+                          isCollapsed={true}
+                        />
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="h-px bg-border" />
+                      
+                      {/* Demo Icons */}
+                      <div className="space-y-1">
+                        {demoIcons.map(({ icon: Icon, label, id }) => (
+                          <Button
+                            key={id}
+                            variant={selectedDemo === id ? "secondary" : "ghost"}
+                            size="sm"
+                            className={cn(
+                              "w-full h-10 p-0 flex items-center justify-center group transition-all duration-200",
+                              selectedDemo === id && "bg-secondary/80 hover:bg-secondary/90"
+                            )}
+                            title={label}
+                            onClick={() => handleIconClick(id)}
+                          >
+                            <Icon className={cn(
+                              "h-4 w-4 transition-colors duration-200",
+                              selectedDemo === id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                            )} />
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                     
-                    {/* Divider */}
-                    <div className="h-px bg-border" />
-                    
-                    {/* Demo Icons */}
-                    <div className="space-y-1">
-                      {demoIcons.map(({ icon: Icon, label, id }) => (
-                        <Button
-                          key={id}
-                          variant={selectedDemo === id ? "secondary" : "ghost"}
-                          size="sm"
-                          className={cn(
-                            "w-full h-10 p-0 flex items-center justify-center group transition-all duration-200",
-                            selectedDemo === id && "bg-secondary/80 hover:bg-secondary/90"
-                          )}
-                          title={label}
-                          onClick={() => handleIconClick(id)}
-                        >
-                          <Icon className={cn(
-                            "h-4 w-4 transition-colors duration-200",
-                            selectedDemo === id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                          )} />
-                        </Button>
-                      ))}
+                    {/* Footer with Theme Toggle */}
+                    <div className="border-t p-2">
+                      <ThemeToggleCompact />
                     </div>
                   </div>
                 ) : (
                   /* Expanded State - Full Content */
                   <div className="flex flex-col h-full">
-                    {/* Navigation Section */}
-                    <div className="p-4 pb-0">
-                      <NavigationSection
-                        activeTab={activeTab}
-                        onTabChange={handleNavigationClick}
-                        isCollapsed={false}
-                      />
+                    <div className="flex-1 overflow-y-auto">
+                      {/* Navigation Section */}
+                      <div className="p-4 pb-0">
+                        <NavigationSection
+                          activeTab={activeTab}
+                          onTabChange={handleNavigationClick}
+                          isCollapsed={false}
+                        />
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="mx-4 my-4 h-px bg-border" />
+                      
+                      {/* Demos Section */}
+                      <div className="px-4 pb-4">
+                        <CollapsibleSection
+                          title="Demos"
+                          icon={Layers}
+                          defaultOpen={true}
+                        >
+                          <div className="max-w-full">
+                            {sidebar}
+                          </div>
+                        </CollapsibleSection>
+                      </div>
                     </div>
                     
-                    {/* Divider */}
-                    <div className="mx-4 my-4 h-px bg-border" />
-                    
-                    {/* Demos Section */}
-                    <div className="flex-1 px-4 pb-4 overflow-y-auto">
-                      <CollapsibleSection
-                        title="Demos"
-                        icon={Layers}
-                        defaultOpen={true}
-                      >
-                        <div className="max-w-full">
-                          {sidebar}
-                        </div>
-                      </CollapsibleSection>
+                    {/* Footer with Theme Toggle */}
+                    <div className="border-t p-4">
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3">Theme</h3>
+                      <ThemeToggleSegmented />
                     </div>
                   </div>
                 )}
@@ -175,26 +191,19 @@ export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLa
         
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto">
-          {/* Top bar with theme toggle */}
-          <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            {/* Hamburger menu for mobile */}
-            {isMobile && sidebar && (
+          {/* Top bar - only show on mobile */}
+          {isMobile && sidebar && (
+            <div className="flex items-center p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="h-9 w-9 p-0 md:hidden"
+                className="h-9 w-9 p-0"
               >
                 <Menu className="h-5 w-5" />
               </Button>
-            )}
-            
-            {/* Spacer for desktop */}
-            {!isMobile && <div />}
-            
-            {/* Theme Toggle */}
-            <ThemeToggle />
-          </div>
+            </div>
+          )}
           
           <div className="p-6 w-full h-full">
             {children}
