@@ -10,6 +10,7 @@ import { TableContent } from './PaginatedTable/components/TableContent'
 import { WorkflowDisplay } from '../workflow/WorkflowDisplay'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUrlParams } from '../../hooks/useNavigation'
 import { TableLoadState } from './TablesSection'
 import { TableControls, FilterItem } from './PaginatedTable/components/TableControls'
 import { StatusIndicator } from '../ui/StatusIndicator'
@@ -56,6 +57,7 @@ const createNot = (p: predicate.Predicate): predicate.Predicate => ({
 export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: WorkflowsTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteFlows } = useWorkflowApi()
+  const { setParam } = useUrlParams()
   const toast = useToast()
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
   const [isDeleting, setIsDeleting] = React.useState(false)
@@ -126,25 +128,39 @@ export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: Wo
     pagination.actions.setWhere(whereClause)
   }, [activeFilters, searchText, buildWhereClause, pagination.actions])
   
+  // Sync current filter state to URL parameters
+  const syncFiltersToUrl = React.useCallback((filters: FilterItem[]) => {
+    // For WorkflowsTable, only workflow filters are relevant
+    const workflowFilters = filters.filter(f => f.stateType === 'workflow')
+    if (workflowFilters.length > 0) {
+      // Set the first workflow filter as the main filter parameter
+      setParam('filter', workflowFilters[0].label)
+    } else {
+      setParam('filter', null)
+    }
+    // Note: 'id' parameter is controlled by parent components, don't modify it here
+  }, [setParam])
+
   // Filter management functions
   const removeFilter = (index: number) => {
-    setActiveFilters(prev => prev.filter((_, i) => i !== index))
+    const newFilters = activeFilters.filter((_, i) => i !== index)
+    setActiveFilters(newFilters)
+    syncFiltersToUrl(newFilters)
   }
   
   const toggleFilterMode = (index: number) => {
-    setActiveFilters(prev => prev.map((filter, i) => 
+    const newFilters = activeFilters.map((filter, i) => 
       i === index ? { ...filter, isExclude: !filter.isExclude } : filter
-    ))
+    )
+    setActiveFilters(newFilters)
+    syncFiltersToUrl(newFilters)
   }
   
   const clearAllFilters = () => {
     setActiveFilters([])
-    // Also clear URL parameters to prevent filters from reactivating when switching views
-    const urlParams = new URLSearchParams(window.location.search)
-    urlParams.delete('filter')
-    urlParams.delete('id')
-    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '')
-    window.history.replaceState({}, '', newUrl)
+    // Clear filter-related URL parameters
+    setParam('filter', null)
+    // Note: We don't clear 'id' as it might be controlled by parent components
   }
   
   // Adapt load function to work with the new hooks

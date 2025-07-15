@@ -10,6 +10,7 @@ import { TableContent } from './PaginatedTable/components/TableContent'
 import { StateDetailsRenderer } from '../workflow/StateDetailsRenderer'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUrlParams } from '../../hooks/useNavigation'
 import { TableLoadState } from './TablesSection'
 import { TableControls } from './PaginatedTable/components/TableControls'
 import { StatusIndicator } from '../ui/StatusIndicator'
@@ -92,18 +93,11 @@ export function ExecutionsTable({
 }: ExecutionsTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteStates, tryRecover } = useWorkflowApi()
+  const { setParam, setArrayParam } = useUrlParams()
   const toast = useToast()
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
-  const [activeFilters, setActiveFilters] = React.useState<FilterItem[]>([])
-  const [searchText, setSearchText] = React.useState('')
-  const [isDeleting, setIsDeleting] = React.useState(false)
-  const [isRecovering, setIsRecovering] = React.useState(false)
-  const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
-  const [recoverStatus, setRecoverStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
-  const [flowNameCache, setFlowNameCache] = React.useState<Map<string, string>>(new Map())
-  
-  // Initialize filters from URL parameters
-  React.useEffect(() => {
+  const [activeFilters, setActiveFilters] = React.useState<FilterItem[]>(() => {
+    // Initialize filters from URL parameters
     const initialFilters: FilterItem[] = []
     
     // Handle workflow filter from URL
@@ -143,10 +137,49 @@ export function ExecutionsTable({
       })
     }
     
-    if (initialFilters.length > 0) {
-      setActiveFilters(initialFilters)
+    return initialFilters
+  })
+  const [searchText, setSearchText] = React.useState('')
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isRecovering, setIsRecovering] = React.useState(false)
+  const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
+  const [recoverStatus, setRecoverStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
+  const [flowNameCache, setFlowNameCache] = React.useState<Map<string, string>>(new Map())
+  
+  // Sync current filter state to URL parameters
+  const syncFiltersToUrl = React.useCallback((filters: FilterItem[]) => {
+    // Extract workflow filters
+    const workflowFilters = filters.filter(f => f.stateType === 'workflow')
+    if (workflowFilters.length > 0) {
+      // Set the first workflow filter as the main workflow parameter
+      setParam('workflow', workflowFilters[0].label)
+    } else {
+      setParam('workflow', null)
     }
-  }, [statusFilter, workflowFilter])
+    
+    // Extract status filters (non-workflow filters)
+    const statusFilters = filters.filter(f => f.stateType !== 'workflow')
+    if (statusFilters.length > 0) {
+      // Map state types back to URL-friendly status names
+      const statusToUrlMap: Record<string, string> = {
+        'workflow.Done': 'done',
+        'workflow.Error': 'error', 
+        'workflow.Await': 'await',
+        'workflow.Scheduled': 'scheduled',
+        'workflow.ScheduleStopped': 'paused',
+        'workflow.NextOperation': 'next'
+      }
+      
+      const statusParams = statusFilters.map(f => statusToUrlMap[f.stateType] || f.stateType)
+      setArrayParam('status', statusParams)
+    } else {
+      setArrayParam('status', [])
+    }
+    
+    // Keep existing runId and schedule parameters as they come from props
+    // Don't modify them here as they're controlled by parent components
+  }, [setParam, setArrayParam])
+  
   
   // Build filter conditions based on current filters
   const buildWhereClause = React.useCallback((): predicate.Predicate | undefined => {
@@ -338,44 +371,66 @@ export function ExecutionsTable({
   }, [refreshTrigger, refresh])
 
   // Filter management functions
-  const addFilter = React.useCallback((stateType: string) => {
+  const addFilter = React.useCallback((stateType: string, label?: string) => {
+    // Special handling for workflow filters
+    if (stateType === 'workflow') {
+      if (!label) return
+      
+      // Check if filter already exists
+      const exists = activeFilters.some(f => f.stateType === 'workflow' && f.label === label && !f.isExclude)
+      if (exists) return
+      
+      const newFilters = [...activeFilters, {
+        stateType: 'workflow',
+        label: label,
+        color: '#3b82f6', // Blue color for workflow filters
+        isExclude: false
+      }]
+      
+      setActiveFilters(newFilters)
+      syncFiltersToUrl(newFilters)
+      return
+    }
+    
+    // Regular state type filters
+    const config = STATE_TYPE_CONFIG[stateType]
+    if (!config) return
+    
     // Check if filter already exists
     const exists = activeFilters.some(f => f.stateType === stateType && !f.isExclude)
     if (exists) return
     
-    const config = STATE_TYPE_CONFIG[stateType]
-    if (!config) return
-    
-    setActiveFilters(prev => [...prev, {
+    const newFilters = [...activeFilters, {
       stateType,
       label: config.label,
       color: config.color,
       isExclude: false
-    }])
-  }, [activeFilters])
+    }]
+    
+    setActiveFilters(newFilters)
+    syncFiltersToUrl(newFilters)
+  }, [activeFilters, syncFiltersToUrl])
   
   const removeFilter = React.useCallback((index: number) => {
-    setActiveFilters(prev => prev.filter((_, i) => i !== index))
-  }, [])
+    const newFilters = activeFilters.filter((_, i) => i !== index)
+    setActiveFilters(newFilters)
+    syncFiltersToUrl(newFilters)
+  }, [activeFilters, syncFiltersToUrl])
   
   const toggleFilterMode = React.useCallback((index: number) => {
-    setActiveFilters(prev => prev.map((filter, i) => 
+    const newFilters = activeFilters.map((filter, i) => 
       i === index ? { ...filter, isExclude: !filter.isExclude } : filter
-    ))
-  }, [])
+    )
+    setActiveFilters(newFilters)
+    syncFiltersToUrl(newFilters)
+  }, [activeFilters, syncFiltersToUrl])
   
   const clearAllFilters = React.useCallback(() => {
     setActiveFilters([])
     setSearchText('')
-    // Also clear URL parameters to prevent filters from reactivating when switching views
-    const urlParams = new URLSearchParams(window.location.search)
-    urlParams.delete('workflow')
-    urlParams.delete('runId')
-    urlParams.delete('status')
-    urlParams.delete('schedule')
-    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '')
-    window.history.replaceState({}, '', newUrl)
-  }, [])
+    // Use syncFiltersToUrl to clear URL parameters
+    syncFiltersToUrl([])
+  }, [syncFiltersToUrl])
 
   const handleDeleteStates = async () => {
     const selectedIDs = Object.keys(selected).filter(k => selected[k])

@@ -80,7 +80,7 @@ export function TableControls({
                 stateType={filter.stateType}
               />
             ))}
-            {activeFilters.length > 1 && onClearAllFilters && (
+            {activeFilters.length > 0 && onClearAllFilters && (
               <Button
                 variant="ghost"
                 size="sm"
