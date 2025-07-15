@@ -367,6 +367,14 @@ export function ExecutionsTable({
   const clearAllFilters = React.useCallback(() => {
     setActiveFilters([])
     setSearchText('')
+    // Also clear URL parameters to prevent filters from reactivating when switching views
+    const urlParams = new URLSearchParams(window.location.search)
+    urlParams.delete('workflow')
+    urlParams.delete('runId')
+    urlParams.delete('status')
+    urlParams.delete('schedule')
+    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '')
+    window.history.replaceState({}, '', newUrl)
   }, [])
 
   const handleDeleteStates = async () => {

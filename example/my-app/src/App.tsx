@@ -31,8 +31,20 @@ export default function App() {
   const activeTab = getActiveTab() as 'workflows' | 'executions' | 'schedules' | 'calendar'
   
   const handleTabChange = (tab: 'workflows' | 'executions' | 'schedules' | 'calendar') => {
-    // Preserve query params when switching tabs
+    // Preserve query params when switching tabs, but clear view-specific filter parameters
     const searchParams = new URLSearchParams(location.search)
+    
+    // Clear filter parameters that are specific to different views
+    // These parameters don't make sense when switching between different view types
+    searchParams.delete('filter')      // workflows page filter
+    searchParams.delete('id')          // workflows page specific item
+    searchParams.delete('workflow')    // executions page workflow filter
+    searchParams.delete('runId')       // executions page run filter
+    searchParams.delete('status')      // executions page status filter
+    searchParams.delete('schedule')    // executions page schedule filter
+    searchParams.delete('parentRunId') // schedules page filter
+    searchParams.delete('focus')       // schedules page focus
+    
     navigate(`/${tab}?${searchParams.toString()}`)
   }
 

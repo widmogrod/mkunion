@@ -148,13 +148,34 @@ export function ExecutionDetailsModal({
           )}
 
           {/* Error Details */}
-          {execution.status === 'error' && execution.errorMessage && (
+          {execution.status === 'error' && execution.outputData && execution.outputData['workflow.Error'] && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">Error Details</h3>
-              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  {execution.errorMessage}
-                </p>
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-4 rounded-lg space-y-2">
+                {execution.outputData['workflow.Error'].Code && (
+                  <div>
+                    <span className="text-xs font-medium text-red-700 dark:text-red-300">Error Code:</span>
+                    <p className="text-sm text-red-600 dark:text-red-400 font-mono">
+                      {execution.outputData['workflow.Error'].Code}
+                    </p>
+                  </div>
+                )}
+                {execution.outputData['workflow.Error'].Reason && (
+                  <div>
+                    <span className="text-xs font-medium text-red-700 dark:text-red-300">Reason:</span>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {execution.outputData['workflow.Error'].Reason}
+                    </p>
+                  </div>
+                )}
+                {execution.outputData['workflow.Error'].Retried !== undefined && (
+                  <div>
+                    <span className="text-xs font-medium text-red-700 dark:text-red-300">Retry Count:</span>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {execution.outputData['workflow.Error'].Retried}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

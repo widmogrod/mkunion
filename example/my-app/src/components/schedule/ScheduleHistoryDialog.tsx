@@ -231,9 +231,10 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
         status = 'done'
       } else if (finalStateType === 'workflow.Error') {
         status = 'error'
-        // Try to extract error message
+        // Try to extract error message from Go Error struct
         const errorState = lastState.Data?.['workflow.Error'] as any
-        errorMessage = errorState?.Message || 'Unknown error'
+        // Use Reason field from Go Error struct, with Code as fallback
+        errorMessage = errorState?.Reason || errorState?.Code || 'Unknown error'
       } else if (finalStateType === 'workflow.Await') {
         status = 'running'
       }

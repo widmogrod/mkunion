@@ -139,6 +139,12 @@ export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: Wo
   
   const clearAllFilters = () => {
     setActiveFilters([])
+    // Also clear URL parameters to prevent filters from reactivating when switching views
+    const urlParams = new URLSearchParams(window.location.search)
+    urlParams.delete('filter')
+    urlParams.delete('id')
+    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '')
+    window.history.replaceState({}, '', newUrl)
   }
   
   // Adapt load function to work with the new hooks

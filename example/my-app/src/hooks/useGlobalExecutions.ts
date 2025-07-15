@@ -126,7 +126,8 @@ export function useGlobalExecutions({ dateRange, schedules }: UseGlobalExecution
             
             if (stateType === 'workflow.Error') {
               const errorState = stateData['workflow.Error'] as any
-              errorMessage = errorState?.Message || 'Unknown error'
+              // Use Reason field from Go Error struct, with Code as fallback
+              errorMessage = errorState?.Reason || errorState?.Code || 'Unknown error'
             }
           }
           
