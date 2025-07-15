@@ -10,9 +10,10 @@ interface ClickableStateRowProps {
   state: schemaless.Record<workflow.State>
   flowName?: string
   className?: string
+  showWorkflowIcon?: boolean
 }
 
-export function ClickableStateRow({ state, flowName, className }: ClickableStateRowProps) {
+export function ClickableStateRow({ state, flowName, className, showWorkflowIcon = true }: ClickableStateRowProps) {
   const { navigateToWorkflows, navigateToSchedules } = useNavigationWithContext()
 
   if (!state.Data || !state.Data.$type) return null
@@ -43,7 +44,7 @@ export function ClickableStateRow({ state, flowName, className }: ClickableState
   return (
     <div className={cn("inline-flex items-center gap-1", className)}>
       {/* Navigate to workflow details */}
-      {flowName && (
+      {showWorkflowIcon && flowName && (
         <Button
           variant="ghost"
           size="sm"

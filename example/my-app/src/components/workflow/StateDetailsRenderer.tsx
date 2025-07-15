@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Code, FileText, Play, Pause, RotateCcw, Send } from 'lucide-react'
+import { Code, FileText, Play, Pause, RotateCcw, Send, Database } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import { useRefreshStore } from '../../stores/refresh-store'
+import { useNavigationWithContext } from '../../hooks/useNavigation'
 import { InteractiveStatusBadge } from '../tables/InteractiveStatusBadge'
 import { ResultPreview } from './ResultPreview'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
@@ -14,9 +15,10 @@ interface StateDetailsRendererProps {
   data: schemaless.Record<workflow.State>
   onAddFilter?: (stateType: string) => void
   isFilterActive?: boolean
+  flowName?: string
 }
 
-export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: StateDetailsRendererProps) {
+export function StateDetailsRenderer({ data, onAddFilter, isFilterActive, flowName }: StateDetailsRendererProps) {
   const [showCode, setShowCode] = useState(true) // Default to showing code
   const [workflowCode, setWorkflowCode] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -24,6 +26,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
   const [callbackResult, setCallbackResult] = useState('')
   const [callbackSubmitting, setCallbackSubmitting] = useState(false)
   const { workflowToStr, submitCallback, stopSchedule, resumeSchedule, tryRecover } = useWorkflowApi()
+  const { navigateToWorkflows } = useNavigationWithContext()
   const toast = useToast()
   const { refreshAll } = useRefreshStore()
 
@@ -118,6 +121,14 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
     } catch (error) {
       console.error('Failed to retry/recover state:', error)
       toast.error('Recovery Failed', `Failed to retry: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  const handleWorkflowClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (flowName) {
+      navigateToWorkflows(flowName, data.ID)
     }
   }
 
@@ -558,6 +569,19 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive }: Stat
         <div className="flex items-center gap-1">
           {/* Quick action buttons */}
           {quickActions && quickActions.map(action => action)}
+          
+          {/* View workflow button */}
+          {flowName && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleWorkflowClick}
+              className="h-6 w-6 p-0 hover:bg-primary/10"
+              title={`View workflow: ${flowName}`}
+            >
+              <Database className="h-3 w-3" />
+            </Button>
+          )}
           
           {/* Toggle button */}
           <Button

@@ -467,6 +467,24 @@ export function ExecutionsTable({
     return activeFilters.some(f => f.stateType === stateType)
   }, [activeFilters])
 
+  // Utility function to extract flow name from state data
+  const extractFlowNameFromState = React.useCallback((item: schemaless.Record<workflow.State>): string | undefined => {
+    if (!item.Data || !item.Data.$type) return undefined
+    
+    const stateData = item.Data[item.Data.$type as keyof typeof item.Data] as any
+    const baseState = stateData?.BaseState
+    
+    if (baseState?.Flow) {
+      if (baseState.Flow.$type === 'workflow.Flow' && baseState.Flow['workflow.Flow']) {
+        return baseState.Flow['workflow.Flow'].Name || undefined
+      } else if (baseState.Flow.$type === 'workflow.FlowRef' && baseState.Flow['workflow.FlowRef']) {
+        return baseState.Flow['workflow.FlowRef'].FlowID || undefined
+      }
+    }
+    
+    return undefined
+  }, [])
+
   // Table columns configuration
   const columns = React.useMemo(() => [
     {
@@ -511,8 +529,11 @@ export function ExecutionsTable({
       key: 'content',
       header: 'Data',
       render: (value: any, item: schemaless.Record<workflow.State>) => {
-        // Get flow name from cache or from data
-        const flowName = flowNameCache.get(item.ID || '') || workflowFilter || undefined
+        // Get flow name from state data first, fallback to cache or filter
+        const flowName = extractFlowNameFromState(item) || 
+                          flowNameCache.get(item.ID || '') || 
+                          workflowFilter || 
+                          undefined
         
         return (
           <div className="space-y-2">
@@ -520,18 +541,20 @@ export function ExecutionsTable({
               data={item} 
               onAddFilter={addFilter}
               isFilterActive={item.Data ? isStateTypeFiltered(item.Data.$type || '') : false}
+              flowName={flowName}
             />
-            {/* Add navigation controls */}
+            {/* Add schedule navigation controls only */}
             <ClickableStateRow 
               state={item}
               flowName={flowName}
               className="mt-2"
+              showWorkflowIcon={false}
             />
           </div>
         )
       }
     }
-  ], [selected, data.items, addFilter, isStateTypeFiltered, flowNameCache, workflowFilter])
+  ], [selected, data.items, addFilter, isStateTypeFiltered, flowNameCache, workflowFilter, extractFlowNameFromState])
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden">
