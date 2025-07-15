@@ -5,6 +5,7 @@ import { Code, FileText, Play, Clock } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { RunWorkflowDialog } from './RunWorkflowDialog'
 import { SchedulePopover } from '../schedule/SchedulePopover'
+import { ClickableWorkflowName } from '../navigation/ClickableWorkflowName'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 
@@ -58,10 +59,19 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
     setShowCode(!showCode)
   }
 
+  const workflowName = data.Data?.Name || 'Unnamed Workflow'
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Badge variant="secondary" className="text-xs">{data.Type}</Badge>
+        <div className="flex items-center gap-2">
+          <ClickableWorkflowName 
+            workflowName={workflowName} 
+            workflowId={data.ID}
+            showArrow
+          />
+          <Badge variant="secondary" className="text-xs">{data.Type}</Badge>
+        </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"

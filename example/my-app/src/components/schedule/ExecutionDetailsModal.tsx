@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { X } from 'lucide-react'
+import { X, Database, CalendarDays } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { StatusIcon } from '../ui/icons'
@@ -21,9 +21,21 @@ interface ExecutionDetailsModalProps {
   isOpen: boolean
   onClose: () => void
   execution: RunExecution | null
+  onNavigateToWorkflow?: (workflowName: string) => void
+  onNavigateToSchedule?: (parentRunId: string) => void
+  workflowName?: string
+  parentRunId?: string
 }
 
-export function ExecutionDetailsModal({ isOpen, onClose, execution }: ExecutionDetailsModalProps) {
+export function ExecutionDetailsModal({ 
+  isOpen, 
+  onClose, 
+  execution,
+  onNavigateToWorkflow,
+  onNavigateToSchedule,
+  workflowName,
+  parentRunId
+}: ExecutionDetailsModalProps) {
   if (!isOpen || !execution) return null
 
   const getStatusIcon = () => {
@@ -149,7 +161,41 @@ export function ExecutionDetailsModal({ isOpen, onClose, execution }: ExecutionD
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 p-4 border-t bg-muted/10">
+        <div className="flex items-center justify-between gap-2 p-4 border-t bg-muted/10">
+          <div className="flex items-center gap-2">
+            {/* Navigate to workflow */}
+            {workflowName && onNavigateToWorkflow && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  onNavigateToWorkflow(workflowName)
+                  onClose()
+                }}
+                className="flex items-center gap-2"
+              >
+                <Database className="h-3 w-3" />
+                View Workflow
+              </Button>
+            )}
+            
+            {/* Navigate to schedule */}
+            {parentRunId && onNavigateToSchedule && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  onNavigateToSchedule(parentRunId)
+                  onClose()
+                }}
+                className="flex items-center gap-2"
+              >
+                <CalendarDays className="h-3 w-3" />
+                View Schedule
+              </Button>
+            )}
+          </div>
+          
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
           </Button>

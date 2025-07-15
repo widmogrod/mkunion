@@ -13,14 +13,19 @@ import { useToast } from '../../contexts/ToastContext'
 import { TableLoadState } from './TablesSection'
 import { TableControls } from './PaginatedTable/components/TableControls'
 import { StatusIndicator } from '../ui/StatusIndicator'
+import { ClickableStateRow } from '../navigation/ClickableStateRow'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
 import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
 
-interface StatesTableProps {
+interface ExecutionsTableProps {
   refreshTrigger: number
   loadStates: (state: TableLoadState) => Promise<any>
+  workflowFilter?: string | null
+  runIdFilter?: string | null
+  statusFilter?: string[]
+  scheduleFilter?: string | null
 }
 
 // Helper functions for creating predicates
@@ -77,7 +82,14 @@ const STATE_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   'workflow.NextOperation': { label: 'Next', color: '#a855f7' },
 }
 
-export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
+export function ExecutionsTable({ 
+  refreshTrigger, 
+  loadStates,
+  workflowFilter,
+  runIdFilter,
+  statusFilter,
+  scheduleFilter
+}: ExecutionsTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteStates, tryRecover } = useWorkflowApi()
   const toast = useToast()
@@ -88,10 +100,83 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
   const [isRecovering, setIsRecovering] = React.useState(false)
   const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
   const [recoverStatus, setRecoverStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
+  const [flowNameCache, setFlowNameCache] = React.useState<Map<string, string>>(new Map())
+  
+  // Initialize filters from URL parameters
+  React.useEffect(() => {
+    const initialFilters: FilterItem[] = []
+    
+    // Handle status filter from URL
+    if (statusFilter && statusFilter.length > 0) {
+      statusFilter.forEach(status => {
+        // Map status names to workflow types
+        const statusToType: Record<string, string> = {
+          'done': 'workflow.Done',
+          'error': 'workflow.Error',
+          'await': 'workflow.Await',
+          'scheduled': 'workflow.Scheduled',
+          'paused': 'workflow.ScheduleStopped',
+          'next': 'workflow.NextOperation'
+        }
+        
+        const stateType = statusToType[status.toLowerCase()] || status
+        const config = STATE_TYPE_CONFIG[stateType]
+        
+        if (config) {
+          initialFilters.push({
+            stateType,
+            label: config.label,
+            color: config.color,
+            isExclude: false
+          })
+        }
+      })
+    }
+    
+    if (initialFilters.length > 0) {
+      setActiveFilters(initialFilters)
+    }
+  }, [statusFilter])
   
   // Build filter conditions based on current filters
   const buildWhereClause = React.useCallback((): predicate.Predicate | undefined => {
     const predicates: predicate.Predicate[] = []
+    
+    // Add workflow filter if present
+    if (workflowFilter) {
+      // We'll need to filter by checking flow names in the results
+      // This is handled after data load since workflow names aren't directly in state records
+    }
+    
+    // Add runId filter if present
+    if (runIdFilter) {
+      predicates.push(
+        createCompare(
+          'ID',
+          '==',
+          { "$type": "schema.String", "schema.String": runIdFilter }
+        )
+      )
+    }
+    
+    // Add schedule filter if present
+    if (scheduleFilter) {
+      // Filter for states with matching ParentRunID
+      predicates.push(
+        createOr([
+          createCompare(
+            'Data["workflow.Scheduled"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
+            '==',
+            { "$type": "schema.String", "schema.String": scheduleFilter }
+          ),
+          createCompare(
+            'Data["workflow.ScheduleStopped"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
+            '==',
+            { "$type": "schema.String", "schema.String": scheduleFilter }
+          )
+        ])
+      )
+    }
     
     // Group filters by include/exclude
     const includeFilters = activeFilters.filter(f => !f.isExclude)
@@ -142,7 +227,7 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
     if (predicates.length === 0) return undefined
     if (predicates.length === 1) return predicates[0]
     return createAnd(predicates)
-  }, [activeFilters, searchText])
+  }, [activeFilters, searchText, workflowFilter, runIdFilter, scheduleFilter])
 
   // Update pagination where clause when filters change
   React.useEffect(() => {
@@ -346,21 +431,34 @@ export function StatesTable({ refreshTrigger, loadStates }: StatesTableProps) {
     {
       key: 'content',
       header: 'Data',
-      render: (value: any, item: schemaless.Record<workflow.State>) => (
-        <StateDetailsRenderer 
-          data={item} 
-          onAddFilter={addFilter}
-          isFilterActive={item.Data ? isStateTypeFiltered(item.Data.$type || '') : false}
-        />
-      )
+      render: (value: any, item: schemaless.Record<workflow.State>) => {
+        // Get flow name from cache or from data
+        const flowName = flowNameCache.get(item.ID || '') || workflowFilter || undefined
+        
+        return (
+          <div className="space-y-2">
+            <StateDetailsRenderer 
+              data={item} 
+              onAddFilter={addFilter}
+              isFilterActive={item.Data ? isStateTypeFiltered(item.Data.$type || '') : false}
+            />
+            {/* Add navigation controls */}
+            <ClickableStateRow 
+              state={item}
+              flowName={flowName}
+              className="mt-2"
+            />
+          </div>
+        )
+      }
     }
-  ], [selected, data.items, addFilter, isStateTypeFiltered])
+  ], [selected, data.items, addFilter, isStateTypeFiltered, flowNameCache, workflowFilter])
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden">
       <CardHeader className="flex-shrink-0 border-b py-3">
         <div className="flex items-center justify-between gap-4">
-          <CardTitle className="text-base">Execution States</CardTitle>
+          <CardTitle className="text-base">Workflow Executions</CardTitle>
           
           {/* Table Controls */}
           <TableControls

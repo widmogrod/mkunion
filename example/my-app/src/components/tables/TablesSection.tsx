@@ -4,7 +4,7 @@ import { AlertCircle, Database } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useRefreshStore } from '../../stores/refresh-store'
 import { WorkflowsTable } from './WorkflowsTable'
-import { StatesTable } from './StatesTable'
+import { ExecutionsTable } from './ExecutionsTable'
 import { PageHeader } from '../layout/PageHeader'
 import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
 
@@ -18,7 +18,7 @@ export interface TableLoadState {
 
 export function TablesSection() {
   const { listFlows, listStates, error } = useWorkflowApi()
-  const { workflowsRefreshTrigger, statesRefreshTrigger } = useRefreshStore()
+  const { workflowsRefreshTrigger, executionsRefreshTrigger } = useRefreshStore()
   
   // Memoize the load functions to prevent infinite re-renders
   const loadFlows = React.useCallback(
@@ -70,8 +70,8 @@ export function TablesSection() {
           />
         </div>
         <div className="flex-1 min-h-0 isolate">
-          <StatesTable 
-            refreshTrigger={statesRefreshTrigger}
+          <ExecutionsTable 
+            refreshTrigger={executionsRefreshTrigger}
             loadStates={loadStates}
           />
         </div>

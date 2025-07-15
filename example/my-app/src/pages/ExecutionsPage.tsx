@@ -4,13 +4,22 @@ import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { useWorkflowApi } from '../hooks/use-workflow-api'
 import { useRefreshStore } from '../stores/refresh-store'
-import { StatesTable } from '../components/tables/StatesTable'
+import { ExecutionsTable } from '../components/tables/ExecutionsTable'
 import { PageHeader } from '../components/layout/PageHeader'
 import { TableLoadState } from '../components/tables/TablesSection'
+import { useUrlParams } from '../hooks/useNavigation'
+import { ShareLinkButton } from '../components/navigation/ShareLinkButton'
 
-export function StatesPage() {
+export function ExecutionsPage() {
   const { listStates, error } = useWorkflowApi()
-  const { statesRefreshTrigger } = useRefreshStore()
+  const { executionsRefreshTrigger } = useRefreshStore()
+  const { getParam, getArrayParam } = useUrlParams()
+  
+  // Get URL parameters
+  const workflowFilter = getParam('workflow')
+  const runIdFilter = getParam('runId')
+  const statusFilter = getArrayParam('status')
+  const scheduleFilter = getParam('schedule')
   
   // Memoize the load function to prevent infinite re-renders
   const loadStates = React.useCallback(
@@ -28,8 +37,9 @@ export function StatesPage() {
     <div className="h-full flex flex-col">
       <PageHeader
         icon={Activity}
-        title="States"
-        description="Monitor workflow execution states and their transitions"
+        title="Executions"
+        description="Monitor workflow executions and their states"
+        actions={<ShareLinkButton />}
       />
       
       {error && (
@@ -44,9 +54,13 @@ export function StatesPage() {
       )}
       
       <div className="flex-1 p-6 min-h-0">
-        <StatesTable 
-          refreshTrigger={statesRefreshTrigger}
+        <ExecutionsTable 
+          refreshTrigger={executionsRefreshTrigger}
           loadStates={loadStates}
+          workflowFilter={workflowFilter}
+          runIdFilter={runIdFilter}
+          statusFilter={statusFilter}
+          scheduleFilter={scheduleFilter}
         />
       </div>
     </div>

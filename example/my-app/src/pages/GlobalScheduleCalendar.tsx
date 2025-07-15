@@ -9,20 +9,45 @@ import { GlobalCalendarView } from '../components/schedule/GlobalCalendarView'
 import { SmartFilters } from '../components/schedule/SmartFilters'
 import { TimelineScrubber } from '../components/schedule/TimelineScrubber'
 import { PageHeader } from '../components/layout/PageHeader'
+import { useUrlParams } from '../hooks/useNavigation'
 
 type ViewMode = 'normal' | 'incident'
 
 export function GlobalScheduleCalendar() {
+  const { getParam, getArrayParam } = useUrlParams()
+  
+  // Get URL parameters
+  const workflowFilterParam = getParam('workflow')
+  const scheduleFilterParam = getParam('schedule')
+  const statusFilterParam = getArrayParam('status')
+  const dateParam = getParam('date')
+  const viewParam = getParam('view') as 'month' | 'week' | 'day' | null
+  
   const [viewMode, setViewMode] = useState<ViewMode>('normal')
   const [dateRange, setDateRange] = useState(() => {
     const today = new Date()
+    
+    // Use date from URL if provided
+    if (dateParam) {
+      const date = new Date(dateParam)
+      if (!isNaN(date.getTime())) {
+        const start = new Date(date.getFullYear(), date.getMonth(), 1)
+        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+        return { start, end }
+      }
+    }
+    
     // Default to current month to show more relevant data
     const start = new Date(today.getFullYear(), today.getMonth(), 1)
     const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     return { start, end }
   })
-  const [statusFilter, setStatusFilter] = useState<string[]>(['all'])
-  const [selectedSchedules, setSelectedSchedules] = useState<string[]>([])
+  const [statusFilter, setStatusFilter] = useState<string[]>(
+    statusFilterParam.length > 0 ? statusFilterParam : ['all']
+  )
+  const [selectedSchedules, setSelectedSchedules] = useState<string[]>(
+    scheduleFilterParam ? [scheduleFilterParam] : []
+  )
   
   // Fetch all schedules
   const { schedules, loading: schedulesLoading } = useAllSchedules()

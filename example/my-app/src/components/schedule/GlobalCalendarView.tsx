@@ -6,6 +6,7 @@ import './RunHistoryCalendar.css'
 import { Schedule } from '../../hooks/useAllSchedules'
 import { GlobalExecution } from '../../hooks/useGlobalExecutions'
 import { ExecutionDetailsModal } from './ExecutionDetailsModal'
+import { useNavigationWithContext } from '../../hooks/useNavigation'
 
 const localizer = momentLocalizer(moment)
 
@@ -38,7 +39,10 @@ export function GlobalCalendarView({
   const [view, setView] = React.useState<View>(viewMode === 'incident' ? 'week' : 'month')
   const [date, setDate] = React.useState(dateRange.start)
   const [selectedExecution, setSelectedExecution] = React.useState<any>(null)
+  const [selectedWorkflowName, setSelectedWorkflowName] = React.useState<string>('')
+  const [selectedParentRunId, setSelectedParentRunId] = React.useState<string>('')
   const [showDetailsModal, setShowDetailsModal] = React.useState(false)
+  const { navigateToWorkflows, navigateToSchedules } = useNavigationWithContext()
   
   // Create a map of parentRunId to schedule for quick lookup
   const scheduleMap = useMemo(() => {
@@ -192,7 +196,12 @@ export function GlobalCalendarView({
   }
   
   const handleSelectEvent = (event: CalendarEvent) => {
-    const { execution } = event.resource
+    const { execution, schedule } = event.resource
+    
+    // Set workflow name and parent run ID for navigation
+    setSelectedWorkflowName(execution.scheduleName || '')
+    setSelectedParentRunId(execution.parentRunId || '')
+    
     // Transform to match the existing ExecutionDetailsModal interface
     setSelectedExecution({
       id: execution.id,
@@ -322,6 +331,10 @@ export function GlobalCalendarView({
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
         execution={selectedExecution}
+        workflowName={selectedWorkflowName}
+        parentRunId={selectedParentRunId}
+        onNavigateToWorkflow={(name) => navigateToWorkflows(name)}
+        onNavigateToSchedule={(parentRunId) => navigateToSchedules({ parentRunId })}
       />
     </>
   )

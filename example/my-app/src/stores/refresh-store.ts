@@ -20,27 +20,27 @@ import { create } from 'zustand'
 interface RefreshStore {
   // Timestamps for last refresh requests
   workflowsRefreshTrigger: number
-  statesRefreshTrigger: number
+  executionsRefreshTrigger: number
   schedulesRefreshTrigger: number
   
   // Actions to trigger refreshes
   refreshWorkflows: () => void
-  refreshStates: () => void
+  refreshExecutions: () => void
   refreshSchedules: () => void
   refreshAll: () => void
 }
 
 export const useRefreshStore = create<RefreshStore>((set) => ({
   workflowsRefreshTrigger: 0,
-  statesRefreshTrigger: 0,
+  executionsRefreshTrigger: 0,
   schedulesRefreshTrigger: 0,
   
   refreshWorkflows: () => set({ workflowsRefreshTrigger: Date.now() }),
-  refreshStates: () => set({ statesRefreshTrigger: Date.now() }),
+  refreshExecutions: () => set({ executionsRefreshTrigger: Date.now() }),
   refreshSchedules: () => set({ schedulesRefreshTrigger: Date.now() }),
   refreshAll: () => set({ 
     workflowsRefreshTrigger: Date.now(),
-    statesRefreshTrigger: Date.now(),
+    executionsRefreshTrigger: Date.now(),
     schedulesRefreshTrigger: Date.now()
   }),
 }))

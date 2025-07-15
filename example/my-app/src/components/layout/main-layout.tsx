@@ -7,8 +7,8 @@ import { ThemeToggle } from '../theme/ThemeToggle'
 interface MainLayoutProps {
   children: React.ReactNode
   sidebar?: React.ReactNode
-  activeTab?: 'workflows' | 'states' | 'schedules' | 'calendar'
-  onTabChange?: (tab: 'workflows' | 'states' | 'schedules' | 'calendar') => void
+  activeTab?: 'workflows' | 'executions' | 'schedules' | 'calendar'
+  onTabChange?: (tab: 'workflows' | 'executions' | 'schedules' | 'calendar') => void
 }
 
 export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLayoutProps) {
@@ -106,14 +106,14 @@ export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLa
                   <span className="sm:hidden">Workflows</span>
                 </Button>
                 <Button
-                  variant={activeTab === 'states' ? 'default' : 'ghost'}
+                  variant={activeTab === 'executions' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => onTabChange('states')}
+                  onClick={() => onTabChange('executions')}
                   className="flex items-center gap-2 h-8 px-3 rounded-md transition-all duration-200"
                 >
                   <Activity className="h-4 w-4" />
-                  <span className="hidden sm:inline">States</span>
-                  <span className="sm:hidden">States</span>
+                  <span className="hidden sm:inline">Executions</span>
+                  <span className="sm:hidden">Executions</span>
                 </Button>
                 <Button
                   variant={activeTab === 'schedules' ? 'default' : 'ghost'}

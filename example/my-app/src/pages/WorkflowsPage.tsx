@@ -7,6 +7,7 @@ import { useRefreshStore } from '../stores/refresh-store'
 import { WorkflowsTable } from '../components/tables/WorkflowsTable'
 import { PageHeader } from '../components/layout/PageHeader'
 import { TableLoadState } from '../components/tables/TablesSection'
+import { ShareLinkButton } from '../components/navigation/ShareLinkButton'
 
 export function WorkflowsPage() {
   const { listFlows, error } = useWorkflowApi()
@@ -30,6 +31,7 @@ export function WorkflowsPage() {
         icon={Database}
         title="Workflows"
         description="Manage and monitor your workflow definitions"
+        actions={<ShareLinkButton />}
       />
       
       {error && (
