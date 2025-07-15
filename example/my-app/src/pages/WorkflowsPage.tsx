@@ -7,11 +7,15 @@ import { useRefreshStore } from '../stores/refresh-store'
 import { WorkflowsTable } from '../components/tables/WorkflowsTable'
 import { PageHeader } from '../components/layout/PageHeader'
 import { TableLoadState } from '../components/tables/TablesSection'
-import { ShareLinkButton } from '../components/navigation/ShareLinkButton'
+import { useUrlParams } from '../hooks/useNavigation'
 
 export function WorkflowsPage() {
   const { listFlows, error } = useWorkflowApi()
   const { workflowsRefreshTrigger } = useRefreshStore()
+  const { getParam } = useUrlParams()
+  
+  // Get URL parameters
+  const workflowFilter = getParam('filter')
   
   // Memoize the load function to prevent infinite re-renders
   const loadFlows = React.useCallback(
@@ -31,7 +35,6 @@ export function WorkflowsPage() {
         icon={Database}
         title="Workflows"
         description="Manage and monitor your workflow definitions"
-        actions={<ShareLinkButton />}
       />
       
       {error && (
@@ -49,6 +52,7 @@ export function WorkflowsPage() {
         <WorkflowsTable 
           refreshTrigger={workflowsRefreshTrigger}
           loadFlows={loadFlows}
+          workflowFilter={workflowFilter}
         />
       </div>
     </div>

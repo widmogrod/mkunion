@@ -11,23 +11,115 @@ import { WorkflowDisplay } from '../workflow/WorkflowDisplay'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import { TableLoadState } from './TablesSection'
-import { TableControls } from './PaginatedTable/components/TableControls'
+import { TableControls, FilterItem } from './PaginatedTable/components/TableControls'
 import { StatusIndicator } from '../ui/StatusIndicator'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
+import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
+import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
 
 interface WorkflowsTableProps {
   refreshTrigger: number
   loadFlows: (state: TableLoadState) => Promise<any>
+  workflowFilter?: string | null
 }
 
-export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProps) {
+// Helper functions for creating predicates
+const createCompare = (location: string, operation: string, value: schema.Schema): predicate.Predicate => ({
+  "$type": "predicate.Compare",
+  "predicate.Compare": {
+    Location: location,
+    Operation: operation,
+    BindValue: {
+      "$type": "predicate.Literal",
+      "predicate.Literal": {
+        Value: value
+      }
+    }
+  }
+})
+
+const createAnd = (predicates: predicate.Predicate[]): predicate.Predicate => ({
+  "$type": "predicate.And",
+  "predicate.And": {
+    L: predicates
+  }
+})
+
+export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: WorkflowsTableProps) {
   const pagination = usePagination({ initialPageSize: 10 })
   const { deleteFlows } = useWorkflowApi()
   const toast = useToast()
   const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
   const [isDeleting, setIsDeleting] = React.useState(false)
   const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
+  const [activeFilters, setActiveFilters] = React.useState<FilterItem[]>([])
+  const [searchText, setSearchText] = React.useState('')
+  
+  // Update filters when workflowFilter prop changes
+  React.useEffect(() => {
+    if (workflowFilter) {
+      setActiveFilters([{
+        stateType: 'workflow',
+        label: workflowFilter,
+        color: '#3b82f6', // Blue color for workflow filters
+        isExclude: false
+      }])
+    } else {
+      setActiveFilters([])
+    }
+  }, [workflowFilter])
+  
+  // Build where clause from active filters
+  const buildWhereClause = React.useCallback(() => {
+    const predicates: predicate.Predicate[] = []
+    
+    // Add workflow filter if present
+    if (activeFilters.length > 0) {
+      activeFilters.forEach(filter => {
+        if (filter.stateType === 'workflow' && !filter.isExclude) {
+          predicates.push(
+            createCompare(
+              'ID',
+              '==',
+              { "$type": "schema.String", "schema.String": filter.label }
+            )
+          )
+        }
+      })
+    }
+    
+    // Text search - exact ID match
+    if (searchText.trim()) {
+      predicates.push(
+        createCompare(
+          'ID',
+          '==',
+          { "$type": "schema.String", "schema.String": searchText.trim() }
+        )
+      )
+    }
+    
+    // Combine all predicates with AND
+    if (predicates.length === 0) return undefined
+    if (predicates.length === 1) return predicates[0]
+    return createAnd(predicates)
+  }, [activeFilters, searchText])
+  
+  // Update pagination where clause when filters change
+  React.useEffect(() => {
+    const whereClause = buildWhereClause()
+    pagination.actions.setWhere(whereClause)
+  }, [activeFilters, searchText, buildWhereClause, pagination.actions])
+  
+  // Filter management functions
+  const removeFilter = (index: number) => {
+    setActiveFilters(prev => prev.filter((_, i) => i !== index))
+  }
+  
+  const clearAllFilters = () => {
+    setActiveFilters([])
+  }
   
   // Adapt load function to work with the new hooks
   const adaptedLoad = React.useCallback(async (state: any) => {
@@ -38,6 +130,8 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
       where: state.where
     }
 
+    console.log('Sending tableState to API:', JSON.stringify(tableState, null, 2))
+    
     const result = await loadFlows(tableState)
     
     return {
@@ -148,11 +242,15 @@ export function WorkflowsTable({ refreshTrigger, loadFlows }: WorkflowsTableProp
           
           {/* Table Controls */}
           <TableControls
+            searchText={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="Search by exact ID"
             onRefresh={refresh}
             isLoading={loading}
             refreshTitle="Refresh workflows data"
-            showSearch={false}
-            showFilters={false}
+            activeFilters={activeFilters}
+            onRemoveFilter={removeFilter}
+            onClearAllFilters={clearAllFilters}
           />
         </div>
       </CardHeader>

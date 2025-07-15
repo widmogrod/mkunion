@@ -1,5 +1,5 @@
 import React from 'react'
-import { X } from 'lucide-react'
+import { X, Database } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { StatusIcon, StatusType } from '../ui/icons'
 
@@ -57,6 +57,9 @@ export function FilterPill({ label, color, isExclude = false, onRemove, onClick,
           size="xs" 
           colored={!isExclude}
         />
+      )}
+      {stateType === 'workflow' && (
+        <Database className="h-3 w-3" />
       )}
       {isExclude && <span className="line-through">{label}</span>}
       {!isExclude && <span>{label}</span>}

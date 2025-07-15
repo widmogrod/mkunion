@@ -8,7 +8,6 @@ import { ExecutionsTable } from '../components/tables/ExecutionsTable'
 import { PageHeader } from '../components/layout/PageHeader'
 import { TableLoadState } from '../components/tables/TablesSection'
 import { useUrlParams } from '../hooks/useNavigation'
-import { ShareLinkButton } from '../components/navigation/ShareLinkButton'
 
 export function ExecutionsPage() {
   const { listStates, error } = useWorkflowApi()
@@ -39,7 +38,6 @@ export function ExecutionsPage() {
         icon={Activity}
         title="Executions"
         description="Monitor workflow executions and their states"
-        actions={<ShareLinkButton />}
       />
       
       {error && (
