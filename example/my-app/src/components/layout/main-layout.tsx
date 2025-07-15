@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronLeft, ChevronRight, MessageSquare, Image, Clock, Zap, Table, CalendarDays, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MessageSquare, Image, Clock, Zap, CalendarDays, Calendar, Database, Activity } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useSidebar } from './SidebarContext'
 import { ThemeToggle } from '../theme/ThemeToggle'
@@ -7,8 +7,8 @@ import { ThemeToggle } from '../theme/ThemeToggle'
 interface MainLayoutProps {
   children: React.ReactNode
   sidebar?: React.ReactNode
-  activeTab?: 'tables' | 'schedules' | 'calendar'
-  onTabChange?: (tab: 'tables' | 'schedules' | 'calendar') => void
+  activeTab?: 'workflows' | 'states' | 'schedules' | 'calendar'
+  onTabChange?: (tab: 'workflows' | 'states' | 'schedules' | 'calendar') => void
 }
 
 export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLayoutProps) {
@@ -96,14 +96,24 @@ export function MainLayout({ children, sidebar, activeTab, onTabChange }: MainLa
             {activeTab && onTabChange && (
               <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
                 <Button
-                  variant={activeTab === 'tables' ? 'default' : 'ghost'}
+                  variant={activeTab === 'workflows' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => onTabChange('tables')}
+                  onClick={() => onTabChange('workflows')}
                   className="flex items-center gap-2 h-8 px-3 rounded-md transition-all duration-200"
                 >
-                  <Table className="h-4 w-4" />
-                  <span className="hidden sm:inline">Workflows & States</span>
+                  <Database className="h-4 w-4" />
+                  <span className="hidden sm:inline">Workflows</span>
                   <span className="sm:hidden">Workflows</span>
+                </Button>
+                <Button
+                  variant={activeTab === 'states' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => onTabChange('states')}
+                  className="flex items-center gap-2 h-8 px-3 rounded-md transition-all duration-200"
+                >
+                  <Activity className="h-4 w-4" />
+                  <span className="hidden sm:inline">States</span>
+                  <span className="sm:hidden">States</span>
                 </Button>
                 <Button
                   variant={activeTab === 'schedules' ? 'default' : 'ghost'}
