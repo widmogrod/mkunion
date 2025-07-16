@@ -14,7 +14,6 @@ import { useUrlParams } from '../../hooks/useNavigation'
 import { TableLoadState } from './TablesSection'
 import { TableControls } from './PaginatedTable/components/TableControls'
 import { StatusIndicator } from '../ui/StatusIndicator'
-import { ClickableStateRow } from '../navigation/ClickableStateRow'
 import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
@@ -597,13 +596,6 @@ export function ExecutionsTable({
               onAddFilter={addFilter}
               isFilterActive={item.Data ? isStateTypeFiltered(item.Data.$type || '') : false}
               flowName={flowName}
-            />
-            {/* Add schedule navigation controls only */}
-            <ClickableStateRow 
-              state={item}
-              flowName={flowName}
-              className="mt-2"
-              showWorkflowIcon={false}
             />
           </div>
         )

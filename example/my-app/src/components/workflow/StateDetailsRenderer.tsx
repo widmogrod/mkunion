@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Code, FileText, Play, Pause, RotateCcw, Send, Database } from 'lucide-react'
+import { Code, FileText, Play, Pause, RotateCcw, Send, Database, CalendarDays } from 'lucide-react'
 import { useWorkflowApi } from '../../hooks/use-workflow-api'
 import { useToast } from '../../contexts/ToastContext'
 import { useRefreshStore } from '../../stores/refresh-store'
@@ -26,7 +26,7 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive, flowNa
   const [callbackResult, setCallbackResult] = useState('')
   const [callbackSubmitting, setCallbackSubmitting] = useState(false)
   const { workflowToStr, submitCallback, stopSchedule, resumeSchedule, tryRecover } = useWorkflowApi()
-  const { navigateToWorkflows } = useNavigationWithContext()
+  const { navigateToWorkflows, navigateToSchedules } = useNavigationWithContext()
   const toast = useToast()
   const { refreshAll } = useRefreshStore()
 
@@ -323,7 +323,11 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive, flowNa
     )
   }
 
-  // Get quick actions for the header
+  /**
+   * Renders quick action buttons based on the current state type.
+   * All state-related actions are consolidated here for consistent placement
+   * in the component header, improving UX and discoverability.
+   */
   const getQuickActions = () => {
     if (!state.$type) return null
 
@@ -400,6 +404,32 @@ export function StateDetailsRenderer({ data, onAddFilter, isFilterActive, flowNa
           <Play className="h-3 w-3" />
         </Button>
       )
+    }
+    
+    // Schedule navigation for Scheduled/ScheduleStopped states
+    if ((state.$type === 'workflow.Scheduled' || state.$type === 'workflow.ScheduleStopped')) {
+      const parentRunId = stateData?.BaseState?.RunOption?.['workflow.ScheduleRun']?.ParentRunID
+      if (parentRunId) {
+        actions.push(
+          <Button
+            key="view-schedule"
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              navigateToSchedules({
+                parentRunId,
+                focus: data.ID
+              })
+            }}
+            className="h-6 w-6 p-0"
+            title="View schedule history"
+          >
+            <CalendarDays className="h-3 w-3" />
+          </Button>
+        )
+      }
     }
 
     return actions
