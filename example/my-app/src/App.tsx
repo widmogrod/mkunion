@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { MainLayout } from './components/layout/main-layout'
 import { DemosSection } from './components/demos/DemosSection'
 import { WorkflowsPage } from './pages/WorkflowsPage'
-import { ExecutionsPage } from './pages/ExecutionsPage'
+import { ExecutionsPageSimple } from './pages/ExecutionsPageSimple'
 import { SchedulesPage } from './pages/SchedulesPage'
 import { GlobalScheduleCalendar } from './pages/GlobalScheduleCalendar'
 import { SidebarProvider } from './components/layout/SidebarContext'
@@ -31,21 +31,30 @@ export default function App() {
   const activeTab = getActiveTab() as 'workflows' | 'executions' | 'schedules' | 'calendar'
   
   const handleTabChange = (tab: 'workflows' | 'executions' | 'schedules' | 'calendar') => {
-    // Preserve query params when switching tabs, but clear view-specific filter parameters
+    // When switching tabs, preserve filters that make sense across views
     const searchParams = new URLSearchParams(location.search)
     
-    // Clear filter parameters that are specific to different views
-    // These parameters don't make sense when switching between different view types
-    searchParams.delete('filter')      // workflows page filter
-    searchParams.delete('id')          // workflows page specific item
-    searchParams.delete('workflow')    // executions page workflow filter
-    searchParams.delete('runId')       // executions page run filter
-    searchParams.delete('status')      // executions page status filter
-    searchParams.delete('schedule')    // executions page schedule filter
-    searchParams.delete('parentRunId') // schedules page filter
-    searchParams.delete('focus')       // schedules page focus
+    // Define which params to keep for each tab
+    const paramsToKeep: Record<string, string[]> = {
+      workflows: ['workflow'], // Keep workflow filter when going to workflows
+      executions: ['workflow', 'status', 'runId', 'schedule'], // Keep all filters
+      schedules: ['workflow', 'parentRunId', 'focus'], // Keep relevant filters
+      calendar: ['workflow', 'schedule', 'status', 'date', 'view'] // Keep calendar filters
+    }
     
-    navigate(`/${tab}?${searchParams.toString()}`)
+    // Get params to keep for the target tab
+    const keepParams = paramsToKeep[tab] || []
+    
+    // Create new params with only the relevant ones
+    const newParams = new URLSearchParams()
+    keepParams.forEach(param => {
+      const value = searchParams.get(param)
+      if (value) {
+        newParams.set(param, value)
+      }
+    })
+    
+    navigate(`/${tab}${newParams.toString() ? `?${newParams.toString()}` : ''}`)
   }
 
   return (
@@ -62,7 +71,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/workflows" replace />} />
                 <Route path="/workflows" element={<WorkflowsPage />} />
                 <Route path="/states" element={<Navigate to="/executions" replace />} />
-                <Route path="/executions" element={<ExecutionsPage />} />
+                <Route path="/executions" element={<ExecutionsPageSimple />} />
                 <Route path="/schedules" element={<SchedulesPage />} />
                 <Route path="/calendar" element={<GlobalScheduleCalendar />} />
                 <Route path="*" element={<Navigate to="/workflows" replace />} />

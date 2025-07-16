@@ -142,12 +142,16 @@ export function useTableData<T>(
     if (prevStateRef.current !== currentStateStr) {
       console.log('TableData: State changed, fetching data', { 
         prev: prevStateRef.current, 
-        current: currentStateStr 
+        current: currentStateStr,
+        parsedCurrent: JSON.parse(currentStateStr),
+        hasWhere: !!state.where
       })
       prevStateRef.current = currentStateStr
       fetchDataRef.current().catch(console.error)
     } else {
-      console.log('TableData: State unchanged, skipping fetch')
+      console.log('TableData: State unchanged, skipping fetch', {
+        currentState: currentStateStr
+      })
     }
   }, [currentStateStr])
 
