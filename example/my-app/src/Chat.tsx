@@ -1,7 +1,10 @@
-import {useEffect, useState} from "react";
-import './Chat.css';
+import { useState } from "react";
+import { Input } from "./components/ui/input";
+import { Button } from "./components/ui/button";
+import { cn } from "./lib/utils";
 import * as openai from './workflow/github_com_sashabaranov_go-openai'
-import {ChatCMD, ChatResult} from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
+import { ChatCMD, ChatResult } from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
+import { assertNever } from "./utils/type-helpers";
 
 type Message = {
     text: string,
@@ -41,81 +44,119 @@ function mapChatResultToMessages(result: ChatResult): Message[] {
 }
 
 function getToolCalls(result: ChatResult): openai.ToolCall[] {
-    switch (result.$type) {
+    const resultType = result.$type;
+    if (!resultType) {
+        console.error('getToolCalls: result.$type is undefined', result);
+        return [];
+    }
+
+    switch (resultType) {
         case "main.SystemResponse":
             return result["main.SystemResponse"].ToolCalls || [];
+
+        case "main.UserResponse":
+            // UserResponse doesn't have tool calls
+            return [];
 
         case "main.ChatResponses":
             const responses = result["main.ChatResponses"]["Responses"] || [];
             return responses.flatMap((response: ChatResult) => {
                 return getToolCalls(response)
             }).filter((toolCall: any) => toolCall)
+        default:
+            return assertNever(resultType);
     }
-
-    return []
 }
 
-export function Chat({props}: ChatParams) {
+export function Chat({ props }: ChatParams) {
     const [messages, setMessages] = useState<Message[]>([
-        {type: "system", text: "Hello, " + props.name + "!"},
-        {type: "system", text: "What can I do for you?"},
+        { type: "system", text: "Hello, " + props.name + "!" },
+        { type: "system", text: "What can I do for you?" },
     ]);
+    const [input, setInput] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        let lastMessage = messages[messages.length - 1];
-        if (!lastMessage || lastMessage.type !== "user") {
-            return
-        }
+    const sendMessage = async (message: string) => {
+        if (!message.trim() || loading) return;
 
-        let cmd: ChatCMD = {
-            "$type": "main.UserMessage",
-            "main.UserMessage": {
-                "Message": lastMessage.text,
-            },
-        };
+        setMessages(prev => [...prev, { type: "user", text: message }]);
+        setInput("");
+        setLoading(true);
 
-        fetch('http://localhost:8080/message', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(cmd),
-        })
-            .then(res => res.json() as Promise<ChatResult>)
-            .then(data => {
-                setMessages([...messages, ...mapChatResultToMessages(data)])
+        try {
+            let cmd: ChatCMD = {
+                "$type": "main.UserMessage",
+                "main.UserMessage": {
+                    "Message": message,
+                },
+            };
 
-                let toolCalls = getToolCalls(data)
-                toolCalls.forEach((toolCall: openai.ToolCall) => {
-                    props.onFunctionCall && toolCall.Function && props.onFunctionCall(toolCall.Function);
-                })
+            const response = await fetch('http://localhost:8080/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(cmd),
             });
 
-    }, [messages, props]);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-    return <div className="chat-window">
-        <ChatHistory messages={messages}/>
-        <ChatInput onSubmit={(message) => setMessages([...messages, {type: "user", text: message}])}/>
-    </div>;
-}
+            const data = await response.json() as ChatResult;
+            setMessages(prev => [...prev, ...mapChatResultToMessages(data)]);
 
-export function ChatHistory(props: { messages: Message[] }) {
-    return <div className="chat-history">
-        {props.messages.map((message, index) =>
-            <div key={index} className={"chat-message " + message.type}>
-                {message.text}
+            let toolCalls = getToolCalls(data);
+            toolCalls.forEach((toolCall: openai.ToolCall) => {
+                props.onFunctionCall && toolCall.Function && props.onFunctionCall(toolCall.Function);
+            });
+        } catch (error) {
+            console.error('Chat error:', error);
+            setMessages(prev => [...prev, { 
+                type: "system", 
+                text: "Error: Unable to send message. Please check if the server is running." 
+            }]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-[400px] space-y-4">
+            <div className="flex-1 overflow-y-auto rounded-lg border bg-background p-4 space-y-2">
+                {messages.map((message, index) => (
+                    <div
+                        key={index}
+                        className={cn(
+                            "rounded-lg px-3 py-2 max-w-[80%]",
+                            message.type === "user" 
+                                ? "ml-auto bg-primary text-primary-foreground" 
+                                : "mr-auto bg-muted"
+                        )}
+                    >
+                        <p className="text-sm">{message.text}</p>
+                    </div>
+                ))}
             </div>
-        )}
-    </div>;
-}
-
-export function ChatInput(props: { onSubmit: (message: string) => void }) {
-    return <form className="chat-input" onSubmit={event => {
-        event.preventDefault();
-        const input = event.currentTarget.querySelector("input") as HTMLInputElement;
-        props.onSubmit(input.value);
-        input.value = "";
-    }}>
-        <input type="text"/>
-    </form>;
+            <form 
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    sendMessage(input);
+                }}
+                className="flex gap-2"
+            >
+                <Input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={loading}
+                    className="flex-1"
+                />
+                <Button type="submit" disabled={loading || !input.trim()}>
+                    Send
+                </Button>
+            </form>
+        </div>
+    );
 }

@@ -142,7 +142,7 @@ func main() {
 			return nil, fmt.Errorf("function %s not found", funcID)
 		},
 		GenerateCallbackIDF: func() string {
-			return "callback_id"
+			return fmt.Sprintf("callback_%d", rand.Int())
 		},
 		GenerateRunIDF: func() string {
 			return fmt.Sprintf("run_id:%d", rand.Int())
@@ -543,7 +543,7 @@ func main() {
 			}
 
 			if len(records.Items) == 0 {
-				log.Errorf("state, with callbackID not found")
+				log.Errorf("state, with callbackID %s not found", callbackCMD.CallbackID)
 				return nil, errors.New("state, with callbackID not found")
 			}
 

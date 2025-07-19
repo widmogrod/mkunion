@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        .error { background: #ffe6e6; }
+        .success { background: #e6ffe6; }
+        button { padding: 10px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button onclick="testFlows()">Test Flows API</button>
+    <button onclick="testStates()">Test States API</button>
+    <button onclick="testWithAbortController()">Test with AbortController</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('logs').appendChild(div);
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        async function testFlows() {
+            log('Testing flows API...');
+            try {
+                const response = await fetch("http://localhost:8080/flows", {
+                    "headers": {
+                        "accept": "*/*",
+                        "accept-language": "en-US,en;q=0.9",
+                        "content-type": "application/json",
+                        "sec-ch-ua": "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"Google Chrome\";v=\"138\"",
+                        "sec-ch-ua-mobile": "?0",
+                        "sec-ch-ua-platform": "\"macOS\"",
+                        "sec-fetch-dest": "empty",
+                        "sec-fetch-mode": "cors",
+                        "sec-fetch-site": "same-site"
+                    },
+                    "referrer": "http://localhost:3000/",
+                    "body": "{\"Limit\":10,\"Sort\":[{\"Field\":\"ID\",\"Descending\":true}]}",
+                    "method": "POST",
+                    "mode": "cors",
+                    "credentials": "omit"
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                log(`✅ Flows API success: ${data.Items?.length || 0} items`, 'success');
+                log(`Sample item: ${JSON.stringify(data.Items?.[0], null, 2)}`);
+                
+            } catch (error) {
+                log(`❌ Flows API error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testStates() {
+            log('Testing states API...');
+            try {
+                const response = await fetch("http://localhost:8080/states", {
+                    "headers": {
+                        "accept": "*/*",
+                        "accept-language": "en-US,en;q=0.9",
+                        "content-type": "application/json",
+                        "sec-ch-ua": "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"Google Chrome\";v=\"138\"",
+                        "sec-ch-ua-mobile": "?0",
+                        "sec-ch-ua-platform": "\"macOS\"",
+                        "sec-fetch-dest": "empty",
+                        "sec-fetch-mode": "cors",
+                        "sec-fetch-site": "same-site"
+                    },
+                    "referrer": "http://localhost:3000/",
+                    "body": "{\"Limit\":10,\"Sort\":[{\"Field\":\"ID\",\"Descending\":true}]}",
+                    "method": "POST",
+                    "mode": "cors",
+                    "credentials": "omit"
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                log(`✅ States API success: ${data.Items?.length || 0} items`, 'success');
+                log(`Sample item: ${JSON.stringify(data.Items?.[0], null, 2)}`);
+                
+            } catch (error) {
+                log(`❌ States API error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testWithAbortController() {
+            log('Testing with AbortController pattern...');
+            
+            const controller = new AbortController();
+            
+            // Simulate the pattern we use in the React hook
+            setTimeout(() => {
+                log('Simulating abort after 100ms...');
+                controller.abort();
+            }, 100);
+
+            try {
+                log('Starting request with AbortController...');
+                
+                const response = await fetch("http://localhost:8080/flows", {
+                    "headers": {
+                        "accept": "*/*",
+                        "content-type": "application/json"
+                    },
+                    "body": "{\"Limit\":10,\"Sort\":[{\"Field\":\"ID\",\"Descending\":true}]}",
+                    "method": "POST",
+                    "signal": controller.signal
+                });
+
+                log('Request completed, checking if aborted...');
+                
+                if (controller.signal.aborted) {
+                    log('⚠️ Request was aborted after completion', 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                log(`✅ AbortController test success: ${data.Items?.length || 0} items`, 'success');
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    log('❌ Request was aborted as expected', 'error');
+                } else {
+                    log(`❌ Unexpected error: ${error.message}`, 'error');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { Button } from '../ui/button'
+import { ConfirmButton } from '../ui/ConfirmButton'
+import { AppleCheckbox } from '../ui/AppleCheckbox'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { useTableData } from './PaginatedTable/hooks/useTableData'
+import { usePagination } from './PaginatedTable/hooks/usePagination'
+import { TableContent } from './PaginatedTable/components/TableContent'
+import { WorkflowDisplay } from '../workflow/WorkflowDisplay'
+import { useWorkflowApi } from '../../hooks/use-workflow-api'
+import { useToast } from '../../contexts/ToastContext'
+import { useUrlParams } from '../../hooks/useNavigation'
+import { TableLoadState } from './TablesSection'
+import { TableControls, FilterItem } from './PaginatedTable/components/TableControls'
+import { StatusIndicator } from '../ui/StatusIndicator'
+import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflow'
+import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
+import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
+import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
+
+interface WorkflowsTableProps {
+  refreshTrigger: number
+  loadFlows: (state: TableLoadState) => Promise<any>
+  workflowFilter?: string | null
+}
+
+// Helper functions for creating predicates
+const createCompare = (location: string, operation: string, value: schema.Schema): predicate.Predicate => ({
+  "$type": "predicate.Compare",
+  "predicate.Compare": {
+    Location: location,
+    Operation: operation,
+    BindValue: {
+      "$type": "predicate.Literal",
+      "predicate.Literal": {
+        Value: value
+      }
+    }
+  }
+})
+
+const createAnd = (predicates: predicate.Predicate[]): predicate.Predicate => ({
+  "$type": "predicate.And",
+  "predicate.And": {
+    L: predicates
+  }
+})
+
+const createNot = (p: predicate.Predicate): predicate.Predicate => ({
+  "$type": "predicate.Not",
+  "predicate.Not": {
+    P: p
+  }
+})
+
+export function WorkflowsTable({ refreshTrigger, loadFlows, workflowFilter }: WorkflowsTableProps) {
+  const pagination = usePagination({ initialPageSize: 10 })
+  const { deleteFlows } = useWorkflowApi()
+  const { setParam } = useUrlParams()
+  const toast = useToast()
+  const [selected, setSelected] = React.useState<{ [key: string]: boolean }>({})
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [deleteStatus, setDeleteStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
+  const [activeFilters, setActiveFilters] = React.useState<FilterItem[]>([])
+  const [searchText, setSearchText] = React.useState('')
+  
+  // Update filters when workflowFilter prop changes
+  React.useEffect(() => {
+    if (workflowFilter) {
+      setActiveFilters([{
+        stateType: 'workflow',
+        label: workflowFilter,
+        color: '#3b82f6', // Blue color for workflow filters
+        isExclude: false
+      }])
+    } else {
+      setActiveFilters([])
+    }
+  }, [workflowFilter])
+  
+  // Build where clause from active filters
+  const buildWhereClause = React.useCallback(() => {
+    const predicates: predicate.Predicate[] = []
+    
+    // Add workflow filter if present
+    if (activeFilters.length > 0) {
+      activeFilters.forEach(filter => {
+        if (filter.stateType === 'workflow') {
+          // For workflows, filter by Data.Name (the workflow definition name)
+          const workflowPredicate = createCompare(
+            'Data["Name"]',
+            '==',
+            { "$type": "schema.String", "schema.String": filter.label }
+          )
+          
+          if (!filter.isExclude) {
+            // Include: match the workflow name
+            predicates.push(workflowPredicate)
+          } else {
+            // Exclude: NOT match the workflow name
+            predicates.push(createNot(workflowPredicate))
+          }
+        }
+      })
+    }
+    
+    // Text search - exact ID match
+    if (searchText.trim()) {
+      predicates.push(
+        createCompare(
+          'ID',
+          '==',
+          { "$type": "schema.String", "schema.String": searchText.trim() }
+        )
+      )
+    }
+    
+    // Combine all predicates with AND
+    if (predicates.length === 0) return undefined
+    if (predicates.length === 1) return predicates[0]
+    return createAnd(predicates)
+  }, [activeFilters, searchText])
+  
+  // Update pagination where clause when filters change
+  React.useEffect(() => {
+    const whereClause = buildWhereClause()
+    pagination.actions.setWhere(whereClause)
+  }, [activeFilters, searchText, buildWhereClause, pagination.actions])
+  
+  // Sync current filter state to URL parameters
+  const syncFiltersToUrl = React.useCallback((filters: FilterItem[]) => {
+    // For WorkflowsTable, only workflow filters are relevant
+    const workflowFilters = filters.filter(f => f.stateType === 'workflow')
+    if (workflowFilters.length > 0) {
+      // Set the first workflow filter as the main filter parameter
+      setParam('filter', workflowFilters[0].label)
+    } else {
+      setParam('filter', null)
+    }
+    // Note: 'id' parameter is controlled by parent components, don't modify it here
+  }, [setParam])
+
+  // Filter management functions
+  const removeFilter = (index: number) => {
+    const newFilters = activeFilters.filter((_, i) => i !== index)
+    setActiveFilters(newFilters)
+    syncFiltersToUrl(newFilters)
+  }
+  
+  const toggleFilterMode = (index: number) => {
+    const newFilters = activeFilters.map((filter, i) => 
+      i === index ? { ...filter, isExclude: !filter.isExclude } : filter
+    )
+    setActiveFilters(newFilters)
+    syncFiltersToUrl(newFilters)
+  }
+  
+  const clearAllFilters = () => {
+    setActiveFilters([])
+    // Clear filter-related URL parameters
+    setParam('filter', null)
+    // Note: We don't clear 'id' as it might be controlled by parent components
+  }
+  
+  // Adapt load function to work with the new hooks
+  const adaptedLoad = React.useCallback(async (state: any) => {
+    const tableState: TableLoadState = {
+      limit: state.limit,
+      offset: state.offset,
+      sort: { ID: true },
+      where: state.where
+    }
+
+    console.log('Sending tableState to API:', JSON.stringify(tableState, null, 2))
+    
+    const result = await loadFlows(tableState)
+    
+    return {
+      items: result.Items || [],
+      next: result.Next ? 'has-next' : undefined,
+      total: undefined
+    }
+  }, [loadFlows])
+
+  const { data, loading, error, refresh } = useTableData(adaptedLoad, pagination.state)
+
+  // Refresh the table when refreshTrigger changes
+  React.useEffect(() => {
+    if (refreshTrigger > 0) {
+      refresh()
+    }
+  }, [refreshTrigger, refresh])
+
+
+  const handleDeleteFlows = async () => {
+    const selectedIDs = Object.keys(selected).filter(k => selected[k])
+    
+    if (selectedIDs.length === 0) {
+      toast.warning('No Selection', 'Please select workflows to delete')
+      return
+    }
+
+    // Get the full record objects for selected flows
+    const flowsToDelete = data.items.filter((item: schemaless.Record<workflow.Flow>) => 
+      item.ID && selectedIDs.includes(item.ID)
+    )
+
+    setIsDeleting(true)
+    setDeleteStatus('idle')
+    try {
+      await deleteFlows(flowsToDelete)
+      setSelected({}) // Clear selection
+      refresh() // Refresh the table data
+      toast.success('Deletion Complete', `Successfully deleted ${flowsToDelete.length} workflow(s)`)
+      setDeleteStatus('success')
+      // Clear status after 2 seconds
+      setTimeout(() => setDeleteStatus('idle'), 2000)
+    } catch (error) {
+      console.error('Failed to delete workflows:', error)
+      toast.error('Deletion Failed', `Failed to delete workflows: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setDeleteStatus('error')
+      // Clear status after 3 seconds for errors
+      setTimeout(() => setDeleteStatus('idle'), 3000)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Table columns configuration
+  const columns = React.useMemo(() => [
+    {
+      key: 'selection',
+      className: 'w-12 px-3 py-3', // Optimized spacing for checkbox column
+      header: (
+        <div className="flex items-center justify-center">
+          <AppleCheckbox
+            checked={Object.keys(selected).length > 0 && Object.values(selected).every(v => v)}
+            onChange={(checked) => {
+              const newSelected: { [key: string]: boolean } = {}
+              if (checked) {
+                data.items.forEach((item: any) => {
+                  if (item.ID) newSelected[item.ID] = true
+                })
+              }
+              setSelected(newSelected)
+            }}
+          />
+        </div>
+      ),
+      render: (value: any, item: schemaless.Record<workflow.Flow>) => {
+        const id = item.ID || ''
+        return (
+          <div className="flex items-center justify-center">
+            <AppleCheckbox
+              checked={selected[id] || false}
+              onChange={(checked) => {
+                if (id) {
+                  setSelected(prev => ({
+                    ...prev,
+                    [id]: checked
+                  }))
+                }
+              }}
+            />
+          </div>
+        )
+      }
+    },
+    {
+      key: 'content',
+      header: 'Data',
+      render: (value: any, item: schemaless.Record<workflow.Flow>) => (
+        <WorkflowDisplay data={item} />
+      )
+    }
+  ], [selected, data.items])
+
+  return (
+    <Card className="w-full h-full flex flex-col overflow-hidden">
+      <CardHeader className="flex-shrink-0 border-b py-3">
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle className="text-base">Workflow Definitions</CardTitle>
+          
+          {/* Table Controls */}
+          <TableControls
+            searchText={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="Search by exact ID"
+            onRefresh={refresh}
+            isLoading={loading}
+            refreshTitle="Refresh workflows data"
+            activeFilters={activeFilters}
+            onRemoveFilter={removeFilter}
+            onToggleFilterMode={toggleFilterMode}
+            onClearAllFilters={clearAllFilters}
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+        {/* Scrollable table content */}
+        <div className="flex-1 overflow-auto">
+          <div className="p-6 pb-2">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-red-500">Error loading data</p>
+              </div>
+            ) : data.items.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-muted-foreground">No workflows found</p>
+              </div>
+            ) : (
+              <TableContent
+                columns={columns}
+                data={data.items}
+                renderItem={(item, column) => {
+                  if (column.render) {
+                    return column.render(item, item)
+                  }
+                  return <pre className="text-xs">{JSON.stringify(item, null, 2)}</pre>
+                }}
+              />
+            )}
+          </div>
+        </div>
+        
+        {/* Fixed action buttons and pagination at bottom */}
+        <div className="flex-shrink-0 border-t bg-background px-4 py-3">
+          <div className="flex items-center justify-between">
+            {/* Left: Action buttons */}
+            <div className="flex gap-2">
+              <ConfirmButton
+                variant="outline"
+                size="sm"
+                disabled={Object.keys(selected).filter(k => selected[k]).length === 0}
+                onConfirm={handleDeleteFlows}
+                confirmText={`Delete ${Object.keys(selected).filter(k => selected[k]).length} workflow(s)`}
+                className="flex items-center"
+              >
+                {isDeleting ? 'Deleting...' : `Delete${Object.keys(selected).filter(k => selected[k]).length > 0 ? ` (${Object.keys(selected).filter(k => selected[k]).length})` : ''}`}
+                <StatusIndicator status={deleteStatus} />
+              </ConfirmButton>
+            </div>
+            
+            {/* Right: Pagination */}
+            {(data.items.length > 0 || pagination.state.offset > 0) && (
+              <div className="flex items-center space-x-4">
+                <span className="text-xs text-muted-foreground">
+                  Page {pagination.currentPage}
+                </span>
+                
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={pagination.actions.goToFirstPage}
+                    disabled={pagination.state.offset === 0}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronsLeft className="h-3 w-3" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={pagination.actions.goToPreviousPage}
+                    disabled={pagination.state.offset === 0}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={pagination.actions.goToNextPage}
+                    disabled={!data.next}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => pagination.actions.goToLastPage(data.total || 100)}
+                    disabled={!data.next}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronsRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

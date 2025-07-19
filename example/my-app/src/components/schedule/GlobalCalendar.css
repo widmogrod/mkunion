@@ -1,0 +1,78 @@
+/* Global Calendar Styles */
+
+/* Subtle pulse animation for incident banner */
+@keyframes pulse-subtle {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Calendar customizations for incident mode */
+.has-failure {
+  position: relative;
+}
+
+.has-failure::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+/* Timeline scrubber hover effects */
+.timeline-bar {
+  transition: transform 0.2s ease-in-out;
+}
+
+.timeline-bar:hover {
+  transform: scaleY(1.1);
+}
+
+/* Status indicator animations */
+.status-indicator-running {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Incident mode calendar adjustments */
+.incident-mode .rbc-event:not(.event-error) {
+  opacity: 0.5;
+}
+
+.incident-mode .rbc-event.event-error {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.4);
+  z-index: 10;
+}
+
+/* Filter badge hover effects */
+.filter-badge {
+  transition: all 0.2s ease-in-out;
+}
+
+.filter-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

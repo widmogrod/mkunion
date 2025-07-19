@@ -1,0 +1,162 @@
+/* Override react-big-calendar styles to match our theme */
+
+.rbc-calendar {
+  @apply bg-background text-foreground;
+  font-family: inherit;
+}
+
+.rbc-header {
+  @apply border-b border-border py-3 px-2 font-medium text-sm;
+}
+
+.rbc-header + .rbc-header {
+  @apply border-l border-border;
+}
+
+.rbc-today {
+  @apply bg-primary/5;
+}
+
+.rbc-off-range-bg {
+  @apply bg-muted/30;
+}
+
+.rbc-date-cell {
+  @apply text-right p-2;
+}
+
+.rbc-date-cell.rbc-now {
+  @apply font-bold text-primary;
+}
+
+.rbc-date-cell > a {
+  @apply no-underline text-inherit hover:text-primary transition-colors;
+}
+
+.rbc-month-view {
+  @apply border border-border rounded-lg overflow-hidden;
+}
+
+.rbc-month-row {
+  @apply border-b border-border;
+}
+
+.rbc-month-row:last-child {
+  @apply border-b-0;
+}
+
+.rbc-day-bg + .rbc-day-bg {
+  @apply border-l border-border;
+}
+
+.rbc-event {
+  @apply cursor-pointer transition-all hover:opacity-90 hover:scale-105;
+}
+
+.rbc-event-label {
+  @apply text-xs;
+}
+
+.rbc-event-content {
+  @apply text-xs;
+}
+
+.rbc-show-more {
+  @apply text-xs text-primary hover:underline cursor-pointer mt-1;
+}
+
+.rbc-toolbar {
+  @apply mb-4;
+}
+
+.rbc-toolbar button {
+  @apply transition-colors;
+}
+
+.rbc-toolbar button:hover {
+  @apply opacity-80;
+}
+
+.rbc-toolbar button.rbc-active {
+  @apply bg-primary text-primary-foreground;
+}
+
+.rbc-time-view {
+  @apply border border-border rounded-lg overflow-hidden;
+}
+
+.rbc-time-header {
+  @apply border-b border-border;
+}
+
+.rbc-time-content {
+  @apply border-t border-border;
+}
+
+.rbc-time-content > * + * > * {
+  @apply border-l border-border;
+}
+
+.rbc-timeslot-group {
+  @apply border-b border-border;
+}
+
+.rbc-current-time-indicator {
+  @apply bg-primary;
+}
+
+.rbc-agenda-view {
+  @apply overflow-auto;
+}
+
+.rbc-agenda-table {
+  @apply w-full;
+}
+
+.rbc-agenda-table tbody > tr > td {
+  @apply p-2 border-b border-border;
+}
+
+.rbc-agenda-table tbody > tr > td + td {
+  @apply border-l border-border;
+}
+
+.rbc-agenda-table thead > tr > th {
+  @apply p-2 border-b-2 border-border font-medium text-left;
+}
+
+/* Dark mode specific styles */
+.dark .rbc-event {
+  filter: brightness(0.9);
+}
+
+.dark .rbc-today {
+  @apply bg-primary/10;
+}
+
+/* Custom class for days with executions */
+.has-execution {
+  position: relative;
+}
+
+.has-execution::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background-color: rgb(var(--primary));
+  border-radius: 50%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .rbc-toolbar {
+    @apply flex-col gap-2;
+  }
+  
+  .rbc-toolbar-label {
+    @apply text-base;
+  }
+}
