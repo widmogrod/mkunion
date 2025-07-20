@@ -3,18 +3,32 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^5.17.0",
+    "@hookform/resolvers": "^5.1.1",
+    "@radix-ui/react-checkbox": "^1.3.2",
+    "@radix-ui/react-popover": "^1.1.14",
+    "@radix-ui/react-select": "^2.2.5",
+    "@radix-ui/react-slot": "^1.2.3",
     "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.58",
     "@types/react": "^18.2.25",
     "@types/react-dom": "^18.2.11",
+    "@types/react-router-dom": "^5.3.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "moment": "^2.30.1",
     "react": "^18.2.0",
+    "react-big-calendar": "^1.19.4",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.60.0",
+    "react-router-dom": "^6.30.1",
     "react-scripts": "5.0.1",
+    "tailwind-merge": "^3.3.1",
     "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "zod": "^4.0.5",
+    "zustand": "^5.0.6"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -39,5 +53,15 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react-big-calendar": "^1.16.2",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17"
   }
 }
