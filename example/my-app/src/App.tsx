@@ -9,6 +9,7 @@ import { GlobalScheduleCalendar } from './pages/GlobalScheduleCalendar'
 import { SidebarProvider } from './components/layout/SidebarContext'
 import { ThemeProvider } from './components/theme/ThemeContext'
 import { ToastProvider } from './contexts/ToastContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 
 export default function App() {
@@ -58,28 +59,32 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <SidebarProvider>
-          <MainLayout 
-            sidebar={<DemosSection />}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          >
-            <div className="h-full">
-              <Routes>
-                <Route path="/" element={<Navigate to="/workflows" replace />} />
-                <Route path="/workflows" element={<WorkflowsPage />} />
-                <Route path="/states" element={<Navigate to="/executions" replace />} />
-                <Route path="/executions" element={<ExecutionsPageSimple />} />
-                <Route path="/schedules" element={<SchedulesPage />} />
-                <Route path="/calendar" element={<GlobalScheduleCalendar />} />
-                <Route path="*" element={<Navigate to="/workflows" replace />} />
-              </Routes>
-            </div>
-          </MainLayout>
-        </SidebarProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ToastProvider>
+          <SidebarProvider>
+            <MainLayout 
+              sidebar={<DemosSection />}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            >
+              <div className="h-full">
+                <ErrorBoundary>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/workflows" replace />} />
+                    <Route path="/workflows" element={<WorkflowsPage />} />
+                    <Route path="/states" element={<Navigate to="/executions" replace />} />
+                    <Route path="/executions" element={<ExecutionsPageSimple />} />
+                    <Route path="/schedules" element={<SchedulesPage />} />
+                    <Route path="/calendar" element={<GlobalScheduleCalendar />} />
+                    <Route path="*" element={<Navigate to="/workflows" replace />} />
+                  </Routes>
+                </ErrorBoundary>
+              </div>
+            </MainLayout>
+          </SidebarProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
