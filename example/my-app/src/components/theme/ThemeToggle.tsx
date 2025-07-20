@@ -49,6 +49,7 @@ export function ThemeToggle() {
       onClick={cycleTheme}
       className="h-8 w-8 p-0"
       title={getTooltip()}
+      aria-label={`Switch theme (currently ${theme} mode)`}
     >
       {getIcon()}
     </Button>

@@ -14,12 +14,6 @@ export function TableContent<T>({
   renderItem,
   className = ""
 }: TableContentProps<T>) {
-  console.log('TableContent: Rendering with data', { 
-    dataLength: data.length, 
-    columns: columns.length,
-    sampleData: data.slice(0, 2)
-  })
-
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 text-muted-foreground">

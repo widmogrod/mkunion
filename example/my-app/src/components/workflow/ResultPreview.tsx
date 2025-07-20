@@ -1,6 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import ReactDOM from 'react-dom'
 import { cn } from '../../lib/utils'
+import { colors } from '../../lib/design-system'
+
+// Constants
+const DEFAULT_MAX_TEXT_LENGTH = 60
+const DEFAULT_THUMBNAIL_SIZE = 32
+const DEFAULT_PREVIEW_SIZE = 200
+const HOVER_DELAY_MS = 200
+const INTERSECTION_OBSERVER_MARGIN = '50px'
+const INTERSECTION_OBSERVER_THRESHOLD = 0.01
+const PREVIEW_OFFSET_Y = 8
 
 interface ResultPreviewProps {
   result: any
@@ -13,9 +23,9 @@ interface ResultPreviewProps {
 export function ResultPreview({ 
   result, 
   className,
-  maxTextLength = 60,
-  thumbnailSize = 32,
-  previewSize = 200 
+  maxTextLength = DEFAULT_MAX_TEXT_LENGTH,
+  thumbnailSize = DEFAULT_THUMBNAIL_SIZE,
+  previewSize = DEFAULT_PREVIEW_SIZE 
 }: ResultPreviewProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [showFullText, setShowFullText] = useState(false)
@@ -43,8 +53,8 @@ export function ResultPreview({
         })
       },
       { 
-        rootMargin: '50px', // Start loading 50px before image enters viewport
-        threshold: 0.01 
+        rootMargin: INTERSECTION_OBSERVER_MARGIN, // Start loading before image enters viewport
+        threshold: INTERSECTION_OBSERVER_THRESHOLD 
       }
     )
 
@@ -70,14 +80,14 @@ export function ResultPreview({
       const rect = thumbnailRef.current.getBoundingClientRect()
       setMousePosition({
         x: rect.left + rect.width / 2,
-        y: rect.bottom + 8
+        y: rect.bottom + PREVIEW_OFFSET_Y
       })
     }
     
     // Debounce hover to prevent flickering
     hoverTimeoutRef.current = setTimeout(() => {
       setShowPreview(true)
-    }, 200) // Reduced delay for better responsiveness
+    }, HOVER_DELAY_MS)
   }
 
   const handleMouseLeave = () => {
@@ -129,7 +139,8 @@ export function ResultPreview({
           mimeType = 'text/plain'
         }
       } catch {
-        // Not valid base64 or binary data
+        // Not valid base64 or binary data - this is expected for binary files
+        // Silent fail is appropriate here as we handle unknown types below
       }
     }
 
@@ -276,17 +287,17 @@ export function ResultPreview({
 
     return (
       <div className={cn("inline text-xs", className)}>
-        <span className="text-muted-foreground">schema.String:</span>
-        <span className="ml-1 text-green-600">"{displayText}"</span>
+        <span className={colors.secondary}>schema.String:</span>
+        <span className={`ml-1 ${colors.codeString}`}>"{displayText}"</span>
         {isLong && !showFullText && (
           <>
-            <span className="text-muted-foreground">...</span>
+            <span className={colors.secondary}>...</span>
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 setShowFullText(true)
               }}
-              className="ml-1 text-blue-600 hover:text-blue-700 underline"
+              className={`ml-1 ${colors.link} ${colors.linkUnderline}`}
             >
               more
             </button>
@@ -298,7 +309,7 @@ export function ResultPreview({
               e.stopPropagation()
               setShowFullText(false)
             }}
-            className="ml-1 text-blue-600 hover:text-blue-700 underline"
+            className={`ml-1 ${colors.link} ${colors.linkUnderline}`}
           >
             less
           </button>
@@ -311,8 +322,8 @@ export function ResultPreview({
   if (result.$type === 'schema.Number' && result['schema.Number'] !== undefined) {
     return (
       <span className={cn("text-xs", className)}>
-        <span className="text-muted-foreground">schema.Number:</span>
-        <span className="ml-1 text-blue-600">{result['schema.Number']}</span>
+        <span className={colors.secondary}>schema.Number:</span>
+        <span className={`ml-1 ${colors.codeNumber}`}>{result['schema.Number']}</span>
       </span>
     )
   }
@@ -321,8 +332,8 @@ export function ResultPreview({
   if (result.$type === 'schema.Bool' && result['schema.Bool'] !== undefined) {
     return (
       <span className={cn("text-xs", className)}>
-        <span className="text-muted-foreground">schema.Bool:</span>
-        <span className="ml-1 text-purple-600">{result['schema.Bool'] ? 'true' : 'false'}</span>
+        <span className={colors.secondary}>schema.Bool:</span>
+        <span className={`ml-1 ${colors.codeBoolean}`}>{result['schema.Bool'] ? 'true' : 'false'}</span>
       </span>
     )
   }
@@ -335,14 +346,13 @@ export function ResultPreview({
     
     return (
       <div className={cn("inline", className)}>
-        <span className="text-xs text-muted-foreground">{preview}</span>
+        <span className={`text-xs ${colors.secondary}`}>{preview}</span>
         <button
           onClick={(e) => {
             e.stopPropagation()
             // TODO: Implement expand view
-            console.log('Expand complex object:', data)
           }}
-          className="ml-1 text-xs text-blue-600 hover:text-blue-700 underline"
+          className={`ml-1 text-xs ${colors.link} ${colors.linkUnderline}`}
         >
           view
         </button>
@@ -366,16 +376,16 @@ export function ResultPreview({
 
   return (
     <div className={cn("inline text-xs", className)}>
-      <span className="text-muted-foreground font-mono">{displayJson}</span>
+      <span className={`${colors.secondary} font-mono`}>{displayJson}</span>
       {isLongJson && !showFullText && (
         <>
-          <span className="text-muted-foreground">...</span>
+          <span className={colors.secondary}>...</span>
           <button
             onClick={(e) => {
               e.stopPropagation()
               setShowFullText(true)
             }}
-            className="ml-1 text-blue-600 hover:text-blue-700 underline"
+            className={`ml-1 ${colors.link} ${colors.linkUnderline}`}
           >
             more
           </button>
@@ -387,7 +397,7 @@ export function ResultPreview({
             e.stopPropagation()
             setShowFullText(false)
           }}
-          className="ml-1 text-blue-600 hover:text-blue-700 underline"
+          className={`ml-1 ${colors.link} ${colors.linkUnderline}`}
         >
           less
         </button>

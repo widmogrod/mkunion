@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useWorkflowApi } from './use-workflow-api'
 import * as workflow from '../workflow/github_com_widmogrod_mkunion_x_workflow'
 
+// Constants
+const MAX_EXECUTIONS_LIMIT = 1000
+const MAX_FLOWS_LIMIT = 1000
+
 export interface GlobalExecution {
   id: string
   parentRunId: string
@@ -24,10 +28,21 @@ export function useGlobalExecutions({ dateRange, schedules }: UseGlobalExecution
   const [error, setError] = useState<string | null>(null)
   const flowNameCacheRef = useRef<Map<string, string>>(new Map())
   const [flowCacheLoaded, setFlowCacheLoaded] = useState(false)
+  const loadExecutionsAbortRef = useRef<AbortController | null>(null)
+  const loadFlowCacheAbortRef = useRef<AbortController | null>(null)
   
   const { listStates, listFlows } = useWorkflowApi()
   
   const loadExecutions = useCallback(async () => {
+    // Cancel any previous request
+    if (loadExecutionsAbortRef.current) {
+      loadExecutionsAbortRef.current.abort()
+    }
+    
+    // Create new abort controller for this request
+    const abortController = new AbortController()
+    loadExecutionsAbortRef.current = abortController
+    
     try {
       setLoading(true)
       setError(null)
@@ -104,8 +119,13 @@ export function useGlobalExecutions({ dateRange, schedules }: UseGlobalExecution
             }
           }
         },
-        limit: 1000 // Increase limit for global view
+        limit: MAX_EXECUTIONS_LIMIT
       })
+      
+      // Check if request was aborted
+      if (abortController.signal.aborted) {
+        return
+      }
       
       if (response.Items) {
         const processedExecutions: GlobalExecution[] = []
@@ -191,15 +211,19 @@ export function useGlobalExecutions({ dateRange, schedules }: UseGlobalExecution
           }
         })
         
-        // Remove duplicates by id (keep the first occurrence)
-        const uniqueExecutions = processedExecutions.filter((execution, index, array) => 
-          array.findIndex(e => e.id === execution.id) === index
-        )
+        // Optimize by using a Set for duplicate removal and combining operations
+        const seenIds = new Set<string>()
+        const filtered: GlobalExecution[] = []
         
-        // Filter by date range
-        const filtered = uniqueExecutions.filter(execution => {
-          return execution.startTime >= dateRange.start && execution.startTime <= dateRange.end
-        })
+        // Combine duplicate removal and date range filtering in one pass
+        for (const execution of processedExecutions) {
+          if (!seenIds.has(execution.id) && 
+              execution.startTime >= dateRange.start && 
+              execution.startTime <= dateRange.end) {
+            seenIds.add(execution.id)
+            filtered.push(execution)
+          }
+        }
         
         // Sort by start time (newest first)
         filtered.sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
@@ -208,18 +232,38 @@ export function useGlobalExecutions({ dateRange, schedules }: UseGlobalExecution
         setFailingSince(earliestFailure)
       }
     } catch (err) {
-      console.error('Failed to load executions:', err)
+      // Don't handle abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return
+      }
       setError('Failed to load executions')
     } finally {
-      setLoading(false)
+      // Only set loading to false if this is the current request
+      if (loadExecutionsAbortRef.current === abortController) {
+        setLoading(false)
+      }
     }
   }, [dateRange, schedules, listStates])
   
   // Load flow cache once
   useEffect(() => {
+    // Cancel any previous request
+    if (loadFlowCacheAbortRef.current) {
+      loadFlowCacheAbortRef.current.abort()
+    }
+    
+    // Create new abort controller
+    const abortController = new AbortController()
+    loadFlowCacheAbortRef.current = abortController
+    
     const loadFlowCache = async () => {
       try {
-        const flowsResponse = await listFlows({ limit: 1000 })
+        const flowsResponse = await listFlows({ limit: MAX_FLOWS_LIMIT })
+        
+        // Check if request was aborted
+        if (abortController.signal.aborted) {
+          return
+        }
         const flowMap = new Map<string, string>()
         
         if (flowsResponse.Items) {
@@ -233,17 +277,35 @@ export function useGlobalExecutions({ dateRange, schedules }: UseGlobalExecution
         flowNameCacheRef.current = flowMap
         setFlowCacheLoaded(true)
       } catch (error) {
-        console.error('Failed to load flow cache:', error)
-        setFlowCacheLoaded(true) // Still proceed even if cache fails
+        // Don't handle abort errors
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
+        // Still proceed even if cache fails
+        setFlowCacheLoaded(true)
       }
     }
     
     loadFlowCache()
+    
+    // Cleanup function
+    return () => {
+      if (loadFlowCacheAbortRef.current) {
+        loadFlowCacheAbortRef.current.abort()
+      }
+    }
   }, [listFlows])
   
   useEffect(() => {
     if (schedules.length > 0 && flowCacheLoaded) {
       loadExecutions()
+    }
+    
+    // Cleanup function to cancel pending requests
+    return () => {
+      if (loadExecutionsAbortRef.current) {
+        loadExecutionsAbortRef.current.abort()
+      }
     }
   }, [schedules, flowCacheLoaded, loadExecutions])
   

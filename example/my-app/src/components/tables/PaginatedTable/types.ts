@@ -32,6 +32,7 @@ export interface PaginatedTableProps<T> {
   pageSize?: number
   enableFilters?: boolean
   enableSearch?: boolean
+  enableVirtualization?: boolean
 }
 
 export interface PaginationBarProps {

@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Button, ButtonProps } from './button'
 import { cn } from '../../lib/utils'
 
+// Constants
+const DEFAULT_CONFIRM_DURATION_MS = 3000
+const COUNTDOWN_INTERVAL_MS = 1000
+
 interface ConfirmButtonProps extends Omit<ButtonProps, 'onClick'> {
   onConfirm: () => void | Promise<void>
   confirmText?: string
@@ -12,7 +16,7 @@ interface ConfirmButtonProps extends Omit<ButtonProps, 'onClick'> {
 export function ConfirmButton({
   onConfirm,
   confirmText = 'Click to confirm',
-  confirmDuration = 3000,
+  confirmDuration = DEFAULT_CONFIRM_DURATION_MS,
   children,
   className,
   variant = 'outline',
@@ -72,7 +76,7 @@ export function ConfirmButton({
     if (!isConfirming) {
       // First click - enter confirmation mode
       setIsConfirming(true)
-      setCountdown(Math.ceil(confirmDuration / 1000))
+      setCountdown(Math.ceil(confirmDuration / COUNTDOWN_INTERVAL_MS))
 
       // Start countdown
       intervalRef.current = setInterval(() => {
@@ -83,7 +87,7 @@ export function ConfirmButton({
           }
           return prev - 1
         })
-      }, 1000)
+      }, COUNTDOWN_INTERVAL_MS)
 
       // Auto-confirm after duration
       timeoutRef.current = setTimeout(() => {
@@ -125,6 +129,7 @@ export function ConfirmButton({
       variant={isConfirming ? 'destructive' : variant}
       onClick={handleConfirm}
       disabled={disabled || isExecuting}
+      aria-label={isConfirming ? `Confirm action: ${confirmText}` : undefined}
       {...props}
     >
       <span className={cn(

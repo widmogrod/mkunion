@@ -18,6 +18,7 @@ import * as workflow from '../../workflow/github_com_widmogrod_mkunion_x_workflo
 import * as schemaless from '../../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import * as predicate from '../../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
 import * as schema from '../../workflow/github_com_widmogrod_mkunion_x_schema'
+import { WORKFLOW_STATE_COLORS, getWorkflowStateColor } from '../../config/workflow-colors'
 
 interface ExecutionsTableProps {
   refreshTrigger: number
@@ -74,12 +75,12 @@ interface FilterItem {
 
 // Map state types to their display properties
 const STATE_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-  'workflow.Done': { label: 'Done', color: '#10b981' },
-  'workflow.Error': { label: 'Error', color: '#ef4444' },
-  'workflow.Await': { label: 'Await', color: '#3b82f6' },
-  'workflow.Scheduled': { label: 'Scheduled', color: '#eab308' },
-  'workflow.ScheduleStopped': { label: 'Paused', color: '#6b7280' },
-  'workflow.NextOperation': { label: 'Next', color: '#a855f7' },
+  'workflow.Done': { label: 'Done', color: WORKFLOW_STATE_COLORS['workflow.Done'] },
+  'workflow.Error': { label: 'Error', color: WORKFLOW_STATE_COLORS['workflow.Error'] },
+  'workflow.Await': { label: 'Await', color: WORKFLOW_STATE_COLORS['workflow.Await'] },
+  'workflow.Scheduled': { label: 'Scheduled', color: WORKFLOW_STATE_COLORS['workflow.Scheduled'] },
+  'workflow.ScheduleStopped': { label: 'Paused', color: WORKFLOW_STATE_COLORS['workflow.ScheduleStopped'] },
+  'workflow.NextOperation': { label: 'Next', color: WORKFLOW_STATE_COLORS['workflow.NextOperation'] },
 }
 
 export function ExecutionsTable({ 
@@ -346,12 +347,8 @@ export function ExecutionsTable({
       sort: { ID: true },
       where: state.where
     }
-
-    console.log('Sending tableState to API:', JSON.stringify(tableState, null, 2))
     
     const result = await loadStates(tableState)
-    
-    console.log('API returned items:', result.Items?.length, 'items')
     
     return {
       items: result.Items || [],
@@ -382,7 +379,7 @@ export function ExecutionsTable({
       const newFilters = [...activeFilters, {
         stateType: 'workflow',
         label: label,
-        color: '#3b82f6', // Blue color for workflow filters
+        color: WORKFLOW_STATE_COLORS['workflow'],
         isExclude: false
       }]
       

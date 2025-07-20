@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import * as workflow from '../workflow/github_com_widmogrod_mkunion_x_workflow'
 import * as schemaless from '../workflow/github_com_widmogrod_mkunion_x_storage_schemaless'
 import * as predicate from '../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
@@ -19,6 +19,15 @@ export interface ListProps<T> {
   where?: predicate.WherePredicates
   prevPage?: string
   nextPage?: string
+}
+
+// Helper function to transform sort object to array
+const transformSortToArray = (sort: { [key: string]: boolean } | undefined) => {
+  if (!sort) return undefined
+  return Object.keys(sort).map((key) => ({
+    Field: key,
+    Descending: sort[key],
+  }))
 }
 
 export function useWorkflowApi() {
@@ -59,21 +68,23 @@ export function useWorkflowApi() {
       let url = input.baseURL || API_BASE_URL + '/'
       url = url + input.path
 
+      // Memoize the request body to avoid recreating the sort array on each call
+      const sortArray = transformSortToArray(input.sort)
+      
+      const requestBody: schemaless.FindingRecords<schemaless.Record<T>> = {
+        Limit: input.limit || 30,
+        Sort: sortArray,
+        Where: input.where,
+        After: input.nextPage,
+        Before: input.prevPage,
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          Limit: input.limit || 30,
-          Sort: input.sort && Object.keys(input.sort).map((key) => ({
-            Field: key,
-            Descending: input.sort?.[key],
-          })),
-          Where: input.where,
-          After: input.nextPage,
-          Before: input.prevPage,
-        } as schemaless.FindingRecords<schemaless.Record<T>>),
+        body: JSON.stringify(requestBody),
       })
       
       if (!response.ok) {

@@ -5,6 +5,7 @@ import { usePagination } from './hooks/usePagination'
 import { useTableData } from './hooks/useTableData'
 import { PaginationBar } from './components/PaginationBar'
 import { TableContent } from './components/TableContent'
+import { VirtualizedTableContent } from './components/VirtualizedTableContent'
 import { LoadingState } from './components/LoadingState'
 import { ErrorState } from './components/ErrorState'
 import { EmptyState } from './components/EmptyState'
@@ -17,7 +18,8 @@ export function PaginatedTable<T>({
   emptyMessage = "No data available",
   pageSize = 10,
   enableFilters = false,
-  enableSearch = false
+  enableSearch = false,
+  enableVirtualization = true
 }: PaginatedTableProps<T>) {
   const pagination = usePagination({ initialPageSize: pageSize })
   const { data, loading, error, refresh } = useTableData(load, pagination.state)
@@ -38,6 +40,12 @@ export function PaginatedTable<T>({
           <LoadingState />
         ) : data.items.length === 0 ? (
           <EmptyState message={emptyMessage} />
+        ) : enableVirtualization ? (
+          <VirtualizedTableContent
+            columns={columns}
+            data={data.items}
+            renderItem={renderItem}
+          />
         ) : (
           <TableContent
             columns={columns}

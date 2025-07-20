@@ -3,6 +3,10 @@ import { Share2, Check, Copy } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useShareableLink } from '../../hooks/useNavigation'
 import { useToast } from '../../contexts/ToastContext'
+import { colors, iconSizes } from '../../lib/design-system'
+
+// Constants
+const COPY_SUCCESS_TIMEOUT_MS = 2000
 
 export function ShareLinkButton() {
   const { shareableLink, copyToClipboard } = useShareableLink()
@@ -34,7 +38,7 @@ export function ShareLinkButton() {
       timeoutRef.current = setTimeout(() => {
         setCopied(false)
         timeoutRef.current = null
-      }, 2000)
+      }, COPY_SUCCESS_TIMEOUT_MS)
     } else {
       toast.error('Copy Failed', 'Failed to copy link to clipboard')
     }
@@ -47,15 +51,16 @@ export function ShareLinkButton() {
       onClick={handleShare}
       className="flex items-center gap-2"
       title="Share this view"
+      aria-label={copied ? "Link copied to clipboard" : "Copy shareable link to clipboard"}
     >
       {copied ? (
         <>
-          <Check className="h-4 w-4 text-green-600" />
+          <Check className={`${iconSizes.sm} ${colors.success}`} />
           Copied!
         </>
       ) : (
         <>
-          <Share2 className="h-4 w-4" />
+          <Share2 className={iconSizes.sm} />
           Share
         </>
       )}
