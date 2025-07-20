@@ -23,13 +23,23 @@
         function log(message, type = 'log') {
             const div = document.createElement('div');
             div.className = `log ${type}`;
-            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            // Use textContent instead of innerHTML to prevent XSS
+            const timestamp = document.createElement('span');
+            timestamp.textContent = `[${new Date().toLocaleTimeString()}] `;
+            const messageText = document.createElement('span');
+            messageText.textContent = message;
+            div.appendChild(timestamp);
+            div.appendChild(messageText);
             document.getElementById('logs').appendChild(div);
             console.log(message);
         }
 
         function clearLogs() {
-            document.getElementById('logs').innerHTML = '';
+            // Use safer DOM manipulation instead of innerHTML
+            const logsDiv = document.getElementById('logs');
+            while (logsDiv.firstChild) {
+                logsDiv.removeChild(logsDiv.firstChild);
+            }
         }
 
         async function testFlows() {

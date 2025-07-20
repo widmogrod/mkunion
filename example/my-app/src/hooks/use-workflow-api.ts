@@ -6,7 +6,8 @@ import * as schema from '../workflow/github_com_widmogrod_mkunion_x_schema'
 import * as openai from '../workflow/github_com_sashabaranov_go-openai'
 import * as app from '../workflow/github_com_widmogrod_mkunion_exammple_my-app'
 
-const API_BASE_URL = 'http://localhost:8080'
+// Use environment variable with fallback to localhost for development
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080'
 
 export interface ListProps<T> {
   baseURL?: string
@@ -42,7 +43,6 @@ export function useWorkflowApi() {
         body: JSON.stringify(workflowData),
       })
       const data = await response.text()
-      console.log('save-flow-result', data)
       return data
     } catch (err) {
       setError(err as Error)
@@ -83,7 +83,6 @@ export function useWorkflowApi() {
       return await response.json()
     } catch (err) {
       setError(err as Error)
-      console.error('Failed to fetch data:', err)
       // Return empty result instead of throwing to prevent app crash
       return {
         Items: [],
@@ -151,12 +150,11 @@ export function useWorkflowApi() {
       return await response.text()
     } catch (err) {
       setError(err as Error)
-      console.error('Failed to fetch workflow string:', err)
       return '' // Return empty string on error
     }
   }, [])
 
-  const workflowAstToStr = useCallback(async (workflowAst: any): Promise<string> => {
+  const workflowAstToStr = useCallback(async (workflowAst: workflow.Workflow): Promise<string> => {
     setError(null)
     try {
       const response = await fetch(`${API_BASE_URL}/workflow-to-str`, {
@@ -175,12 +173,11 @@ export function useWorkflowApi() {
       return await response.text()
     } catch (err) {
       setError(err as Error)
-      console.error('Failed to convert workflow AST to string:', err)
       return '' // Return empty string on error
     }
   }, [])
 
-  const submitCallback = useCallback(async (callbackID: string, result: any): Promise<workflow.State> => {
+  const submitCallback = useCallback(async (callbackID: string, result: schema.Schema): Promise<workflow.State> => {
     setLoading(true)
     setError(null)
     try {
@@ -287,7 +284,7 @@ export function useWorkflowApi() {
     setError(null)
     try {
       // Build the deleting map - need to handle the type mismatch
-      const deleting: { [key: string]: any } = {}
+      const deleting: { [key: string]: schemaless.Record<workflow.Flow> } = {}
       flows.forEach(flow => {
         if (!flow.ID) {
           return
@@ -304,9 +301,8 @@ export function useWorkflowApi() {
         Deleting: deleting
       }
 
-      // Log the request for debugging
-      console.log('Deleting flows request:', JSON.stringify(updateRequest, null, 2))
-      console.warn('WARNING: Flow deletion will cause server panic due to CDC process bug. The CDC is typed for States only but processes all store changes.')
+      // WARNING: Flow deletion will cause server panic due to CDC process bug.
+      // The CDC is typed for States only but processes all store changes.
 
       const response = await fetch(`${API_BASE_URL}/flows-updating`, {
         method: 'POST',

@@ -3,12 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { MessageSquareIcon } from 'lucide-react'
 import { Chat } from '../../Chat'
 import { useRefreshStore } from '../../stores/refresh-store'
+import * as openai from '../../workflow/github_com_sashabaranov_go-openai'
 
 export function ChatDemo() {
   const { refreshAll } = useRefreshStore()
 
-  const handleFunctionCall = (func: any) => {
-    console.log("onFunctionCall", func)
+  const handleFunctionCall = (func: openai.FunctionCall) => {
     
     // Refresh tables based on the function called
     if (func.Name === "refresh_flows" || func.Name === "refresh_states") {

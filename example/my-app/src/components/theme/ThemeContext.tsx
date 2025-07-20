@@ -43,14 +43,24 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }
 
-  // Load theme from localStorage on mount
+  // Load theme from localStorage on mount with proper validation
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as Theme
-    if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-      setTheme(savedTheme)
-      updateActualTheme(savedTheme)
-    } else {
-      // Default to system
+    try {
+      const savedTheme = localStorage.getItem('theme')
+      // Strict validation to ensure only allowed values
+      const validThemes: Theme[] = ['light', 'dark', 'system']
+      if (savedTheme && validThemes.includes(savedTheme as Theme)) {
+        const validatedTheme = savedTheme as Theme
+        setTheme(validatedTheme)
+        updateActualTheme(validatedTheme)
+      } else {
+        // Default to system if invalid or missing
+        setTheme('system')
+        updateActualTheme('system')
+      }
+    } catch (error) {
+      // If localStorage access fails, fall back to system theme
+      setTheme('system')
       updateActualTheme('system')
     }
   }, [])
@@ -84,8 +94,20 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   }, [actualTheme])
 
   const handleSetTheme = (newTheme: Theme) => {
+    // Validate theme before setting
+    const validThemes: Theme[] = ['light', 'dark', 'system']
+    if (!validThemes.includes(newTheme)) {
+      console.error(`Invalid theme: ${newTheme}`)
+      return
+    }
+    
     setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
+    try {
+      localStorage.setItem('theme', newTheme)
+    } catch (error) {
+      // Handle localStorage errors gracefully
+      console.error('Failed to save theme preference:', error)
+    }
     updateActualTheme(newTheme)
   }
 

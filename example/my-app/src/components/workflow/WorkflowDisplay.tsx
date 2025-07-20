@@ -26,18 +26,15 @@ export function WorkflowDisplay({ data }: WorkflowDisplayProps) {
     setLoading(true)
     try {
       // Wrap the Flow in a Workflow union type, same as flowCreate does
-      const workflowData = {
-        $type: 'workflow.Flow',
+      const workflowData: workflow.Workflow = {
+        $type: 'workflow.Flow' as const,
         'workflow.Flow': data.Data
       }
-      
-      console.log('WorkflowDisplay: Sending workflow data to API:', workflowData)
       
       // Send the properly formatted workflow AST data to the API
       const code = await workflowAstToStr(workflowData)
       setWorkflowCode(code)
     } catch (error) {
-      console.error('Failed to load workflow code:', error)
       setWorkflowCode('// Error loading workflow code from API')
     } finally {
       setLoading(false)

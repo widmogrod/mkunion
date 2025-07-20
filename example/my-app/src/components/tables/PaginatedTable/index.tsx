@@ -22,13 +22,7 @@ export function PaginatedTable<T>({
   const pagination = usePagination({ initialPageSize: pageSize })
   const { data, loading, error, refresh } = useTableData(load, pagination.state)
 
-  console.log('PaginatedTable: Render state', {
-    loading,
-    error: !!error,
-    dataItems: data.items.length,
-    hasNext: !!data.next,
-    paginationState: pagination.state
-  })
+  // Debug logging removed for production
 
   if (error) {
     return <ErrorState error={error} onRetry={refresh} />
