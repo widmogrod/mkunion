@@ -71,8 +71,8 @@ func MatchChatCMDR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/exammple/my-app.ChatCMD", ChatCMDFromJSON, ChatCMDToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/exammple/my-app.UserMessage", UserMessageFromJSON, UserMessageToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/my-app.ChatCMD", ChatCMDFromJSON, ChatCMDToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/my-app.UserMessage", UserMessageFromJSON, UserMessageToJSON)
 }
 
 type ChatCMDUnionJSON struct {
@@ -294,10 +294,10 @@ func MatchChatResultR0(
 	}
 }
 func init() {
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/exammple/my-app.ChatResponses", ChatResponsesFromJSON, ChatResponsesToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/exammple/my-app.ChatResult", ChatResultFromJSON, ChatResultToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/exammple/my-app.SystemResponse", SystemResponseFromJSON, SystemResponseToJSON)
-	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/exammple/my-app.UserResponse", UserResponseFromJSON, UserResponseToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/my-app.ChatResponses", ChatResponsesFromJSON, ChatResponsesToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/my-app.ChatResult", ChatResultFromJSON, ChatResultToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/my-app.SystemResponse", SystemResponseFromJSON, SystemResponseToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/my-app.UserResponse", UserResponseFromJSON, UserResponseToJSON)
 }
 
 type ChatResultUnionJSON struct {

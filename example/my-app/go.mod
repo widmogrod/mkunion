@@ -1,4 +1,4 @@
-module github.com/widmogrod/mkunion/exammple/my-app
+module github.com/widmogrod/mkunion/example/my-app
 
 go 1.23.0
 

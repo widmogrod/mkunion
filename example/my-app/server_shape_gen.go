@@ -37,7 +37,7 @@ func ChatCMDShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "ChatCMD",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Variant: []shape.Shape{
 			UserMessageShape(),
 		},
@@ -48,7 +48,7 @@ func UserMessageShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "UserMessage",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Message",
@@ -69,7 +69,7 @@ func ChatResultShape() shape.Shape {
 	return &shape.UnionLike{
 		Name:          "ChatResult",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Variant: []shape.Shape{
 			SystemResponseShape(),
 			UserResponseShape(),
@@ -82,7 +82,7 @@ func SystemResponseShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "SystemResponse",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Message",
@@ -111,7 +111,7 @@ func UserResponseShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "UserResponse",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Message",
@@ -130,7 +130,7 @@ func ChatResponsesShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "ChatResponses",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Responses",
@@ -138,7 +138,7 @@ func ChatResponsesShape() shape.Shape {
 					Element: &shape.RefName{
 						Name:          "ChatResult",
 						PkgName:       "main",
-						PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+						PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 					},
 				},
 			},
@@ -156,7 +156,7 @@ func CommandShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Command",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "Command",
@@ -171,7 +171,7 @@ func ExprShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Expr",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "Expr",
@@ -186,7 +186,7 @@ func FindRecordsShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "FindRecords",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "FindingRecords",
@@ -211,7 +211,7 @@ func FunctionInputShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "FunctionInput",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "FunctionInput",
@@ -226,7 +226,7 @@ func FunctionOutputShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "FunctionOutput",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "FunctionOutput",
@@ -241,7 +241,7 @@ func GenerateImageShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "GenerateImage",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Width",
@@ -280,7 +280,7 @@ func ListWorkflowsFnShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "ListWorkflowsFn",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		Fields: []*shape.FieldLike{
 			{
 				Name: "Count",
@@ -319,14 +319,14 @@ func ListWorkflowsFnShape() shape.Shape {
 					},
 				},
 				Tags: map[string]shape.Tag{
-					"desc": {
-						Value: "skip words",
-					},
 					"enum": {
 						Value: "hello",
 						Options: []string{
 							"world",
 						},
+					},
+					"desc": {
+						Value: "skip words",
 					},
 				},
 			},
@@ -339,7 +339,7 @@ func PageResultShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "PageResult",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "PageResult",
@@ -364,7 +364,7 @@ func PredicateShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Predicate",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "Predicate",
@@ -379,7 +379,7 @@ func RefreshFlowsShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "RefreshFlows",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 	}
 }
 
@@ -388,7 +388,7 @@ func RefreshStatesShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "RefreshStates",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 	}
 }
 
@@ -397,7 +397,7 @@ func ReshaperShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Reshaper",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "Reshaper",
@@ -412,7 +412,7 @@ func SchemaShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Schema",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "Schema",
@@ -427,7 +427,7 @@ func ServiceShape() shape.Shape {
 	return &shape.StructLike{
 		Name:          "Service",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		TypeParams: []shape.TypeParam{
 			shape.TypeParam{
 				Name: "Dep",
@@ -450,7 +450,7 @@ func StateShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "State",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "State",
@@ -465,7 +465,7 @@ func UpdateRecordsShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "UpdateRecords",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "UpdateRecords",
@@ -490,7 +490,7 @@ func WorkflowShape() shape.Shape {
 	return &shape.AliasLike{
 		Name:          "Workflow",
 		PkgName:       "main",
-		PkgImportName: "github.com/widmogrod/mkunion/exammple/my-app",
+		PkgImportName: "github.com/widmogrod/mkunion/example/my-app",
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "Workflow",
