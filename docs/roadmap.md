@@ -1,7 +1,7 @@
 # Roadmap
 ## Learning and adoption
 
-- [ ] **docs**: document simple state machine and how to use `mkunion` for it
+- [x] **docs**: document simple state machine and how to use `mkunion` for it
 - [x] **feature**: `mkunion watch ./...` command that watches for changes in files and runs faster than `go generate ./...`
 - [x] **feature**: `go:tag mkmatch` to generate pattern matching functions
 - [x] **feature**: `go:tag mkmatch` with better type parameters validation
