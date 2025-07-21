@@ -171,7 +171,7 @@ suite.SelfDocumentStateDiagram(t, "filename.go")
 ## Important Notes
 
 - Go version: 1.23.0 with toolchain 1.24.3
-- Always run `mkunion watch ./...` before `go generate ./...`
+- Always run `mkunion watch -g ./...` to generate new files including go:generate tag
 - The type registry can be disabled with `//go:tag mkunion:",no-type-registry"`
 - When running tests that use AWS services, ensure the development environment is bootstrapped
 - On Mac with Colima: ensure Colima is running before executing `dev/bootstrap.sh`
