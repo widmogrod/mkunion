@@ -1,13 +1,13 @@
 package traffic
 
-//go:tag mkunion:"TrafficState,no-type-registry"
+//go:tag mkunion:"TrafficState"
 type (
 	RedLight    struct{}
 	YellowLight struct{}
 	GreenLight  struct{}
 )
 
-//go:tag mkunion:"TrafficCommand,no-type-registry"
+//go:tag mkunion:"TrafficCommand"
 type (
 	NextCMD struct{} // Move to next state in sequence
 )
