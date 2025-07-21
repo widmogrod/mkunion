@@ -3,6 +3,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/widmogrod/mkunion)](https://goreportcard.com/report/github.com/widmogrod/mkunion)
 [![codecov](https://codecov.io/gh/widmogrod/mkunion/branch/main/graph/badge.svg?token=3Z3Z3Z3Z3Z)](https://codecov.io/gh/widmogrod/mkunion)
 
+```bash
+go install github.com/widmogrod/mkunion/cmd/mkunion@latest
+```
 
 ## About
 Strongly typed **union type** in golang that supports generics*.
@@ -83,4 +86,3 @@ func ExampleFromJSON() {
 ## Next
 
 - Read [getting started](https://widmogrod.github.io/mkunion/getting_started/) to learn more.
-- Or to understand better concepts jump and read [value proposition](./docs/value_proposition.md)

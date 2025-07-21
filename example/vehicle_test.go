@@ -26,6 +26,8 @@ func TestGeneratedVisitor(t *testing.T) {
 	assert.Equal(t, "Boat", boat.AcceptVehicle(visitor))
 }
 
+// --8<-- [start:json]
+
 func ExampleVehicleToJSON() {
 	var vehicle Vehicle = &Car{
 		Color:  "black",
@@ -42,6 +44,8 @@ func ExampleVehicleFromJSON() {
 	fmt.Printf("%#v", vehicle)
 	// Output: &example.Car{Color:"black", Wheels:4}
 }
+
+// --8<-- [end:json]
 
 func ExampleMatchPairs() {
 	var vehicle1 Vehicle = &Boat{Color: "black", Propellers: 10}

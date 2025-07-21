@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+// --8<-- [start:example-sum-values]
+
 func Example_treeSumValues() {
 	tree := &Branch[int]{
 		L: &Leaf[int]{Value: 1},
@@ -26,6 +28,10 @@ func Example_treeSumValues() {
 	fmt.Println(result)
 	// Output: 10
 }
+
+// --8<-- [end:example-sum-values]
+
+// --8<-- [start:example-custom-agg]
 
 type orderAgg struct {
 	Order  []int
@@ -58,6 +64,8 @@ func Example_treeCustomReduction() {
 	// Output: [1 2 3 4]
 	// 10
 }
+
+// --8<-- [end:example-custom-agg]
 
 func TestTreeSchema(t *testing.T) {
 	tree := &Branch[int]{

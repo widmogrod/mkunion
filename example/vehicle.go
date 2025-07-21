@@ -2,6 +2,8 @@ package example
 
 import "fmt"
 
+// --8<-- [start:vehicle-def]
+
 //go:tag mkunion:"Vehicle"
 type (
 	Car struct {
@@ -18,6 +20,10 @@ type (
 	}
 )
 
+// --8<-- [end:vehicle-def]
+
+// --8<-- [start:calculate-fuel]
+
 func CalculateFuelUsage(v Vehicle) int {
 	return MatchVehicleR1(
 		v,
@@ -33,12 +39,20 @@ func CalculateFuelUsage(v Vehicle) int {
 	)
 }
 
+// --8<-- [end:calculate-fuel]
+
+// --8<-- [start:match-def]
+
 //go:tag mkmatch:"MatchPairs"
 type MatchPairs[A, B Vehicle] interface {
 	MatchCars(x, y *Car)
 	MatchBoatAny(x *Boat, y any)
 	Finally(x, y any)
 }
+
+// --8<-- [end:match-def]
+
+// --8<-- [start:match-pairs]
 
 func NamePairs(x, y Vehicle) string {
 	return MatchPairsR1(
@@ -54,3 +68,5 @@ func NamePairs(x, y Vehicle) string {
 		},
 	)
 }
+
+// --8<-- [end:match-pairs]

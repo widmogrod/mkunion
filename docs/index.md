@@ -28,57 +28,9 @@ MkUnion solves all of these problems by generating opinionated and strongly type
 ## Example
 
 ```go title="example/vehicle.go"
-package example
-
-// union declaration
-//go:tag mkunion:"Vehicle"
-type (
-	Car struct {
-		Color  string
-		Wheels int
-	}
-	Plane struct {
-		Color   string
-		Engines int
-	}
-	Boat struct {
-		Color      string
-		Propellers int
-	}
-)
-
-func CalculateFuelUsage(v Vehicle) int {
-	// example of pattern matching over Vehicle union type
-	return MatchVehicleR1(
-		v,
-		func(x *Car) int {
-			return x.Wheels * 2
-		},
-		func(x *Plane) int {
-			return x.Engines * 10
-		},
-		func(x *Boat) int {
-			return x.Propellers * 5
-		},
-	)
-}
-
-func ExampleToJSON() {
-    var vehicle Vehicle = &Car{
-        Color:  "black",
-        Wheels: 4,
-    }
-    result, _ := shared.JSONMarshal(vehicle)
-    fmt.Println(string(result))
-    // Output: {"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}
-}
-
-func ExampleFromJSON() {
-	input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
-	vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
-	fmt.Printf("%#v", vehicle)
-	// Output: &example.Car{Color:"black", Wheels:4}
-}
+--8<-- "example/vehicle.go:vehicle-def"
+--8<-- "example/vehicle.go:calculate-fuel"
+--8<-- "example/vehicle_test.go:json"
 ```
 
 Watch for changes in the file and generate code on the fly:
@@ -91,5 +43,4 @@ mkunion watch -g ./...
 
 ## Next
 
-- Read [getting started](./getting_started.md)  to learn more.
-- Or to understand better concepts jump and read [value proposition](./value_proposition.md)
+- Read [getting started](./getting_started.md) to learn more.

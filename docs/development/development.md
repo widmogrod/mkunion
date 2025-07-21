@@ -20,7 +20,13 @@ This command starts a Docker container with all the necessary tools to develop a
 
 In a separate terminal, run:
 ```
-go generate ./...
+echo "Build mkunion ..."
+go build -C cmd/mkunion .
+
+echo "Generate files ..."
+cmd/mkunion/mkunion watch -g ./...
+
+echo "Run tests ..."
 go test ./...
 ```
 
