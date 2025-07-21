@@ -43,7 +43,7 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   ```
 - `go:tag mkmatch:""` - generate custom pattern matching function from interface definition
   ```go title="example/vehicle.go"
---8<-- "example/vehicle.go:match-def"
+  --8<-- "example/vehicle.go:match-def"
   ```
 
 #### `type (...)` convention
