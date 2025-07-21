@@ -1,10 +1,15 @@
 package f
 
+// --8<-- [start:either]
+
 //go:tag mkunion:"Either,serde"
 type (
 	Left[A, B any]  struct{ Value A }
 	Right[A, B any] struct{ Value B }
 )
+
+// --8<-- [end:either]
+// --8<-- [start:option]
 
 //go:tag mkunion:"Option"
 type (
@@ -12,11 +17,17 @@ type (
 	None[A any] struct{}
 )
 
+// --8<-- [end:option]
+// --8<-- [start:result]
+
 //go:tag mkunion:"Result"
 type (
 	Ok[A any, E any]  struct{ Value A }
 	Err[A any, E any] struct{ Value E }
 )
+
+// --8<-- [end:result]
+// --8<-- [start:map-either]
 
 func MapEither[A, B, C any](x Either[A, B], f func(A) C) Either[C, B] {
 	return MatchEitherR1(
@@ -30,6 +41,8 @@ func MapEither[A, B, C any](x Either[A, B], f func(A) C) Either[C, B] {
 	)
 }
 
+// --8<-- [end:map-either]
+
 func OrElseEither[A, B any](x Either[A, B], y Either[A, B]) Either[A, B] {
 	return MatchEitherR1(
 		x,
@@ -42,6 +55,8 @@ func OrElseEither[A, B any](x Either[A, B], y Either[A, B]) Either[A, B] {
 	)
 }
 
+// --8<-- [start:map-option]
+
 func MapOption[A, B any](x Option[A], f func(A) B) Option[B] {
 	return MatchOptionR1(
 		x,
@@ -53,6 +68,8 @@ func MapOption[A, B any](x Option[A], f func(A) B) Option[B] {
 		},
 	)
 }
+
+// --8<-- [end:map-option]
 
 func MapResult[A, E any, C any](x Result[A, E], f func(A) C) Result[C, E] {
 	return MatchResultR1(
