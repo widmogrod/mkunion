@@ -10,23 +10,7 @@ go install github.com/widmogrod/mkunion/cmd/mkunion@latest
 Create your first union. In our simple example, we will represent different types of vehicles.
 But in a more complex example, you may want to represent different states of your application, model domain aggregates, or create your own DSL.
 ```go title="example/vehicle.go"
-package example
-
-//go:tag mkunion:"Vehicle"
-type (
-	Car struct {
-		Color  string
-		Wheels int
-	}
-	Plane struct {
-		Color   string
-		Engines int
-	}
-	Boat struct {
-		Color      string
-		Propellers int
-	}
-)
+--8<-- "example/vehicle.go:vehicle-def"
 ```
 
 In the above example, you can see a few important concepts:
@@ -59,12 +43,7 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   ```
 - `go:tag mkmatch:""` - generate custom pattern matching function from interface definition
   ```go title="example/vehicle.go"
-  //go:tag mkmatch:"MatchPairs"
-  type MatchPairs[A, B Vehicle] interface {
-      MatchCars(x, y *Car)
-      MatchBoatAny(x *Boat, y any)
-      Finally(x, y any)
-  }
+--8<-- "example/vehicle.go:match-def"
   ```
 
 #### `type (...)` convention
@@ -80,6 +59,7 @@ mkunion watch ./...
 ```
 
 This command will:
+
 1. Generate union types and shapes from your code
 2. Automatically run `go generate ./...` to trigger any other code generators
 3. Continue watching for file changes and repeat the process
@@ -87,13 +67,6 @@ This command will:
 To generate unions without watching for changes (one-time generation):
 ```
 mkunion watch -g ./...
-```
-
-If you want to skip the automatic `go generate` step:
-```
-mkunion watch -G ./...
-# or
-mkunion watch --dont-run-go-generate ./...
 ```
 
 Alternatively, you can run the `mkunion` command directly on specific files:
@@ -112,7 +85,7 @@ mkunion watch --dont-run-go-generate ./...
 mkunion watch -G ./...
 ```
 
-This automatic execution works well with extensions like `moq` that depend on union types being defined first.
+This automatic execution works well with extensions like [moq](https://github.com/matryer/moq) that depend on union types being defined first.
 
 ### Match over union type
 When you run the `mkunion` command, it will generate a file alongside your original file with the `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go)).
@@ -120,22 +93,8 @@ When you run the `mkunion` command, it will generate a file alongside your origi
 You can use these functions to do exhaustive matching on your union type.
 
 For example, you can calculate fuel usage for different types of vehicles with a function that looks like this:
-
 ```go title="example/vehicle.go"
-func CalculateFuelUsage(v Vehicle) int {
-	return MatchVehicleR1(
-		v,
-		func(x *Car) int {
-			return x.Wheels * 2
-		},
-		func(x *Plane) int {
-			return x.Engines * 10
-		},
-		func(x *Boat) int {
-			return x.Propellers * 5
-		},
-	)
-}
+--8<-- "example/vehicle.go:calculate-fuel"
 ```
 
 And as you can see, it leverages generics to make it easy to write.
@@ -164,23 +123,8 @@ You just need to use the `shared.JSONMarshal` and `shared.JSONUnmarshal` functio
 
 Example:
 
-```go
-func ExampleVehicleFromJSON() {
-    vehicle := &Car{
-        Color:  "black",
-        Wheels: 4,
-    }
-    result, _ := shared.JSONMarshal[Vehicle](vehicle)
-    fmt.Println(string(result))
-    // Output: {"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}
-}
-
-func ExampleVehicleToJSON() {
-    input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
-    vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
-    fmt.Printf("%#v", vehicle)
-    // Output: &example.Car{Color:"black", Wheels:4}
-}
+```go title="example/vehicle_test.go"
+--8<-- "example/vehicle_test.go:json"
 ```
 
 You can notice that it has an opinionated way of marshalling and unmarshalling your union type.
