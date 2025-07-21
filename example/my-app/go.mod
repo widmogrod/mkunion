@@ -1,4 +1,4 @@
-module github.com/widmogrod/mkunion/exammple/my-app
+module github.com/widmogrod/mkunion/example/my-app
 
 go 1.23.0
 
@@ -16,16 +16,16 @@ require (
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.4 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34 // indirect
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.15 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.35.0 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.36.5 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.11 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.36 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.36 // indirect
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.44.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.35.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.5 // indirect
-	github.com/aws/smithy-go v1.22.3 // indirect
+	github.com/aws/smithy-go v1.22.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
