@@ -12,6 +12,7 @@
 - [ ] **docs**: describe philosophy of "data as resource" and how it translates to some of library concepts
 - [ ] **feature**: remove need to provide name for `//go:tag mkmatch:"<name>"` and allow to have only `//go:tag mkmatch`
 - [ ] **feature**: allow to specify type param name in `go:tag mkunion:"Tree[A]"` with validation of expected number and name of type parameters
+- [ ] **bug fix**: prevent dot imports adding same type into registry but in different place and causing panic
 
 ## Long tern experiments and prototypes
 
