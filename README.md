@@ -7,6 +7,10 @@
 go install github.com/widmogrod/mkunion/cmd/mkunion@latest
 ```
 
+```
+mkunion watch -g ./...
+```
+
 ## About
 Strongly typed **union type** in golang that supports generics*.
 
@@ -24,44 +28,43 @@ On top of that, any data marshalling, like to/from JSON, requires additional, ha
 
 MkUnion solves all of these problems by generating opinionated and strongly typed, meaningful code for you.
 
-## Example
+## Examples
+
+### Example 1: Union definition and patter matching with JSON marshaling
 
 ```go title="example/vehicle.go"
 package example
 
-//go:generate mkunion
-
-// union declaration
 //go:tag mkunion:"Vehicle"
 type (
-	Car struct {
-		Color  string
-		Wheels int
-	}
-	Plane struct {
-		Color   string
-		Engines int
-	}
-	Boat struct {
-		Color      string
-		Propellers int
-	}
+    Car struct {
+        Color  string
+        Wheels int
+    }
+    Plane struct {
+        Color   string
+        Engines int
+    }
+    Boat struct {
+        Color      string
+        Propellers int
+    }
 )
 
 func CalculateFuelUsage(v Vehicle) int {
-	// example of pattern matching over Vehicle union type
-	return MatchVehicleR1(
-		v,
-		func(x *Car) int {
-			return x.Wheels * 2
-		},
-		func(x *Plane) int {
-			return x.Engines * 10
-		},
-		func(x *Boat) int {
-			return x.Propellers * 5
-		},
-	)
+    // example of pattern matching over Vehicle union type
+    return MatchVehicleR1(
+        v,
+        func(x *Car) int {
+            return x.Wheels * 2
+        },
+        func(x *Plane) int {
+            return x.Engines * 10
+        },
+        func(x *Boat) int {
+            return x.Propellers * 5
+        },
+    )
 }
 
 func ExampleToJSON() {
@@ -75,11 +78,65 @@ func ExampleToJSON() {
 }
 
 func ExampleFromJSON() {
-	input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
-	vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
-	fmt.Printf("%#v", vehicle)
-	// Output: &example.Car{Color:"black", Wheels:4}
+    input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
+    vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
+    fmt.Printf("%#v", vehicle)
+    // Output: &example.Car{Color:"black", Wheels:4}
 }
+```
+
+### Example 2: Result Type for Error Handling
+
+```go title="f/datas.go"
+//go:tag mkunion:"Result"
+type (
+    Ok[T any] struct{ Value T }
+    Err[T any] struct{ Error error }
+)
+```
+
+### Example 3: AST and Recursive Types
+
+```go title="example/calculator_example.go"
+//go:tag mkunion:"Calc"
+type (
+    Lit struct{ V int }
+    Sum struct{ Left, Right Calc }
+    Mul struct{ Left, Right Calc }
+)
+```
+
+### Example 4: States for State Machines or Events for Event Sourcing
+
+```go
+//go:tag mkunion:"OrderState"
+type (
+    Draft struct{ Items []Item }
+    Submitted struct{ OrderID string; Items []Item }
+    Shipped struct{ OrderID string; TrackingNumber string }
+    Delivered struct{ OrderID string; DeliveredAt time.Time }
+)
+```
+
+### Example 5: HTTP API responses
+
+```go
+//go:tag mkunion:"APIResponse"
+type (
+    Success[T any] struct{ Data T; Status int }
+    ValidationError[T any] struct{ Errors []string }
+    ServerError[T any] struct{ Message string; Code string }
+)
+```
+
+### Example 6: Configuration type
+```go
+//go:tag mkunion:"Config"  
+type (
+    FileConfig struct{ Path string }
+    EnvConfig struct{ Prefix string }
+    DefaultConfig struct{}
+)
 ```
 
 

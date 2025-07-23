@@ -831,12 +831,12 @@ func (r *Err[A, E]) MarshalJSON() ([]byte, error) {
 func (r *Err[A, E]) _marshalJSONErrLb_ACommaE_bL(x Err[A, E]) ([]byte, error) {
 	partial := make(map[string]json.RawMessage)
 	var err error
-	var fieldValue []byte
-	fieldValue, err = r._marshalJSONE(x.Value)
+	var fieldError []byte
+	fieldError, err = r._marshalJSONE(x.Error)
 	if err != nil {
-		return nil, fmt.Errorf("f: Err[A,E]._marshalJSONErrLb_ACommaE_bL: field name Value; %w", err)
+		return nil, fmt.Errorf("f: Err[A,E]._marshalJSONErrLb_ACommaE_bL: field name Error; %w", err)
 	}
-	partial["Value"] = fieldValue
+	partial["Error"] = fieldError
 	result, err := json.Marshal(partial)
 	if err != nil {
 		return nil, fmt.Errorf("f: Err[A,E]._marshalJSONErrLb_ACommaE_bL: struct; %w", err)
@@ -865,10 +865,10 @@ func (r *Err[A, E]) _unmarshalJSONErrLb_ACommaE_bL(data []byte) (Err[A, E], erro
 	if err != nil {
 		return result, fmt.Errorf("f: Err[A,E]._unmarshalJSONErrLb_ACommaE_bL: native struct unwrap; %w", err)
 	}
-	if fieldValue, ok := partial["Value"]; ok {
-		result.Value, err = r._unmarshalJSONE(fieldValue)
+	if fieldError, ok := partial["Error"]; ok {
+		result.Error, err = r._unmarshalJSONE(fieldError)
 		if err != nil {
-			return result, fmt.Errorf("f: Err[A,E]._unmarshalJSONErrLb_ACommaE_bL: field Value; %w", err)
+			return result, fmt.Errorf("f: Err[A,E]._unmarshalJSONErrLb_ACommaE_bL: field Error; %w", err)
 		}
 	}
 	return result, nil

@@ -23,7 +23,7 @@ type (
 //go:tag mkunion:"Result"
 type (
 	Ok[A any, E any]  struct{ Value A }
-	Err[A any, E any] struct{ Value E }
+	Err[A any, E any] struct{ Error E }
 )
 
 // --8<-- [end:result]
@@ -78,7 +78,7 @@ func MapResult[A, E any, C any](x Result[A, E], f func(A) C) Result[C, E] {
 			return &Ok[C, E]{Value: f(x.Value)}
 		},
 		func(x *Err[A, E]) Result[C, E] {
-			return &Err[C, E]{Value: x.Value}
+			return &Err[C, E]{Error: x.Error}
 		},
 	)
 }
