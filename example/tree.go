@@ -38,24 +38,37 @@ func (s sumVisitor) VisitLeaf(v *Leaf[int]) any {
 	return v.Value
 }
 
-//go:tag mkmatch:"MyName"
-type MyTriesMatch[T0, T1 Tree[any]] interface {
-	MatchLeafs(*Leaf[any], *Leaf[any])
-	MatchBranches(*Branch[any], any)
+// --8<-- [start:match-def]
+
+//go:tag mkmatch:"TreePairMatch"
+type TreePair[T0, T1 any] interface {
+	MatchLeafs(*Leaf[int], *Leaf[int])
+	MatchBranches(*Branch[int], any)
 	MatchMixed(any, any)
 }
 
-func treeDoNumbers(a, b Tree[any]) int {
-	return MyNameR1(
+// --8<-- [end:match-def]
+
+// --8<-- [start:match-use]
+
+// CombineTreeValues returns sum of tree nodes for int nodes, and for others returns 0
+// function is safe to use with any time, even if it's not a Tree
+func CombineTreeValues(a, b any) int {
+	return TreePairMatchR1(
 		a, b,
-		func(x0 *Leaf[any], x1 *Leaf[any]) int {
-			return x0.Value.(int) + x1.Value.(int)
+		func(x0 *Leaf[int], x1 *Leaf[int]) int {
+			// Both are leaves - add their values
+			return x0.Value + x1.Value
 		},
-		func(x0 *Branch[any], x1 any) int {
-			return -1
+		func(x0 *Branch[int], x1 any) int {
+			// First is branch - return special value
+			return CombineTreeValues(x0.L, x0.R) + 1
 		},
 		func(x0 any, x1 any) int {
-			return -10
+			// Mixed types - return default
+			return 0
 		},
 	)
 }
+
+// --8<-- [end:match-use]
