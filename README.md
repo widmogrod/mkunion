@@ -37,34 +37,34 @@ package example
 
 //go:tag mkunion:"Vehicle"
 type (
-	Car struct {
-		Color  string
-		Wheels int
-	}
-	Plane struct {
-		Color   string
-		Engines int
-	}
-	Boat struct {
-		Color      string
-		Propellers int
-	}
+    Car struct {
+        Color  string
+        Wheels int
+    }
+    Plane struct {
+        Color   string
+        Engines int
+    }
+    Boat struct {
+        Color      string
+        Propellers int
+    }
 )
 
 func CalculateFuelUsage(v Vehicle) int {
-	// example of pattern matching over Vehicle union type
-	return MatchVehicleR1(
-		v,
-		func(x *Car) int {
-			return x.Wheels * 2
-		},
-		func(x *Plane) int {
-			return x.Engines * 10
-		},
-		func(x *Boat) int {
-			return x.Propellers * 5
-		},
-	)
+    // example of pattern matching over Vehicle union type
+    return MatchVehicleR1(
+        v,
+        func(x *Car) int {
+            return x.Wheels * 2
+        },
+        func(x *Plane) int {
+            return x.Engines * 10
+        },
+        func(x *Boat) int {
+            return x.Propellers * 5
+        },
+    )
 }
 
 func ExampleToJSON() {
@@ -78,10 +78,10 @@ func ExampleToJSON() {
 }
 
 func ExampleFromJSON() {
-	input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
-	vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
-	fmt.Printf("%#v", vehicle)
-	// Output: &example.Car{Color:"black", Wheels:4}
+    input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
+    vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
+    fmt.Printf("%#v", vehicle)
+    // Output: &example.Car{Color:"black", Wheels:4}
 }
 ```
 
@@ -90,8 +90,8 @@ func ExampleFromJSON() {
 ```go title="f/datas.go"
 //go:tag mkunion:"Result"
 type (
-	Ok[T any] struct{ Value T }
-	Err[T any] struct{ Error error }
+    Ok[T any] struct{ Value T }
+    Err[T any] struct{ Error error }
 )
 ```
 
@@ -100,9 +100,9 @@ type (
 ```go title="example/calculator_example.go"
 //go:tag mkunion:"Calc"
 type (
-	Lit struct{ V int }
-	Sum struct{ Left, Right Calc }
-	Mul struct{ Left, Right Calc }
+    Lit struct{ V int }
+    Sum struct{ Left, Right Calc }
+    Mul struct{ Left, Right Calc }
 )
 ```
 
@@ -111,10 +111,10 @@ type (
 ```go
 //go:tag mkunion:"OrderState"
 type (
-	Draft struct{ Items []Item }
-	Submitted struct{ OrderID string; Items []Item }
-	Shipped struct{ OrderID string; TrackingNumber string }
-	Delivered struct{ OrderID string; DeliveredAt time.Time }
+    Draft struct{ Items []Item }
+    Submitted struct{ OrderID string; Items []Item }
+    Shipped struct{ OrderID string; TrackingNumber string }
+    Delivered struct{ OrderID string; DeliveredAt time.Time }
 )
 ```
 
@@ -123,9 +123,9 @@ type (
 ```go
 //go:tag mkunion:"APIResponse"
 type (
-	Success[T any] struct{ Data T; Status int }
-	ValidationError[T any] struct{ Errors []string }
-	ServerError[T any] struct{ Message string; Code string }
+    Success[T any] struct{ Data T; Status int }
+    ValidationError[T any] struct{ Errors []string }
+    ServerError[T any] struct{ Message string; Code string }
 )
 ```
 
@@ -133,9 +133,9 @@ type (
 ```go
 //go:tag mkunion:"Config"  
 type (
-	FileConfig struct{ Path string }
-	EnvConfig struct{ Prefix string }
-	DefaultConfig struct{}
+    FileConfig struct{ Path string }
+    EnvConfig struct{ Prefix string }
+    DefaultConfig struct{}
 )
 ```
 
