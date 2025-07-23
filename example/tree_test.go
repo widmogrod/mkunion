@@ -85,14 +85,17 @@ func TestTreeSchema(t *testing.T) {
 }
 
 func TestMyNameMatch(t *testing.T) {
-	leaf1 := &Leaf[any]{Value: 1}
-	leaf2 := &Leaf[any]{Value: 2}
+	leaf1 := &Leaf[int]{Value: 1}
+	leaf2 := &Leaf[int]{Value: 2}
 
-	result := treeDoNumbers(leaf1, leaf2)
+	result := CombineTreeValues(leaf1, leaf2)
 	assert.Equal(t, 3, result)
 
-	branch1 := &Branch[any]{L: leaf1, R: leaf2}
+	branch1 := &Branch[int]{L: leaf1, R: leaf2}
+	result = CombineTreeValues(branch1, leaf1)
+	assert.Equal(t, 4, result)
 
-	result = treeDoNumbers(branch1, leaf1)
-	assert.Equal(t, -1, result)
+	leaf3 := &Leaf[string]{Value: "hello"}
+	result = CombineTreeValues(leaf1, leaf3)
+	assert.Equal(t, 0, result)
 }

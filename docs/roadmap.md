@@ -5,11 +5,12 @@
 - [x] **feature**: `mkunion watch ./...` command that watches for changes in files and runs faster than `go generate ./...`
 - [x] **feature**: `go:tag mkmatch` to generate pattern matching functions
 - [x] **feature**: `go:tag mkmatch` with better type parameters validation
-- [ ] **docs**: document how to write custom pattern matching functions
+- [x] **docs**: document how to write custom pattern matching functions
 - [ ] **docs**: document other packages in `x/` directory
 - [ ] **docs**: document typescript types generation and end-to-end typs concepts (from backend to frontend)
 - [ ] **feature**: expose functions to extract `go:tag` metadata
 - [ ] **docs**: describe philosophy of "data as resource" and how it translates to some of library concepts
+- [ ] **feature**: remove need to provide name for `//go:tag mkmatch:"<name>"` and allow to have only `//go:tag mkmatch`
 
 ## Long tern experiments and prototypes
 
