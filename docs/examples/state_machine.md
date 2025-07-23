@@ -123,7 +123,8 @@ and discover transitions that we didn't think about, that should or shouldn't be
 Here is how you can test a state machine in a declarative way, using the `mkunion/x/machine` package:
 
 ```go title="example/state/machine_test.go"
---8<-- "example/state/machine_test.go:test-suite"
+--8<-- "example/state/machine_test.go:moq-init"
+--8<-- "example/state/machine_test.go:test-suite-happy"
 ```
 A few things to notice in this test:
 
@@ -142,9 +143,7 @@ I know it's subjective, but I find it very readable and easy to understand, even
 The last bit is this line at the bottom of the test file:
 
 ```go title="example/state/machine_test.go"
-if suite.AssertSelfDocumentStateDiagram(t, "machine_test.go") {
-   suite.SelfDocumentStateDiagram(t, "machine_test.go")
-}
+--8<-- "example/state/machine_test.go:doc-assert"
 ```
 
 This code takes all inputs provided in the test suite and fuzzes them, applies commands to random states, and records the results of those transitions.
@@ -205,6 +204,5 @@ For a comprehensive guide on best practices, patterns, and advanced techniques, 
 ## Next steps
 
 - **[State Machine Best Practices](state_machine_best_practices.md)** - Learn about file organization, naming conventions, testing strategies, and advanced patterns
-- **[Simple Examples](simple_state_machines.md)** - Start with basic state machines before tackling complex scenarios
 - **[Persisting union in database](../examples/state_storage.md)** - Learn how to persist state in a database and handle concurrency conflicts
 - **[Handling errors in state machines](../examples/state_storage.md)** - Build self-healing systems by treating errors as states
