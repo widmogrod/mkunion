@@ -249,7 +249,7 @@ func ErrShape() shape.Shape {
 		},
 		Fields: []*shape.FieldLike{
 			{
-				Name: "Value",
+				Name: "Error",
 				Type: &shape.RefName{
 					Name:          "E",
 					PkgName:       "",
