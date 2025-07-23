@@ -125,7 +125,7 @@ func (t *Triangle) Accept(v ShapeVisitor) { v.VisitTriangle(t) }
     - JSON marshalling requires custom implementation
 
 !!! note
-    Projects like [exhaustive](https://github.com/nishanths/exhaustive) with [golangci-lint](https://github.com/golangci/golangci-lint) can detect those situations
+    Projects like [exhaustive](https://github.com/nishanths/exhaustive) with [golangci-lint](https://github.com/golangci/golangci-lint) can detect non exhaustive switch situation when configured
 
 #### 3. Interface with Type Assertions
 
