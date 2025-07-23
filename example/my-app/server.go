@@ -31,6 +31,8 @@ import (
 	"syscall"
 )
 
+// --8<-- [start:ts-gen]
+
 // this command make sure that all types that are imported will have generated typescript mapping
 //go:generate ../../cmd/mkunion/mkunion shape-export --language=typescript -o ./src/workflow
 
@@ -49,6 +51,8 @@ type (
 	FunctionOutput = workflow.FunctionOutput
 	FunctionInput  = workflow.FunctionInput
 )
+
+// --8<-- [end:ts-gen]
 
 //go:tag mkunion:"ChatCMD"
 type (

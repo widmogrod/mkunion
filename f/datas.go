@@ -11,6 +11,8 @@ type (
 // --8<-- [end:either]
 // --8<-- [start:option]
 
+// Option type - represent nullable values explicitly
+//
 //go:tag mkunion:"Option"
 type (
 	Some[A any] struct{ Value A }
@@ -20,6 +22,8 @@ type (
 // --8<-- [end:option]
 // --8<-- [start:result]
 
+// Result type - explicit error handling without exceptions
+//
 //go:tag mkunion:"Result"
 type (
 	Ok[A any, E any]  struct{ Value A }
@@ -106,3 +110,19 @@ func MapResult[A, E any, C any](x Result[A, E], f func(A) C) Result[C, E] {
 //
 //	panic(fmt.Errorf("f.Map: unexpected type %T", x))
 //}
+
+func MkOk[E, A any](x A) Result[A, E] {
+	return &Ok[A, E]{Value: x}
+}
+
+func MkErr[A, E any](err E) Result[A, E] {
+	return &Err[A, E]{Error: err}
+}
+
+func MkSome[A any](v A) Option[A] {
+	return &Some[A]{Value: v}
+}
+
+func MkNone[A any]() Option[A] {
+	return &None[A]{}
+}

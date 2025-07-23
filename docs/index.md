@@ -44,3 +44,4 @@ mkunion watch -g ./...
 ## Next
 
 - Read [getting started](./getting_started.md) to learn more.
+- Learn more about [value proposition](./value_proposition.md)

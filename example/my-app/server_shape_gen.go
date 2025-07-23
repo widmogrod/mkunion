@@ -319,14 +319,14 @@ func ListWorkflowsFnShape() shape.Shape {
 					},
 				},
 				Tags: map[string]shape.Tag{
+					"desc": {
+						Value: "skip words",
+					},
 					"enum": {
 						Value: "hello",
 						Options: []string{
 							"world",
 						},
-					},
-					"desc": {
-						Value: "skip words",
 					},
 				},
 			},
