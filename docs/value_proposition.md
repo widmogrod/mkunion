@@ -125,7 +125,7 @@ func (t *Triangle) Accept(v ShapeVisitor) { v.VisitTriangle(t) }
     - JSON marshalling requires custom implementation
 
 !!! note
-    Projects like [exhaustive](https://github.com/nishanths/exhaustive) with [golangci-lint](https://github.com/golangci/golangci-lint) can detect those situations
+    Projects like [exhaustive](https://github.com/nishanths/exhaustive) with [golangci-lint](https://github.com/golangci/golangci-lint) can detect non exhaustive switch situation when configured
 
 #### 3. Interface with Type Assertions
 
@@ -313,14 +313,10 @@ decoded, _ := shared.JSONUnmarshal[Shape](json)
 MkUnion fully supports Go generics:
 
 ```go
-//go:tag mkunion:"Result"
-type (
-    Success[T any] struct{ Value T }
-    Failure[T any] struct{ Error error }
-)
+--8<-- "f/datas.go:result"
 
 // Use with any type
-var result Result[string] = &Success[string]{Value: "hello"}
+var result Result[string] = &Ok[string]{Value: "hello"}
 ```
 
  - Read more about it [Union and generic types](examples/generic_union.md)
