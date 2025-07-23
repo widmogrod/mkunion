@@ -33,14 +33,14 @@ func TestTransition(t *testing.T) {
 			name:      "ProcessingToProcessingError",
 			state:     &Processing{ID: "123"},
 			command:   &StartCommand{ID: "123"},
-			expectErr: errors.New("already processing"),
+			expectErr: ErrAlreadyProcessing,
 			expectRes: nil,
 		},
 		{
 			name:      "InvalidTransitionError",
 			state:     &Complete{Result: "Success"},
 			command:   &StartCommand{ID: "456"},
-			expectErr: errors.New("invalid transition"),
+			expectErr: ErrInvalidTransition,
 			expectRes: nil,
 		},
 	}

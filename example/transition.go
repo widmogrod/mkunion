@@ -23,6 +23,11 @@ type (
 
 // --8<-- [start:match-def]
 
+var (
+	ErrAlreadyProcessing = errors.New("already processing")
+	ErrInvalidTransition = errors.New("invalid transition")
+)
+
 //go:tag mkmatch:"TransitionMatch"
 type TransitionMatch[S State, C Command] interface {
 	ProcessingStart(*Processing, *StartCommand)
@@ -38,7 +43,7 @@ func Transition(state State, cmd Command) (State, error) {
 	return TransitionMatchR2(
 		state, cmd,
 		func(s *Processing, c *StartCommand) (State, error) {
-			return nil, errors.New("already processing")
+			return nil, ErrAlreadyProcessing
 		},
 		func(s *Processing, c *CompleteCommand) (State, error) {
 			return &Complete{Result: c.Result}, nil
@@ -47,7 +52,7 @@ func Transition(state State, cmd Command) (State, error) {
 			return &Processing{ID: c.ID}, nil
 		},
 		func(s State, c Command) (State, error) {
-			return nil, errors.New("invalid transition")
+			return nil, ErrInvalidTransition
 		},
 	)
 }
