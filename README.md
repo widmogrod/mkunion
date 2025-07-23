@@ -85,7 +85,7 @@ func ExampleFromJSON() {
 }
 ```
 
-### Example 2: Result Type (Error Handling)
+### Example 2: Result Type for Error Handling
 
 ```go title="f/datas.go"
 //go:tag mkunion:"Result"
@@ -95,7 +95,7 @@ type (
 )
 ```
 
-### Example 3: AST (Recursive Types)
+### Example 3: AST and Recursive Types
 
 ```go title="example/calculator_example.go"
 //go:tag mkunion:"Calc"
@@ -106,7 +106,7 @@ type (
 )
 ```
 
-### Example 4: State Machine (Business Logic)
+### Example 4: States for State Machines or Events for Event Sourcing
 
 ```go
 //go:tag mkunion:"OrderState"
@@ -118,7 +118,7 @@ type (
 )
 ```
 
-### Example 5: HTTP API (Real-world)
+### Example 5: HTTP API responses
 
 ```go
 //go:tag mkunion:"APIResponse"
@@ -129,7 +129,7 @@ type (
 )
 ```
 
-### Example 6: Configuration (Practical)
+### Example 6: Configuration type
 ```go
 //go:tag mkunion:"Config"  
 type (
