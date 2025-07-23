@@ -86,9 +86,9 @@ When defining a match interface:
 ### Example 1: Matching Vehicle Pairs
 
 ```go title="example/vehicle.go"
---8<--"example/vehicle.go:vehicle-def"
---8<--"example/vehicle.go:match-def"
---8<--"example/vehicle.go:match-pairs"
+--8<-- "example/vehicle.go:vehicle-def"
+--8<-- "example/vehicle.go:match-def"
+--8<-- "example/vehicle.go:match-pairs"
 ```
 
 ### Example 2: Matching Tree Nodes
@@ -96,9 +96,9 @@ When defining a match interface:
 Notice that CombineTreeValues function match against TreePair type parameters.
 
 ```go title="example/tree.go"
---8<--"example/tree.go:tree-def"
---8<--"example/tree.go:match-def"
---8<--"example/tree.go:match-use"
+--8<-- "example/tree.go:tree-def"
+--8<-- "example/tree.go:match-def"
+--8<-- "example/tree.go:match-use"
 ```
 
 ### Example 3: State Machine Transitions
@@ -106,8 +106,8 @@ Notice that CombineTreeValues function match against TreePair type parameters.
 Custom pattern matching is particularly useful for state machines:
 
 ```go title="example/transition.go"
---8<--"example/transition.go:match-def"
---8<--"example/transition.go:match-use"
+--8<-- "example/transition.go:match-def"
+--8<-- "example/transition.go:match-use"
 ```
 
 ## Best Practices
@@ -115,27 +115,29 @@ Custom pattern matching is particularly useful for state machines:
 1. **Order Matters**: The generated function checks patterns in the order they appear in the interface. Put more specific patterns first.
 2. **Use Wildcards Wisely**: The `any` type acts as a wildcard. Use it for catch-all cases or when you need to handle any type.
 3. **Exhaustiveness**: Always include a catch-all pattern (typically with `any` parameters) to ensure all cases are handled.
-4. **Naming Conventions**: 
-   - Use descriptive names for match methods
-   - The interface name becomes the function prefix
-   - Consider the domain when naming
+4. **Naming Conventions**:
+    - Use descriptive names for match methods
+    - The interface name becomes the function prefix
+    - Consider the domain when naming
 5. **Type Safety**: The generated functions are fully type-safe and will panic if the patterns are not exhaustive.
 
 
 ## Limitations
 
-1. Custom pattern matching functions are limited to matching on up to 3 return values (R0, R1, R2, R3).
-2. The interface methods must have parameters matching the type parameters in order.
-3. All methods in the interface must have the same number of parameters.
+1. Custom pattern matching functions are **limited to matching on up to 3 return values** (R0, R1, R2, R3).
+2. The interface methods **must have parameters matching the type parameters in order**.
+3. All methods in the **interface must have the same number of parameters**.
 
 ## Summary
 
-Custom pattern matching in mkunion provides a powerful way to handle complex matching scenarios while maintaining type safety. By defining interfaces with the `//go:tag mkmatch:""` annotation, you can create specialized matching functions that work across multiple values and implement domain-specific logic.
+Custom pattern matching in `mkunion` provides a powerful way to handle complex matching scenarios while maintaining type safety. 
+By defining interfaces with the `//go:tag mkmatch:""` annotation, you can create specialized matching functions that work across multiple values and implement domain-specific logic.
 
 This feature is particularly useful for:
+
 - State machine implementations
 - Complex data transformations
 - Multi-value comparisons
 - Domain-specific pattern matching logic
 
-Combined with mkunion's automatic union type generation and standard pattern matching, custom pattern matching completes a comprehensive toolkit for working with algebraic data types in Go.
+Combined with `mkunion`'s automatic union type generation and standard pattern matching, custom pattern matching completes a comprehensive toolkit for working with algebraic data types in Go.
