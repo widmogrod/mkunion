@@ -63,7 +63,7 @@ func (p *PubSub[T]) Register(key T) error {
 func (p *PubSub[T]) Publish(ctx context.Context, key T, msg Message) error {
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("pubsub.Publish: key=%#v ctx=%s %w", key, ctx.Err(), ErrContextDone)
+		return fmt.Errorf("pubsub.Publish: key=%#v: %w (context: %v)", key, ErrContextDone, ctx.Err())
 	default:
 		// continue
 	}
