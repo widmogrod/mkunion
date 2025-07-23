@@ -143,3 +143,4 @@ type (
 ## Next
 
 - Read [getting started](https://widmogrod.github.io/mkunion/getting_started/) to learn more.
+- Learn more about [value proposition](https://widmogrod.github.io/mkunion/value_proposition/).
