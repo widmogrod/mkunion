@@ -28,6 +28,8 @@ func TestSuite(t *testing.T) {
 		Quantity: 3,
 	}
 
+	// --8<-- [start:test-suite]
+	// --8<-- [start:test-suite-happy]
 	suite := machine.NewTestSuite(di, NewMachine)
 	suite.Case(t, "happy path of order state transition",
 		func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
@@ -69,6 +71,7 @@ func TestSuite(t *testing.T) {
 									},
 								})
 						}).
+						// --8<-- [end:test-suite-happy]
 						ForkCase(t, "mark order cannot be by the same worker", func(t *testing.T, c *machine.Case[Dependency, Command, State]) {
 							c.
 								GivenCommand(&MarkOrderCompleteCMD{
@@ -166,16 +169,19 @@ func TestSuite(t *testing.T) {
 												PaymentChargedAt: &now,
 											},
 										})
-									// --8<-- [end:moq-usage]
 								})
+							// --8<-- [end:moq-usage]
 						})
 				})
 		},
 	)
 
+	// --8<-- [start:doc-assert]
 	if suite.AssertSelfDocumentStateDiagram(t, "machine_test.go") {
 		suite.SelfDocumentStateDiagram(t, "machine_test.go")
 	}
+	// --8<-- [end:doc-assert]
+	// --8<-- [end:test-suite]
 }
 
 func TestStorage(t *testing.T) {

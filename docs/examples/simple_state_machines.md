@@ -56,4 +56,3 @@ The traffic light example illustrates fundamental state machine concepts:
 
 - Review the [comprehensive Order Service example](state_machine.md) for a more complex scenario
 - Learn about [testing strategies](state_machine.md#testing-state-machines-self-documenting) for state machines
-- Explore [advanced patterns](state_machine_best_practices.md#advanced-patterns) for composition and async operations
