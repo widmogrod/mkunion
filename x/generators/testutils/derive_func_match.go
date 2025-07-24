@@ -19,7 +19,7 @@ type (
 	N1 struct{}
 )
 
-//go:tag mkmatch:"MatchAlphabetNumberTuple"
+//go:tag mkmatch
 type MatchAlphabetNumberTuple[T0 Alphabet, T1 Number] interface {
 	Match1(x *A1, y *N0)
 	Match2(x *C3, y *time.Duration)

@@ -30,6 +30,20 @@ func ExtractDocumentTags(doc *ast.CommentGroup) map[string]Tag {
 
 func ExtractTags(tag string) map[string]Tag {
 	tag = strings.Trim(tag, "`")
+	tag = strings.TrimSpace(tag)
+
+	// Handle special case for tags without values (e.g., "//go:tag mkmatch" instead of "//go:tag mkmatch:\"Name\"")
+	// Only check if it's a simple tag without colons AND without commas
+	if tag != "" && !strings.Contains(tag, ":") && !strings.Contains(tag, ",") {
+		// This is a single tag without value, return it with empty value
+		return map[string]Tag{
+			tag: {
+				Value:   "",
+				Options: nil,
+			},
+		}
+	}
+
 	tags, err := structtag.Parse(tag)
 	if err != nil {
 		return nil

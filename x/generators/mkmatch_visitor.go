@@ -39,10 +39,26 @@ func (f *MkMatchTaggedNodeVisitor) Specs() []*MatchSpec {
 func (f *MkMatchTaggedNodeVisitor) visitTaggedNode(node *shape.NodeAndTag) {
 	b := NewMkMatchBuilder()
 	b.InitPkgMap(f.pkgMap)
-	b.name = node.Tag.Value
+
+	// If tag value is empty, the builder will use the interface name when walking the AST
+	// Otherwise, use the provided tag value
+	if node.Tag.Value != "" {
+		b.name = node.Tag.Value
+	}
 
 	ast.Walk(b, node.Node)
-	f.matchBuilder[node.Tag.Value] = b
+
+	// After walking, the builder should have a name (either from tag or interface name)
+	// Use that as the key for storing the builder
+	key := b.name
+	if key == "" {
+		// This shouldn't happen, but as a fallback use the original tag value
+		key = node.Tag.Value
+		if key == "" {
+			key = fmt.Sprintf("_unnamed_%p", b)
+		}
+	}
+	f.matchBuilder[key] = b
 }
 
 func typeToString(t ast.Expr) string {

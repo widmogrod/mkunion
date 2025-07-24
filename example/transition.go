@@ -28,7 +28,7 @@ var (
 	ErrInvalidTransition = errors.New("invalid transition")
 )
 
-//go:tag mkmatch:"TransitionMatch"
+//go:tag mkmatch
 type TransitionMatch[S State, C Command] interface {
 	ProcessingStart(*Processing, *StartCommand)
 	ProcessingComplete(*Processing, *CompleteCommand)
