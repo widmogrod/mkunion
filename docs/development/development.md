@@ -27,6 +27,7 @@ echo "Generate files ..."
 cmd/mkunion/mkunion watch -g ./...
 
 echo "Run tests ..."
+source .envrc
 go test ./...
 ```
 
