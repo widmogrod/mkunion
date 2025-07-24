@@ -56,10 +56,10 @@ MatchPairsR1(v1, v2,
 
 ## Basic Syntax
 
-To create a custom pattern matching function, use the `//go:tag mkmatch:"FunctionName"` annotation on an interface definition:
+To create a custom pattern matching function, use the `//go:tag mkmatch` annotation on an interface definition:
 
 ```go
-//go:tag mkmatch:"MatchPairs"
+//go:tag mkmatch
 type MatchPairs[A, B Vehicle] interface {
     MatchCars(x, y *Car)
     MatchBoatAny(x *Boat, y any)
@@ -68,6 +68,21 @@ type MatchPairs[A, B Vehicle] interface {
 ```
 
 This generates functions like `MatchPairsR0`, `MatchPairsR1`, `MatchPairsR2`, and `MatchPairsR3` with 0 to 3 return values respectively.
+
+### Custom Naming
+
+You can also provide the function name in the tag, and mkunion will use that instead of interface name:
+
+```go
+//go:tag mkmatch:"MyPairMatcher"
+type MatchPairs[A, B Vehicle] interface {
+    MatchCars(x, y *Car)
+    MatchBoatAny(x *Boat, y any)
+    Finally(x, y any)
+}
+```
+
+This generates `MyPairMatcherR0`, `MyPairMatcherR1`, etc., 
 
 ## Interface Definition Rules
 

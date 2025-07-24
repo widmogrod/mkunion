@@ -140,6 +140,9 @@ func (b *MkMatchBuilder) extractPackageName(node ast.Node) {
 }
 
 func (b *MkMatchBuilder) SetName(name string) error {
+	// If no name is set yet (empty string from tag), use the interface name
+	// If name is "-", still allow override (this is the special skip case)
+	// If name is already set from the tag, keep it unless it's "-"
 	if b.name == "" || b.name == "-" {
 		b.name = name
 	}

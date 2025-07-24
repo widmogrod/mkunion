@@ -534,7 +534,7 @@ func (wt *WindowTrigger) Reset() {
 	wt.ts = wt.initState(wt.td)
 }
 
-//go:tag mkmatch:"EvaluateTrigger"
+//go:tag mkmatch
 type EvaluateTrigger[T0 TriggerDescription, T1 TriggerType] interface {
 	MatchPeriod(*AtPeriod, *AtPeriod)
 	MatchCount(*AtWindowItemSize, *AtWindowItemSize)

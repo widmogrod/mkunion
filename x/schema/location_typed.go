@@ -75,7 +75,7 @@ func (location *TypedLocation) WrapLocation(loc []Location) ([]Location, error) 
 	return loc, nil
 }
 
-//go:tag mkmatch:"-"
+//go:tag mkmatch
 type MatchDifference[A, B shape.Shape] interface {
 	StructLikes(x *shape.StructLike, y *shape.StructLike)
 	UnionLikes(x *shape.UnionLike, y *shape.UnionLike)

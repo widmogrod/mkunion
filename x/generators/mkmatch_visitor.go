@@ -39,10 +39,10 @@ func (f *MkMatchTaggedNodeVisitor) Specs() []*MatchSpec {
 func (f *MkMatchTaggedNodeVisitor) visitTaggedNode(node *shape.NodeAndTag) {
 	b := NewMkMatchBuilder()
 	b.InitPkgMap(f.pkgMap)
-	b.name = node.Tag.Value
 
+	b.name = node.Tag.Value
 	ast.Walk(b, node.Node)
-	f.matchBuilder[node.Tag.Value] = b
+	f.matchBuilder[b.name] = b
 }
 
 func typeToString(t ast.Expr) string {
