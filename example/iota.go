@@ -4,38 +4,38 @@ import "math"
 
 // --8<-- [start:example]
 
-type ShapeType int
+type IotaShapeType int
 
 const (
-	CircleType ShapeType = iota
-	RectangleType
-	TriangleType
+	IotaCircleType IotaShapeType = iota
+	IotaRectangleType
+	IotaTriangleType
 )
 
 type (
-	Circle    struct{ Radius float64 }
-	Rectangle struct{ Width, Height float64 }
-	Triangle  struct{ Base, Height float64 }
+	IotaCircle    struct{ Radius float64 }
+	IotaRectangle struct{ Width, Height float64 }
+	IotaTriangle  struct{ Base, Height float64 }
 )
 
-type Shape struct {
-	Type     ShapeType
-	Circle   *Circle
-	Rect     *Rectangle
-	Triangle *Triangle
+type IotaShape struct {
+	Type     IotaShapeType
+	Circle   *IotaCircle
+	Rect     *IotaRectangle
+	Triangle *IotaTriangle
 }
 
-func CalculateArea(s Shape) float64 {
+func CalculateIotaArea(s IotaShape) float64 {
 	switch s.Type {
-	case CircleType:
+	case IotaCircleType:
 		if s.Circle != nil {
 			return math.Pi * s.Circle.Radius * s.Circle.Radius
 		}
-	case RectangleType:
+	case IotaRectangleType:
 		if s.Rect != nil {
 			return s.Rect.Width * s.Rect.Height
 		}
-		// Missing TriangleType will not tell you that it's missing switch case
+		// Missing IotaTriangleType will not tell you that it's missing switch case
 		// you need to use tools like https://github.com/nishanths/exhaustive
 	}
 	return 0

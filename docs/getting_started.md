@@ -7,15 +7,15 @@ go install github.com/widmogrod/mkunion/cmd/mkunion@latest
 ```
 
 ### Define your first union type
-Create your first union. In our simple example, we will represent different types of vehicles.
+Create your first union. In our simple example, we will represent different geometric shapes.
 But in a more complex example, you may want to represent different states of your application, model domain aggregates, or create your own DSL.
-```go title="example/vehicle.go"
---8<-- "example/vehicle.go:vehicle-def"
+```go title="example/shape.go"
+--8<-- "example/shape.go:shape-def"
 ```
 
 In the above example, you can see a few important concepts:
 
-#### `//go:tag mkunion:"Vehicle"`
+#### `//go:tag mkunion:"Shape"`
 
 Tags are a powerful and flexible way to add metadata to your code.
 You may be familiar with tags when you work with JSON in Go:
@@ -33,7 +33,7 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
 
 ##### Tags supported by MkUnion
 
-- `go:tag mkunion:"Vehicle"` - defines a union type. For generic unions, type parameters MUST be specified: `go:tag mkunion:"Result[T, E]"`.
+- `go:tag mkunion:"Shape"` - defines a union type. For generic unions, type parameters MUST be specified: `go:tag mkunion:"Result[T, E]"`.
 - `go:tag serde:"json"` - enables serialization type (currently only JSON is supported), enabled by default.
 - `go:tag shape:"-"` - disables shape generation for this type, useful in cases where an x/shared package cannot depend on other x packages, to avoid circular dependencies.
 - `go:tag mkunion:",no-type-registry"` - if you want to disable generation of the type registry in a package, define this tag in one of the Go files above the package declaration:
@@ -42,8 +42,8 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   package example
   ```
 - `go:tag mkmatch` - generate custom pattern matching function from interface definition
-  ```go title="example/vehicle.go"
-  --8<-- "example/vehicle.go:match-def"
+  ```go title="example/shape.go"
+  --8<-- "example/shape.go:match-def"
   ```
 
 #### `type (...)` convention
@@ -71,7 +71,7 @@ mkunion watch -g ./...
 
 Alternatively, you can run the `mkunion` command directly on specific files:
 ```
-mkunion -i example/vehicle.go
+mkunion -i example/shape.go
 ```
 
 
@@ -88,13 +88,13 @@ mkunion watch -G ./...
 This automatic execution works well with extensions like [moq](https://github.com/matryer/moq) that depend on union types being defined first.
 
 ### Match over union type
-When you run the `mkunion` command, it will generate a file alongside your original file with the `union_gen.go` suffix (example [vehicle_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/vehicle_union_gen.go)).
+When you run the `mkunion` command, it will generate a file alongside your original file with the `union_gen.go` suffix (example [shape_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/shape_union_gen.go)).
 
 You can use these functions to do exhaustive matching on your union type.
 
-For example, you can calculate fuel usage for different types of vehicles with a function that looks like this:
-```go title="example/vehicle.go"
---8<-- "example/vehicle.go:calculate-fuel"
+For example, you can calculate the area of different shapes with a function that looks like this:
+```go title="example/shape.go"
+--8<-- "example/shape.go:calculate-area"
 ```
 
 And as you can see, it leverages generics to make it easy to write.
@@ -104,13 +104,13 @@ No need to cast, check types, or use `switch` statements.
 Where `Name` is the name of your union type.
 Where `R0`, `R1`, `R2`, `R3` stand for the number of return values.
 
-Example of `MatchVehicleR1` function signature:
+Example of `MatchShapeR1` function signature:
 ```go
-func MatchVehicleR1[T0 any](
-	x Vehicle,
-	f1 func(x *Car) T0,
-	f2 func(x *Plane) T0,
-	f3 func(x *Boat) T0,
+func MatchShapeR1[T0 any](
+	x Shape,
+	f1 func(x *Circle) T0,
+	f2 func(x *Rectangle) T0,
+	f3 func(x *Square) T0,
 ) T0 {
 	/* ... */
 }
@@ -123,8 +123,8 @@ You just need to use the `shared.JSONMarshal` and `shared.JSONUnmarshal` functio
 
 Example:
 
-```go title="example/vehicle_test.go"
---8<-- "example/vehicle_test.go:json"
+```go title="example/shape_test.go"
+--8<-- "example/shape_test.go:json"
 ```
 
 You can notice that it has an opinionated way of marshalling and unmarshalling your union type.

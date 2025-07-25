@@ -30,59 +30,55 @@ MkUnion solves all of these problems by generating opinionated and strongly type
 
 ## Examples
 
-### Example 1: Union definition and patter matching with JSON marshaling
+### Example 1: Union definition and pattern matching with JSON marshaling
 
-```go title="example/vehicle.go"
+```go title="example/shape.go"
 package example
 
-//go:tag mkunion:"Vehicle"
+//go:tag mkunion:"Shape"
 type (
-    Car struct {
-        Color  string
-        Wheels int
+    Circle struct {
+        Radius float64
     }
-    Plane struct {
-        Color   string
-        Engines int
+    Rectangle struct {
+        Width  float64
+        Height float64
     }
-    Boat struct {
-        Color      string
-        Propellers int
+    Square struct {
+        Side float64
     }
 )
 
-func CalculateFuelUsage(v Vehicle) int {
-    // example of pattern matching over Vehicle union type
-    return MatchVehicleR1(
-        v,
-        func(x *Car) int {
-            return x.Wheels * 2
+func CalculateArea(s Shape) float64 {
+    // example of pattern matching over Shape union type
+    return MatchShapeR1(
+        s,
+        func(x *Circle) float64 {
+            return math.Pi * x.Radius * x.Radius
         },
-        func(x *Plane) int {
-            return x.Engines * 10
+        func(x *Rectangle) float64 {
+            return x.Width * x.Height
         },
-        func(x *Boat) int {
-            return x.Propellers * 5
+        func(x *Square) float64 {
+            return x.Side * x.Side
         },
     )
 }
 
 func ExampleToJSON() {
-    var vehicle Vehicle = &Car{
-        Color:  "black",
-        Wheels: 4,
+    var shape Shape = &Circle{
+        Radius: 10,
     }
-    result, _ := shared.JSONMarshal(vehicle)
+    result, _ := shared.JSONMarshal(shape)
     fmt.Println(string(result))
-    // Output: {"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}
+    // Output: {"$type":"example.Circle","example.Circle":{"Radius":10}}
 }
 
 func ExampleFromJSON() {
-    input := []byte(`{"$type":"example.Car","example.Car":{"Color":"black","Wheels":4}}`)
-    vehicle, _ := shared.JSONUnmarshal[Vehicle](input)
-    fmt.Printf("%#v", vehicle)
-    // Output: &example.Car{Color:"black", Wheels:4}
-}
+    input := []byte(`{"$type":"example.Circle","example.Circle":{"Radius":10}}`)
+    shape, _ := shared.JSONUnmarshal[Shape](input)
+    fmt.Printf("%#v", shape)
+    // Output: &example.Circle{Radius:10}
 ```
 
 ### Example 2: Result Type for Error Handling

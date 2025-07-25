@@ -27,10 +27,10 @@ MkUnion solves all of these problems by generating opinionated and strongly type
 
 ## Example
 
-```go title="example/vehicle.go"
---8<-- "example/vehicle.go:vehicle-def"
---8<-- "example/vehicle.go:calculate-fuel"
---8<-- "example/vehicle_test.go:json"
+```go title="example/shape.go"
+--8<-- "example/shape.go:shape-def"
+--8<-- "example/shape.go:calculate-area"
+--8<-- "example/shape_test.go:json"
 ```
 
 Watch for changes in the file and generate code on the fly:
