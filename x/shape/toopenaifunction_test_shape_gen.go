@@ -17,14 +17,14 @@ func weatherInputShape() Shape {
 				Type: &PrimitiveLike{Kind: &StringLike{}},
 				Desc: Ptr("The city and state e.g. San Francisco, CA"),
 				Tags: map[string]Tag{
-					"name": {
-						Value: "location",
-					},
 					"desc": {
 						Value: "The city and state e.g. San Francisco",
 						Options: []string{
 							"CA",
 						},
+					},
+					"name": {
+						Value: "location",
 					},
 				},
 			},
