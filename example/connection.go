@@ -4,7 +4,7 @@ import "net"
 
 // --8<-- [start:example]
 
-//go:tag mkunion:"Connection"
+//go:tag mkunion:"Connection[State]"
 type (
 	Disconnected[State any] struct{}
 	Connecting[State any]   struct{ Addr string }

@@ -94,6 +94,8 @@ dev/docs.sh build
 ### Code Generation Patterns
 
 1. **Union Types**: Use `//go:tag mkunion:"UnionName"` to mark types for union generation
+   - For generic unions: `//go:tag mkunion:"UnionName[T, E]"` with explicit type parameters
+   - Type parameter names must match between tag and variant types
 2. **Generated Files**: 
    - `*_union_gen.go` - Union type definitions and constructors
    - `*_shape_gen.go` - Shape definitions for type introspection

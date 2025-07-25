@@ -1,6 +1,6 @@
 package testutils
 
-//go:tag mkunion:"Record"
+//go:tag mkunion:"Record[A]"
 type (
 	Item[A any] struct {
 		Key  string

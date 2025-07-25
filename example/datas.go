@@ -6,13 +6,13 @@ import (
 
 // --8<-- [start:example]
 
-//go:tag mkunion:"Option"
+//go:tag mkunion:"Option[T]"
 type (
 	None[T any] struct{}
 	Some[T any] struct{ Value T }
 )
 
-//go:tag mkunion:"Result"
+//go:tag mkunion:"Result[T, E]"
 type (
 	Ok[T, E any]  struct{ Value T }
 	Err[T, E any] struct{ Error E }

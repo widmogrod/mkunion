@@ -2,7 +2,7 @@ package f
 
 // --8<-- [start:either]
 
-//go:tag mkunion:"Either,serde"
+//go:tag mkunion:"Either[A, B],serde"
 type (
 	Left[A, B any]  struct{ Value A }
 	Right[A, B any] struct{ Value B }
@@ -13,7 +13,7 @@ type (
 
 // Option type - represent nullable values explicitly
 //
-//go:tag mkunion:"Option"
+//go:tag mkunion:"Option[A]"
 type (
 	Some[A any] struct{ Value A }
 	None[A any] struct{}
@@ -24,7 +24,7 @@ type (
 
 // Result type - explicit error handling without exceptions
 //
-//go:tag mkunion:"Result"
+//go:tag mkunion:"Result[A, E]"
 type (
 	Ok[A any, E any]  struct{ Value A }
 	Err[A any, E any] struct{ Error E }
