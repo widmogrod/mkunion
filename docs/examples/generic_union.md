@@ -47,29 +47,10 @@ You can also reduce the tree to a complex structure, for example, to keep track 
 --8<-- "example/tree_test.go:example-custom-agg"
 ```
 
-## Either & Option types
-
-For educational purposes, let's create two of the most popular union types in functional languages: `Option` and `Either`, with corresponding `Map` functions.
-
-- The Either type is used to represent one of two possible values. Many times the left value holds the success value, and the right value holds an error value.
-- The Option type is used to represent a value that may or may not be present, often replacing nulls in other languages.
-
-```go title="f/datas.go"
---8<-- "f/datas.go:either"
---8<-- "f/datas.go:option"
---8<-- "f/datas.go:map-either"
---8<-- "f/datas.go:map-option"
-```
-
-In the example above, we define `MapEither` and `MapOption` functions that will apply the function `f` to the value inside the `Either` or `Option` type.
-
-It would be preferable to have only one `Map` definition, but due to limitations of the Go type system, we need to define separate functions for each type.
-
-I'm considering adding code generation for such behaviors in the future. This is not yet implemented due to a focus on validating core concepts.
 
 ## Next steps
 
-- **[Custom Pattern Matching](./examples/custom_pattern_matching.md)** - Learn about custom pattern matching
-- **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON
-- **[State Machines and unions](./examples/state_machine.md)** - Learn about modeling state machines and how union type helps
-- **[Composability and Type Safety](./examples/union_composability.md)** - Learn about composability of types
+- **[Composability and Type Safety](./union_composability.md)** - Learn how to compose `Option[T]` and `Result[T, E]` types (Advanced topic).
+- **[Custom Pattern Matching](./custom_pattern_matching.md)** - Learn about custom pattern matching
+- **[Marshaling union in JSON](./json.md)** - Learn about marshaling and unmarshalling of union types in JSON
+- **[State Machines and unions](./state_machine.md)** - Learn about modeling state machines and how union type helps
