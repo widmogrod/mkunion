@@ -413,7 +413,7 @@ func TestInferFromFile(t *testing.T) {
 		if assert.Len(t, inferred.taggedNodes, 4) {
 			assert.Equal(t, "Example", inferred.taggedNodes["mkunion"][0].Tag.Value)
 			assert.Equal(t, "AliasExample", inferred.taggedNodes["mkunion"][1].Tag.Value)
-			assert.Equal(t, "Option", inferred.taggedNodes["mkunion"][2].Tag.Value)
+			assert.Equal(t, "Option[AZ]", inferred.taggedNodes["mkunion"][2].Tag.Value)
 			assert.Equal(t, "list", inferred.taggedNodes["json"][0].Tag.Value)
 			assert.Equal(t, "MyMatchWithCustomName", inferred.taggedNodes["mkmatch"][0].Tag.Value)
 		}

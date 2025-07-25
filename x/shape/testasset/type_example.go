@@ -74,7 +74,7 @@ var (
 	_ = &ListOf2[ListOf[*bool], *ListOf2[Example, *time.Time]]{} // √ - found by FindInstantiationsOf x2
 )
 
-//go:tag mkunion:"Option"
+//go:tag mkunion:"Option[AZ]"
 type (
 	Some[AZ ListOf2[*O, time.Location]] struct {
 		Data AZ
