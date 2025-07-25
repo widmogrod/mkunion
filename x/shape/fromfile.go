@@ -231,28 +231,17 @@ func (f *InferredInfo) RetrieveStruct(name string) *StructLike {
 }
 
 func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
-	var variants []Shape
-	for _, variantName := range f.possibleVariantTypes[name] {
-		variant := f.shapes[variantName]
-		injectTag(variant, TagUnionName, name)
-		variants = append(variants, variant)
-	}
-
+	variants := f.collectVariants(name)
 	if len(variants) == 0 {
 		return nil
 	}
 
-	var typeParams []TypeParam
-	for _, v := range variants {
-		typeParams = append(typeParams, ExtractTypeParams(v)...)
-	}
+	expectedTypeParams := f.extractExpectedTypeParams(name)
+	uniqueTypeParams := f.collectUniqueTypeParams(variants)
 
-	// deduplicate typeParams by name
-	var uniqueTypeParams []TypeParam
-	for _, typeParam := range typeParams {
-		if !nameExistsInParams(typeParam.Name, uniqueTypeParams) {
-			uniqueTypeParams = append(uniqueTypeParams, typeParam)
-		}
+	if err := f.validateTypeParameters(name, expectedTypeParams, uniqueTypeParams, variants); err != nil {
+		log.Error(err)
+		return nil
 	}
 
 	return &UnionLike{
@@ -263,6 +252,117 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 		Variant:       variants,
 		Tags:          f.possibleTaggedTypes[name],
 	}
+}
+
+// collectVariants collects and prepares union variants.
+func (f *InferredInfo) collectVariants(unionName string) []Shape {
+	var variants []Shape
+	for _, variantName := range f.possibleVariantTypes[unionName] {
+		variant := f.shapes[variantName]
+		// Always inject the base union name (without type params) into variants
+		injectTag(variant, TagUnionName, unionName)
+		variants = append(variants, variant)
+	}
+	return variants
+}
+
+// extractExpectedTypeParams extracts expected type parameters from union tags.
+func (f *InferredInfo) extractExpectedTypeParams(unionName string) []string {
+	unionTags := f.possibleTaggedTypes[unionName]
+	if unionTag, ok := unionTags["mkunion"]; ok {
+		_, params := parseUnionNameWithTypeParams(unionTag.Value)
+		return params
+	}
+	return nil
+}
+
+// collectUniqueTypeParams collects unique type parameters from variants.
+func (f *InferredInfo) collectUniqueTypeParams(variants []Shape) []TypeParam {
+	seen := make(map[string]bool)
+	var unique []TypeParam
+
+	for _, v := range variants {
+		for _, param := range ExtractTypeParams(v) {
+			if !seen[param.Name] {
+				seen[param.Name] = true
+				unique = append(unique, param)
+			}
+		}
+	}
+
+	return unique
+}
+
+// validateTypeParameters validates type parameters consistency between tag and variants.
+func (f *InferredInfo) validateTypeParameters(unionName string, expected []string, unique []TypeParam, variants []Shape) error {
+	if len(unique) == 0 {
+		return nil // No generic variants, nothing to validate
+	}
+
+	if len(expected) == 0 {
+		return fmt.Errorf(
+			"%s: Union %q requires type params %s - change tag to //go:tag mkunion:%q",
+			f.fileName, unionName, formatTypeParamsForTag(unique),
+			unionName+formatTypeParamsForTag(unique))
+	}
+
+	if len(expected) != len(unique) {
+		plural1 := ""
+		if len(expected) != 1 {
+			plural1 = "s"
+		}
+		plural2 := ""
+		if len(unique) != 1 {
+			plural2 = "s"
+		}
+		return fmt.Errorf(
+			"%s: Union %q tag has %d param%s %v but variants use %d param%s %s",
+			f.fileName, unionName, len(expected), plural1, expected,
+			len(unique), plural2, formatTypeParamsForTag(unique))
+	}
+
+	return f.validateVariantParameters(unionName, expected, variants)
+}
+
+// validateVariantParameters validates each variant's type parameters.
+func (f *InferredInfo) validateVariantParameters(unionName string, expected []string, variants []Shape) error {
+	for _, variant := range variants {
+		variantParams := ExtractTypeParams(variant)
+		variantName := Name(variant)
+
+		if err := f.validateVariantParamCount(unionName, variantName, expected, variantParams); err != nil {
+			return err
+		}
+
+		if err := f.validateVariantParamNames(unionName, variantName, expected, variantParams); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateVariantParamCount validates variant has correct number of type parameters.
+func (f *InferredInfo) validateVariantParamCount(unionName, variantName string, expected []string, actual []TypeParam) error {
+	if len(actual) != len(expected) {
+		return fmt.Errorf(
+			"%s: Union %q variant %q has params %s but tag expects %v",
+			f.fileName, unionName, variantName,
+			formatTypeParamsForTag(actual), expected)
+	}
+	return nil
+}
+
+// validateVariantParamNames validates variant parameter names match by position.
+func (f *InferredInfo) validateVariantParamNames(unionName, variantName string, expected []string, actual []TypeParam) error {
+	for i, expectedName := range expected {
+		if i < len(actual) && actual[i].Name != expectedName {
+			return fmt.Errorf(
+				"%s: Union %q variant %q param #%d: expected %q but found %q",
+				f.fileName, unionName, variantName, i+1, expectedName, actual[i].Name)
+		}
+	}
+	return nil
 }
 
 func (f *InferredInfo) RetrieveShapes() []Shape {
@@ -357,11 +457,8 @@ func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
 	return result
 }
 
-// removeTypeParams removes type parameters from a given string, returning the base name without brackets and type arguments.
-// Examples:
-// Option        -> Option
-// Option[A]     -> Option
-// Option[A, B]  -> Option
+// removeTypeParams removes type parameters from a given string, returning the base name.
+// Examples: "Option[A]" -> "Option", "Result[T, E]" -> "Result"
 func removeTypeParams(name string) string {
 	if i := strings.Index(name, "["); i != -1 {
 		return name[:i]
@@ -430,7 +527,8 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 			unionName = names[1]
 		}
 
-		// register union specific tags
+		// It's impossible to have type Option interface{} and type Option[A] interface{} in same package
+		// Register union tags under the base name (without type params)
 		f.possibleTaggedTypes[unionName] = tags
 
 		// start capturing possible variants
@@ -944,13 +1042,13 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 	)
 }
 
+// nameExistsInParams checks if a type parameter name exists in the given list.
 func nameExistsInParams(name string, params []TypeParam) bool {
 	for _, param := range params {
 		if param.Name == name {
 			return true
 		}
 	}
-
 	return false
 }
 
