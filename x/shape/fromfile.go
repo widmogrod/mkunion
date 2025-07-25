@@ -1235,7 +1235,9 @@ func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
 	result := make(map[string]Shape, len(walker.indexedShapes))
 
 	for name, shape := range walker.IndexedShapes() {
-		result[name] = shape
+		// Use full package import name for registry consistency
+		fullName := ToGoTypeName(shape, WithPkgImportName())
+		result[fullName] = shape
 
 		ref, ok := shape.(*RefName)
 		if !ok {
