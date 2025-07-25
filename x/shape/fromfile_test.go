@@ -3,6 +3,7 @@ package shape
 import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -428,21 +429,14 @@ func TestIndexedTypeWalker_ExpandedShapes(t *testing.T) {
 	expanded := inferred.ExpandedShapes()
 
 	t.Run("should detect union type", func(t *testing.T) {
-		_, okI1 := indexed["testasset.Option[ListOf2[*O,time.Location]]"]
-		_, okE1 := expanded["testasset.Option[ListOf2[*O,time.Location]]"]
-		assert.True(t, okI1)
-		assert.True(t, okE1)
+		require.Contains(t, indexed, "testasset.Option[ListOf2[*O,time.Location]]")
+		require.Contains(t, expanded, "testasset.Option[ListOf2[*O,time.Location]]")
 	})
 	t.Run("expanded should have variant of a union", func(t *testing.T) {
-		_, okI2 := indexed["testasset.Some[ListOf2[*O,time.Location]]"]
-		_, okE2 := expanded["testasset.Some[ListOf2[*O,time.Location]]"]
-		assert.False(t, okI2)
-		assert.True(t, okE2)
-
-		_, okI3 := indexed["testasset.None[ListOf2[*O,time.Location]]"]
-		_, okE3 := expanded["testasset.None[ListOf2[*O,time.Location]]"]
-		assert.False(t, okI3)
-		assert.True(t, okE3)
+		require.NotContains(t, indexed, "testasset.Some[ListOf2[*O,time.Location]]")
+		require.Contains(t, expanded, "testasset.Some[ListOf2[*O,time.Location]]")
+		require.NotContains(t, indexed, "testasset.None[ListOf2[*O,time.Location]]")
+		require.Contains(t, expanded, "testasset.None[ListOf2[*O,time.Location]]")
 	})
 }
 
