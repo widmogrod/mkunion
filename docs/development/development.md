@@ -26,6 +26,11 @@ go build -C cmd/mkunion .
 echo "Generate files ..."
 cmd/mkunion/mkunion watch -g ./...
 
+echo "Add vaiables manualy..."
+source .envrc
+# or use:
+#  direnv allow .envrc
+
 echo "Run tests ..."
 go test ./...
 ```
@@ -38,5 +43,5 @@ Note: Some tests may be flaky (this is a known issue being addressed). If you en
 
 To preview the documentation, run:
 ```
- ./dev/docs.sh run
+./dev/docs.sh run
 ```
