@@ -32,63 +32,65 @@ MkUnion solves all of these problems by generating opinionated and strongly type
 
 ### Example 1: Union definition and pattern matching with JSON marshaling
 
-```go title="example/shape.go"
-package example
-
+```go
 //go:tag mkunion:"Shape"
 type (
-    Circle struct {
-        Radius float64
-    }
-    Rectangle struct {
-        Width  float64
-        Height float64
-    }
-    Square struct {
-        Side float64
-    }
+    Circle struct{ Radius float64 }
+    Rectangle struct{ Width, Height float64 }
+    Triangle struct{ Base, Height float64 }
 )
 
-func CalculateArea(s Shape) float64 {
-    // example of pattern matching over Shape union type
-    return MatchShapeR1(
-        s,
-        func(x *Circle) float64 {
-            return math.Pi * x.Radius * x.Radius
-        },
-        func(x *Rectangle) float64 {
-            return x.Width * x.Height
-        },
-        func(x *Square) float64 {
-            return x.Side * x.Side
-        },
-    )
-}
-
-func ExampleToJSON() {
-    var shape Shape = &Circle{
-        Radius: 10,
-    }
-    result, _ := shared.JSONMarshal(shape)
-    fmt.Println(string(result))
-    // Output: {"$type":"example.Circle","example.Circle":{"Radius":10}}
-}
-
-func ExampleFromJSON() {
-    input := []byte(`{"$type":"example.Circle","example.Circle":{"Radius":10}}`)
-    shape, _ := shared.JSONUnmarshal[Shape](input)
-    fmt.Printf("%#v", shape)
-    // Output: &example.Circle{Radius:10}
+// Generated code provides:
+area := MatchShapeR1(
+    shape,
+    func(c *Circle) float64 { return math.Pi * c.Radius * c.Radius },
+    func(r *Rectangle) float64 { return r.Width * r.Height },
+    func(t *Triangle) float64 { return 0.5 * t.Base * t.Height },
+)
 ```
 
 ### Example 2: Result Type for Error Handling
 
-```go title="f/datas.go"
+```go
+//go:tag mkunion:"Option[T]"
+type (
+	None[T any] struct{}
+	Some[T any] struct{ Value T }
+)
+
 //go:tag mkunion:"Result[T, E]"
 type (
-    Ok[T any, E any] struct{ Value T }
-    Err[T any, E any] struct{ Error E }
+	Ok[T, E any]  struct{ Value T }
+	Err[T, E any] struct{ Error E }
 )
+
+type User struct{ Name string }
+
+type APIError struct {
+	Code    int
+	Message string
+}
+
+// FetchResult combine unions for rich error handling
+type FetchResult = Result[Option[User], APIError]
+
+// handleFetch uses nested pattern matching to handle result
+func handleFetch(result FetchResult) string {
+	return MatchResultR1(result,
+		func(ok *Ok[Option[User], APIError]) string {
+			return MatchOptionR1(ok.Value,
+				func(*None[User]) string { return "User not found" },
+				func(some *Some[User]) string {
+					return fmt.Sprintf("Found user: %s", some.Value.Name)
+				},
+			)
+		},
+		func(err *Err[Option[User], APIError]) string {
+			return fmt.Sprintf("API error: %v", err.Error)
+		},
+	)
+}
+
 ```
 
 **Important:** Generic unions MUST specify their type parameters in the tag. The type parameter names in the tag must match those used in the variant types.
