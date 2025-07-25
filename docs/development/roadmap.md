@@ -14,6 +14,7 @@
 - [ ] **feature**: allow to specify type param name in `go:tag mkunion:"Tree[A]"` with validation of expected number and name of type parameters
 - [ ] **bug fix**: prevent dot imports adding same type into registry but in different place and causing panic
 - [ ] **docs**: describe that go:tag can be used on package level
+- [ ] **feature**: `mkunion clean` removes all generated files to have clean state for generation
 
 ## Long tern experiments and prototypes
 
