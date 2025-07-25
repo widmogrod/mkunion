@@ -2,7 +2,7 @@ package example
 
 // --8<-- [start:tree-def]
 
-//go:tag mkunion:"Tree"
+//go:tag mkunion:"Tree[A]"
 type (
 	Branch[A any] struct{ L, R Tree[A] }
 	Leaf[A any]   struct{ Value A }

@@ -19,7 +19,7 @@ const (
 	KeySystemWatermark = "watermark"
 )
 
-//go:tag mkunion:"Data"
+//go:tag mkunion:"Data[A]"
 type (
 	Record[A any] struct {
 		Key       string
@@ -557,7 +557,7 @@ func DoSink[A any](ctx PushAndPull[A, any], f func(*Record[A]) error) error {
 	}
 }
 
-//go:tag mkunion:"Either"
+//go:tag mkunion:"Either[A, B]"
 type (
 	Left[A, B any] struct {
 		Left A
