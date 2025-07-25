@@ -1162,9 +1162,6 @@ func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
 			continue
 		}
 
-		unionName := union.Name
-		_ = unionName
-
 		for _, variant := range union.Variant {
 			if IsWeekAlias(variant) {
 				continue
