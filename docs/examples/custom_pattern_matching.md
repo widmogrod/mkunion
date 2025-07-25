@@ -1,3 +1,6 @@
+---
+title: Custom Pattern Matching
+---
 # Custom Pattern Matching
 
 mkunion provides a powerful feature for creating custom pattern matching functions that can match on multiple union values simultaneously. This guide explains how to write and use custom pattern matching functions.
@@ -156,3 +159,9 @@ This feature is particularly useful for:
 - Domain-specific pattern matching logic
 
 Combined with `mkunion`'s automatic union type generation and standard pattern matching, custom pattern matching completes a comprehensive toolkit for working with algebraic data types in Go.
+
+## Next steps
+
+- **[Union and generic types]()** - Learn about generic unions
+- **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON
+- **[State Machines and unions](./examples/state_machine.md)** - Learn about modeling state machines and how union type helps

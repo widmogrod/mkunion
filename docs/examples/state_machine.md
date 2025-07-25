@@ -1,5 +1,5 @@
 ---
-title: State machines and unions
+title: State Machines and unions
 ---
 # MkUnion and state machines in Go
 
@@ -204,5 +204,6 @@ For a comprehensive guide on best practices, patterns, and advanced techniques, 
 ## Next steps
 
 - **[State Machine Best Practices](state_machine_best_practices.md)** - Learn about file organization, naming conventions, testing strategies, and advanced patterns
-- **[Persisting union in database](../examples/state_storage.md)** - Learn how to persist state in a database and handle concurrency conflicts
-- **[Handling errors in state machines](../examples/state_storage.md)** - Build self-healing systems by treating errors as states
+- **[Persisting union in database](state_storage.md)** - Learn how to persist state in a database and handle concurrency conflicts
+- **[Handling errors in state machines](state_storage.md)** - Build self-healing systems by treating errors as states
+- **[Composability and Type Safety](union_composability.md)** - Learn about composability of types

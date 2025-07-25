@@ -131,3 +131,9 @@ You can notice that it has an opinionated way of marshalling and unmarshalling y
 It uses the `$type` field to store type information, and then stores the actual data in a separate field with the corresponding name.
 
 You can read more about it in the [Marshaling union in JSON](./examples/json.md) section.
+
+## Next steps
+
+- **[Union and generic types](./examples/generic_union.md)** - Learn about generic unions
+- **[Custom Pattern Matching](./examples/custom_pattern_matching.md)** - Learn about custom pattern matching
+- **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON

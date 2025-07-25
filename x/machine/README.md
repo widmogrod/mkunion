@@ -12,7 +12,7 @@ The package provides an inference method to visualize state machines as a mermai
 - [ ] Describe storage with version use case as optimistic locking
 
 ## Example
-Look into the [simple_machine_test.go](../../example/state/simple_machine_test.go) directory for a complete example.
+Look into the [machine_test.go](../../example/state/machine_test.go) directory for a complete example.
 
 The example implements such a state machine:
 ```mermaid

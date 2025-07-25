@@ -66,3 +66,10 @@ In the example above, we define `MapEither` and `MapOption` functions that will 
 It would be preferable to have only one `Map` definition, but due to limitations of the Go type system, we need to define separate functions for each type.
 
 I'm considering adding code generation for such behaviors in the future. This is not yet implemented due to a focus on validating core concepts.
+
+## Next steps
+
+- **[Custom Pattern Matching](./examples/custom_pattern_matching.md)** - Learn about custom pattern matching
+- **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON
+- **[State Machines and unions](./examples/state_machine.md)** - Learn about modeling state machines and how union type helps
+- **[Composability and Type Safety](./examples/union_composability.md)** - Learn about composability of types

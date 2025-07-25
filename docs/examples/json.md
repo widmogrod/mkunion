@@ -79,3 +79,11 @@ There are a few things that you can notice in this example:
       It could increase type strictness on the client side, but it makes generating TypeScript types more complex, and I'm not sure if it's worth it.
 
 - It's not shown in this example, but you can also reference types and union types from other packages, and serialization will work as expected.
+
+
+
+## Next steps
+
+- **[Union and generic types]()** - Learn about generic unions
+- **[Custom Pattern Matching](./examples/custom_pattern_matching.md)** - Learn about custom pattern matching
+- **[State Machines and unions](./examples/state_machine.md)** - Learn about modeling state machines and how union type helps

@@ -41,7 +41,7 @@ mkunion watch ./...
 mkunion watch -g ./...
 ```
 
-## Next
+## Next steps
 
-- Read [getting started](./getting_started.md) to learn more.
-- Learn more about [value proposition](./value_proposition.md)
+- **Read [getting started](./getting_started.md)** to learn more.
+- **Learn more about [value proposition](./value_proposition.md)**
