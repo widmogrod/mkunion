@@ -1,10 +1,13 @@
+---
+title: Custom Pattern Matching
+---
 # Custom Pattern Matching
 
 mkunion provides a powerful feature for creating custom pattern matching functions that can match on multiple union values simultaneously. This guide explains how to write and use custom pattern matching functions.
 
 ## Overview
 
-While mkunion automatically generates pattern matching functions for individual union types (like `MatchTreeR1`, `MatchVehicleR2`, etc.), you can also define custom pattern matching functions that work across multiple values or implement specialized matching logic.
+While mkunion automatically generates pattern matching functions for individual union types (like `MatchTreeR1`, `MatchShapeR2`, etc.), you can also define custom pattern matching functions that work across multiple values or implement specialized matching logic.
 
 Custom pattern matching is useful when you need to:
 - Match on combinations of multiple union values
@@ -21,11 +24,11 @@ Without custom pattern matching, matching two union values requires nested type 
 
 ```go
 // Without custom pattern matching - verbose and error-prone
-if a, ok := v1.(*Car); ok {
-    if b, ok := v2.(*Boat); ok {
-        // handle Car-Boat combination
-    } else if b, ok := v2.(*Plane); ok {
-        // handle Car-Plane combination
+if a, ok := v1.(*Circle); ok {
+    if b, ok := v2.(*Rectangle); ok {
+        // handle Circle-Rectangle combination
+    } else if b, ok := v2.(*Square); ok {
+        // handle Circle-Square combination
     }
 }
 // ... many more nested ifs
@@ -41,12 +44,12 @@ Custom pattern matching solves these issues elegantly:
 
 ```go
 // With custom pattern matching - clean and maintainable
-MatchPairsR1(v1, v2,
-    func(a *Car, b *Boat) string { 
-        return "Car meets Boat" 
+MatchShapesR1(v1, v2,
+    func(a *Circle, b *Circle) string { 
+        return "Two circles" 
     },
-    func(a *Car, b *Plane) string { 
-        return "Car meets Plane" 
+    func(a *Rectangle, b any) string { 
+        return "Rectangle meets another shape" 
     },
     func(a any, b any) string { 
         return "Other combination" 
@@ -60,29 +63,29 @@ To create a custom pattern matching function, use the `//go:tag mkmatch` annotat
 
 ```go
 //go:tag mkmatch
-type MatchPairs[A, B Vehicle] interface {
-    MatchCars(x, y *Car)
-    MatchBoatAny(x *Boat, y any)
+type MatchShapes[A, B Shape] interface {
+    MatchCircles(x, y *Circle)
+    MatchRectangleAny(x *Rectangle, y any)
     Finally(x, y any)
 }
 ```
 
-This generates functions like `MatchPairsR0`, `MatchPairsR1`, `MatchPairsR2`, and `MatchPairsR3` with 0 to 3 return values respectively.
+This generates functions like `MatchShapesR0`, `MatchShapesR1`, `MatchShapesR2`, and `MatchShapesR3` with 0 to 3 return values respectively.
 
 ### Custom Naming
 
 You can also provide the function name in the tag, and mkunion will use that instead of interface name:
 
 ```go
-//go:tag mkmatch:"MyPairMatcher"
-type MatchPairs[A, B Vehicle] interface {
-    MatchCars(x, y *Car)
-    MatchBoatAny(x *Boat, y any)
+//go:tag mkmatch:"MyShapeMatcher"
+type MatchShapes[A, B Shape] interface {
+    MatchCircles(x, y *Circle)
+    MatchRectangleAny(x *Rectangle, y any)
     Finally(x, y any)
 }
 ```
 
-This generates `MyPairMatcherR0`, `MyPairMatcherR1`, etc., 
+This generates `MyShapeMatcherR0`, `MyShapeMatcherR1`, etc., 
 
 ## Interface Definition Rules
 
@@ -92,18 +95,18 @@ When defining a match interface:
 2. **Method Names**: Method names can be anything descriptive
 3. **Method Parameters**: Each method must have the same number of parameters as type parameters
 4. **Parameter Types**: Parameters can be:
-   - Concrete types from the union (e.g., `*Car`, `*Boat`)
+   - Concrete types from the union (e.g., `*Circle`, `*Rectangle`)
    - The `any` type for wildcard matching
    - Other specific types for specialized matching
 
 ## Examples
 
-### Example 1: Matching Vehicle Pairs
+### Example 1: Matching Shape Pairs
 
-```go title="example/vehicle.go"
---8<-- "example/vehicle.go:vehicle-def"
---8<-- "example/vehicle.go:match-def"
---8<-- "example/vehicle.go:match-pairs"
+```go title="example/shape.go"
+--8<-- "example/shape.go:shape-def"
+--8<-- "example/shape.go:match-def"
+--8<-- "example/shape.go:match-shapes"
 ```
 
 ### Example 2: Matching Tree Nodes
@@ -156,3 +159,9 @@ This feature is particularly useful for:
 - Domain-specific pattern matching logic
 
 Combined with `mkunion`'s automatic union type generation and standard pattern matching, custom pattern matching completes a comprehensive toolkit for working with algebraic data types in Go.
+
+## Next steps
+
+- **[Union and generic types]()** - Learn about generic unions
+- **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON
+- **[State Machines and unions](./examples/state_machine.md)** - Learn about modeling state machines and how union type helps
