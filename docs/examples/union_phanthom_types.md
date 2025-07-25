@@ -1,5 +1,5 @@
 ---
-title: Phantom types use cases
+title: Phantom Types
 ---
 
 Leverage Go's type system for compile-time guarantees.
