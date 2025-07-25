@@ -357,6 +357,18 @@ func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
 	return result
 }
 
+// removeTypeParams removes type parameters from a given string, returning the base name without brackets and type arguments.
+// Examples:
+// Option        -> Option
+// Option[A]     -> Option
+// Option[A, B]  -> Option
+func removeTypeParams(name string) string {
+	if i := strings.Index(name, "["); i != -1 {
+		return name[:i]
+	}
+	return name
+}
+
 func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 	opt := f.optionAST()
 	switch t := n.(type) {
@@ -408,7 +420,7 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 
 		unionName := ""
 		if unionTag, ok := tags["mkunion"]; ok {
-			unionName = unionTag.Value
+			unionName = removeTypeParams(unionTag.Value)
 		} else {
 			comment := shared.Comment(t.Doc)
 			names := matchGoGenerateExtractUnionName.FindStringSubmatch(comment)
