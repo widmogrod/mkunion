@@ -407,6 +407,69 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:        "clean",
+				Description: "Remove all generated files to have clean state for generation",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:     "verbose",
+						Aliases:  []string{"v"},
+						Required: false,
+						Value:    false,
+					},
+					&cli.BoolFlag{
+						Name:     "dry-run",
+						Aliases:  []string{"n"},
+						Required: false,
+						Value:    false,
+						Usage:    "Show what files would be removed without actually removing them",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					if c.Bool("verbose") {
+						log.SetLevel(log.DebugLevel)
+					}
+
+					paths := c.Args().Slice()
+					if len(paths) == 0 {
+						paths = []string{"."}
+					}
+
+					paths, err := mapf(paths, artToPath)
+					if err != nil {
+						return err
+					}
+
+					paths = dedup(paths)
+
+					removedFiles, err := CleanGeneratedFiles(paths, c.Bool("dry-run"))
+					if err != nil {
+						return err
+					}
+
+					if c.Bool("dry-run") {
+						if len(removedFiles) > 0 {
+							fmt.Printf("Would remove %d files:\n", len(removedFiles))
+							for _, file := range removedFiles {
+								fmt.Printf("  %s\n", file)
+							}
+						} else {
+							fmt.Println("No generated files found to remove")
+						}
+					} else {
+						if len(removedFiles) > 0 {
+							fmt.Printf("Removed %d generated files:\n", len(removedFiles))
+							for _, file := range removedFiles {
+								fmt.Printf("  %s\n", file)
+							}
+						} else {
+							fmt.Println("No generated files found to remove")
+						}
+					}
+
+					return nil
+				},
+			},
 		},
 	}
 
@@ -1138,4 +1201,89 @@ func hasGoGenerateDirectives(dir string) bool {
 	})
 
 	return err != nil && err.Error() == "found"
+}
+
+// CleanGeneratedFiles removes all generated files from the specified directories
+func CleanGeneratedFiles(dirs []string, dryRun bool) ([]string, error) {
+	var allFiles []string
+
+	// Collect all generated files from all directories
+	for _, dir := range dirs {
+		files, err := findGeneratedFiles(dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find generated files in %s: %w", dir, err)
+		}
+		allFiles = append(allFiles, files...)
+	}
+
+	// Deduplicate files
+	uniqueFiles := dedup(allFiles)
+	var removedFiles []string
+
+	for _, file := range uniqueFiles {
+		if !dryRun {
+			err := os.Remove(file)
+			if err != nil {
+				log.Warnf("failed to remove %s: %v", file, err)
+				continue
+			}
+		}
+		removedFiles = append(removedFiles, file)
+	}
+
+	return removedFiles, nil
+}
+
+// findGeneratedFiles finds all generated files in a directory
+func findGeneratedFiles(dir string) ([]string, error) {
+	var generatedFiles []string
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip hidden directories
+		if d.IsDir() && strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+
+		// Only look at .go files
+		if !d.IsDir() && filepath.Ext(path) == ".go" {
+			// Check if it's a generated file
+			if isGeneratedFile(path) {
+				generatedFiles = append(generatedFiles, path)
+			}
+		}
+
+		return nil
+	})
+
+	return generatedFiles, err
+}
+
+// isGeneratedFile checks if a file is a generated file based on naming patterns
+func isGeneratedFile(path string) bool {
+	fileName := filepath.Base(path)
+	
+	// Check for the specific generated file patterns used by mkunion
+	generatedSuffixes := []string{
+		"_union_gen.go",
+		"_shape_gen.go", 
+		"_serde_gen.go",
+		"_match_gen.go",
+	}
+
+	for _, suffix := range generatedSuffixes {
+		if strings.HasSuffix(fileName, suffix) {
+			return true
+		}
+	}
+
+	// Check for type registry files
+	if fileName == "types_reg_gen.go" {
+		return true
+	}
+
+	return false
 }

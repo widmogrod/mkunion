@@ -1,0 +1,16 @@
+# Build artifacts
+cmd/mkunion/mkunion
+cmd/mkfunc/mkfunc
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+*.tmp
