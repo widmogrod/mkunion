@@ -60,6 +60,12 @@ func main() {
 				Name:  "type-registry",
 				Value: true,
 			},
+			&cli.StringSliceFlag{
+				Name:    "serde-formats",
+				Aliases: []string{"serde"},
+				Value:   cli.NewStringSlice("json"),
+				Usage:   "Serialization formats to generate (json, protobuf, sql, graphql)",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if c.Bool("verbose") {
@@ -80,7 +86,7 @@ func main() {
 				cli.ShowAppHelpAndExit(c, 1)
 			}
 
-			savedFiles, err := GenerateMain(sourcePaths, c.Bool("type-registry"))
+			savedFiles, err := GenerateMain(sourcePaths, c.Bool("type-registry"), c.StringSlice("serde-formats"))
 			if err != nil {
 				return err
 			}
@@ -184,6 +190,12 @@ func main() {
 						Required: false,
 						Value:    false,
 						Usage:    "Skip running 'go generate ./...' after mkunion generation (default: false)",
+					},
+					&cli.StringSliceFlag{
+						Name:    "serde-formats",
+						Aliases: []string{"serde"},
+						Value:   cli.NewStringSlice("json"),
+						Usage:   "Serialization formats to generate (json, protobuf, sql, graphql)",
 					},
 				},
 				Action: func(c *cli.Context) error {
@@ -311,7 +323,7 @@ func main() {
 								if len(changedSourcePaths) > 0 {
 									prevLevel := log.GetLevel()
 									log.SetLevel(log.ErrorLevel)
-									savedFiles, err := GenerateMain(changedSourcePaths, c.Bool("type-registry"))
+									savedFiles, err := GenerateMain(changedSourcePaths, c.Bool("type-registry"), c.StringSlice("serde-formats"))
 									log.SetLevel(prevLevel)
 
 									for _, x := range savedFiles {
@@ -372,7 +384,7 @@ func main() {
 
 					prevLevel := log.GetLevel()
 					log.SetLevel(log.ErrorLevel)
-					savedFiles, err := GenerateMain(sourcePaths, c.Bool("type-registry"))
+					savedFiles, err := GenerateMain(sourcePaths, c.Bool("type-registry"), c.StringSlice("serde-formats"))
 					log.SetLevel(prevLevel)
 					if err != nil {
 						return fmt.Errorf("initial generation: %w", err)
@@ -550,7 +562,7 @@ func goFilesFromDirs(dirs []string) ([]string, error) {
 
 }
 
-func GenerateMain(sourcePaths []string, typeRegistry bool) ([]string, error) {
+func GenerateMain(sourcePaths []string, typeRegistry bool, serdeFormats []string) ([]string, error) {
 	packages := make(map[string]*shape.InferredInfo)
 	var savedFiles []string
 
@@ -577,16 +589,58 @@ func GenerateMain(sourcePaths []string, typeRegistry bool) ([]string, error) {
 			savedFiles = append(savedFiles, savedFile)
 		}
 
-		contents, err = GenerateSerde(inferred)
-		if err != nil {
-			return savedFiles, fmt.Errorf("failed generating serde in %s: %w", sourcePath, err)
-		}
-		savedFile, err = SaveFile(contents, sourcePath, "serde_gen")
-		if err != nil {
-			return savedFiles, fmt.Errorf("failed saving serde in %s: %w", sourcePath, err)
-		}
-		if len(savedFile) > 0 {
-			savedFiles = append(savedFiles, savedFile)
+		// Generate serialization for each requested format
+		for _, format := range serdeFormats {
+			switch format {
+			case "json":
+				contents, err = GenerateSerde(inferred)
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed generating json serde in %s: %w", sourcePath, err)
+				}
+				savedFile, err = SaveFile(contents, sourcePath, "serde_gen")
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed saving json serde in %s: %w", sourcePath, err)
+				}
+				if len(savedFile) > 0 {
+					savedFiles = append(savedFiles, savedFile)
+				}
+			case "protobuf":
+				contents, err = GenerateProtobufSerde(inferred)
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed generating protobuf serde in %s: %w", sourcePath, err)
+				}
+				savedFile, err = SaveFile(contents, sourcePath, "protobuf_gen")
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed saving protobuf serde in %s: %w", sourcePath, err)
+				}
+				if len(savedFile) > 0 {
+					savedFiles = append(savedFiles, savedFile)
+				}
+			case "sql":
+				contents, err = GenerateSQLSerde(inferred)
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed generating sql serde in %s: %w", sourcePath, err)
+				}
+				savedFile, err = SaveFile(contents, sourcePath, "sql_gen")
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed saving sql serde in %s: %w", sourcePath, err)
+				}
+				if len(savedFile) > 0 {
+					savedFiles = append(savedFiles, savedFile)
+				}
+			case "graphql":
+				contents, err = GenerateGraphQLSerde(inferred)
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed generating graphql serde in %s: %w", sourcePath, err)
+				}
+				savedFile, err = SaveFile(contents, sourcePath, "graphql_gen")
+				if err != nil {
+					return savedFiles, fmt.Errorf("failed saving graphql serde in %s: %w", sourcePath, err)
+				}
+				if len(savedFile) > 0 {
+					savedFiles = append(savedFiles, savedFile)
+				}
+			}
 		}
 
 		contents, err = GenerateShape(inferred)
@@ -1035,6 +1089,204 @@ func GenerateMatch(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 
 	result.Write(b)
 	return result, nil
+}
+
+func GenerateProtobufSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
+	shapesContents := bytes.Buffer{}
+	shapes := inferred.RetrieveShapesTaggedAs("serde")
+	unions := inferred.RetrieveUnions()
+	allShapes := append(shapes, make([]shape.Shape, len(unions))...)
+	for i, union := range unions {
+		allShapes[len(shapes)+i] = union
+	}
+	
+	if len(allShapes) == 0 {
+		return shapesContents, nil
+	}
+
+	var err error
+	packageName := "main"
+	pkgMap := make(generators.PkgMap)
+	initFunc := make(generators.InitFuncs, 0, 0)
+
+	for _, x := range shapes {
+		packageName = shape.ToGoPkgName(x)
+		genSerde := generators.NewSerdeProtobufTagged(x)
+		genSerde.SkipImportsAndPackage(true)
+
+		contents := "//shape:serde:protobuf\n"
+		contents, err = genSerde.Generate()
+		if err != nil {
+			return shapesContents, fmt.Errorf("mkunion.GenerateProtobufSerde: failed to generate protobuf serde for %s: %w", shape.ToGoTypeName(x), err)
+		}
+		shapesContents.WriteString(contents)
+
+		pkgMap = generators.MergePkgMaps(pkgMap,
+			genSerde.ExtractImports(x),
+		)
+	}
+
+	for _, union := range unions {
+		packageName = shape.ToGoPkgName(union)
+		genSerde := generators.NewSerdeProtobufUnion(union)
+		genSerde.SkipImportsAndPackage(true)
+
+		contents := []byte("//union:serde:protobuf\n")
+		contents, err = genSerde.Generate()
+		if err != nil {
+			return shapesContents, fmt.Errorf("mkunion.GenerateProtobufSerde: failed to generate protobuf serde for %s: %w", shape.ToGoTypeName(union), err)
+		}
+		shapesContents.Write(contents)
+
+		pkgMap = generators.MergePkgMaps(pkgMap,
+			genSerde.ExtractImports(union),
+		)
+	}
+
+	contents := bytes.Buffer{}
+	contents.WriteString("// Code generated by mkunion. DO NOT EDIT.\n")
+	contents.WriteString(fmt.Sprintf("package %s\n\n", packageName))
+	contents.WriteString(generators.GenerateImports(pkgMap))
+	contents.WriteString(generators.GenerateInitFunc(initFunc))
+
+	_, err = shapesContents.WriteTo(&contents)
+	if err != nil {
+		return shapesContents, fmt.Errorf("mkunion.GenerateProtobufSerde: failed to write shapes contents: %w", err)
+	}
+
+	return contents, nil
+}
+
+func GenerateSQLSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
+	shapesContents := bytes.Buffer{}
+	shapes := inferred.RetrieveShapesTaggedAs("serde")
+	unions := inferred.RetrieveUnions()
+	allShapes := append(shapes, make([]shape.Shape, len(unions))...)
+	for i, union := range unions {
+		allShapes[len(shapes)+i] = union
+	}
+	
+	if len(allShapes) == 0 {
+		return shapesContents, nil
+	}
+
+	var err error
+	packageName := "main"
+	pkgMap := make(generators.PkgMap)
+	initFunc := make(generators.InitFuncs, 0, 0)
+
+	for _, x := range shapes {
+		packageName = shape.ToGoPkgName(x)
+		genSerde := generators.NewSerdeSQLTagged(x)
+		genSerde.SkipImportsAndPackage(true)
+
+		contents := "//shape:serde:sql\n"
+		contents, err = genSerde.Generate()
+		if err != nil {
+			return shapesContents, fmt.Errorf("mkunion.GenerateSQLSerde: failed to generate sql serde for %s: %w", shape.ToGoTypeName(x), err)
+		}
+		shapesContents.WriteString(contents)
+
+		pkgMap = generators.MergePkgMaps(pkgMap,
+			genSerde.ExtractImports(x),
+		)
+	}
+
+	for _, union := range unions {
+		packageName = shape.ToGoPkgName(union)
+		genSerde := generators.NewSerdeSQLUnion(union)
+		genSerde.SkipImportsAndPackage(true)
+
+		contents := []byte("//union:serde:sql\n")
+		contents, err = genSerde.Generate()
+		if err != nil {
+			return shapesContents, fmt.Errorf("mkunion.GenerateSQLSerde: failed to generate sql serde for %s: %w", shape.ToGoTypeName(union), err)
+		}
+		shapesContents.Write(contents)
+
+		pkgMap = generators.MergePkgMaps(pkgMap,
+			genSerde.ExtractImports(union),
+		)
+	}
+
+	contents := bytes.Buffer{}
+	contents.WriteString("// Code generated by mkunion. DO NOT EDIT.\n")
+	contents.WriteString(fmt.Sprintf("package %s\n\n", packageName))
+	contents.WriteString(generators.GenerateImports(pkgMap))
+	contents.WriteString(generators.GenerateInitFunc(initFunc))
+
+	_, err = shapesContents.WriteTo(&contents)
+	if err != nil {
+		return shapesContents, fmt.Errorf("mkunion.GenerateSQLSerde: failed to write shapes contents: %w", err)
+	}
+
+	return contents, nil
+}
+
+func GenerateGraphQLSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
+	shapesContents := bytes.Buffer{}
+	shapes := inferred.RetrieveShapesTaggedAs("serde")
+	unions := inferred.RetrieveUnions()
+	allShapes := append(shapes, make([]shape.Shape, len(unions))...)
+	for i, union := range unions {
+		allShapes[len(shapes)+i] = union
+	}
+	
+	if len(allShapes) == 0 {
+		return shapesContents, nil
+	}
+
+	var err error
+	packageName := "main"
+	pkgMap := make(generators.PkgMap)
+	initFunc := make(generators.InitFuncs, 0, 0)
+
+	for _, x := range shapes {
+		packageName = shape.ToGoPkgName(x)
+		genSerde := generators.NewSerdeGraphQLTagged(x)
+		genSerde.SkipImportsAndPackage(true)
+
+		contents := "//shape:serde:graphql\n"
+		contents, err = genSerde.Generate()
+		if err != nil {
+			return shapesContents, fmt.Errorf("mkunion.GenerateGraphQLSerde: failed to generate graphql serde for %s: %w", shape.ToGoTypeName(x), err)
+		}
+		shapesContents.WriteString(contents)
+
+		pkgMap = generators.MergePkgMaps(pkgMap,
+			genSerde.ExtractImports(x),
+		)
+	}
+
+	for _, union := range unions {
+		packageName = shape.ToGoPkgName(union)
+		genSerde := generators.NewSerdeGraphQLUnion(union)
+		genSerde.SkipImportsAndPackage(true)
+
+		contents := []byte("//union:serde:graphql\n")
+		contents, err = genSerde.Generate()
+		if err != nil {
+			return shapesContents, fmt.Errorf("mkunion.GenerateGraphQLSerde: failed to generate graphql serde for %s: %w", shape.ToGoTypeName(union), err)
+		}
+		shapesContents.Write(contents)
+
+		pkgMap = generators.MergePkgMaps(pkgMap,
+			genSerde.ExtractImports(union),
+		)
+	}
+
+	contents := bytes.Buffer{}
+	contents.WriteString("// Code generated by mkunion. DO NOT EDIT.\n")
+	contents.WriteString(fmt.Sprintf("package %s\n\n", packageName))
+	contents.WriteString(generators.GenerateImports(pkgMap))
+	contents.WriteString(generators.GenerateInitFunc(initFunc))
+
+	_, err = shapesContents.WriteTo(&contents)
+	if err != nil {
+		return shapesContents, fmt.Errorf("mkunion.GenerateGraphQLSerde: failed to write shapes contents: %w", err)
+	}
+
+	return contents, nil
 }
 
 func runGoGenerate(dirs []string) error {
