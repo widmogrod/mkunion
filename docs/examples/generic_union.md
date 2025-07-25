@@ -4,12 +4,7 @@ title: Union and generic types
 # Union and generic types
 MkUnion will generate generic unions for you.
 
-You only need to declare each variant type of the union with a type parameter,
-and the library will figure out the rest.
-
-What is **IMPORTANT** is that each variant type (Branch, Leaf in this example) needs to have the same number of type parameters.
-
-For example, let's say you want to create a recursive tree data structure, that in its leaves will hold a value of `A` type.
+For example, let's say you want to create a recursive **tree** data structure, that in its leaves will hold a value of `A` type.
 
 ## Declaration and generation
 
@@ -22,6 +17,12 @@ You can use `mkunion` to create a union type for the tree:
 After you run generation (as described in [getting started](../getting_started.md)), 
 you have access to the same features as with non-generic unions.
 
+When defining generic unions, you must follow these requirements:
+
+1. **Type parameters must be specified in the tag**: The union tag must include all type parameters used by the variant types.
+2. **Parameter names must match**: Type parameter names in the tag must match those used in variant types both by name and position.
+3. **Same number of parameters**: Each variant type needs to have the same number of type parameters.
+
 ## Matching function
 
 Let's define a higher-order function `ReduceTree` that will traverse leaves in `Tree` and produce a single value.
@@ -31,6 +32,7 @@ This function uses `MatchTreeR1` function that is generated automatically for yo
 ```go title="example/tree.go"
 --8<-- "example/tree.go:reduce-tree"
 ```
+
 ## Example usage
 
 You can use such function to sum all values in the tree, assuming that tree is of type `Tree[int]`:
@@ -64,4 +66,3 @@ In the example above, we define `MapEither` and `MapOption` functions that will 
 It would be preferable to have only one `Map` definition, but due to limitations of the Go type system, we need to define separate functions for each type.
 
 I'm considering adding code generation for such behaviors in the future. This is not yet implemented due to a focus on validating core concepts.
-

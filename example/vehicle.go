@@ -43,7 +43,7 @@ func CalculateFuelUsage(v Vehicle) int {
 
 // --8<-- [start:match-def]
 
-//go:tag mkmatch:"MatchPairs"
+//go:tag mkmatch
 type MatchPairs[A, B Vehicle] interface {
 	MatchCars(x, y *Car)
 	MatchBoatAny(x *Boat, y any)

@@ -33,7 +33,7 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
 
 ##### Tags supported by MkUnion
 
-- `go:tag mkunion:"Vehicle"` - defines a union type.
+- `go:tag mkunion:"Vehicle"` - defines a union type. For generic unions, type parameters MUST be specified: `go:tag mkunion:"Result[T, E]"`.
 - `go:tag serde:"json"` - enables serialization type (currently only JSON is supported), enabled by default.
 - `go:tag shape:"-"` - disables shape generation for this type, useful in cases where an x/shared package cannot depend on other x packages, to avoid circular dependencies.
 - `go:tag mkunion:",no-type-registry"` - if you want to disable generation of the type registry in a package, define this tag in one of the Go files above the package declaration:
@@ -41,7 +41,7 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   //go:tag mkunion:",no-type-registry"
   package example
   ```
-- `go:tag mkmatch:""` - generate custom pattern matching function from interface definition
+- `go:tag mkmatch` - generate custom pattern matching function from interface definition
   ```go title="example/vehicle.go"
   --8<-- "example/vehicle.go:match-def"
   ```

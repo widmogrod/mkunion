@@ -88,12 +88,14 @@ func ExampleFromJSON() {
 ### Example 2: Result Type for Error Handling
 
 ```go title="f/datas.go"
-//go:tag mkunion:"Result"
+//go:tag mkunion:"Result[T, E]"
 type (
-    Ok[T any] struct{ Value T }
-    Err[T any] struct{ Error error }
+    Ok[T any, E any] struct{ Value T }
+    Err[T any, E any] struct{ Error E }
 )
 ```
+
+**Important:** Generic unions MUST specify their type parameters in the tag. The type parameter names in the tag must match those used in the variant types.
 
 ### Example 3: AST and Recursive Types
 
@@ -121,7 +123,7 @@ type (
 ### Example 5: HTTP API responses
 
 ```go
-//go:tag mkunion:"APIResponse"
+//go:tag mkunion:"APIResponse[T]"
 type (
     Success[T any] struct{ Data T; Status int }
     ValidationError[T any] struct{ Errors []string }
