@@ -4,6 +4,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -456,7 +457,7 @@ type OptionVisitor[T1 ListOf2[*O,time.Location]] interface {
 	VisitNone(v *None[T1]) any 		// should be ignored
 }`,
 			expected: map[string]Shape{
-				"test_package.ListOf2[*O,time.Location]": &RefName{
+				"github.com/test_package.ListOf2[*O,time.Location]": &RefName{
 					Name:          "ListOf2",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -487,7 +488,7 @@ var (
 )
 `,
 			expected: map[string]Shape{
-				"test_package.Option[ListOf2[*O,time.Location]]": &RefName{
+				"github.com/test_package.Option[ListOf2[*O,time.Location]]": &RefName{
 					Name:          "Option",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -547,7 +548,7 @@ func OptionToJSON[T1 ListOf2[*O,time.Location]](x Option[T1]) ([]byte, error) {
 }
 `,
 			expected: map[string]Shape{
-				"test_package.ListOf2[*O,time.Location]": &RefName{
+				"github.com/test_package.ListOf2[*O,time.Location]": &RefName{
 					Name:          "ListOf2",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -616,7 +617,7 @@ func init() {
 	shared.JSONMarshallerRegister[T1]("github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*.O,time.Location]]", NoneFromJSON[ListOf2[*O,time.Location]], NoneToJSON[ListOf2[*O,time.Location]])
 }`,
 			expected: map[string]Shape{
-				"test_package.ListOf2[*O,time.Location]": &RefName{
+				"github.com/test_package.ListOf2[*O,time.Location]": &RefName{
 					Name:          "ListOf2",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -696,4 +697,31 @@ type Storage[T any] interface {
 			}
 		})
 	}
+}
+
+func TestExpandedShapes_UsesPkgImportNameForKeys(t *testing.T) {
+	// Test that ExpandedShapes uses full package import names for keys
+	// to prevent duplicate registrations with dot imports
+	indexed, err := NewIndexTypeInDir("testasset")
+	assert.NoError(t, err)
+	assert.NotNil(t, indexed)
+
+	expanded := indexed.ExpandedShapes()
+
+	// All keys should use the full package import name format
+	// Check that types from known packages have proper import names
+	hasExpectedKeys := false
+	for key := range expanded {
+		t.Logf("Key: %s", key)
+		// Keys should contain the full package import path for types from testasset
+		if strings.Contains(key, "testasset.") && strings.Contains(key, ".") {
+			assert.True(t, 
+				strings.Contains(key, "github.com/widmogrod/mkunion/x/shape/testasset."),
+				"Key %s should use full package import name", key)
+			hasExpectedKeys = true
+		}
+	}
+	
+	// Ensure we actually tested some keys
+	assert.True(t, hasExpectedKeys, "Should have found keys with testasset package")
 }
