@@ -16,7 +16,7 @@ mkunion is a Go code generation tool that implements strongly typed union types 
 ### Building mkunion
 ```bash
 # Build the mkunion tool
-cd cmd/mkunion && go build -o mkunion
+go build -C cmd/mkunion .
 
 # Install from latest release
 go install github.com/widmogrod/mkunion/cmd/mkunion@latest
