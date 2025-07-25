@@ -162,6 +162,6 @@ Combined with `mkunion`'s automatic union type generation and standard pattern m
 
 ## Next steps
 
-- **[Union and generic types]()** - Learn about generic unions
-- **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON
-- **[State Machines and unions](./examples/state_machine.md)** - Learn about modeling state machines and how union type helps
+- **[Union and generic types](./generic_union.md)** - Learn about generic unions
+- **[Marshaling union in JSON](./json.md)** - Learn about marshaling and unmarshalling of union types in JSON
+- **[State Machines and unions](./state_machine.md)** - Learn about modeling state machines and how union type helps

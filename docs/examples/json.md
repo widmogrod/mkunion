@@ -84,6 +84,6 @@ There are a few things that you can notice in this example:
 
 ## Next steps
 
-- **[Union and generic types]()** - Learn about generic unions
-- **[Custom Pattern Matching](./examples/custom_pattern_matching.md)** - Learn about custom pattern matching
-- **[State Machines and unions](./examples/state_machine.md)** - Learn about modeling state machines and how union type helps
+- **[Union and generic types](./generic_union.md)** - Learn about generic unions
+- **[Custom Pattern Matching](./custom_pattern_matching.md)** - Learn about custom pattern matching
+- **[State Machines and unions](./state_machine.md)** - Learn about modeling state machines and how union type helps

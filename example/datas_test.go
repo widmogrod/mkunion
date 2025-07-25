@@ -1,6 +1,8 @@
 package example
 
 import (
+	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,3 +38,66 @@ func TestHandleFetch(t *testing.T) {
 		})
 	}
 }
+
+func TestOptionUsage(t *testing.T) {
+	// --8<-- [start:mk-option-use]
+
+	// Usage examples
+	userOpt := MkSome(User{Name: "Alice"}) // Some[User]
+	// emptyOpt := MkNone[User]()             // None[User]
+
+	// Safe access with pattern matching
+	message := MatchOptionR1(userOpt,
+		func(*None[User]) string {
+			return "No user found"
+		},
+		func(some *Some[User]) string {
+			return fmt.Sprintf("Hello, %s!", some.Value.Name)
+		},
+	)
+	assert.Equal(t, "Hello, Alice!", message)
+	// --8<-- [end:mk-option-use]
+}
+
+// Usage examples
+func parseUser(data string) Result[User, string] {
+	if data == "" {
+		return MkErr[User]("empty input")
+	}
+	// Parse logic here
+	return MkOk[string](User{Name: data})
+}
+
+func TestOptionComplexUse(t *testing.T) {
+	result := parseUser("Alice")
+	output := MatchResultR1(result,
+		func(ok *Ok[User, string]) string {
+			return fmt.Sprintf("Parsed user: %s", ok.Value.Name)
+		},
+		func(err *Err[User, string]) string {
+			return fmt.Sprintf("Parse error: %s", err.Error)
+		},
+	)
+	require.Equal(t, "Parsed user: Alice", output)
+}
+
+// --8<-- [start:creating-fetch]
+func TestCreatingUnions(t *testing.T) {
+	// Success with user
+	fetchSuccess := MkOk[APIError](MkSome(User{Name: "Alice"}))
+
+	// Success but user not found
+	fetchNotFound := MkOk[APIError](MkNone[User]())
+
+	// API error
+	fetchError := MkErr[Option[User]](APIError{
+		Code:    500,
+		Message: "Internal Server Error",
+	})
+
+	assert.Equal(t, "Found user: Alice", handleFetch(fetchSuccess))
+	assert.Equal(t, "User not found", handleFetch(fetchNotFound))
+	assert.Equal(t, "API error: {500 Internal Server Error}", handleFetch(fetchError))
+}
+
+// --8<-- [end:creating-fetch]
