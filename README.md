@@ -139,6 +139,38 @@ type (
 )
 ```
 
+### Example 7: Package-level tags for configuration
+
+mkunion supports package-level `go:tag` annotations that can be used to configure behavior for the entire package:
+
+```go
+//go:tag mkunion:",no-type-registry"
+//go:tag version:"1.0.0,stable"
+//go:tag module:"mypackage"
+package mypackage
+
+// Your union types here...
+```
+
+Package-level tags can be used for:
+- **Package configuration**: Control mkunion behavior (e.g., `no-type-registry`)
+- **Metadata storage**: Store version, author, or other package information
+- **Build tool integration**: Add custom annotations for documentation or build systems
+
+Use the provided convenience functions to extract package-level tag metadata:
+
+```go
+// Extract tags from a file
+tags, err := shape.ExtractPackageTagsFromFile("main.go")
+
+// Extract tags from a directory
+tags, err := shape.ExtractPackageTagsFromDir("./mypackage")
+
+// Get specific tag values
+version := shape.GetPackageTagValue(tags, "version", "unknown")
+hasOption := shape.HasPackageTagOption(tags, "mkunion", "no-type-registry")
+```
+
 
 ## Next
 

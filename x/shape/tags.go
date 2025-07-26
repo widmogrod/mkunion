@@ -1,7 +1,10 @@
 package shape
 
 import (
+	"fmt"
 	"go/ast"
+	"go/parser"
+	"go/token"
 	"strings"
 
 	"github.com/widmogrod/mkunion/x/shared"
@@ -319,4 +322,114 @@ func MergeTagsInto(tags map[string]Tag, newTags map[string]Tag) map[string]Tag {
 	}
 
 	return tags
+}
+
+// ExtractPackageTagsFromFile extracts package-level tags from a Go source file.
+// This is a convenience function that parses the given file and returns
+// only the package-level go:tag declarations.
+//
+// Example usage:
+//   tags, err := ExtractPackageTagsFromFile("mypackage.go")
+//   if err != nil {
+//       log.Fatal(err)
+//   }
+//   
+//   if tag, ok := tags["mkunion"]; ok {
+//       fmt.Printf("mkunion tag: %s, options: %v\n", tag.Value, tag.Options)
+//   }
+//
+// Returns:
+//   - map[string]Tag: Package-level tags found in the file
+//   - error: Parsing error if the file cannot be read or parsed
+func ExtractPackageTagsFromFile(filename string) (map[string]Tag, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse file %s: %w", filename, err)
+	}
+
+	if f.Doc == nil {
+		return nil, nil
+	}
+
+	return ExtractDocumentTags(f.Doc), nil
+}
+
+// ExtractPackageTagsFromDir extracts package-level tags from all Go files in a directory.
+// This is a convenience function that walks through a directory and collects
+// all package-level go:tag declarations, merging them into a single map.
+//
+// If multiple files in the same directory have conflicting package-level tags,
+// the last file processed will take precedence.
+//
+// Example usage:
+//   tags, err := ExtractPackageTagsFromDir("./mypackage")
+//   if err != nil {
+//       log.Fatal(err)
+//   }
+//   
+//   if tag, ok := tags["version"]; ok {
+//       fmt.Printf("Package version: %s\n", tag.Value)
+//   }
+//
+// Returns:
+//   - map[string]Tag: Merged package-level tags from all files in the directory
+//   - error: Error if directory cannot be read or files cannot be parsed
+func ExtractPackageTagsFromDir(dir string) (map[string]Tag, error) {
+	walker, err := NewIndexTypeInDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create index walker for directory %s: %w", dir, err)
+	}
+
+	return walker.PackageTags(), nil
+}
+
+// GetPackageTagValue is a convenience function to get the value of a specific package-level tag.
+// Returns the tag value if found, or the default value if not found.
+//
+// Example usage:
+//   tags, _ := ExtractPackageTagsFromFile("main.go")
+//   version := GetPackageTagValue(tags, "version", "unknown")
+//   fmt.Printf("Package version: %s\n", version)
+func GetPackageTagValue(tags map[string]Tag, tagName, defaultValue string) string {
+	if tags == nil {
+		return defaultValue
+	}
+
+	tag, ok := tags[tagName]
+	if !ok {
+		return defaultValue
+	}
+
+	if tag.Value == "" {
+		return defaultValue
+	}
+
+	return tag.Value
+}
+
+// HasPackageTagOption checks if a package-level tag has a specific option.
+//
+// Example usage:
+//   tags, _ := ExtractPackageTagsFromFile("main.go")
+//   if HasPackageTagOption(tags, "mkunion", "no-type-registry") {
+//       fmt.Println("Type registry is disabled for this package")
+//   }
+func HasPackageTagOption(tags map[string]Tag, tagName, option string) bool {
+	if tags == nil {
+		return false
+	}
+
+	tag, ok := tags[tagName]
+	if !ok {
+		return false
+	}
+
+	for _, opt := range tag.Options {
+		if opt == option {
+			return true
+		}
+	}
+
+	return false
 }
