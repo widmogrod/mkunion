@@ -2,8 +2,6 @@ package shape
 
 import (
 	"fmt"
-	"path"
-	"strings"
 	log "github.com/sirupsen/logrus"
 	"go/ast"
 )
@@ -170,88 +168,61 @@ func InjectPkgImportNameWithDotImportResolution(pkgNameToImportName map[string]s
 	}
 	
 	return func(x Shape) {
-		switch y := x.(type) {
-		case *RefName:
-			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
-			if isPkgNotSet {
-				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
-					// Only try dot import resolution if this might be a type from the current package
-					// that could actually be from a dot import
-					resolvedPkg := resolveDotImportPackage(y.Name, dotImports)
-					if resolvedPkg != "" && resolvedPkg != pkgImportName {
-						// Only use the resolved package if it's different from the current assignment
-						y.PkgImportName = resolvedPkg
-						y.PkgName = path.Base(resolvedPkg)
-					} else {
+		MatchShapeR1(x,
+			func(y *Any) any { return nil }, // Any - no action needed
+			func(y *RefName) any { // RefName
+				isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+				if isPkgNotSet {
+					if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
 						y.PkgImportName = pkgImportName
+					} else {
+						log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
 					}
-				} else {
-					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
 				}
-			}
-
-		case *StructLike:
-			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
-			if isPkgNotSet {
-				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
-					y.PkgImportName = pkgImportName
-				} else {
-					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				return nil
+			},
+			func(y *PointerLike) any { return nil }, // PointerLike - no action needed
+			func(y *AliasLike) any { // AliasLike
+				isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+				if isPkgNotSet {
+					if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
+						y.PkgImportName = pkgImportName
+					} else {
+						log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+					}
 				}
-			}
-
-		case *UnionLike:
-			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
-			if isPkgNotSet {
-				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
-					y.PkgImportName = pkgImportName
-				} else {
-					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				return nil
+			},
+			func(y *PrimitiveLike) any { return nil }, // PrimitiveLike - no action needed
+			func(y *ListLike) any { return nil }, // ListLike - no action needed
+			func(y *MapLike) any { return nil }, // MapLike - no action needed
+			func(y *StructLike) any { // StructLike
+				isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+				if isPkgNotSet {
+					if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
+						y.PkgImportName = pkgImportName
+					} else {
+						log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+					}
 				}
-			}
-
-		case *AliasLike:
-			isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
-			if isPkgNotSet {
-				if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
-					y.PkgImportName = pkgImportName
-				} else {
-					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				return nil
+			},
+			func(y *UnionLike) any { // UnionLike
+				isPkgNotSet := y.PkgName != "" && y.PkgImportName == ""
+				if isPkgNotSet {
+					if pkgImportName, ok := pkgNameToImportName[y.PkgName]; ok {
+						y.PkgImportName = pkgImportName
+					} else {
+						log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+					}
 				}
-			}
-		}
+				return nil
+			},
+		)
 	}
 }
 
-// resolveDotImportPackage attempts to resolve which dot-imported package contains a given type
-func resolveDotImportPackage(typeName string, dotImports []string) string {
-	// For demonstration purposes, we'll use known type names to resolve packages
-	// In a production system, this would involve actually looking up the types in the packages
-	
-	switch typeName {
-	case "Option", "Result", "Some", "None", "Ok", "Err":
-		// These are from the f package
-		for _, pkg := range dotImports {
-			if strings.Contains(pkg, "/f") || strings.HasSuffix(pkg, "/f") {
-				return pkg
-			}
-		}
-	case "JSONMarshal", "TypeRegistryStore":
-		// These are from the shared package  
-		for _, pkg := range dotImports {
-			if strings.Contains(pkg, "/shared") || strings.HasSuffix(pkg, "/shared") {
-				return pkg
-			}
-		}
-	}
-	
-	// If we can't resolve, return the first dot import as fallback
-	if len(dotImports) > 0 {
-		return dotImports[0]
-	}
-	
-	return ""
-}
+
 
 func InjectPkgName(pkgName string) func(x Shape) {
 	return func(x Shape) {
