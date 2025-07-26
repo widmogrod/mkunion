@@ -1268,8 +1268,8 @@ func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
 			}
 
 			newVariant := IndexWith(variant, ref)
-			name := ToGoTypeName(newVariant, WithPkgImportName())
-			result[name] = newVariant
+			fullName := ToGoTypeName(newVariant, WithPkgImportName())
+			result[fullName] = newVariant
 		}
 	}
 
