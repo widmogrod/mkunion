@@ -23,7 +23,6 @@ require (
 	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
 	golang.org/x/mod v0.24.0
-	google.golang.org/protobuf v1.33.0
 )
 
 require (
