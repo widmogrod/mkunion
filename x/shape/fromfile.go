@@ -1285,7 +1285,10 @@ func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
 
 			newVariant := IndexWith(variant, ref)
 			fullName := ToGoTypeName(newVariant, WithPkgImportName())
-			result[fullName] = newVariant
+			// Only add if not already present to avoid duplicates
+			if _, exists := result[fullName]; !exists {
+				result[fullName] = newVariant
+			}
 		}
 	}
 

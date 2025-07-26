@@ -964,24 +964,7 @@ func shouldSkipTypeRegistryEntry(instantiatedTypeName, fullTypeName, packageName
 	return false
 }
 
-func getShortPackageName(fullImportPath string) string {
-	// Map common full import paths to their short names used in imports
-	switch fullImportPath {
-	case "github.com/widmogrod/mkunion/f":
-		return "f"
-	default:
-		// Extract the last part of the path as a fallback
-		return path.Base(fullImportPath)
-	}
-}
 
-func extractBaseTypeName(typeName string) string {
-	// Extract the type name before any generic parameters
-	if idx := strings.Index(typeName, "["); idx > 0 {
-		return typeName[:idx]
-	}
-	return typeName
-}
 
 func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, error) {
 	packageName := inferred.PackageName()
@@ -1056,42 +1039,12 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 				// For external types, use the correct package name for function references
 				funcPrefix := ""
 				
-				// If the fullTypeName indicates this is from an external package,
-				// extract the correct package name for function references
-				if strings.Contains(fullTypeName, ".") {
-					// For a type like "github.com/widmogrod/mkunion/f.Option[github.com/widmogrod/mkunion/example.User]"
-					// we need to extract "github.com/widmogrod/mkunion/f"
-					
-					// Find the first dot after which the type name starts
-					// Look for pattern: package.TypeName[...] 
-					var fullImportPath string
-					
-					// Find where the actual type name starts (after the last / in package path)
-					parts := strings.Split(fullTypeName, ".")
-					if len(parts) >= 2 {
-						// For "github.com/widmogrod/mkunion/f.Option[...]"
-						// We want everything before the type name "Option"
-						// So we join all parts except the last one, but be careful about generics
-						
-						// Find the part that contains the type name (has [ or is at the end)
-						typeNamePartIdx := -1
-						for i, part := range parts {
-							if strings.Contains(part, "[") || i == len(parts)-1 {
-								typeNamePartIdx = i
-								break
-							}
-						}
-						
-						if typeNamePartIdx > 0 {
-							fullImportPath = strings.Join(parts[:typeNamePartIdx], ".")
-						}
-					}
-					
-					if fullImportPath != "" && fullImportPath != packageName {
-						// This is from an external package
-						shortPkg := getShortPackageName(fullImportPath)
-						funcPrefix = shortPkg + "."
-					}
+				// Get the package import name from the shape itself
+				pkgImportName := shape.ToGoPkgImportName(some)
+				if pkgImportName != "" && pkgImportName != packageName {
+					// This is from an external package, use the short package name
+					shortPkg := shape.GuessPkgNameFromPkgImportName(pkgImportName)
+					funcPrefix = shortPkg + "."
 				}
 				
 				// Build the marshaller registration with correct package qualification
