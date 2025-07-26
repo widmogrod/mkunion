@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -29,11 +30,13 @@ func TypeRegistryStore[A any](typeFullName string) {
 	registerType.Store(typeFullName, *destinationTypePtr)
 }
 
-// PackageTagsStore stores package-level tags for runtime access.
+// PackageTagsStore stores package-level tags for runtime access with package namespace.
 // This function is typically called from generated code during package initialization.
-func PackageTagsStore(tags map[string]interface{}) {
+// Tags are stored with package-namespaced keys to prevent conflicts between packages.
+func PackageTagsStore(pkgImportName string, tags map[string]interface{}) {
 	for key, value := range tags {
-		packageTags.Store(key, value)
+		namespacedKey := pkgImportName + "." + key
+		packageTags.Store(namespacedKey, value)
 	}
 }
 
@@ -44,6 +47,24 @@ func PackageTagsLoad() map[string]interface{} {
 	packageTags.Range(func(key, value interface{}) bool {
 		if keyStr, ok := key.(string); ok {
 			result[keyStr] = value
+		}
+		return true
+	})
+	return result
+}
+
+// PackageTagsLoadForPackage retrieves package-level tags for a specific package.
+// Returns only the tags for the given package import name.
+func PackageTagsLoadForPackage(pkgImportName string) map[string]interface{} {
+	result := make(map[string]interface{})
+	prefix := pkgImportName + "."
+	packageTags.Range(func(key, value interface{}) bool {
+		if keyStr, ok := key.(string); ok {
+			if strings.HasPrefix(keyStr, prefix) {
+				// Remove the package prefix to get the original tag name
+				tagName := strings.TrimPrefix(keyStr, prefix)
+				result[tagName] = value
+			}
 		}
 		return true
 	})

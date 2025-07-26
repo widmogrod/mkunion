@@ -984,11 +984,12 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 
 	// Embed package tags for runtime access
 	if len(pkgTags) > 0 {
+		pkgImportName := inferred.PkgImportName()
 		contents.WriteString("\t// Package tags embedded at compile time\n")
 		if packageName == "shared" {
-			contents.WriteString("\tPackageTagsStore(map[string]interface{}{\n")
+			contents.WriteString(fmt.Sprintf("\tPackageTagsStore(%q, map[string]interface{}{\n", pkgImportName))
 		} else {
-			contents.WriteString("\tshared.PackageTagsStore(map[string]interface{}{\n")
+			contents.WriteString(fmt.Sprintf("\tshared.PackageTagsStore(%q, map[string]interface{}{\n", pkgImportName))
 		}
 		
 		sortedTagKeys := make([]string, 0, len(pkgTags))

@@ -74,7 +74,7 @@ The generated `types_reg_gen.go` will contain:
 ```go
 func init() {
     // Package tags embedded at compile time
-    shared.PackageTagsStore(map[string]interface{}{
+    shared.PackageTagsStore("github.com/myorg/myapp", map[string]interface{}{
         "author":  shape.Tag{Value: "Development Team", Options: nil},
         "module":  shape.Tag{Value: "myapp", Options: nil},
         "version": shape.Tag{Value: "1.2.3", Options: []string{"stable", "production"}},
@@ -83,39 +83,85 @@ func init() {
 }
 ```
 
+**Important Note**: Package tags are automatically namespaced by their full import path to prevent conflicts when multiple packages define the same tag names. This ensures that each package's tags are isolated and don't overwrite each other.
+
 ### Runtime API Functions
 
 The `shape` package provides several functions for accessing embedded package tags at runtime:
 
+#### GetRuntimePackageTagsForPackage(pkgImportName)
+
+Retrieves package-level tags for a specific package (recommended):
+
+```go
+import "github.com/widmogrod/mkunion/x/shape"
+
+const pkgName = "github.com/myorg/myapp"
+
+// Get tags for a specific package - recommended approach
+tags := shape.GetRuntimePackageTagsForPackage(pkgName)
+fmt.Printf("Package tags: %+v\n", tags)
+```
+
 #### GetRuntimePackageTags()
 
-Retrieves all package-level tags embedded at compile time:
+Retrieves all package-level tags embedded at compile time (returns namespaced keys):
 
 ```go
 import "github.com/widmogrod/mkunion/x/shape"
 
 // This works even in a static binary without source files
+// Returns all tags with namespaced keys like "github.com/myorg/myapp.version"
 tags := shape.GetRuntimePackageTags()
 fmt.Printf("All tags: %+v\n", tags)
 ```
 
-#### GetRuntimePackageTagValue(tagName, defaultValue)
+#### GetRuntimePackageTagValueForPackage(pkgImportName, tagName, defaultValue)
 
-Gets the value of a specific package tag with a fallback default:
+Gets the value of a specific package tag for a specific package:
 
 ```go
+const pkgName = "github.com/myorg/myapp"
+
 // Get package version, fallback to "unknown"
-version := shape.GetRuntimePackageTagValue("version", "unknown")
+version := shape.GetRuntimePackageTagValueForPackage(pkgName, "version", "unknown")
 fmt.Printf("Binary version: %s\n", version)
 
 // Get author, fallback to "anonymous"  
-author := shape.GetRuntimePackageTagValue("author", "anonymous")
+author := shape.GetRuntimePackageTagValueForPackage(pkgName, "author", "anonymous")
 fmt.Printf("Author: %s\n", author)
+```
+
+#### GetRuntimePackageTagValue(tagName, defaultValue)
+
+Gets the value of a specific package tag (works with namespaced keys):
+
+```go
+// Get package version, fallback to "unknown" 
+// Note: This searches across all packages - prefer the package-specific version
+version := shape.GetRuntimePackageTagValue("version", "unknown")
+fmt.Printf("Binary version: %s\n", version)
+```
+
+#### HasRuntimePackageTagOptionForPackage(pkgImportName, tagName, option)
+
+Checks if a package tag for a specific package has a specific option:
+
+```go
+const pkgName = "github.com/myorg/myapp"
+
+if shape.HasRuntimePackageTagOptionForPackage(pkgName, "mkunion", "no-type-registry") {
+    fmt.Println("Type registry is disabled")
+}
+
+if shape.HasRuntimePackageTagOptionForPackage(pkgName, "version", "production") {
+    fmt.Println("Production build")
+}
 ```
 
 #### HasRuntimePackageTagOption(tagName, option)
 
-Checks if a package tag has a specific option:
+Checks if a package tag has a specific option (works with namespaced keys):
 
 ```go
 // Check if version is marked as stable

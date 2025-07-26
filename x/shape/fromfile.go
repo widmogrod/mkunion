@@ -1220,6 +1220,10 @@ func (walker *IndexedTypeWalker) SetPkgImportName(pkgImportName string) {
 	walker.pkgImportName = pkgImportName
 }
 
+func (walker *IndexedTypeWalker) PkgImportName() string {
+	return walker.pkgImportName
+}
+
 func (walker *IndexedTypeWalker) IndexedShapes() map[string]Shape {
 	return walker.indexedShapes
 }

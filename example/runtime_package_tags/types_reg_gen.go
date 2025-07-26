@@ -8,7 +8,7 @@ import (
 
 func init() {
 	// Package tags embedded at compile time
-	shared.PackageTagsStore(map[string]interface{}{
+	shared.PackageTagsStore("github.com/widmogrod/mkunion/example/runtime_package_tags", map[string]interface{}{
 		"author":  shape.Tag{Value: "mkunion development team", Options: nil},
 		"license": shape.Tag{Value: "MIT", Options: nil},
 		"module":  shape.Tag{Value: "runtime-tags-example", Options: nil},

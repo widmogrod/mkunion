@@ -366,8 +366,7 @@ func TestHasPackageTagOption(t *testing.T) {
 func TestRuntimePackageTags(t *testing.T) {
 	// Test the runtime package tag functions by simulating what the generated code would do
 	
-	// First, clear any existing package tags
-	shared.PackageTagsStore(map[string]interface{}{})
+	testPkgName := "github.com/test/package"
 	
 	// Simulate what generated code would do - store package tags
 	testTags := map[string]interface{}{
@@ -375,10 +374,10 @@ func TestRuntimePackageTags(t *testing.T) {
 		"module":  Tag{Value: "testmodule", Options: nil},
 		"mkunion": Tag{Value: "", Options: []string{"no-type-registry"}},
 	}
-	shared.PackageTagsStore(testTags)
+	shared.PackageTagsStore(testPkgName, testTags)
 	
-	// Test GetRuntimePackageTags
-	runtimeTags := GetRuntimePackageTags()
+	// Test GetRuntimePackageTagsForPackage
+	runtimeTags := GetRuntimePackageTagsForPackage(testPkgName)
 	require.NotNil(t, runtimeTags)
 	assert.Equal(t, 3, len(runtimeTags))
 	
@@ -398,22 +397,83 @@ func TestRuntimePackageTags(t *testing.T) {
 	assert.Equal(t, "", mkunionTag.Value)
 	assert.Equal(t, []string{"no-type-registry"}, mkunionTag.Options)
 	
-	// Test GetRuntimePackageTagValue
-	version := GetRuntimePackageTagValue("version", "unknown")
+	// Test GetRuntimePackageTagValueForPackage
+	version := GetRuntimePackageTagValueForPackage(testPkgName, "version", "unknown")
 	assert.Equal(t, "1.0.0", version)
 	
-	module := GetRuntimePackageTagValue("module", "unknown")
+	module := GetRuntimePackageTagValueForPackage(testPkgName, "module", "unknown")
 	assert.Equal(t, "testmodule", module)
 	
-	nonexistent := GetRuntimePackageTagValue("nonexistent", "default")
+	nonexistent := GetRuntimePackageTagValueForPackage(testPkgName, "nonexistent", "default")
 	assert.Equal(t, "default", nonexistent)
 	
-	// Test HasRuntimePackageTagOption
-	assert.True(t, HasRuntimePackageTagOption("mkunion", "no-type-registry"))
-	assert.False(t, HasRuntimePackageTagOption("mkunion", "unknown"))
-	assert.False(t, HasRuntimePackageTagOption("version", "no-type-registry"))
-	assert.False(t, HasRuntimePackageTagOption("nonexistent", "any"))
+	// Test HasRuntimePackageTagOptionForPackage
+	assert.True(t, HasRuntimePackageTagOptionForPackage(testPkgName, "mkunion", "no-type-registry"))
+	assert.False(t, HasRuntimePackageTagOptionForPackage(testPkgName, "mkunion", "unknown"))
+	assert.False(t, HasRuntimePackageTagOptionForPackage(testPkgName, "version", "no-type-registry"))
+	assert.False(t, HasRuntimePackageTagOptionForPackage(testPkgName, "nonexistent", "any"))
+}
+
+func TestRuntimePackageTagsMultiplePackages(t *testing.T) {
+	// Test that package tags from different packages don't overwrite each other
 	
-	// Clean up for other tests
-	shared.PackageTagsStore(map[string]interface{}{})
+	pkgA := "github.com/test/packageA"
+	pkgB := "github.com/test/packageB"
+	
+	// Store tags for package A
+	tagsA := map[string]interface{}{
+		"version": Tag{Value: "1.0.0", Options: []string{"stable"}},
+		"author":  Tag{Value: "Team A", Options: nil},
+	}
+	shared.PackageTagsStore(pkgA, tagsA)
+	
+	// Store tags for package B (with conflicting "version" key)
+	tagsB := map[string]interface{}{
+		"version": Tag{Value: "2.0.0", Options: []string{"beta"}},
+		"module":  Tag{Value: "pkg-b", Options: nil},
+	}
+	shared.PackageTagsStore(pkgB, tagsB)
+	
+	// Verify package A tags are preserved
+	runtimeTagsA := GetRuntimePackageTagsForPackage(pkgA)
+	require.NotNil(t, runtimeTagsA)
+	assert.Equal(t, 2, len(runtimeTagsA))
+	
+	versionTagA, ok := runtimeTagsA["version"]
+	require.True(t, ok)
+	assert.Equal(t, "1.0.0", versionTagA.Value)
+	assert.Equal(t, []string{"stable"}, versionTagA.Options)
+	
+	authorTag, ok := runtimeTagsA["author"]
+	require.True(t, ok)
+	assert.Equal(t, "Team A", authorTag.Value)
+	
+	// Verify package B tags are preserved separately
+	runtimeTagsB := GetRuntimePackageTagsForPackage(pkgB)
+	require.NotNil(t, runtimeTagsB)
+	assert.Equal(t, 2, len(runtimeTagsB))
+	
+	versionTagB, ok := runtimeTagsB["version"]
+	require.True(t, ok)
+	assert.Equal(t, "2.0.0", versionTagB.Value)
+	assert.Equal(t, []string{"beta"}, versionTagB.Options)
+	
+	moduleTag, ok := runtimeTagsB["module"]
+	require.True(t, ok)
+	assert.Equal(t, "pkg-b", moduleTag.Value)
+	
+	// Verify that package A doesn't have package B's tags
+	_, hasModule := runtimeTagsA["module"]
+	assert.False(t, hasModule)
+	
+	// Verify that package B doesn't have package A's tags
+	_, hasAuthor := runtimeTagsB["author"]
+	assert.False(t, hasAuthor)
+	
+	// Test convenience functions
+	versionA := GetRuntimePackageTagValueForPackage(pkgA, "version", "unknown")
+	assert.Equal(t, "1.0.0", versionA)
+	
+	versionB := GetRuntimePackageTagValueForPackage(pkgB, "version", "unknown")
+	assert.Equal(t, "2.0.0", versionB)
 }
