@@ -92,9 +92,9 @@ func (g *SerdeGraphQLTagged) rootTypeName() string {
 
 func (g *SerdeGraphQLTagged) GenerateGraphQLSchema(x shape.Shape) (string, error) {
 	result := &strings.Builder{}
-	
+
 	typeName := g.rootTypeName()
-	
+
 	result.WriteString("/*\n")
 	result.WriteString(fmt.Sprintf("GraphQL Schema for %s:\n\n", typeName))
 
@@ -162,13 +162,13 @@ func (g *SerdeGraphQLTagged) GenerateGraphQLSchema(x shape.Shape) (string, error
 			for _, field := range x.Fields {
 				fieldType := g.shapeToGraphQLType(field.Type)
 				isRequired := !shape.IsPointer(field.Type)
-				
+
 				// Get GraphQL field name from tag or use field name
 				gqlFieldName := shape.TagGetValue(field.Tags, "graphql", field.Name)
 				if gqlFieldName == "" {
 					gqlFieldName = strings.ToLower(field.Name[:1]) + field.Name[1:] // camelCase
 				}
-				
+
 				if isRequired {
 					result.WriteString(fmt.Sprintf("  %s: %s!\n", gqlFieldName, fieldType))
 				} else {
@@ -256,9 +256,9 @@ func (g *SerdeGraphQLTagged) shapeToGraphQLType(s shape.Shape) string {
 
 func (g *SerdeGraphQLTagged) GenerateResolverComment(x shape.Shape) (string, error) {
 	result := &strings.Builder{}
-	
+
 	typeName := g.rootTypeName()
-	
+
 	result.WriteString("/*\n")
 	result.WriteString(fmt.Sprintf("Example GraphQL Resolver for %s:\n\n", typeName))
 	result.WriteString("// In your resolver file:\n")

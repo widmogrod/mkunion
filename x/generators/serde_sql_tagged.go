@@ -13,10 +13,10 @@ const (
 
 func NewSerdeSQLTagged(shape shape.Shape) *SerdeSQLTagged {
 	return &SerdeSQLTagged{
-		shape:                          shape,
-		skipImportsAndPackage:          false,
-		didGenerateMarshalSQLMethod:    make(map[string]bool),
-		didGenerateUnmarshalSQLMethod:  make(map[string]bool),
+		shape:                         shape,
+		skipImportsAndPackage:         false,
+		didGenerateMarshalSQLMethod:   make(map[string]bool),
+		didGenerateUnmarshalSQLMethod: make(map[string]bool),
 		pkgUsed: PkgMap{
 			"sql":      "database/sql/driver",
 			"fmt":      "fmt",

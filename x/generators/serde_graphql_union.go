@@ -160,7 +160,7 @@ func (g *SerdeGraphQLUnion) GenerateUnionSchema(union *shape.UnionLike) ([]byte,
 		variantName := g.VariantName(variant)
 		body.WriteString(fmt.Sprintf("type %s implements %s {\n", variantName, unionName))
 		body.WriteString("  __typename: String!\n")
-		
+
 		// Add fields based on variant type
 		err := shape.MatchShapeR1(
 			variant,
@@ -212,11 +212,11 @@ func (g *SerdeGraphQLUnion) GenerateUnionSchema(union *shape.UnionLike) ([]byte,
 				return nil
 			},
 		)
-		
+
 		if err != nil {
 			return nil, fmt.Errorf("generators.SerdeGraphQLUnion.GenerateUnionSchema: variant %s; %w", variantName, err)
 		}
-		
+
 		body.WriteString("}\n\n")
 	}
 
@@ -237,7 +237,7 @@ func (g *SerdeGraphQLUnion) GenerateUnionSchema(union *shape.UnionLike) ([]byte,
 	for _, variant := range union.Variant {
 		variantName := g.VariantName(variant)
 		body.WriteString(fmt.Sprintf("input %sInput {\n", variantName))
-		
+
 		err := shape.MatchShapeR1(
 			variant,
 			func(x *shape.Any) error {
@@ -287,11 +287,11 @@ func (g *SerdeGraphQLUnion) GenerateUnionSchema(union *shape.UnionLike) ([]byte,
 				return nil
 			},
 		)
-		
+
 		if err != nil {
 			return nil, fmt.Errorf("generators.SerdeGraphQLUnion.GenerateUnionSchema: input %s; %w", variantName, err)
 		}
-		
+
 		body.WriteString("}\n\n")
 	}
 
@@ -360,12 +360,12 @@ func (g *SerdeGraphQLUnion) generateStructFields(s *shape.StructLike, body *byte
 	for _, field := range s.Fields {
 		fieldType := g.shapeToGraphQLType(field.Type)
 		isRequired := !shape.IsPointer(field.Type)
-		
+
 		gqlFieldName := shape.TagGetValue(field.Tags, "graphql", field.Name)
 		if gqlFieldName == "" {
 			gqlFieldName = strings.ToLower(field.Name[:1]) + field.Name[1:] // camelCase
 		}
-		
+
 		if isRequired {
 			body.WriteString(fmt.Sprintf("  %s: %s!\n", gqlFieldName, fieldType))
 		} else {

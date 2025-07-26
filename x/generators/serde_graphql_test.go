@@ -8,8 +8,8 @@ import (
 
 func TestSerdeGraphQLTagged_Generate_Struct(t *testing.T) {
 	s := &shape.StructLike{
-		Name:    "TestStruct",
-		PkgName: "test",
+		Name:          "TestStruct",
+		PkgName:       "test",
 		PkgImportName: "github.com/test/test",
 		Fields: []*shape.FieldLike{
 			{
@@ -36,13 +36,13 @@ func TestSerdeGraphQLTagged_Generate_Struct(t *testing.T) {
 
 func TestSerdeGraphQLUnion_Generate(t *testing.T) {
 	union := &shape.UnionLike{
-		Name:    "TestUnion",
-		PkgName: "test",
+		Name:          "TestUnion",
+		PkgName:       "test",
 		PkgImportName: "github.com/test/test",
 		Variant: []shape.Shape{
 			&shape.StructLike{
-				Name:    "Branch",
-				PkgName: "test",
+				Name:          "Branch",
+				PkgName:       "test",
 				PkgImportName: "github.com/test/test",
 				Fields: []*shape.FieldLike{
 					{
@@ -52,8 +52,8 @@ func TestSerdeGraphQLUnion_Generate(t *testing.T) {
 				},
 			},
 			&shape.StructLike{
-				Name:    "Leaf",
-				PkgName: "test",
+				Name:          "Leaf",
+				PkgName:       "test",
 				PkgImportName: "github.com/test/test",
 				Fields: []*shape.FieldLike{
 					{
@@ -69,7 +69,7 @@ func TestSerdeGraphQLUnion_Generate(t *testing.T) {
 	result, err := generator.Generate()
 
 	assert.NoError(t, err)
-	
+
 	resultStr := string(result)
 	assert.Contains(t, resultStr, "GraphQL Schema for TestUnion Union")
 	assert.Contains(t, resultStr, "interface TestUnion")
