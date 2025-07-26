@@ -1,2 +1,4 @@
 /mkunion
 /tmp/*_gen.go
+cmd/mkunion/mkunion
+**/mkunion
