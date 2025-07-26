@@ -2,7 +2,7 @@ package example
 
 import (
 	"fmt"
-	"github.com/widmogrod/mkunion/f"
+	. "github.com/widmogrod/mkunion/f"
 )
 
 // --8<-- [start:example]
@@ -17,20 +17,20 @@ type APIError struct {
 }
 
 // FetchResult combine unions for rich error handling
-type FetchResult = f.Result[f.Option[User], APIError]
+type FetchResult = Result[Option[User], APIError]
 
 // HandleFetch uses nested pattern matching to handle result (exported for testing)
 func HandleFetch(result FetchResult) string {
-	return f.MatchResultR1(result,
-		func(ok *f.Ok[f.Option[User], APIError]) string {
-			return f.MatchOptionR1(ok.Value,
-				func(some *f.Some[User]) string {
+	return MatchResultR1(result,
+		func(ok *Ok[Option[User], APIError]) string {
+			return MatchOptionR1(ok.Value,
+				func(some *Some[User]) string {
 					return fmt.Sprintf("Found user: %s", some.Value.Name)
 				},
-				func(*f.None[User]) string { return "User not found" },
+				func(*None[User]) string { return "User not found" },
 			)
 		},
-		func(err *f.Err[f.Option[User], APIError]) string {
+		func(err *Err[Option[User], APIError]) string {
 			return fmt.Sprintf("API error: %v", err.Error)
 		},
 	)

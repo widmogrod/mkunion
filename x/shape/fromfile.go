@@ -32,6 +32,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 		possibleTaggedTypes:  map[string]map[string]Tag{},
 		shapes:               make(map[string]Shape),
 		taggedNodes:          make(map[string][]*NodeAndTag),
+		dotImports:           make([]string, 0),
 	}
 
 	fset := token.NewFileSet()
@@ -175,6 +176,7 @@ type InferredInfo struct {
 	possibleVariantTypes       map[string][]string
 	shapes                     map[string]Shape
 	packageNameToPackageImport map[string]string
+	dotImports                 []string // packages imported with dot import
 	currentType                string
 	possibleTaggedTypes        map[string]map[string]Tag
 	taggedNodes                map[string][]*NodeAndTag
@@ -562,7 +564,14 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		for _, imp := range t.Imports {
 			pkgImportName := strings.Trim(imp.Path.Value, "\"")
 			if imp.Name != nil {
-				f.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				if imp.Name.String() == "." {
+					// Dot import - types from this package appear without package prefix
+					// We need to track this for proper type attribution
+					f.packageNameToPackageImport["."] = pkgImportName
+					f.dotImports = append(f.dotImports, pkgImportName)
+				} else {
+					f.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				}
 			} else {
 				defaultPkgName := path.Base(pkgImportName)
 				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)

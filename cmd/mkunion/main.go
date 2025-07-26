@@ -937,6 +937,52 @@ func SaveFile(contents bytes.Buffer, sourcePath string, infix string) (string, e
 	return fileName, nil
 }
 
+func shouldSkipTypeRegistryEntry(instantiatedTypeName, fullTypeName, packageName string) bool {
+	// If both names are the same, no issue
+	if instantiatedTypeName == fullTypeName {
+		return false
+	}
+
+	// Check if the instantiated type name refers to types that would not exist in the current package
+	// This happens with dot imports where types appear without package prefix in source code
+	// but actually come from external packages
+	
+	// If the full type name indicates it's from a different package than the current one,
+	// but the instantiated type name doesn't have a package prefix, this is likely a dot import issue
+	if strings.Contains(fullTypeName, ".") && !strings.Contains(instantiatedTypeName, ".") {
+		// Extract package from full type name
+		if idx := strings.Index(fullTypeName, "."); idx > 0 {
+			fullTypePkg := fullTypeName[:idx]
+			// If the full type is from a different package but instantiated type has no package,
+			// this is likely a dot import that would cause compilation errors
+			if fullTypePkg != packageName && !strings.Contains(instantiatedTypeName, ".") {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
+func getShortPackageName(fullImportPath string) string {
+	// Map common full import paths to their short names used in imports
+	switch fullImportPath {
+	case "github.com/widmogrod/mkunion/f":
+		return "f"
+	default:
+		// Extract the last part of the path as a fallback
+		return path.Base(fullImportPath)
+	}
+}
+
+func extractBaseTypeName(typeName string) string {
+	// Extract the type name before any generic parameters
+	if idx := strings.Index(typeName, "["); idx > 0 {
+		return typeName[:idx]
+	}
+	return typeName
+}
+
 func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, error) {
 	packageName := inferred.PackageName()
 
@@ -985,6 +1031,13 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 			shape.WithPkgImportName(),
 		)
 
+		// Skip duplicate or problematic entries for dot imports
+		// If the instantiated type name doesn't have a package prefix but the full type name does,
+		// and they refer to different packages, this might be a dot import case
+		if shouldSkipTypeRegistryEntry(instantiatedTypeName, fullTypeName, packageName) {
+			continue
+		}
+
 		// Register go type
 		if packageName == "shared" {
 			contents.WriteString(fmt.Sprintf("\tTypeRegistryStore[%s](%q)\n", instantiatedTypeName, fullTypeName))
@@ -1000,7 +1053,69 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 			}
 			some = shape.IndexWith(some, ref)
 			if shape.IsUnion(some) {
-				contents.WriteString(fmt.Sprintf("\t%s\n", generators.StrRegisterUnionFuncName(shape.ToGoPkgName(some), some)))
+				// For external types, use the correct package name for function references
+				funcPrefix := ""
+				
+				// If the fullTypeName indicates this is from an external package,
+				// extract the correct package name for function references
+				if strings.Contains(fullTypeName, ".") {
+					// For a type like "github.com/widmogrod/mkunion/f.Option[github.com/widmogrod/mkunion/example.User]"
+					// we need to extract "github.com/widmogrod/mkunion/f"
+					
+					// Find the first dot after which the type name starts
+					// Look for pattern: package.TypeName[...] 
+					var fullImportPath string
+					
+					// Find where the actual type name starts (after the last / in package path)
+					parts := strings.Split(fullTypeName, ".")
+					if len(parts) >= 2 {
+						// For "github.com/widmogrod/mkunion/f.Option[...]"
+						// We want everything before the type name "Option"
+						// So we join all parts except the last one, but be careful about generics
+						
+						// Find the part that contains the type name (has [ or is at the end)
+						typeNamePartIdx := -1
+						for i, part := range parts {
+							if strings.Contains(part, "[") || i == len(parts)-1 {
+								typeNamePartIdx = i
+								break
+							}
+						}
+						
+						if typeNamePartIdx > 0 {
+							fullImportPath = strings.Join(parts[:typeNamePartIdx], ".")
+						}
+					}
+					
+					if fullImportPath != "" && fullImportPath != packageName {
+						// This is from an external package
+						shortPkg := getShortPackageName(fullImportPath)
+						funcPrefix = shortPkg + "."
+					}
+				}
+				
+				// Build the marshaller registration with correct package qualification
+				unionTypeName := shape.ToGoTypeName(some, shape.WithPkgImportName(), shape.WithInstantiation())
+				baseName := shape.Name(some)
+				typeParams := shape.ToGoTypeParamsTypes(some)
+				
+				fromFuncName := funcPrefix + baseName + "FromJSON"
+				toFuncName := funcPrefix + baseName + "ToJSON"
+				
+				if len(typeParams) > 0 {
+					paramNames := make([]string, len(typeParams))
+					for i, t := range typeParams {
+						paramNames[i] = shape.ToGoTypeName(t,
+							shape.WithRootPackage(packageName),
+							shape.WithInstantiation(),
+						)
+					}
+					fromFuncName += "[" + strings.Join(paramNames, ",") + "]"
+					toFuncName += "[" + strings.Join(paramNames, ",") + "]"
+				}
+				
+				contents.WriteString(fmt.Sprintf("\tshared.JSONMarshallerRegister(%q, %s, %s)\n",
+					unionTypeName, fromFuncName, toFuncName))
 			}
 		}
 	}

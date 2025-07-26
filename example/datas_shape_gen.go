@@ -43,13 +43,13 @@ func FetchResultShape() shape.Shape {
 		IsAlias:       true,
 		Type: &shape.RefName{
 			Name:          "Result",
-			PkgName:       "f",
-			PkgImportName: "github.com/widmogrod/mkunion/f",
+			PkgName:       "example",
+			PkgImportName: "github.com/widmogrod/mkunion/example",
 			Indexed: []shape.Shape{
 				&shape.RefName{
 					Name:          "Option",
-					PkgName:       "f",
-					PkgImportName: "github.com/widmogrod/mkunion/f",
+					PkgName:       "example",
+					PkgImportName: "github.com/widmogrod/mkunion/example",
 					Indexed: []shape.Shape{
 						&shape.RefName{
 							Name:          "User",
