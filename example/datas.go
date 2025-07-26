@@ -18,28 +18,28 @@ type (
 	Err[T, E any] struct{ Error E }
 )
 
-type SimpleUser struct{ Name string }
+type User struct{ Name string }
 
-type SimpleAPIError struct {
+type APIError struct {
 	Code    int
 	Message string
 }
 
 // FetchResult combine unions for rich error handling
-type SimpleFetchResult = Result[Option[SimpleUser], SimpleAPIError]
+type FetchResult = Result[Option[User], APIError]
 
 // handleFetch uses nested pattern matching to handle result
-func handleFetch(result SimpleFetchResult) string {
+func handleFetch(result FetchResult) string {
 	return MatchResultR1(result,
-		func(ok *Ok[Option[SimpleUser], SimpleAPIError]) string {
+		func(ok *Ok[Option[User], APIError]) string {
 			return MatchOptionR1(ok.Value,
-				func(*None[SimpleUser]) string { return "User not found" },
-				func(some *Some[SimpleUser]) string {
+				func(*None[User]) string { return "User not found" },
+				func(some *Some[User]) string {
 					return fmt.Sprintf("Found user: %s", some.Value.Name)
 				},
 			)
 		},
-		func(err *Err[Option[SimpleUser], SimpleAPIError]) string {
+		func(err *Err[Option[User], APIError]) string {
 			return fmt.Sprintf("API error: %v", err.Error)
 		},
 	)

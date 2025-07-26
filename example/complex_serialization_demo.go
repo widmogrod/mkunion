@@ -7,21 +7,7 @@ import (
 
 // Complex nested types demonstration using concrete types
 // This demonstrates the pattern FetchResult = Result[Option[User], APIError]
-
-//go:tag serde:"user"
-type User struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Active   bool   `json:"active"`
-}
-
-//go:tag serde:"api-error"
-type APIError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Details string `json:"details,omitempty"`
-}
+// Note: User and APIError types are defined in datas.go
 
 // Option[User] - demonstrating Option pattern with concrete User type
 //go:tag mkunion:"OptionUser"
@@ -33,7 +19,7 @@ type (
 )
 
 // Result[OptionUser, APIError] - demonstrating Result pattern
-//go:tag mkunion:"FetchResult"
+//go:tag mkunion:"DemoFetchResult"
 type (
 	FetchSuccess struct {
 		Value OptionUser `json:"value"`
@@ -45,9 +31,9 @@ type (
 
 //go:tag serde:"request-log"
 type RequestLog struct {
-	RequestID string      `json:"request_id"`
-	Timestamp time.Time   `json:"timestamp"`
-	Result    FetchResult `json:"result"`
+	RequestID string           `json:"request_id"`
+	Timestamp time.Time        `json:"timestamp"`
+	Result    DemoFetchResult  `json:"result"`
 	Metadata  map[string]string `json:"metadata,omitempty"`
 }
 
@@ -87,7 +73,7 @@ type SearchResponse struct {
 //go:tag mkunion:"NestedResult"
 type (
 	NestedSuccess struct {
-		Primary   FetchResult      `json:"primary"`
+		Primary   DemoFetchResult      `json:"primary"`
 		Secondary UserSearchResult `json:"secondary"`
 		Metadata  map[string]interface{} `json:"metadata"`
 	}
