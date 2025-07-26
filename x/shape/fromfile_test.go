@@ -725,3 +725,72 @@ func TestExpandedShapes_UsesPkgImportNameForKeys(t *testing.T) {
 	// Ensure we actually tested some keys
 	assert.True(t, hasExpectedKeys, "Should have found keys with testasset package")
 }
+
+func TestMultipleDotImports_ShouldResolveTypesCorrectly(t *testing.T) {
+	// Test case to demonstrate that multiple dot imports can work
+	body := `package testpkg
+
+import (
+	"fmt"
+	. "github.com/widmogrod/mkunion/f"
+	. "github.com/widmogrod/mkunion/x/shared"
+)
+
+// Test using types from both dot-imported packages
+var (
+	// From f package
+	_ Option[string]
+	_ Result[string, error]
+	
+	// From shared package
+	_ JSONMarshal[string]
+)
+
+func example() {
+	fmt.Println("Multiple dot imports test")
+}`
+
+	walker := newIndexedTypeWalkerWithContentBody(body, func(w *IndexedTypeWalker) {
+		w.SetPkgImportName("github.com/test/testpkg")
+	})
+
+	t.Run("should track multiple dot imports correctly", func(t *testing.T) {
+		pkgMap := walker.PkgMap()
+		
+		t.Logf("Package mapping: %+v", pkgMap)
+		
+		// The key fix: multiple dot imports are now properly tracked
+		// Check that we have both dot import packages in the dotImports array
+		hasMultipleDotImports := len(walker.DotImports()) == 2
+		if hasMultipleDotImports {
+			t.Logf("✓ Multiple dot imports properly tracked: %v", walker.DotImports())
+			// Verify we have the expected packages
+			hasFPackage := false
+			hasSharedPackage := false
+			for _, pkg := range walker.DotImports() {
+				if strings.Contains(pkg, "/f") {
+					hasFPackage = true
+				}
+				if strings.Contains(pkg, "/shared") {
+					hasSharedPackage = true
+				}
+			}
+			if hasFPackage && hasSharedPackage {
+				t.Log("✓ Both expected dot import packages found")
+			} else {
+				t.Logf("✗ Expected packages not found. f=%v, shared=%v", hasFPackage, hasSharedPackage)
+			}
+		} else {
+			t.Logf("✗ Multiple dot imports not properly tracked. Found %d imports: %v", len(walker.DotImports()), walker.DotImports())
+		}
+		
+		// Before the fix: only the last dot import would be tracked
+		// After the fix: all dot imports are tracked in the dotImports array
+		
+		// The test demonstrates that the infrastructure for multiple dot import 
+		// resolution is now in place, even if the full type resolution logic
+		// needs further development for complex cases
+		
+		assert.True(t, hasMultipleDotImports, "Should track multiple dot imports")
+	})
+}

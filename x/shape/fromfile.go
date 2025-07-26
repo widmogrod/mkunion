@@ -1141,6 +1141,7 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 	result := &IndexedTypeWalker{
 		indexedShapes:              make(map[string]Shape),
 		packageNameToPackageImport: make(map[string]string),
+		dotImports:                 make([]string, 0),
 		knownTypeNamesInPackage:    map[string]struct{}{},
 		pkgName:                    "", // will be set in ast.Walk
 		pkgImportName:              tryToFindPkgImportName(path.Join(dir, "shape_index_type_in_dir.go")),
@@ -1187,6 +1188,7 @@ func newIndexedTypeWalkerWithContentBody(x string, opts ...func(x *IndexedTypeWa
 	walker := &IndexedTypeWalker{
 		indexedShapes:              make(map[string]Shape),
 		packageNameToPackageImport: make(map[string]string),
+		dotImports:                 make([]string, 0),
 		knownTypeNamesInPackage:    map[string]struct{}{},
 	}
 
@@ -1209,6 +1211,7 @@ type IndexedTypeWalker struct {
 	filterGenericTypes         []string
 	indexedShapes              map[string]Shape
 	packageNameToPackageImport map[string]string
+	dotImports                 []string // packages imported with dot import
 
 	knownTypeNamesInPackage map[string]struct{}
 
@@ -1223,6 +1226,10 @@ func (walker *IndexedTypeWalker) PackageName() string {
 
 func (walker *IndexedTypeWalker) PkgMap() map[string]string {
 	return walker.packageNameToPackageImport
+}
+
+func (walker *IndexedTypeWalker) DotImports() []string {
+	return walker.dotImports
 }
 
 func (walker *IndexedTypeWalker) SetPkgImportName(pkgImportName string) {
@@ -1244,9 +1251,9 @@ func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
 	result := make(map[string]Shape, len(walker.indexedShapes))
 
 	for name, shape := range walker.IndexedShapes() {
-		// Use full package import name for registry consistency - fixes dot import issues
-		fullName := ToGoTypeName(shape, WithPkgImportName())
-		result[fullName] = shape
+		// Use the original name as the key to preserve type instantiation information
+		// but ensure the shape has the correct package information for type registry
+		result[name] = shape
 
 		ref, ok := shape.(*RefName)
 		if !ok {
@@ -1298,7 +1305,14 @@ func (walker *IndexedTypeWalker) Visit(n ast.Node) ast.Visitor {
 		for _, imp := range t.Imports {
 			pkgImportName := strings.Trim(imp.Path.Value, "\"")
 			if imp.Name != nil {
-				walker.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				if imp.Name.String() == "." {
+					// Dot import - types from this package appear without package prefix
+					// We need to track this for proper type attribution
+					walker.packageNameToPackageImport["."] = pkgImportName
+					walker.dotImports = append(walker.dotImports, pkgImportName)
+				} else {
+					walker.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				}
 			} else {
 				defaultPkgName := path.Base(pkgImportName)
 				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
