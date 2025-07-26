@@ -434,25 +434,25 @@ func HasPackageTagOption(tags map[string]Tag, tagName, option string) bool {
 	return false
 }
 
-// GetRuntimePackageTags retrieves package-level tags that were embedded at compile time.
+// GetRuntimePackageTagsAll retrieves package-level tags from all packages that were embedded at compile time.
 // This function allows a compiled binary to self-reflect on package tags that were
 // present during compilation, without requiring access to source files.
 //
 // This function returns all tags from all packages. For package-specific tags,
-// use GetRuntimePackageTagsForPackage.
+// use GetRuntimePackageTags.
 //
 // This is useful for scenarios where you need package tag information in a static binary
 // that's deployed in an environment without the source code.
 //
 // Example usage:
 //   // This works even in a static binary without source files
-//   tags := GetRuntimePackageTags()
+//   tags := GetRuntimePackageTagsAll()
 //   version := GetPackageTagValue(tags, "version", "unknown")
 //   fmt.Printf("Binary version: %s\n", version)
 //
 // Returns:
-//   - map[string]Tag: Package-level tags embedded during compilation
-func GetRuntimePackageTags() map[string]Tag {
+//   - map[string]Tag: Package-level tags embedded during compilation from all packages
+func GetRuntimePackageTagsAll() map[string]Tag {
 	storedTags := shared.PackageTagsLoad()
 	result := make(map[string]Tag)
 	
@@ -465,11 +465,11 @@ func GetRuntimePackageTags() map[string]Tag {
 	return result
 }
 
-// GetRuntimePackageTagsForPackage retrieves package-level tags for a specific package.
+// GetRuntimePackageTags retrieves package-level tags for a specific package.
 // This function allows access to tags for a specific package import path.
 //
 // Example usage:
-//   tags := GetRuntimePackageTagsForPackage("github.com/myorg/mypackage")
+//   tags := GetRuntimePackageTags("github.com/myorg/mypackage")
 //   version := GetPackageTagValue(tags, "version", "unknown")
 //   fmt.Printf("Package version: %s\n", version)
 //
@@ -478,7 +478,7 @@ func GetRuntimePackageTags() map[string]Tag {
 //
 // Returns:
 //   - map[string]Tag: Package-level tags for the specified package
-func GetRuntimePackageTagsForPackage(pkgImportName string) map[string]Tag {
+func GetRuntimePackageTags(pkgImportName string) map[string]Tag {
 	storedTags := shared.PackageTagsLoadForPackage(pkgImportName)
 	result := make(map[string]Tag)
 	
@@ -491,8 +491,8 @@ func GetRuntimePackageTagsForPackage(pkgImportName string) map[string]Tag {
 	return result
 }
 
-// GetRuntimePackageTagValue is a convenience function to get the value of a specific 
-// package-level tag from runtime-embedded tags. Returns the tag value if found, 
+// GetRuntimePackageTagValueAll is a convenience function to get the value of a specific 
+// package-level tag from runtime-embedded tags across all packages. Returns the tag value if found, 
 // or the default value if not found.
 //
 // This function is particularly useful for static binaries that need to access
@@ -500,45 +500,46 @@ func GetRuntimePackageTagsForPackage(pkgImportName string) map[string]Tag {
 //
 // Example usage:
 //   // This works even in a static binary
-//   version := GetRuntimePackageTagValue("version", "unknown")
+//   version := GetRuntimePackageTagValueAll("version", "unknown")
 //   fmt.Printf("Binary version: %s\n", version)
-func GetRuntimePackageTagValue(tagName, defaultValue string) string {
-	tags := GetRuntimePackageTags()
+func GetRuntimePackageTagValueAll(tagName, defaultValue string) string {
+	tags := GetRuntimePackageTagsAll()
 	return GetPackageTagValue(tags, tagName, defaultValue)
 }
 
-// GetRuntimePackageTagValueForPackage is a convenience function to get the value of a specific 
+// GetRuntimePackageTagValue is a convenience function to get the value of a specific 
 // package-level tag for a specific package. Returns the tag value if found, 
 // or the default value if not found.
 //
 // Example usage:
-//   version := GetRuntimePackageTagValueForPackage("github.com/myorg/mypackage", "version", "unknown")
+//   version := GetRuntimePackageTagValue("github.com/myorg/mypackage", "version", "unknown")
 //   fmt.Printf("Package version: %s\n", version)
-func GetRuntimePackageTagValueForPackage(pkgImportName, tagName, defaultValue string) string {
-	tags := GetRuntimePackageTagsForPackage(pkgImportName)
+func GetRuntimePackageTagValue(pkgImportName, tagName, defaultValue string) string {
+	tags := GetRuntimePackageTags(pkgImportName)
 	return GetPackageTagValue(tags, tagName, defaultValue)
 }
 
-// HasRuntimePackageTagOption checks if a runtime-embedded package-level tag has a specific option.
+// HasRuntimePackageTagOptionAll checks if a runtime-embedded package-level tag has a specific option
+// across all packages.
 //
 // Example usage:
 //   // This works even in a static binary
-//   if HasRuntimePackageTagOption("mkunion", "no-type-registry") {
+//   if HasRuntimePackageTagOptionAll("mkunion", "no-type-registry") {
 //       fmt.Println("Type registry is disabled for this package")
 //   }
-func HasRuntimePackageTagOption(tagName, option string) bool {
-	tags := GetRuntimePackageTags()
+func HasRuntimePackageTagOptionAll(tagName, option string) bool {
+	tags := GetRuntimePackageTagsAll()
 	return HasPackageTagOption(tags, tagName, option)
 }
 
-// HasRuntimePackageTagOptionForPackage checks if a runtime-embedded package-level tag 
+// HasRuntimePackageTagOption checks if a runtime-embedded package-level tag 
 // for a specific package has a specific option.
 //
 // Example usage:
-//   if HasRuntimePackageTagOptionForPackage("github.com/myorg/mypackage", "mkunion", "no-type-registry") {
+//   if HasRuntimePackageTagOption("github.com/myorg/mypackage", "mkunion", "no-type-registry") {
 //       fmt.Println("Type registry is disabled for this package")
 //   }
-func HasRuntimePackageTagOptionForPackage(pkgImportName, tagName, option string) bool {
-	tags := GetRuntimePackageTagsForPackage(pkgImportName)
+func HasRuntimePackageTagOption(pkgImportName, tagName, option string) bool {
+	tags := GetRuntimePackageTags(pkgImportName)
 	return HasPackageTagOption(tags, tagName, option)
 }

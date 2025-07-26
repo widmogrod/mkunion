@@ -376,8 +376,8 @@ func TestRuntimePackageTags(t *testing.T) {
 	}
 	shared.PackageTagsStore(testPkgName, testTags)
 	
-	// Test GetRuntimePackageTagsForPackage
-	runtimeTags := GetRuntimePackageTagsForPackage(testPkgName)
+	// Test GetRuntimePackageTags
+	runtimeTags := GetRuntimePackageTags(testPkgName)
 	require.NotNil(t, runtimeTags)
 	assert.Equal(t, 3, len(runtimeTags))
 	
@@ -397,21 +397,21 @@ func TestRuntimePackageTags(t *testing.T) {
 	assert.Equal(t, "", mkunionTag.Value)
 	assert.Equal(t, []string{"no-type-registry"}, mkunionTag.Options)
 	
-	// Test GetRuntimePackageTagValueForPackage
-	version := GetRuntimePackageTagValueForPackage(testPkgName, "version", "unknown")
+	// Test GetRuntimePackageTagValue
+	version := GetRuntimePackageTagValue(testPkgName, "version", "unknown")
 	assert.Equal(t, "1.0.0", version)
 	
-	module := GetRuntimePackageTagValueForPackage(testPkgName, "module", "unknown")
+	module := GetRuntimePackageTagValue(testPkgName, "module", "unknown")
 	assert.Equal(t, "testmodule", module)
 	
-	nonexistent := GetRuntimePackageTagValueForPackage(testPkgName, "nonexistent", "default")
+	nonexistent := GetRuntimePackageTagValue(testPkgName, "nonexistent", "default")
 	assert.Equal(t, "default", nonexistent)
 	
-	// Test HasRuntimePackageTagOptionForPackage
-	assert.True(t, HasRuntimePackageTagOptionForPackage(testPkgName, "mkunion", "no-type-registry"))
-	assert.False(t, HasRuntimePackageTagOptionForPackage(testPkgName, "mkunion", "unknown"))
-	assert.False(t, HasRuntimePackageTagOptionForPackage(testPkgName, "version", "no-type-registry"))
-	assert.False(t, HasRuntimePackageTagOptionForPackage(testPkgName, "nonexistent", "any"))
+	// Test HasRuntimePackageTagOption
+	assert.True(t, HasRuntimePackageTagOption(testPkgName, "mkunion", "no-type-registry"))
+	assert.False(t, HasRuntimePackageTagOption(testPkgName, "mkunion", "unknown"))
+	assert.False(t, HasRuntimePackageTagOption(testPkgName, "version", "no-type-registry"))
+	assert.False(t, HasRuntimePackageTagOption(testPkgName, "nonexistent", "any"))
 }
 
 func TestRuntimePackageTagsMultiplePackages(t *testing.T) {
@@ -435,7 +435,7 @@ func TestRuntimePackageTagsMultiplePackages(t *testing.T) {
 	shared.PackageTagsStore(pkgB, tagsB)
 	
 	// Verify package A tags are preserved
-	runtimeTagsA := GetRuntimePackageTagsForPackage(pkgA)
+	runtimeTagsA := GetRuntimePackageTags(pkgA)
 	require.NotNil(t, runtimeTagsA)
 	assert.Equal(t, 2, len(runtimeTagsA))
 	
@@ -449,7 +449,7 @@ func TestRuntimePackageTagsMultiplePackages(t *testing.T) {
 	assert.Equal(t, "Team A", authorTag.Value)
 	
 	// Verify package B tags are preserved separately
-	runtimeTagsB := GetRuntimePackageTagsForPackage(pkgB)
+	runtimeTagsB := GetRuntimePackageTags(pkgB)
 	require.NotNil(t, runtimeTagsB)
 	assert.Equal(t, 2, len(runtimeTagsB))
 	
@@ -471,9 +471,9 @@ func TestRuntimePackageTagsMultiplePackages(t *testing.T) {
 	assert.False(t, hasAuthor)
 	
 	// Test convenience functions
-	versionA := GetRuntimePackageTagValueForPackage(pkgA, "version", "unknown")
+	versionA := GetRuntimePackageTagValue(pkgA, "version", "unknown")
 	assert.Equal(t, "1.0.0", versionA)
 	
-	versionB := GetRuntimePackageTagValueForPackage(pkgB, "version", "unknown")
+	versionB := GetRuntimePackageTagValue(pkgB, "version", "unknown")
 	assert.Equal(t, "2.0.0", versionB)
 }

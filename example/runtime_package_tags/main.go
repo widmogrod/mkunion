@@ -49,7 +49,7 @@ func demonstrateRuntimeAccess() {
 	const pkgImportName = "github.com/widmogrod/mkunion/example/runtime_package_tags"
 	
 	// Get runtime-embedded tags for our specific package
-	tags := shape.GetRuntimePackageTagsForPackage(pkgImportName)
+	tags := shape.GetRuntimePackageTags(pkgImportName)
 	
 	if len(tags) == 0 {
 		fmt.Println("No runtime tags found (type registry might be disabled)")
@@ -66,9 +66,9 @@ func demonstrateRuntimeAccess() {
 	}
 
 	// Using convenience functions with runtime tags
-	version := shape.GetRuntimePackageTagValueForPackage(pkgImportName, "version", "unknown")
-	author := shape.GetRuntimePackageTagValueForPackage(pkgImportName, "author", "anonymous")
-	license := shape.GetRuntimePackageTagValueForPackage(pkgImportName, "license", "proprietary")
+	version := shape.GetRuntimePackageTagValue(pkgImportName, "version", "unknown")
+	author := shape.GetRuntimePackageTagValue(pkgImportName, "author", "anonymous")
+	license := shape.GetRuntimePackageTagValue(pkgImportName, "license", "proprietary")
 	
 	fmt.Printf("\nRuntime metadata:\n")
 	fmt.Printf("  Version: %s\n", version)
@@ -76,19 +76,19 @@ func demonstrateRuntimeAccess() {
 	fmt.Printf("  License: %s\n", license)
 
 	// Check tag options
-	if shape.HasRuntimePackageTagOptionForPackage(pkgImportName, "version", "production") {
+	if shape.HasRuntimePackageTagOption(pkgImportName, "version", "production") {
 		fmt.Println("  ✓ Production-ready release")
 	}
 	
 	// Demonstrate backward compatibility: old functions still work but return namespaced keys
 	fmt.Println("\n=== Backward Compatibility ===")
-	allTags := shape.GetRuntimePackageTags()
-	fmt.Printf("GetRuntimePackageTags() returns %d tags with namespaced keys:\n", len(allTags))
+	allTags := shape.GetRuntimePackageTagsAll()
+	fmt.Printf("GetRuntimePackageTagsAll() returns %d tags with namespaced keys:\n", len(allTags))
 	for namespacedKey := range allTags {
 		fmt.Printf("  %s\n", namespacedKey)
 	}
 	
-	if shape.HasRuntimePackageTagOption("version", "stable") {
+	if shape.HasRuntimePackageTagOptionAll("version", "stable") {
 		fmt.Println("  ✓ Stable version")
 	}
 }
