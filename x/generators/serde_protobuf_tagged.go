@@ -18,9 +18,8 @@ func NewSerdeProtobufTagged(shape shape.Shape) *SerdeProtobufTagged {
 		didGenerateMarshalProtobufMethod:   make(map[string]bool),
 		didGenerateUnmarshalProtobufMethod: make(map[string]bool),
 		pkgUsed: PkgMap{
-			"proto":  "google.golang.org/protobuf/proto",
 			"fmt":    "fmt",
-			"binary": "encoding/binary",
+			"json":   "encoding/json",
 		},
 	}
 }
@@ -114,12 +113,7 @@ func (g *SerdeProtobufTagged) GenerateVarCasting(x shape.Shape) (string, error) 
 		func(x *shape.AliasLike) (string, error) {
 			result := &strings.Builder{}
 			result.WriteString("var (\n")
-			result.WriteString("\t_ proto.Message = (*")
-			result.WriteString(shape.ToGoTypeName(x,
-				shape.WithInstantiation(),
-				shape.WithRootPackage(shape.ToGoPkgName(x)),
-			))
-			result.WriteString(")(nil)\n")
+			result.WriteString("\t// Experimental protobuf support using JSON encoding\n")
 			result.WriteString(")\n\n")
 
 			return result.String(), nil
@@ -136,12 +130,7 @@ func (g *SerdeProtobufTagged) GenerateVarCasting(x shape.Shape) (string, error) 
 		func(x *shape.StructLike) (string, error) {
 			result := &strings.Builder{}
 			result.WriteString("var (\n")
-			result.WriteString("\t_ proto.Message = (*")
-			result.WriteString(shape.ToGoTypeName(x,
-				shape.WithInstantiation(),
-				shape.WithRootPackage(shape.ToGoPkgName(x)),
-			))
-			result.WriteString(")(nil)\n")
+			result.WriteString("\t// Experimental protobuf support using JSON encoding\n")
 			result.WriteString(")\n\n")
 
 			return result.String(), nil
@@ -173,7 +162,7 @@ func (g *SerdeProtobufTagged) GenerateMarshalProtobuf(x shape.Shape) (string, er
 	result.WriteString(fmt.Sprintf("\tif r == nil {\n"))
 	result.WriteString(fmt.Sprintf("\t\treturn nil, nil\n"))
 	result.WriteString(fmt.Sprintf("\t}\n"))
-	result.WriteString(fmt.Sprintf("\treturn proto.Marshal(r)\n"))
+	result.WriteString(fmt.Sprintf("\treturn json.Marshal(r)\n"))
 	result.WriteString("}\n\n")
 
 	return result.String(), nil
@@ -185,7 +174,7 @@ func (g *SerdeProtobufTagged) GenerateUnmarshalProtobuf(x shape.Shape) (string, 
 	result.WriteString(fmt.Sprintf("\tif len(data) == 0 {\n"))
 	result.WriteString(fmt.Sprintf("\t\treturn nil\n"))
 	result.WriteString(fmt.Sprintf("\t}\n"))
-	result.WriteString(fmt.Sprintf("\treturn proto.Unmarshal(data, r)\n"))
+	result.WriteString(fmt.Sprintf("\treturn json.Unmarshal(data, r)\n"))
 	result.WriteString("}\n\n")
 
 	return result.String(), nil

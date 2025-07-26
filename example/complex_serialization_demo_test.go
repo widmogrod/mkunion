@@ -213,11 +213,40 @@ func TestComplexSerializationChains(t *testing.T) {
 
 // Demonstration of format-specific serialization chains
 func TestProtobufSerializationChains(t *testing.T) {
-	t.Skip("Protobuf generator currently has issues - needs to generate proper proto.Message implementations")
+	// Create test data
+	originalFetch := &FetchSuccess{
+		Value: &SomeUser{Value: User{Name: "Alice"}},
+	}
 	
-	// NOTE: The current protobuf generator attempts to use proto.Marshal on types that don't implement 
-	// proto.Message interface. This would need to be fixed in the generator to work properly.
-	// The concept is sound, but the implementation needs adjustment.
+	// Test protobuf round-trip: go -> protobuf -> go
+	t.Run("OptionUser_Protobuf_Chain", func(t *testing.T) {
+		// go -> protobuf
+		protoBytes, err := OptionUserToProtobuf(originalFetch.Value)
+		if err != nil {
+			t.Fatalf("Failed to marshal to protobuf: %v", err)
+		}
+		
+		// protobuf -> go
+		restored, err := OptionUserFromProtobuf(protoBytes)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal from protobuf: %v", err)
+		}
+		
+		// Verify round-trip worked
+		if restored == nil {
+			t.Fatal("Restored value is nil")
+		}
+		
+		if someUser, ok := restored.(*SomeUser); ok {
+			if someUser.Value.Name != "Alice" {
+				t.Errorf("Expected name 'Alice', got '%s'", someUser.Value.Name)
+			}
+		} else {
+			t.Error("Expected SomeUser variant")
+		}
+		
+		t.Logf("Protobuf round-trip successful: %+v -> %+v", originalFetch.Value, restored)
+	})
 }
 
 func TestSQLSerializationChains(t *testing.T) {

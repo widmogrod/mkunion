@@ -13,9 +13,8 @@ func NewSerdeProtobufUnion(union *shape.UnionLike) *SerdeProtobufUnion {
 		skipImportsAndPackage: false,
 		skipInitFunc:          false,
 		pkgUsed: PkgMap{
-			"proto":  "google.golang.org/protobuf/proto",
 			"fmt":    "fmt",
-			"binary": "encoding/binary",
+			"json":   "encoding/json",
 		},
 	}
 }
@@ -104,25 +103,39 @@ func (g *SerdeProtobufUnion) Generate() ([]byte, error) {
 }
 
 func (g *SerdeProtobufUnion) constructionf(x shape.Shape, template string) string {
+	typeParamNames := shape.ToGoTypeParamsNames(x)
+	typeName := fmt.Sprintf(template, shape.Name(x))
+	if len(typeParamNames) == 0 {
+		return typeName
+	}
+
+	return fmt.Sprintf("%s[%s]",
+		typeName,
+		strings.Join(typeParamNames, ","),
+	)
+}
+
+func (g *SerdeProtobufUnion) funcDeclarationf(x shape.Shape, template string) string {
 	typeParams := shape.ExtractTypeParams(x)
 	typeName := fmt.Sprintf(template, shape.Name(x))
 	if len(typeParams) == 0 {
 		return typeName
 	}
 
-	typeName += "["
+	// For function declarations, the type parameters go after the function name
+	// e.g. OptionFromProtobuf[T any] not Option[T any]FromProtobuf
+	paramDecls := make([]string, len(typeParams))
 	for i, t := range typeParams {
-		if i > 0 {
-			typeName += ", "
-		}
 		paramType := shape.ToGoTypeName(t.Type,
 			shape.WithRootPackage(g.union.PkgName),
 		)
-		typeName += fmt.Sprintf("%s %s", t.Name, paramType)
+		paramDecls[i] = fmt.Sprintf("%s %s", t.Name, paramType)
 	}
-	typeName += "]"
 
-	return typeName
+	return fmt.Sprintf("%s[%s]",
+		typeName,
+		strings.Join(paramDecls, ", "),
+	)
 }
 
 func (g *SerdeProtobufUnion) parametrisedf(x shape.Shape, template string) string {
@@ -171,6 +184,15 @@ func (g *SerdeProtobufUnion) GenerateUnionMessage(union *shape.UnionLike) ([]byt
 	}
 	body.WriteString("}\n\n")
 
+	// Add simple marshal/unmarshal methods for the protobuf message
+	body.WriteString(fmt.Sprintf("func (m *%sProtoMessage) Marshal() ([]byte, error) {\n", shape.Name(union)))
+	body.WriteString(fmt.Sprintf("\treturn json.Marshal(m)\n"))
+	body.WriteString(fmt.Sprintf("}\n\n"))
+
+	body.WriteString(fmt.Sprintf("func (m *%sProtoMessage) Unmarshal(data []byte) error {\n", shape.Name(union)))
+	body.WriteString(fmt.Sprintf("\treturn json.Unmarshal(data, m)\n"))
+	body.WriteString(fmt.Sprintf("}\n\n"))
+
 	return body.Bytes(), nil
 }
 
@@ -179,15 +201,15 @@ func (g *SerdeProtobufUnion) GenerateUnionFromFunc(union *shape.UnionLike) ([]by
 
 	errorContext := fmt.Sprintf("%s.%sFromProtobuf:", g.union.PkgName, shape.Name(union))
 
-	body.WriteString(fmt.Sprintf("func %sFromProtobuf(data []byte) (%s, error) {\n",
-		g.constructionf(union, "%s"),
+	body.WriteString(fmt.Sprintf("func %s(data []byte) (%s, error) {\n",
+		g.funcDeclarationf(union, "%sFromProtobuf"),
 		g.parametrisedf(union, "%s"),
 	))
 	body.WriteString(fmt.Sprintf("\tif len(data) == 0 {\n"))
 	body.WriteString(fmt.Sprintf("\t\treturn nil, nil\n"))
 	body.WriteString(fmt.Sprintf("\t}\n"))
 	body.WriteString(fmt.Sprintf("\tvar msg %sProtoMessage\n", shape.Name(union)))
-	body.WriteString(fmt.Sprintf("\terr := proto.Unmarshal(data, &msg)\n"))
+	body.WriteString(fmt.Sprintf("\terr := msg.Unmarshal(data)\n"))
 	body.WriteString(fmt.Sprintf("\tif err != nil {\n"))
 	body.WriteString(fmt.Sprintf("\t\treturn nil, fmt.Errorf(\"%s %%w\", err)\n", errorContext))
 	body.WriteString(fmt.Sprintf("\t}\n\n"))
@@ -199,7 +221,7 @@ func (g *SerdeProtobufUnion) GenerateUnionFromFunc(union *shape.UnionLike) ([]by
 			strings.ToUpper(g.VariantName(variant)),
 		))
 		body.WriteString(fmt.Sprintf("\t\tvar result %s\n", g.parametrisedf(variant, "%s")))
-		body.WriteString(fmt.Sprintf("\t\terr := proto.Unmarshal(msg.%s, &result)\n", g.VariantName(variant)))
+		body.WriteString(fmt.Sprintf("\t\terr := json.Unmarshal(msg.%s, &result)\n", g.VariantName(variant)))
 		body.WriteString(fmt.Sprintf("\t\tif err != nil {\n"))
 		body.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"%s variant %d; %%w\", err)\n", errorContext, i))
 		body.WriteString(fmt.Sprintf("\t\t}\n"))
@@ -218,8 +240,8 @@ func (g *SerdeProtobufUnion) GenerateUnionToFunc(union *shape.UnionLike) ([]byte
 
 	errorContext := fmt.Sprintf("%s.%sToProtobuf:", g.union.PkgName, shape.Name(union))
 
-	body.WriteString(fmt.Sprintf("func %sToProtobuf(x %s) ([]byte, error) {\n",
-		g.constructionf(union, "%s"),
+	body.WriteString(fmt.Sprintf("func %s(x %s) ([]byte, error) {\n",
+		g.funcDeclarationf(union, "%sToProtobuf"),
 		g.parametrisedf(union, "%s"),
 	))
 	body.WriteString(fmt.Sprintf("\tif x == nil {\n"))
@@ -231,7 +253,7 @@ func (g *SerdeProtobufUnion) GenerateUnionToFunc(union *shape.UnionLike) ([]byte
 
 	for i, variant := range union.Variant {
 		body.WriteString(fmt.Sprintf("\t\tfunc (y *%s) ([]byte, error) {\n", g.parametrisedf(variant, "%s")))
-		body.WriteString(fmt.Sprintf("\t\t\tdata, err := proto.Marshal(y)\n"))
+		body.WriteString(fmt.Sprintf("\t\t\tdata, err := json.Marshal(y)\n"))
 		body.WriteString(fmt.Sprintf("\t\t\tif err != nil {\n"))
 		body.WriteString(fmt.Sprintf("\t\t\t\treturn nil, fmt.Errorf(\"%s variant %d; %%w\", err)\n", errorContext, i))
 		body.WriteString(fmt.Sprintf("\t\t\t}\n"))
@@ -242,7 +264,7 @@ func (g *SerdeProtobufUnion) GenerateUnionToFunc(union *shape.UnionLike) ([]byte
 		))
 		body.WriteString(fmt.Sprintf("\t\t\t\t%s: data,\n", g.VariantName(variant)))
 		body.WriteString(fmt.Sprintf("\t\t\t}\n"))
-		body.WriteString(fmt.Sprintf("\t\t\treturn proto.Marshal(msg)\n"))
+		body.WriteString(fmt.Sprintf("\t\t\treturn msg.Marshal()\n"))
 		body.WriteString(fmt.Sprintf("\t\t},\n"))
 	}
 	body.WriteString(fmt.Sprintf("\t)\n"))
