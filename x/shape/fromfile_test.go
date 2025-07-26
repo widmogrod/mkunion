@@ -430,13 +430,13 @@ func TestIndexedTypeWalker_ExpandedShapes(t *testing.T) {
 	expanded := inferred.ExpandedShapes()
 
 	t.Run("should detect union type", func(t *testing.T) {
-		require.Contains(t, indexed, "testasset.Option[ListOf2[*O,time.Location]]")
+		require.Contains(t, indexed, "github.com/widmogrod/mkunion/x/shape/testasset.Option[ListOf2[*O,time.Location]]")
 		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.Option[ListOf2[*O,time.Location]]")
 	})
 	t.Run("expanded should have variant of a union", func(t *testing.T) {
-		require.NotContains(t, indexed, "testasset.Some[ListOf2[*O,time.Location]]")
+		require.NotContains(t, indexed, "github.com/widmogrod/mkunion/x/shape/testasset.Some[ListOf2[*O,time.Location]]")
 		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.Some[ListOf2[*O,time.Location]]")
-		require.NotContains(t, indexed, "testasset.None[ListOf2[*O,time.Location]]")
+		require.NotContains(t, indexed, "github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*O,time.Location]]")
 		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*O,time.Location]]")
 	})
 }

@@ -1557,7 +1557,7 @@ func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 			}
 		}
 
-		name := ToGoTypeName(indexed)
+		name := ToGoTypeName(indexed, WithPkgImportName())
 
 		if _, ok := walker.indexedShapes[name]; !ok {
 			walker.indexedShapes[name] = indexed
