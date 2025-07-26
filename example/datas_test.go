@@ -9,22 +9,22 @@ import (
 func TestHandleFetch(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    FetchResult
+		input    SimpleFetchResult
 		expected string
 	}{
 		{
 			name:     "UserFound",
-			input:    MkOk[APIError](MkSome(User{Name: "Alice"})),
+			input:    MkOk[SimpleAPIError](MkSome(SimpleUser{Name: "Alice"})),
 			expected: "Found user: Alice",
 		},
 		{
 			name:     "UserNotFound",
-			input:    MkOk[APIError](MkNone[User]()),
+			input:    MkOk[SimpleAPIError](MkNone[SimpleUser]()),
 			expected: "User not found",
 		},
 		{
 			name:     "APIErrorOccurred",
-			input:    MkErr[Option[User]](APIError{Code: 500, Message: "Internal Server Error"}),
+			input:    MkErr[Option[SimpleUser]](SimpleAPIError{Code: 500, Message: "Internal Server Error"}),
 			expected: "API error: {500 Internal Server Error}",
 		},
 	}
