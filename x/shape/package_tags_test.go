@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/widmogrod/mkunion/x/shared"
 )
 
 func TestPackageLevelTagExtraction(t *testing.T) {
@@ -360,4 +361,59 @@ func TestHasPackageTagOption(t *testing.T) {
 	// Test with nil tags
 	result := HasPackageTagOption(nil, "mkunion", "no-type-registry")
 	assert.False(t, result)
+}
+
+func TestRuntimePackageTags(t *testing.T) {
+	// Test the runtime package tag functions by simulating what the generated code would do
+	
+	// First, clear any existing package tags
+	shared.PackageTagsStore(map[string]interface{}{})
+	
+	// Simulate what generated code would do - store package tags
+	testTags := map[string]interface{}{
+		"version": Tag{Value: "1.0.0", Options: []string{"stable"}},
+		"module":  Tag{Value: "testmodule", Options: nil},
+		"mkunion": Tag{Value: "", Options: []string{"no-type-registry"}},
+	}
+	shared.PackageTagsStore(testTags)
+	
+	// Test GetRuntimePackageTags
+	runtimeTags := GetRuntimePackageTags()
+	require.NotNil(t, runtimeTags)
+	assert.Equal(t, 3, len(runtimeTags))
+	
+	// Verify individual tags
+	versionTag, ok := runtimeTags["version"]
+	require.True(t, ok)
+	assert.Equal(t, "1.0.0", versionTag.Value)
+	assert.Equal(t, []string{"stable"}, versionTag.Options)
+	
+	moduleTag, ok := runtimeTags["module"]
+	require.True(t, ok)
+	assert.Equal(t, "testmodule", moduleTag.Value)
+	assert.Nil(t, moduleTag.Options)
+	
+	mkunionTag, ok := runtimeTags["mkunion"]
+	require.True(t, ok)
+	assert.Equal(t, "", mkunionTag.Value)
+	assert.Equal(t, []string{"no-type-registry"}, mkunionTag.Options)
+	
+	// Test GetRuntimePackageTagValue
+	version := GetRuntimePackageTagValue("version", "unknown")
+	assert.Equal(t, "1.0.0", version)
+	
+	module := GetRuntimePackageTagValue("module", "unknown")
+	assert.Equal(t, "testmodule", module)
+	
+	nonexistent := GetRuntimePackageTagValue("nonexistent", "default")
+	assert.Equal(t, "default", nonexistent)
+	
+	// Test HasRuntimePackageTagOption
+	assert.True(t, HasRuntimePackageTagOption("mkunion", "no-type-registry"))
+	assert.False(t, HasRuntimePackageTagOption("mkunion", "unknown"))
+	assert.False(t, HasRuntimePackageTagOption("version", "no-type-registry"))
+	assert.False(t, HasRuntimePackageTagOption("nonexistent", "any"))
+	
+	// Clean up for other tests
+	shared.PackageTagsStore(map[string]interface{}{})
 }

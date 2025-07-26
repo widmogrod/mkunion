@@ -961,6 +961,14 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 			"shared": "github.com/widmogrod/mkunion/x/shared",
 		},
 	}
+	
+	// Add shape package if we have package tags to embed
+	pkgTags := inferred.PackageTags()
+	if len(pkgTags) > 0 {
+		maps = append(maps, generators.PkgMap{
+			"shape": "github.com/widmogrod/mkunion/x/shape",
+		})
+	}
 	for _, key := range sortedKeys {
 		inst := found[key]
 		next := shape.ExtractPkgImportNamesForTypeInitialisation(inst)
@@ -973,6 +981,43 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 
 	contents.WriteString("func init() {\n")
 	// generate type registry
+
+	// Embed package tags for runtime access
+	if len(pkgTags) > 0 {
+		contents.WriteString("\t// Package tags embedded at compile time\n")
+		if packageName == "shared" {
+			contents.WriteString("\tPackageTagsStore(map[string]interface{}{\n")
+		} else {
+			contents.WriteString("\tshared.PackageTagsStore(map[string]interface{}{\n")
+		}
+		
+		sortedTagKeys := make([]string, 0, len(pkgTags))
+		for k := range pkgTags {
+			sortedTagKeys = append(sortedTagKeys, k)
+		}
+		sort.Strings(sortedTagKeys)
+		
+		for _, tagKey := range sortedTagKeys {
+			tag := pkgTags[tagKey]
+			optionsStr := "nil"
+			if len(tag.Options) > 0 {
+				opts := make([]string, len(tag.Options))
+				for i, opt := range tag.Options {
+					opts[i] = fmt.Sprintf("%q", opt)
+				}
+				optionsStr = fmt.Sprintf("[]string{%s}", strings.Join(opts, ", "))
+			}
+			
+			if packageName == "shape" {
+				contents.WriteString(fmt.Sprintf("\t\t%q: Tag{Value: %q, Options: %s},\n", 
+					tagKey, tag.Value, optionsStr))
+			} else {
+				contents.WriteString(fmt.Sprintf("\t\t%q: shape.Tag{Value: %q, Options: %s},\n", 
+					tagKey, tag.Value, optionsStr))
+			}
+		}
+		contents.WriteString("\t})\n")
+	}
 
 	for _, key := range sortedKeys {
 		inst := found[key]

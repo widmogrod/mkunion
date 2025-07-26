@@ -48,6 +48,122 @@ Custom tags are useful for:
 - Package metadata
 - Custom code generation tools
 
+## Runtime Package Tag Access
+
+mkunion automatically embeds package-level tags into the generated type registry, allowing binaries to self-reflect on their package tags at runtime without requiring access to source files.
+
+### Compile-Time Embedding
+
+When mkunion generates a type registry, it automatically includes all package-level tags:
+
+```go
+//go:tag version:"1.2.3,stable,production"
+//go:tag module:"myapp"
+//go:tag author:"Development Team"
+package main
+
+//go:tag mkunion:"Status"
+type (
+    Success struct{ Message string }
+    Error   struct{ Code int; Message string }
+)
+```
+
+The generated `types_reg_gen.go` will contain:
+
+```go
+func init() {
+    // Package tags embedded at compile time
+    shared.PackageTagsStore(map[string]interface{}{
+        "author":  shape.Tag{Value: "Development Team", Options: nil},
+        "module":  shape.Tag{Value: "myapp", Options: nil},
+        "version": shape.Tag{Value: "1.2.3", Options: []string{"stable", "production"}},
+    })
+    // ... type registry entries
+}
+```
+
+### Runtime API Functions
+
+The `shape` package provides several functions for accessing embedded package tags at runtime:
+
+#### GetRuntimePackageTags()
+
+Retrieves all package-level tags embedded at compile time:
+
+```go
+import "github.com/widmogrod/mkunion/x/shape"
+
+// This works even in a static binary without source files
+tags := shape.GetRuntimePackageTags()
+fmt.Printf("All tags: %+v\n", tags)
+```
+
+#### GetRuntimePackageTagValue(tagName, defaultValue)
+
+Gets the value of a specific package tag with a fallback default:
+
+```go
+// Get package version, fallback to "unknown"
+version := shape.GetRuntimePackageTagValue("version", "unknown")
+fmt.Printf("Binary version: %s\n", version)
+
+// Get author, fallback to "anonymous"  
+author := shape.GetRuntimePackageTagValue("author", "anonymous")
+fmt.Printf("Author: %s\n", author)
+```
+
+#### HasRuntimePackageTagOption(tagName, option)
+
+Checks if a package tag has a specific option:
+
+```go
+// Check if version is marked as stable
+if shape.HasRuntimePackageTagOption("version", "stable") {
+    fmt.Println("This is a stable release")
+}
+
+// Check if type registry is disabled
+if shape.HasRuntimePackageTagOption("mkunion", "no-type-registry") {
+    fmt.Println("Type registry is disabled")
+}
+```
+
+### Use Cases for Runtime Tags
+
+Runtime package tag access is particularly useful for:
+
+1. **Version Information**: Embed version strings and release metadata
+2. **Build Configuration**: Store build-time flags and settings
+3. **License and Attribution**: Include author and license information
+4. **Feature Flags**: Control runtime behavior based on compile-time tags
+5. **Deployment Metadata**: Store environment and deployment information
+
+### Static Binary Self-Reflection
+
+This feature enables static binaries to introspect their own metadata without requiring source files or external configuration:
+
+```go
+func main() {
+    // Binary can self-reflect on its package tags
+    version := shape.GetRuntimePackageTagValue("version", "unknown")
+    author := shape.GetRuntimePackageTagValue("author", "unknown")
+    
+    fmt.Printf("This is %s version %s\n", author, version)
+    
+    if shape.HasRuntimePackageTagOption("version", "production") {
+        fmt.Println("Running in production mode")
+    }
+}
+```
+
+### Important Notes
+
+- Runtime tag access only works when the type registry is generated
+- If you use `//go:tag mkunion:",no-type-registry"`, no tags will be embedded
+- Tags are embedded as constants at compile time - they cannot be modified at runtime
+- The runtime APIs return empty maps/defaults when no tags are embedded
+
 ## Extracting Package Tags
 
 mkunion provides several functions to extract package-level tags:

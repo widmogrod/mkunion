@@ -433,3 +433,59 @@ func HasPackageTagOption(tags map[string]Tag, tagName, option string) bool {
 
 	return false
 }
+
+// GetRuntimePackageTags retrieves package-level tags that were embedded at compile time.
+// This function allows a compiled binary to self-reflect on package tags that were
+// present during compilation, without requiring access to source files.
+//
+// This is useful for scenarios where you need package tag information in a static binary
+// that's deployed in an environment without the source code.
+//
+// Example usage:
+//   // This works even in a static binary without source files
+//   tags := GetRuntimePackageTags()
+//   version := GetPackageTagValue(tags, "version", "unknown")
+//   fmt.Printf("Binary version: %s\n", version)
+//
+// Returns:
+//   - map[string]Tag: Package-level tags embedded during compilation
+func GetRuntimePackageTags() map[string]Tag {
+	storedTags := shared.PackageTagsLoad()
+	result := make(map[string]Tag)
+	
+	for key, value := range storedTags {
+		if tag, ok := value.(Tag); ok {
+			result[key] = tag
+		}
+	}
+	
+	return result
+}
+
+// GetRuntimePackageTagValue is a convenience function to get the value of a specific 
+// package-level tag from runtime-embedded tags. Returns the tag value if found, 
+// or the default value if not found.
+//
+// This function is particularly useful for static binaries that need to access
+// compile-time package tag information without source file access.
+//
+// Example usage:
+//   // This works even in a static binary
+//   version := GetRuntimePackageTagValue("version", "unknown")
+//   fmt.Printf("Binary version: %s\n", version)
+func GetRuntimePackageTagValue(tagName, defaultValue string) string {
+	tags := GetRuntimePackageTags()
+	return GetPackageTagValue(tags, tagName, defaultValue)
+}
+
+// HasRuntimePackageTagOption checks if a runtime-embedded package-level tag has a specific option.
+//
+// Example usage:
+//   // This works even in a static binary
+//   if HasRuntimePackageTagOption("mkunion", "no-type-registry") {
+//       fmt.Println("Type registry is disabled for this package")
+//   }
+func HasRuntimePackageTagOption(tagName, option string) bool {
+	tags := GetRuntimePackageTags()
+	return HasPackageTagOption(tags, tagName, option)
+}

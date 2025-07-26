@@ -11,6 +11,7 @@ import (
 var (
 	registerJSONMarshaller = sync.Map{}
 	registerType           = sync.Map{}
+	packageTags            = sync.Map{}
 )
 
 //go:tag shape:"-"
@@ -26,6 +27,27 @@ func TypeRegistryLoad(typeFullName string) (any, bool) {
 func TypeRegistryStore[A any](typeFullName string) {
 	destinationTypePtr := new(A)
 	registerType.Store(typeFullName, *destinationTypePtr)
+}
+
+// PackageTagsStore stores package-level tags for runtime access.
+// This function is typically called from generated code during package initialization.
+func PackageTagsStore(tags map[string]interface{}) {
+	for key, value := range tags {
+		packageTags.Store(key, value)
+	}
+}
+
+// PackageTagsLoad retrieves package-level tags that were embedded at compile time.
+// Returns a map of all stored package tags.
+func PackageTagsLoad() map[string]interface{} {
+	result := make(map[string]interface{})
+	packageTags.Range(func(key, value interface{}) bool {
+		if keyStr, ok := key.(string); ok {
+			result[keyStr] = value
+		}
+		return true
+	})
+	return result
 }
 
 func FullTypeName(x reflect.Type) string {
