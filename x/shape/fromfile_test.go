@@ -431,13 +431,13 @@ func TestIndexedTypeWalker_ExpandedShapes(t *testing.T) {
 
 	t.Run("should detect union type", func(t *testing.T) {
 		require.Contains(t, indexed, "testasset.Option[ListOf2[*O,time.Location]]")
-		require.Contains(t, expanded, "testasset.Option[ListOf2[*O,time.Location]]")
+		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.Option[ListOf2[*O,time.Location]]")
 	})
 	t.Run("expanded should have variant of a union", func(t *testing.T) {
 		require.NotContains(t, indexed, "testasset.Some[ListOf2[*O,time.Location]]")
-		require.Contains(t, expanded, "testasset.Some[ListOf2[*O,time.Location]]")
+		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.Some[ListOf2[*O,time.Location]]")
 		require.NotContains(t, indexed, "testasset.None[ListOf2[*O,time.Location]]")
-		require.Contains(t, expanded, "testasset.None[ListOf2[*O,time.Location]]")
+		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*O,time.Location]]")
 	})
 }
 
@@ -567,7 +567,7 @@ func OptionToJSON[T1 ListOf2[*O,time.Location]](x Option[T1]) ([]byte, error) {
 						},
 					},
 				},
-				"test_package.None[int]": &RefName{
+				"github.com/test_package.None[int]": &RefName{
 					Name:          "None",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -597,7 +597,7 @@ func (r *Some[T1]) _unmarshalJSONSomeLb_T1_bL(data []byte) (Some[T1], error) {
 }
 `,
 			expected: map[string]Shape{
-				"test_package.Some[int]": &RefName{
+				"github.com/test_package.Some[int]": &RefName{
 					Name:          "Some",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
