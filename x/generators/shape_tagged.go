@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shape"
+	"sort"
 	"strings"
 )
 
@@ -510,7 +511,16 @@ func TagsToStr(x map[string]shape.Tag) string {
 	result := &bytes.Buffer{}
 
 	fmt.Fprintf(result, "map[string]shape.Tag{\n")
-	for k, v := range x {
+
+	// Sort keys for deterministic output
+	keys := make([]string, 0, len(x))
+	for k := range x {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := x[k]
 		fmt.Fprintf(result, "\t%q: %s,\n", k, padLeftTabs2(1, TagToStr(v, true)))
 	}
 	fmt.Fprintf(result, "}")
