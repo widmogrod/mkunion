@@ -187,7 +187,9 @@ func (g *SerdeJSONUnion) ExtractImportFuncs(s shape.Shape) []string {
 
 func StrRegisterUnionFuncName(rootPkgName string, x shape.Shape) string {
 	return fmt.Sprintf("shared.JSONMarshallerRegister(%q, %s, %s)",
-		shape.ToGoTypeName(x, shape.WithPkgImportName(), shape.WithInstantiation()),
+		shape.ToGoTypeName(x,
+			//shape.WithRootPackage(rootPkgName),
+			shape.WithPkgImportName(), shape.WithInstantiation()),
 		StrFuncNameFromJSONInstantiated(rootPkgName, x),
 		StrFuncNameToJSONInstantiated(rootPkgName, x),
 	)
@@ -215,9 +217,18 @@ func StrFuncNameToJSONInstantiated(rootPkgName string, x shape.Shape) string {
 
 func StrInstantiatef(pkgName string, x shape.Shape, template string) string {
 	typeParamTypes := shape.ToGoTypeParamsTypes(x)
-	typeName := fmt.Sprintf(template, shape.Name(x))
+
+	// Check if we need to add package prefix
+	shapePkgName := shape.PkgName(x)
+	funcName := fmt.Sprintf(template, shape.Name(x))
+
+	// If the shape is from a different package, add the package prefix
+	if shapePkgName != "" && shapePkgName != pkgName {
+		funcName = shapePkgName + "." + funcName
+	}
+
 	if len(typeParamTypes) == 0 {
-		return typeName
+		return funcName
 	}
 
 	instantiatedNames := make([]string, len(typeParamTypes))
@@ -229,7 +240,7 @@ func StrInstantiatef(pkgName string, x shape.Shape, template string) string {
 	}
 
 	return fmt.Sprintf("%s[%s]",
-		typeName,
+		funcName,
 		strings.Join(instantiatedNames, ","),
 	)
 }

@@ -1063,7 +1063,7 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 			}
 			some = shape.IndexWith(some, ref)
 			if shape.IsUnion(some) {
-				contents.WriteString(fmt.Sprintf("\t%s\n", generators.StrRegisterUnionFuncName(shape.ToGoPkgName(some), some)))
+				contents.WriteString(fmt.Sprintf("\t%s\n", generators.StrRegisterUnionFuncName(packageName, some)))
 			}
 		}
 	}
@@ -1265,11 +1265,11 @@ func findGeneratedFiles(dir string) ([]string, error) {
 // isGeneratedFile checks if a file is a generated file based on naming patterns
 func isGeneratedFile(path string) bool {
 	fileName := filepath.Base(path)
-	
+
 	// Check for the specific generated file patterns used by mkunion
 	generatedSuffixes := []string{
 		"_union_gen.go",
-		"_shape_gen.go", 
+		"_shape_gen.go",
 		"_serde_gen.go",
 		"_match_gen.go",
 	}

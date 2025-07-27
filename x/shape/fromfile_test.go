@@ -676,7 +676,7 @@ type Storage[T any] interface {
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			w := newIndexedTypeWalkerWithContentBody(
+			w := NewIndexedTypeWalkerWithContentBody(
 				uc.body,
 				func(x *IndexedTypeWalker) {
 					x.SetPkgImportName("github.com/test_package")

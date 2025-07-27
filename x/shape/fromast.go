@@ -26,9 +26,11 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 			Indexed:       nil,
 		}
 
+		log.Debugf("FromAST: Creating RefName for %s (before options)", y.Name)
 		for _, f := range fx {
 			f(result)
 		}
+		log.Debugf("FromAST: RefName for %s after options: pkg=%s, pkgImport=%s", y.Name, result.PkgName, result.PkgImportName)
 
 		return result
 
@@ -154,6 +156,23 @@ func InjectPkgImportName(pkgNameToImportName map[string]string) func(x Shape) {
 					y.PkgImportName = pkgImportName
 				} else {
 					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				}
+			}
+		}
+	}
+}
+
+// InjectDotImportResolver provides a function to resolve unqualified types from dot imports
+func InjectDotImportResolver(resolver func(name string) (pkgName, pkgImportName string, found bool)) func(x Shape) {
+	return func(x Shape) {
+		switch y := x.(type) {
+		case *RefName:
+			// Only apply to unqualified types (no package name set)
+			if y.PkgName == "" && y.PkgImportName == "" {
+				if pkgName, pkgImportName, found := resolver(y.Name); found {
+					log.Debugf("InjectDotImportResolver: resolved %s to %s:%s", y.Name, pkgImportName, pkgName)
+					y.PkgName = pkgName
+					y.PkgImportName = pkgImportName
 				}
 			}
 		}

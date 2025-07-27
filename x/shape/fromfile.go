@@ -32,6 +32,7 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 		possibleTaggedTypes:  map[string]map[string]Tag{},
 		shapes:               make(map[string]Shape),
 		taggedNodes:          make(map[string][]*NodeAndTag),
+		dotImports:           []string{},
 	}
 
 	fset := token.NewFileSet()
@@ -41,6 +42,28 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 	}
 
 	ast.Walk(result, f)
+	return result, nil
+}
+
+func InferFromFileWithContentBody(x string, pkgImportName string) (*InferredInfo, error) {
+	result := &InferredInfo{
+		fileName:             "_new_file_to_infer.go",
+		pkgImportName:        pkgImportName,
+		possibleVariantTypes: map[string][]string{},
+		possibleTaggedTypes:  map[string]map[string]Tag{},
+		shapes:               make(map[string]Shape),
+		taggedNodes:          make(map[string][]*NodeAndTag),
+		dotImports:           []string{},
+	}
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, result.fileName, []byte(x), parser.ParseComments)
+	if err != nil {
+		panic(err)
+	}
+
+	ast.Walk(result, f)
+
 	return result, nil
 }
 
@@ -178,6 +201,7 @@ type InferredInfo struct {
 	currentType                string
 	possibleTaggedTypes        map[string]map[string]Tag
 	taggedNodes                map[string][]*NodeAndTag
+	dotImports                 []string // List of dot-imported packages
 }
 
 type NodeAndTag struct {
@@ -208,6 +232,30 @@ func (f *InferredInfo) PackageImportName() string {
 
 func (f *InferredInfo) PackageNameToPackageImport() map[string]string {
 	return f.packageNameToPackageImport
+}
+
+// ResolveUnqualifiedType checks if an unqualified type name comes from a dot import
+// Returns the package name, package import path, and whether it was found in dot imports
+func (f *InferredInfo) ResolveUnqualifiedType(name string) (pkgName, pkgImportName string, foundInDotImport bool) {
+	log.Debugf("ResolveUnqualifiedType: checking %s (dot imports: %v)", name, f.dotImports)
+	// Check each dot import to see if it contains this type
+	for _, dotImportPath := range f.dotImports {
+		// Try to look up the shape in the dot imported package
+		shapes := LookupPkgShapeOnDisk(dotImportPath)
+		log.Debugf("ResolveUnqualifiedType: found %d shapes in %s", len(shapes), dotImportPath)
+		for _, shape := range shapes {
+			shapeName := Name(shape)
+			log.Debugf("ResolveUnqualifiedType: comparing %s with %s", name, shapeName)
+			if shapeName == name {
+				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
+				log.Debugf("ResolveUnqualifiedType: found %s in dot import %s (pkg: %s)", name, dotImportPath, pkgName)
+				return pkgName, dotImportPath, true
+			}
+		}
+	}
+	// Fall back to current package
+	log.Debugf("ResolveUnqualifiedType: %s not found in dot imports, using current package", name)
+	return f.pkgName, f.pkgImportName, false
 }
 
 func (f *InferredInfo) RetrieveUnions() []*UnionLike {
@@ -562,7 +610,13 @@ func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
 		for _, imp := range t.Imports {
 			pkgImportName := strings.Trim(imp.Path.Value, "\"")
 			if imp.Name != nil {
-				f.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				if imp.Name.String() == "." {
+					// This is a dot import
+					f.dotImports = append(f.dotImports, pkgImportName)
+					log.Debugf("InferredInfo: Registered dot import %s", pkgImportName)
+				} else {
+					f.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				}
 			} else {
 				defaultPkgName := path.Base(pkgImportName)
 				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
@@ -1054,6 +1108,7 @@ func nameExistsInParams(name string, params []TypeParam) bool {
 
 func (f *InferredInfo) optionAST() []FromASTOption {
 	return []FromASTOption{
+		InjectDotImportResolver(f.ResolveUnqualifiedType),
 		InjectPkgName(f.pkgName),
 		InjectPkgImportName(f.packageNameToPackageImport),
 	}
@@ -1135,6 +1190,7 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 		knownTypeNamesInPackage:    map[string]struct{}{},
 		pkgName:                    "", // will be set in ast.Walk
 		pkgImportName:              tryToFindPkgImportName(path.Join(dir, "shape_index_type_in_dir.go")),
+		dotImports:                 []string{},
 	}
 
 	fset := token.NewFileSet()
@@ -1174,11 +1230,12 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 	return result, nil
 }
 
-func newIndexedTypeWalkerWithContentBody(x string, opts ...func(x *IndexedTypeWalker)) *IndexedTypeWalker {
+func NewIndexedTypeWalkerWithContentBody(x string, opts ...func(x *IndexedTypeWalker)) *IndexedTypeWalker {
 	walker := &IndexedTypeWalker{
 		indexedShapes:              make(map[string]Shape),
 		packageNameToPackageImport: make(map[string]string),
 		knownTypeNamesInPackage:    map[string]struct{}{},
+		dotImports:                 []string{},
 	}
 
 	for _, opt := range opts {
@@ -1206,6 +1263,7 @@ type IndexedTypeWalker struct {
 	pkgName       string
 	pkgImportName string
 	packageTags   map[string]Tag
+	dotImports    []string // List of dot-imported packages
 }
 
 func (walker *IndexedTypeWalker) PackageName() string {
@@ -1222,6 +1280,26 @@ func (walker *IndexedTypeWalker) SetPkgImportName(pkgImportName string) {
 
 func (walker *IndexedTypeWalker) IndexedShapes() map[string]Shape {
 	return walker.indexedShapes
+}
+
+// ResolveUnqualifiedType checks if an unqualified type name comes from a dot import
+// Returns the package name, package import path, and whether it was found in dot imports
+func (walker *IndexedTypeWalker) ResolveUnqualifiedType(name string) (pkgName, pkgImportName string, foundInDotImport bool) {
+	log.Debugf("IndexedTypeWalker.ResolveUnqualifiedType: checking %s (dot imports: %v)", name, walker.dotImports)
+	// Check each dot import to see if it contains this type
+	for _, dotImportPath := range walker.dotImports {
+		// Try to look up the shape in the dot imported package
+		shapes := LookupPkgShapeOnDisk(dotImportPath)
+		for _, shape := range shapes {
+			if Name(shape) == name {
+				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
+				log.Debugf("IndexedTypeWalker.ResolveUnqualifiedType: found %s in dot import %s (pkg: %s)", name, dotImportPath, pkgName)
+				return pkgName, dotImportPath, true
+			}
+		}
+	}
+	// Fall back to current package
+	return walker.pkgName, walker.pkgImportName, false
 }
 
 func (walker *IndexedTypeWalker) PackageTags() map[string]Tag {
@@ -1287,7 +1365,13 @@ func (walker *IndexedTypeWalker) Visit(n ast.Node) ast.Visitor {
 		for _, imp := range t.Imports {
 			pkgImportName := strings.Trim(imp.Path.Value, "\"")
 			if imp.Name != nil {
-				walker.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				if imp.Name.String() == "." {
+					// This is a dot import
+					walker.dotImports = append(walker.dotImports, pkgImportName)
+					log.Debugf("IndexedTypeWalker: Registered dot import %s", pkgImportName)
+				} else {
+					walker.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+				}
 			} else {
 				defaultPkgName := path.Base(pkgImportName)
 				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
@@ -1515,50 +1599,64 @@ func (walker *IndexedTypeWalker) guessParamNamesReceiver(x *ast.FieldList) []str
 }
 
 func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
-	switch arg.(type) {
+	// Check if this is a type we should register
+	shouldRegister := false
+	switch t := arg.(type) {
 	case *ast.IndexExpr, *ast.IndexListExpr, *ast.StarExpr:
-		options := []FromASTOption{
-			InjectPkgName(walker.pkgName),
-			InjectPkgImportName(walker.packageNameToPackageImport),
+		shouldRegister = true
+	case *ast.Ident:
+		// Only register exported identifiers that aren't primitive types
+		if t.IsExported() && NameToPrimitiveShape(t.Name) == nil {
+			shouldRegister = true
 		}
-		indexed := FromAST(arg, options...)
+	}
 
-		// if is pointer unwrap it
-		ptr, ok := indexed.(*PointerLike)
-		if ok {
-			indexed = ptr.Type
-		}
+	if !shouldRegister {
+		return
+	}
 
-		if len(walker.filterGenericTypes) > 0 {
-			indexedName := Name(indexed)
-			for _, name := range walker.filterGenericTypes {
-				if name == indexedName {
+	options := []FromASTOption{
+		InjectDotImportResolver(walker.ResolveUnqualifiedType),
+		InjectPkgName(walker.pkgName),
+		InjectPkgImportName(walker.packageNameToPackageImport),
+	}
+	indexed := FromAST(arg, options...)
+
+	// if is pointer unwrap it
+	ptr, ok := indexed.(*PointerLike)
+	if ok {
+		indexed = ptr.Type
+	}
+
+	if len(walker.filterGenericTypes) > 0 {
+		indexedName := Name(indexed)
+		for _, name := range walker.filterGenericTypes {
+			if name == indexedName {
+				// we extracted type parameter, not interested in it
+				return
+			}
+
+			typeParams := ExtractIndexedTypes(indexed)
+			for {
+				if len(typeParams) == 0 {
+					break
+				}
+
+				tp := typeParams[0]
+				typeParams = typeParams[1:]
+				if Name(tp) == name {
 					// we extracted type parameter, not interested in it
 					return
 				}
 
-				typeParams := ExtractIndexedTypes(indexed)
-				for {
-					if len(typeParams) == 0 {
-						break
-					}
-
-					tp := typeParams[0]
-					typeParams = typeParams[1:]
-					if Name(tp) == name {
-						// we extracted type parameter, not interested in it
-						return
-					}
-
-					typeParams = append(typeParams, ExtractIndexedTypes(tp)...)
-				}
+				typeParams = append(typeParams, ExtractIndexedTypes(tp)...)
 			}
 		}
+	}
 
-		name := ToGoTypeName(indexed)
+	name := ToGoTypeName(indexed)
 
-		if _, ok := walker.indexedShapes[name]; !ok {
-			walker.indexedShapes[name] = indexed
-		}
+	if _, ok := walker.indexedShapes[name]; !ok {
+		walker.indexedShapes[name] = indexed
 	}
 }
