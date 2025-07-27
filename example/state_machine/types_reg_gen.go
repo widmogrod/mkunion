@@ -10,9 +10,6 @@ import (
 )
 
 func init() {
-	shared.TypeRegistryStore[machine.Machine[Dependencies, Command, State]]("github.com/widmogrod/mkunion/x/machine.Machine[github.com/widmogrod/mkunion/example/state_machine.Dependencies,github.com/widmogrod/mkunion/example/state_machine.Command,github.com/widmogrod/mkunion/example/state_machine.State]")
-	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/example/state_machine.State]")
-	shared.TypeRegistryStore[schemaless.Repository[schema.Schema]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[CancelOrderCMD]("github.com/widmogrod/mkunion/example/state_machine.CancelOrderCMD")
 	shared.TypeRegistryStore[Command]("github.com/widmogrod/mkunion/example/state_machine.Command")
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/state_machine.Command", CommandFromJSON, CommandToJSON)
@@ -32,5 +29,8 @@ func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/state_machine.State", StateFromJSON, StateToJSON)
 	shared.TypeRegistryStore[StateUnionJSON]("github.com/widmogrod/mkunion/example/state_machine.StateUnionJSON")
 	shared.TypeRegistryStore[StateVisitor]("github.com/widmogrod/mkunion/example/state_machine.StateVisitor")
+	shared.TypeRegistryStore[machine.Machine[Dependencies, Command, State]]("github.com/widmogrod/mkunion/x/machine.Machine[github.com/widmogrod/mkunion/example/state_machine.Dependencies,github.com/widmogrod/mkunion/example/state_machine.Command,github.com/widmogrod/mkunion/example/state_machine.State]")
+	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/example/state_machine.State]")
+	shared.TypeRegistryStore[schemaless.Repository[schema.Schema]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 }

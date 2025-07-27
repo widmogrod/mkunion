@@ -21,8 +21,6 @@ func init() {
 	shared.TypeRegistryStore[schema.Number]("github.com/widmogrod/mkunion/x/schema.Number")
 	shared.TypeRegistryStore[schema.String]("github.com/widmogrod/mkunion/x/schema.String")
 	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.State]")
-	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 	shared.TypeRegistryStore[And]("github.com/widmogrod/mkunion/x/workflow.And")
 	shared.TypeRegistryStore[Apply]("github.com/widmogrod/mkunion/x/workflow.Apply")
 	shared.TypeRegistryStore[ApplyAwaitOptions]("github.com/widmogrod/mkunion/x/workflow.ApplyAwaitOptions")
@@ -88,4 +86,6 @@ func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/workflow.Workflow", WorkflowFromJSON, WorkflowToJSON)
 	shared.TypeRegistryStore[WorkflowUnionJSON]("github.com/widmogrod/mkunion/x/workflow.WorkflowUnionJSON")
 	shared.TypeRegistryStore[WorkflowVisitor]("github.com/widmogrod/mkunion/x/workflow.WorkflowVisitor")
+	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
+	shared.TypeRegistryStore[testing.T]("testing.T")
 }
