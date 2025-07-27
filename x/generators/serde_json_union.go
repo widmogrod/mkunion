@@ -188,8 +188,9 @@ func (g *SerdeJSONUnion) ExtractImportFuncs(s shape.Shape) []string {
 func StrRegisterUnionFuncName(rootPkgName string, x shape.Shape) string {
 	return fmt.Sprintf("shared.JSONMarshallerRegister(%q, %s, %s)",
 		shape.ToGoTypeName(x,
-			//shape.WithRootPackage(rootPkgName),
-			shape.WithPkgImportName(), shape.WithInstantiation()),
+			shape.WithPkgImportName(),
+			shape.WithInstantiation(),
+		),
 		StrFuncNameFromJSONInstantiated(rootPkgName, x),
 		StrFuncNameToJSONInstantiated(rootPkgName, x),
 	)
@@ -234,7 +235,7 @@ func StrInstantiatef(pkgName string, x shape.Shape, template string) string {
 	instantiatedNames := make([]string, len(typeParamTypes))
 	for i, t := range typeParamTypes {
 		instantiatedNames[i] = shape.ToGoTypeName(t,
-			shape.WithRootPackage(pkgName),
+			shape.WithRootPkgName(pkgName),
 			shape.WithInstantiation(),
 		)
 	}
@@ -278,7 +279,7 @@ func (g *SerdeJSONUnion) constructionf(x shape.Shape, template string) string {
 			typeName += ", "
 		}
 		paramType := shape.ToGoTypeName(t.Type,
-			shape.WithRootPackage(g.union.PkgName),
+			shape.WithRootPkgName(g.union.PkgName),
 		)
 		typeName += fmt.Sprintf("%s %s", t.Name, paramType)
 	}
