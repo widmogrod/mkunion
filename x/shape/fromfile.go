@@ -17,13 +17,28 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+// Track files currently being inferred to prevent infinite recursion
+var (
+	inferringFiles sync.Map
+)
+
+func isCurrentlyInferring(filename string) bool {
+	_, ok := inferringFiles.Load(filename)
+	return ok
+}
 
 func InferFromFile(filename string) (*InferredInfo, error) {
 	if !path.IsAbs(filename) {
 		cwd, _ := os.Getwd()
 		filename = path.Join(cwd, filename)
 	}
+
+	// Mark that we're processing this file
+	inferringFiles.Store(filename, true)
+	defer inferringFiles.Delete(filename)
 
 	result := &InferredInfo{
 		fileName:             filename,
@@ -237,11 +252,18 @@ func (f *InferredInfo) PackageNameToPackageImport() map[string]string {
 // ResolveUnqualifiedType checks if an unqualified type name comes from a dot import
 // Returns the package name, package import path, and whether it was found in dot imports
 func (f *InferredInfo) ResolveUnqualifiedType(name string) (pkgName, pkgImportName string, foundInDotImport bool) {
+	// If we're already processing this file, don't try to resolve dot imports
+	// to prevent infinite recursion
+	if f.fileName != "" && isCurrentlyInferring(f.fileName) {
+		return f.pkgName, f.pkgImportName, false
+	}
+
 	log.Debugf("ResolveUnqualifiedType: checking %s (dot imports: %v)", name, f.dotImports)
 	// Check each dot import to see if it contains this type
 	for _, dotImportPath := range f.dotImports {
 		// Try to look up the shape in the dot imported package
 		shapes := LookupPkgShapeOnDisk(dotImportPath)
+
 		log.Debugf("ResolveUnqualifiedType: found %d shapes in %s", len(shapes), dotImportPath)
 		for _, shape := range shapes {
 			shapeName := Name(shape)
@@ -1290,6 +1312,7 @@ func (walker *IndexedTypeWalker) ResolveUnqualifiedType(name string) (pkgName, p
 	for _, dotImportPath := range walker.dotImports {
 		// Try to look up the shape in the dot imported package
 		shapes := LookupPkgShapeOnDisk(dotImportPath)
+
 		for _, shape := range shapes {
 			if Name(shape) == name {
 				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
