@@ -60,23 +60,42 @@ func TestSerdeJSONUnion_Generate_Generic(t *testing.T) {
 }
 
 func TestStrRegisterUnionFuncName(t *testing.T) {
+	log.SetLevel(log.ErrorLevel)
 	contents := `package testutils
 
 import (
-	"github.com/widmogrod/mkunion/f"
 	. "github.com/widmogrod/mkunion/f"
 )
 
-var v0 Generic[f.Result[int, error]] = &testutils.Never[f.Result[int, error]]{}
-var v1 Generic[Result[float64, error]] = &testutils.Never[Result[float64, error]]{}
-var v2 f.Result[Generic[bool], error] = &f.Result[*testutils.Never[bool], error]{}
-var v3 Result[Generic[string], error] = &f.Result[*testutils.Ever[string], error]{}
+type User struct{ Name string }
 
-//go:tag mkunion:"Generic[A]"
-type (
-	Never[A any] struct{}
-	Ever[A any]  struct{ Value A }
-)
+type APIError struct {
+	Code    int
+	Message string
+}
+
+// --8<-- [start:fetch-type]
+
+// FetchResult combine unions for rich error handling
+type FetchResult = Result[Option[User], APIError]
+
+
+// handleFetch uses nested pattern matching to handle result
+func handleFetch(result FetchResult) string {
+	return MatchResultR1(result,
+		func(ok *Ok[Option[User], APIError]) string {
+			return MatchOptionR1(ok.Value,
+				func(*None[User]) string { return "User not found" },
+				func(some *Some[User]) string {
+					return fmt.Sprintf("Found user: %s", some.Value.Name)
+				},
+			)
+		},
+		func(err *Err[Option[User], APIError]) string {
+			return fmt.Sprintf("API error: %v", err.Error)
+		},
+	)
+}
 `
 
 	pkgName := "github.com/widmogrod/mkunion/x/generators/testutils"
@@ -85,15 +104,15 @@ type (
 	//inferred, err := shape.InferFromFile("testutils/tree.go")
 	require.NoError(t, err)
 
-	union := inferred.RetrieveUnion("Generic")
-	assert.NotNil(t, union)
-	t.Log(shape.ToStr(union))
-
-	st := NewShapeTagged(union)
-	result, err := st.Generate()
-	assert.NoError(t, err)
-
-	t.Log(result)
+	//union := inferred.RetrieveUnion("Generic")
+	//assert.NotNil(t, union)
+	//t.Log(shape.ToStr(union))
+	//
+	//st := NewShapeTagged(union)
+	//result, err := st.Generate()
+	//assert.NoError(t, err)
+	//
+	//t.Log(result)
 
 	//g := NewSerdeJSONUnion(union)
 	//result2, err2 := g.Generate()
@@ -107,8 +126,10 @@ type (
 			x.SetPkgImportName(pkgName)
 		},
 	)
-	t.Log("expanded...")
-	for _, s := range walker.IndexedShapes() {
+
+	expanded := walker.ExpandedShapes()
+	t.Log("expanded...", expanded)
+	for _, s := range expanded {
 		found := false
 		if ref, ok := s.(*shape.RefName); ok {
 			for _, sh := range inferred.RetrieveShapes() {
@@ -186,7 +207,7 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker, infshapes *shape.In
 		inst := found[key]
 		instantiatedTypeName := shape.ToGoTypeName(inst,
 			shape.WithInstantiation(),
-			shape.WithRootPackage(packageName),
+			shape.WithRootPkgName(packageName),
 		)
 		fullTypeName := shape.ToGoTypeName(inst,
 			shape.WithInstantiation(),
@@ -228,4 +249,97 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker, infshapes *shape.In
 	contents.WriteString("}\n")
 
 	return contents, nil
+}
+
+func TestToGoPkgName(t *testing.T) {
+	subject := &shape.StructLike{
+		Name:          "Err",
+		PkgName:       "f",
+		PkgImportName: "github.com/widmogrod/mkunion/f",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				//Name: "Option[testutils.User]",
+				Type: &shape.RefName{
+					Name:          "Option",
+					PkgName:       "f",
+					PkgImportName: "github.com/widmogrod/mkunion/f",
+					Indexed: []shape.Shape{
+						&shape.RefName{
+							Name:          "User",
+							PkgName:       "testutils",
+							PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						},
+					},
+				},
+			},
+			shape.TypeParam{
+				Name: "E",
+				//Name: "testutils.APIError",
+				Type: &shape.RefName{
+					Name:          "APIError",
+					PkgName:       "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				},
+			},
+		},
+		Fields: []*shape.FieldLike{
+			{
+				Name: "Error",
+				Type: &shape.RefName{
+					Name:          "APIError",
+					PkgName:       "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion": {
+				Value: "Result",
+			},
+		},
+	}
+
+	assert.Equal(t, "f", shape.ToGoPkgName(subject), "root package name is incorrect")
+
+	result := shape.ToGoTypeName(subject,
+		shape.WithInstantiation(),
+		shape.WithPkgImportName(),
+	)
+	assert.Equal(t, "github.com/widmogrod/mkunion/f.Err[github.com/widmogrod/mkunion/f.Option[github.com/widmogrod/mkunion/x/generators/testutils.User],github.com/widmogrod/mkunion/x/generators/testutils.APIError]", result)
+	//assert.Equal(t, "github.com/widmogrod/mkunion/f.Err[github.com/widmogrod/mkunion/f.Option[github.com/widmogrod/mkunion/x/generators/testutils.User],github.com/widmogrod/mkunion/x/generators/testutils.APIError]", result)
+
+	result2 := shape.ToGoTypeName(subject,
+		shape.WithInstantiation(),
+	)
+	assert.Equal(t, "f.Err[Option[testutils.User],testutils.APIError]", result2)
+
+	result3 := shape.ToGoTypeName(subject,
+		shape.WithPkgImportName(),
+	)
+	assert.Equal(t, "github.com/widmogrod/mkunion/f.Err[A,E]", result3)
+
+	result4 := shape.ToGoTypeName(subject,
+		shape.WithRootPkgName("f"),
+	)
+	assert.Equal(t, "Err[A,E]", result4)
+
+	result5 := shape.ToGoTypeName(subject,
+		shape.WithInstantiation(),
+		shape.WithRootPkgName("f"),
+	)
+	assert.Equal(t, "Err[Option[testutils.User],testutils.APIError]", result5)
+
+	result5b := shape.ToGoTypeName(subject,
+		shape.WithInstantiation(),
+		shape.WithRootPkgName("testutils"),
+	)
+	assert.Equal(t, "f.Err[f.Option[User],APIError]", result5b)
+
+	result6 := shape.ToGoTypeName(subject,
+		shape.WithInstantiation(),
+		shape.WithPkgImportName(),
+		shape.WithRootPkgName("f"),
+	)
+	assert.Equal(t, "Err[Option[github.com/widmogrod/mkunion/x/generators/testutils.User],github.com/widmogrod/mkunion/x/generators/testutils.APIError]", result6)
 }
