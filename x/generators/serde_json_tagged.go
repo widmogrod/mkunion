@@ -120,13 +120,13 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 			result.WriteString("\t_ json.Unmarshaler = (*")
 			result.WriteString(shape.ToGoTypeName(x,
 				shape.WithInstantiation(),
-				shape.WithRootPackage(shape.ToGoPkgName(x)),
+				shape.WithRootPkgName(shape.ToGoPkgName(x)),
 			))
 			result.WriteString(")(nil)\n")
 			result.WriteString("\t_ json.Marshaler   = (*")
 			result.WriteString(shape.ToGoTypeName(x,
 				shape.WithInstantiation(),
-				shape.WithRootPackage(shape.ToGoPkgName(x)),
+				shape.WithRootPkgName(shape.ToGoPkgName(x)),
 			))
 			result.WriteString(")(nil)\n")
 			result.WriteString(")\n\n")
@@ -150,13 +150,13 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 			result.WriteString("\t_ json.Unmarshaler = (*")
 			result.WriteString(shape.ToGoTypeName(x,
 				shape.WithInstantiation(),
-				shape.WithRootPackage(shape.ToGoPkgName(x)),
+				shape.WithRootPkgName(shape.ToGoPkgName(x)),
 			))
 			result.WriteString(")(nil)\n")
 			result.WriteString("\t_ json.Marshaler   = (*")
 			result.WriteString(shape.ToGoTypeName(x,
 				shape.WithInstantiation(),
-				shape.WithRootPackage(shape.ToGoPkgName(x)),
+				shape.WithRootPkgName(shape.ToGoPkgName(x)),
 			))
 			result.WriteString(")(nil)\n")
 			result.WriteString(")\n\n")
@@ -204,7 +204,7 @@ var removeNonAlpha = strings.NewReplacer(
 // g.toGoAlphaName return name of type that could be use as part of method or function name
 func (g *SerdeJSONTagged) toGoAlphaName(x shape.Shape) string {
 	typeName := shape.ToGoTypeName(x,
-		shape.WithRootPackage(shape.ToGoPkgName(g.shape)),
+		shape.WithRootPkgName(shape.ToGoPkgName(g.shape)),
 	)
 
 	return removeNonAlpha.Replace(typeName)
@@ -216,7 +216,7 @@ func (g *SerdeJSONTagged) rootPkgName() string {
 
 func (g *SerdeJSONTagged) rootTypeName() string {
 	return shape.ToGoTypeName(g.shape,
-		shape.WithRootPackage(shape.ToGoPkgName(g.shape)),
+		shape.WithRootPkgName(shape.ToGoPkgName(g.shape)),
 	)
 }
 
@@ -243,7 +243,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 	}
 
 	rootTypeName := g.rootTypeName()
-	typeName := shape.ToGoTypeName(x, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))
+	typeName := shape.ToGoTypeName(x, shape.WithRootPkgName(shape.ToGoPkgName(g.shape)))
 	errorContext := g.errorContext(methodName)
 
 	methodWrap := func(body *strings.Builder) (string, error) {
@@ -296,7 +296,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			return result + methods, nil
 		},
 		func(y *shape.AliasLike) (string, error) {
-			aliasTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))
+			aliasTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPkgName(shape.ToGoPkgName(g.shape)))
 
 			if y.IsAlias {
 				g.pkgUsed["shared"] = "github.com/widmogrod/mkunion/x/shared"
@@ -376,7 +376,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			return result + methods, nil
 		},
 		func(y *shape.MapLike) (string, error) {
-			keyTypeName := shape.ToGoTypeName(y.Key, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))
+			keyTypeName := shape.ToGoTypeName(y.Key, shape.WithRootPkgName(shape.ToGoPkgName(g.shape)))
 			isKeyString := shape.IsString(y.Key) || shape.IsBinary(y.Key)
 
 			body := &strings.Builder{}
@@ -517,7 +517,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 	}
 
 	rootTypeName := g.rootTypeName()
-	typeName := shape.ToGoTypeName(x, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))
+	typeName := shape.ToGoTypeName(x, shape.WithRootPkgName(shape.ToGoPkgName(g.shape)))
 	errorContext := g.errorContext(methodName)
 
 	methodWrap := func(body *strings.Builder) (string, error) {
@@ -578,7 +578,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			return result + methods, nil
 		},
 		func(y *shape.AliasLike) (string, error) {
-			aliasTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))
+			aliasTypeName := shape.ToGoTypeName(y.Type, shape.WithRootPkgName(shape.ToGoPkgName(g.shape)))
 
 			if y.IsAlias {
 				g.pkgUsed["shared"] = "github.com/widmogrod/mkunion/x/shared"
@@ -676,7 +676,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			return result + methods, nil
 		},
 		func(y *shape.MapLike) (string, error) {
-			keyTypeName := shape.ToGoTypeName(y.Key, shape.WithRootPackage(shape.ToGoPkgName(g.shape)))
+			keyTypeName := shape.ToGoTypeName(y.Key, shape.WithRootPkgName(shape.ToGoPkgName(g.shape)))
 			isKeyString := shape.IsString(y.Key) || shape.IsBinary(y.Key)
 
 			body := &strings.Builder{}
