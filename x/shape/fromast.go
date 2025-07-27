@@ -4,6 +4,8 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"go/ast"
+	"go/token"
+	"strings"
 )
 
 type FromASTOption func(x Shape)
@@ -33,6 +35,18 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 		log.Debugf("FromAST: RefName for %s after options: pkg=%s, pkgImport=%s", y.Name, result.PkgName, result.PkgImportName)
 
 		return result
+
+	case *ast.BasicLit:
+		if y.Kind != token.STRING {
+			return &Any{}
+		}
+
+		return &RefName{
+			Name:          strings.Trim(y.Value, `"`),
+			PkgName:       "",
+			PkgImportName: "",
+			Indexed:       nil,
+		}
 
 	case *ast.IndexExpr:
 		result := FromAST(y.X, fx...)
@@ -169,8 +183,8 @@ func InjectDotImportResolver(resolver func(name string) (pkgName, pkgImportName 
 		case *RefName:
 			// Only apply to unqualified types (no package name set)
 			if y.PkgName == "" && y.PkgImportName == "" {
-				if pkgName, pkgImportName, found := resolver(y.Name); found {
-					log.Debugf("InjectDotImportResolver: resolved %s to %s:%s", y.Name, pkgImportName, pkgName)
+				pkgName, pkgImportName, found := resolver(y.Name)
+				if found {
 					y.PkgName = pkgName
 					y.PkgImportName = pkgImportName
 				}
