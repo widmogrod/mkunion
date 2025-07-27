@@ -258,25 +258,28 @@ func (f *InferredInfo) ResolveUnqualifiedType(name string) (pkgName, pkgImportNa
 		return f.pkgName, f.pkgImportName, false
 	}
 
-	log.Debugf("ResolveUnqualifiedType: checking %s (dot imports: %v)", name, f.dotImports)
 	// Check each dot import to see if it contains this type
 	for _, dotImportPath := range f.dotImports {
 		// Try to look up the shape in the dot imported package
 		shapes := LookupPkgShapeOnDisk(dotImportPath)
-
-		log.Debugf("ResolveUnqualifiedType: found %d shapes in %s", len(shapes), dotImportPath)
 		for _, shape := range shapes {
-			shapeName := Name(shape)
-			log.Debugf("ResolveUnqualifiedType: comparing %s with %s", name, shapeName)
-			if shapeName == name {
+			if Name(shape) == name {
 				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
-				log.Debugf("ResolveUnqualifiedType: found %s in dot import %s (pkg: %s)", name, dotImportPath, pkgName)
 				return pkgName, dotImportPath, true
+			}
+
+			if union, ok := shape.(*UnionLike); ok {
+				for _, variant := range union.Variant {
+					if Name(variant) == name {
+						pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
+						return pkgName, dotImportPath, true
+					}
+				}
 			}
 		}
 	}
+
 	// Fall back to current package
-	log.Debugf("ResolveUnqualifiedType: %s not found in dot imports, using current package", name)
 	return f.pkgName, f.pkgImportName, false
 }
 
@@ -1036,7 +1039,6 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 			for _, param := range x.TypeParams {
 				param := param
 				if rep, ok := replacement[param.Name]; ok {
-					param.Name = ToGoTypeName(rep, WithRootPackage(x.PkgName))
 					param.Type = rep
 				}
 
@@ -1074,7 +1076,6 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 			for _, param := range x.TypeParams {
 				param := param
 				if rep, ok := replacement[param.Name]; ok {
-					param.Name = ToGoTypeName(rep, WithRootPackage(x.PkgName))
 					param.Type = rep
 				}
 
@@ -1103,7 +1104,6 @@ func InstantiateTypeThatAreOvershadowByTypeParam(typ Shape, replacement map[stri
 			for _, param := range x.TypeParams {
 				param := param
 				if rep, ok := replacement[param.Name]; ok {
-					param.Name = ToGoTypeName(rep, WithRootPackage(x.PkgName))
 					param.Type = rep
 				}
 
@@ -1307,20 +1307,29 @@ func (walker *IndexedTypeWalker) IndexedShapes() map[string]Shape {
 // ResolveUnqualifiedType checks if an unqualified type name comes from a dot import
 // Returns the package name, package import path, and whether it was found in dot imports
 func (walker *IndexedTypeWalker) ResolveUnqualifiedType(name string) (pkgName, pkgImportName string, foundInDotImport bool) {
-	log.Debugf("IndexedTypeWalker.ResolveUnqualifiedType: checking %s (dot imports: %v)", name, walker.dotImports)
 	// Check each dot import to see if it contains this type
 	for _, dotImportPath := range walker.dotImports {
 		// Try to look up the shape in the dot imported package
 		shapes := LookupPkgShapeOnDisk(dotImportPath)
 
 		for _, shape := range shapes {
+			// When shape is union look for variant with a name
 			if Name(shape) == name {
 				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
-				log.Debugf("IndexedTypeWalker.ResolveUnqualifiedType: found %s in dot import %s (pkg: %s)", name, dotImportPath, pkgName)
 				return pkgName, dotImportPath, true
+			}
+
+			if union, ok := shape.(*UnionLike); ok {
+				for _, variant := range union.Variant {
+					if Name(variant) == name {
+						pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
+						return pkgName, dotImportPath, true
+					}
+				}
 			}
 		}
 	}
+
 	// Fall back to current package
 	return walker.pkgName, walker.pkgImportName, false
 }
@@ -1367,7 +1376,10 @@ func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
 			}
 
 			newVariant := IndexWith(variant, ref)
-			name := ToGoTypeName(newVariant)
+			name := ToGoTypeName(newVariant,
+				WithPkgImportName(),
+				WithInstantiation(),
+			)
 			result[name] = newVariant
 		}
 	}
@@ -1677,7 +1689,10 @@ func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 		}
 	}
 
-	name := ToGoTypeName(indexed)
+	name := ToGoTypeName(indexed,
+		WithPkgImportName(),
+		WithInstantiation(),
+	)
 
 	if _, ok := walker.indexedShapes[name]; !ok {
 		walker.indexedShapes[name] = indexed

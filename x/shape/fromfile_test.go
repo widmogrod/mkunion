@@ -2,6 +2,7 @@ package shape
 
 import (
 	"github.com/google/go-cmp/cmp"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -429,22 +430,23 @@ func TestIndexedTypeWalker_ExpandedShapes(t *testing.T) {
 	expanded := inferred.ExpandedShapes()
 
 	t.Run("should detect union type", func(t *testing.T) {
-		require.Contains(t, indexed, "testasset.Option[ListOf2[*O,time.Location]]")
-		require.Contains(t, expanded, "testasset.Option[ListOf2[*O,time.Location]]")
+		require.Contains(t, indexed, "github.com/widmogrod/mkunion/x/shape/testasset.Option[github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[*github.com/widmogrod/mkunion/x/shape/testasset.O,time.Location]]")
+		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.Option[github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[*github.com/widmogrod/mkunion/x/shape/testasset.O,time.Location]]")
 	})
 	t.Run("expanded should have variant of a union", func(t *testing.T) {
-		require.NotContains(t, indexed, "testasset.Some[ListOf2[*O,time.Location]]")
-		require.Contains(t, expanded, "testasset.Some[ListOf2[*O,time.Location]]")
-		require.NotContains(t, indexed, "testasset.None[ListOf2[*O,time.Location]]")
-		require.Contains(t, expanded, "testasset.None[ListOf2[*O,time.Location]]")
+		require.NotContains(t, indexed, "github.com/widmogrod/mkunion/x/shape/testasset.Some[github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[*github.com/widmogrod/mkunion/x/shape/testasset.O,time.Location]]")
+		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.Some[github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[*github.com/widmogrod/mkunion/x/shape/testasset.O,time.Location]]")
+		require.NotContains(t, indexed, "github.com/widmogrod/mkunion/x/shape/testasset.None[github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[*github.com/widmogrod/mkunion/x/shape/testasset.O,time.Location]]")
+		require.Contains(t, expanded, "github.com/widmogrod/mkunion/x/shape/testasset.None[github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[*github.com/widmogrod/mkunion/x/shape/testasset.O,time.Location]]")
 	})
 }
 
 func TestIndexedTypeWalker_Visit(t *testing.T) {
 	useCases := map[string]struct {
-		body            string
-		expected        map[string]Shape
-		expectedPkgTags map[string]Tag
+		body               string
+		expected           map[string]Shape
+		expectedPkgTags    map[string]Tag
+		expectedDotImports []string
 	}{
 		"from interface declaration": {
 			body: `package test_package
@@ -456,7 +458,7 @@ type OptionVisitor[T1 ListOf2[*O,time.Location]] interface {
 	VisitNone(v *None[T1]) any 		// should be ignored
 }`,
 			expected: map[string]Shape{
-				"test_package.ListOf2[*O,time.Location]": &RefName{
+				"github.com/test_package.ListOf2[*github.com/test_package.O,time.Location]": &RefName{
 					Name:          "ListOf2",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -476,6 +478,7 @@ type OptionVisitor[T1 ListOf2[*O,time.Location]] interface {
 					},
 				},
 			},
+			expectedDotImports: []string{},
 		},
 		"from variables top level": {
 			body: `package test_package
@@ -487,7 +490,7 @@ var (
 )
 `,
 			expected: map[string]Shape{
-				"test_package.Option[ListOf2[*O,time.Location]]": &RefName{
+				"github.com/test_package.Option[github.com/test_package.ListOf2[*github.com/test_package.O,time.Location]]": &RefName{
 					Name:          "Option",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -514,6 +517,7 @@ var (
 					},
 				},
 			},
+			expectedDotImports: []string{},
 		},
 		"from function declaration": {
 			body: `package test_package
@@ -547,7 +551,7 @@ func OptionToJSON[T1 ListOf2[*O,time.Location]](x Option[T1]) ([]byte, error) {
 }
 `,
 			expected: map[string]Shape{
-				"test_package.ListOf2[*O,time.Location]": &RefName{
+				"github.com/test_package.ListOf2[*github.com/test_package.O,time.Location]": &RefName{
 					Name:          "ListOf2",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -566,7 +570,7 @@ func OptionToJSON[T1 ListOf2[*O,time.Location]](x Option[T1]) ([]byte, error) {
 						},
 					},
 				},
-				"test_package.None[int]": &RefName{
+				"github.com/test_package.None[int]": &RefName{
 					Name:          "None",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -575,6 +579,7 @@ func OptionToJSON[T1 ListOf2[*O,time.Location]](x Option[T1]) ([]byte, error) {
 					},
 				},
 			},
+			expectedDotImports: []string{},
 		},
 		"from function receiver": {
 			body: `package test_package
@@ -596,7 +601,7 @@ func (r *Some[T1]) _unmarshalJSONSomeLb_T1_bL(data []byte) (Some[T1], error) {
 }
 `,
 			expected: map[string]Shape{
-				"test_package.Some[int]": &RefName{
+				"github.com/test_package.Some[int]": &RefName{
 					Name:          "Some",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -605,6 +610,7 @@ func (r *Some[T1]) _unmarshalJSONSomeLb_T1_bL(data []byte) (Some[T1], error) {
 					},
 				},
 			},
+			expectedDotImports: []string{},
 		},
 		"from init function with embeded function": {
 			body: `package test_package
@@ -616,7 +622,7 @@ func init() {
 	shared.JSONMarshallerRegister[T1]("github.com/widmogrod/mkunion/x/shape/testasset.None[ListOf2[*.O,time.Location]]", NoneFromJSON[ListOf2[*O,time.Location]], NoneToJSON[ListOf2[*O,time.Location]])
 }`,
 			expected: map[string]Shape{
-				"test_package.ListOf2[*O,time.Location]": &RefName{
+				"github.com/test_package.ListOf2[*github.com/test_package.O,time.Location]": &RefName{
 					Name:          "ListOf2",
 					PkgName:       "test_package",
 					PkgImportName: "github.com/test_package",
@@ -636,6 +642,7 @@ func init() {
 					},
 				},
 			},
+			expectedDotImports: []string{},
 		},
 		"contrastive example, commented code is not initialised": {
 			body: `package projection
@@ -657,7 +664,8 @@ type (
 	//}
 )
 `,
-			expected: make(map[string]Shape),
+			expected:           make(map[string]Shape),
+			expectedDotImports: []string{},
 		},
 		"contrastive example, pointer to type parameter is not initialisation": {
 			body: `// projection package is responsible for storing and retrieving data from the storage.
@@ -672,9 +680,190 @@ type Storage[T any] interface {
 			expectedPkgTags: map[string]Tag{
 				"mytag": {Value: "-"},
 			},
+			expectedDotImports: []string{},
+		},
+		"dot import example": {
+			body: `package test_package
+import (
+	"fmt"
+	. "github.com/widmogrod/mkunion/f"
+)
+
+type User struct{ Name string }
+
+type APIError struct {
+	Code    int
+	Message string
+}
+
+type FetchResult = Result[Option[User], APIError]
+
+func handleFetch(result FetchResult) string {
+	return MatchResultR1(result,
+		func(ok *Ok[Option[User], APIError]) string {
+			return MatchOptionR1(ok.Value,
+				func(*None[User]) string { return "User not found" },
+				func(some *Some[User]) string {
+					return fmt.Sprintf("Found user: %s", some.Value.Name)
+				},
+			)
+		},
+		func(err *Err[Option[User], APIError]) string {
+			return fmt.Sprintf("API error: %v", err.Error)
+		},
+	)
+}
+`,
+			expected: map[string]Shape{
+				"github.com/widmogrod/mkunion/f.Err[github.com/widmogrod/mkunion/f.Option[github.com/test_package.User],github.com/test_package.APIError]": &StructLike{
+					Name:          "Err",
+					PkgName:       "f",
+					PkgImportName: "github.com/widmogrod/mkunion/f",
+					TypeParams: []TypeParam{
+						{
+							Name: "A",
+							Type: &RefName{
+								Name:          "Option",
+								PkgName:       "f",
+								PkgImportName: "github.com/widmogrod/mkunion/f",
+								Indexed: []Shape{
+									&RefName{
+										Name:          "User",
+										PkgName:       "test_package",
+										PkgImportName: "github.com/test_package",
+									},
+								},
+							},
+						},
+						{
+							Name: "E",
+							Type: &RefName{
+								Name:          "APIError",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+					},
+					Fields: []*FieldLike{
+						{
+							Name: "Error",
+							Type: &RefName{
+								Name:          "APIError",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+					},
+					Tags: map[string]Tag{"mkunion": {Value: "Result"}},
+				},
+
+				"github.com/widmogrod/mkunion/f.None[github.com/test_package.User]": &StructLike{
+					Name:          "None",
+					PkgName:       "f",
+					PkgImportName: "github.com/widmogrod/mkunion/f",
+					TypeParams: []TypeParam{
+						{
+							Name: "A",
+							Type: &RefName{
+								Name:          "User",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+					},
+					Fields: nil,
+					Tags:   map[string]Tag{"mkunion": {Value: "Option"}},
+				},
+
+				"github.com/widmogrod/mkunion/f.Ok[github.com/widmogrod/mkunion/f.Option[github.com/test_package.User],github.com/test_package.APIError]": &StructLike{
+					Name:          "Ok",
+					PkgName:       "f",
+					PkgImportName: "github.com/widmogrod/mkunion/f",
+					TypeParams: []TypeParam{
+						{
+							Name: "A",
+							Type: &RefName{
+								Name:          "Option",
+								PkgName:       "f",
+								PkgImportName: "github.com/widmogrod/mkunion/f",
+								Indexed: []Shape{
+									&RefName{
+										Name:          "User",
+										PkgName:       "test_package",
+										PkgImportName: "github.com/test_package",
+									},
+								},
+							},
+						},
+						{
+							Name: "E",
+							Type: &RefName{
+								Name:          "APIError",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+					},
+					Fields: []*FieldLike{
+						{
+							Name: "Value",
+							Type: &RefName{
+								Name:          "Option",
+								PkgName:       "f",
+								PkgImportName: "github.com/widmogrod/mkunion/f",
+								Indexed: []Shape{
+									&RefName{
+										Name:          "User",
+										PkgName:       "test_package",
+										PkgImportName: "github.com/test_package",
+									},
+								},
+							},
+						},
+					},
+					Tags: map[string]Tag{"mkunion": {Value: "Result"}},
+				},
+
+				"github.com/widmogrod/mkunion/f.Some[github.com/test_package.User]": &StructLike{
+					Name:          "Some",
+					PkgName:       "f",
+					PkgImportName: "github.com/widmogrod/mkunion/f",
+					TypeParams: []TypeParam{
+						{
+							Name: "A",
+							Type: &RefName{
+								Name:          "User",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+					},
+					Fields: []*FieldLike{
+						{
+							Name: "Value",
+							Type: &RefName{
+								Name:          "User",
+								PkgName:       "test_package",
+								PkgImportName: "github.com/test_package",
+							},
+						},
+					},
+					Tags: map[string]Tag{"mkunion": {Value: "Option"}},
+				},
+
+				"github.com/test_package.FetchResult": &RefName{
+					Name:          "FetchResult",
+					PkgName:       "test_package",
+					PkgImportName: "github.com/test_package",
+				},
+			},
+			expectedDotImports: []string{
+				"github.com/widmogrod/mkunion/f",
+			},
 		},
 	}
 	for name, uc := range useCases {
+		log.SetLevel(log.ErrorLevel)
 		t.Run(name, func(t *testing.T) {
 			w := NewIndexedTypeWalkerWithContentBody(
 				uc.body,
@@ -692,6 +881,10 @@ type Storage[T any] interface {
 			}
 
 			if diff := cmp.Diff(uc.expectedPkgTags, w.PackageTags()); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(uc.expectedDotImports, w.dotImports); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
