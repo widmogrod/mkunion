@@ -2,10 +2,12 @@ package example
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	. "github.com/widmogrod/mkunion/f"
 )
 
 func TestHandleFetch(t *testing.T) {
@@ -101,3 +103,22 @@ func TestCreatingUnions(t *testing.T) {
 }
 
 // --8<-- [end:creating-fetch]
+
+func TestUnmarshaling(t *testing.T) {
+	// Success with user
+	fetchSuccess := MkOk[APIError](MkSome(User{Name: "Alice"}))
+
+	// First, let's test that marshaling works
+	data, err := ResultToJSON[Option[User], APIError](fetchSuccess)
+	require.NoError(t, err)
+	t.Log(string(data))
+
+	// Then test unmarshaling
+	result, err := ResultFromJSON[Option[User], APIError](data)
+	require.NoError(t, err)
+	t.Log(result)
+
+	if diff := cmp.Diff(fetchSuccess, result); diff != "" {
+		t.Fatalf("mismatch (-want +got):\n%s", diff)
+	}
+}

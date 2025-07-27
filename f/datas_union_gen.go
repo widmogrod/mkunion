@@ -308,8 +308,8 @@ func (r *Right[A, B]) _unmarshalJSONB(data []byte) (B, error) {
 }
 
 type OptionVisitor[A any] interface {
-	VisitSome(v *Some[A]) any
 	VisitNone(v *None[A]) any
+	VisitSome(v *Some[A]) any
 }
 
 type Option[A any] interface {
@@ -317,22 +317,22 @@ type Option[A any] interface {
 }
 
 var (
-	_ Option[any] = (*Some[any])(nil)
 	_ Option[any] = (*None[any])(nil)
+	_ Option[any] = (*Some[any])(nil)
 )
 
-func (r *Some[A]) AcceptOption(v OptionVisitor[A]) any { return v.VisitSome(r) }
 func (r *None[A]) AcceptOption(v OptionVisitor[A]) any { return v.VisitNone(r) }
+func (r *Some[A]) AcceptOption(v OptionVisitor[A]) any { return v.VisitSome(r) }
 
 func MatchOptionR3[A any, T0, T1, T2 any](
 	x Option[A],
-	f1 func(x *Some[A]) (T0, T1, T2),
-	f2 func(x *None[A]) (T0, T1, T2),
+	f1 func(x *None[A]) (T0, T1, T2),
+	f2 func(x *Some[A]) (T0, T1, T2),
 ) (T0, T1, T2) {
 	switch v := x.(type) {
-	case *Some[A]:
-		return f1(v)
 	case *None[A]:
+		return f1(v)
+	case *Some[A]:
 		return f2(v)
 	}
 	var result1 T0
@@ -343,13 +343,13 @@ func MatchOptionR3[A any, T0, T1, T2 any](
 
 func MatchOptionR2[A any, T0, T1 any](
 	x Option[A],
-	f1 func(x *Some[A]) (T0, T1),
-	f2 func(x *None[A]) (T0, T1),
+	f1 func(x *None[A]) (T0, T1),
+	f2 func(x *Some[A]) (T0, T1),
 ) (T0, T1) {
 	switch v := x.(type) {
-	case *Some[A]:
-		return f1(v)
 	case *None[A]:
+		return f1(v)
+	case *Some[A]:
 		return f2(v)
 	}
 	var result1 T0
@@ -359,13 +359,13 @@ func MatchOptionR2[A any, T0, T1 any](
 
 func MatchOptionR1[A any, T0 any](
 	x Option[A],
-	f1 func(x *Some[A]) T0,
-	f2 func(x *None[A]) T0,
+	f1 func(x *None[A]) T0,
+	f2 func(x *Some[A]) T0,
 ) T0 {
 	switch v := x.(type) {
-	case *Some[A]:
-		return f1(v)
 	case *None[A]:
+		return f1(v)
+	case *Some[A]:
 		return f2(v)
 	}
 	var result1 T0
@@ -374,13 +374,13 @@ func MatchOptionR1[A any, T0 any](
 
 func MatchOptionR0[A any](
 	x Option[A],
-	f1 func(x *Some[A]),
-	f2 func(x *None[A]),
+	f1 func(x *None[A]),
+	f2 func(x *Some[A]),
 ) {
 	switch v := x.(type) {
-	case *Some[A]:
-		f1(v)
 	case *None[A]:
+		f1(v)
+	case *Some[A]:
 		f2(v)
 	}
 }
@@ -392,8 +392,8 @@ func init() {
 
 type OptionUnionJSON[A any] struct {
 	Type string          `json:"$type,omitempty"`
-	Some json.RawMessage `json:"f.Some,omitempty"`
 	None json.RawMessage `json:"f.None,omitempty"`
+	Some json.RawMessage `json:"f.Some,omitempty"`
 }
 
 func OptionFromJSON[A any](x []byte) (Option[A], error) {
@@ -410,16 +410,16 @@ func OptionFromJSON[A any](x []byte) (Option[A], error) {
 	}
 
 	switch data.Type {
-	case "f.Some":
-		return SomeFromJSON[A](data.Some)
 	case "f.None":
 		return NoneFromJSON[A](data.None)
+	case "f.Some":
+		return SomeFromJSON[A](data.Some)
 	}
 
-	if data.Some != nil {
-		return SomeFromJSON[A](data.Some)
-	} else if data.None != nil {
+	if data.None != nil {
 		return NoneFromJSON[A](data.None)
+	} else if data.Some != nil {
+		return SomeFromJSON[A](data.Some)
 	}
 	return nil, fmt.Errorf("f.OptionFromJSON[A]: unknown type: %s", data.Type)
 }
@@ -430,16 +430,6 @@ func OptionToJSON[A any](x Option[A]) ([]byte, error) {
 	}
 	return MatchOptionR2(
 		x,
-		func(y *Some[A]) ([]byte, error) {
-			body, err := SomeToJSON[A](y)
-			if err != nil {
-				return nil, fmt.Errorf("f.OptionToJSON[A]: %w", err)
-			}
-			return json.Marshal(OptionUnionJSON[A]{
-				Type: "f.Some",
-				Some: body,
-			})
-		},
 		func(y *None[A]) ([]byte, error) {
 			body, err := NoneToJSON[A](y)
 			if err != nil {
@@ -450,7 +440,68 @@ func OptionToJSON[A any](x Option[A]) ([]byte, error) {
 				None: body,
 			})
 		},
+		func(y *Some[A]) ([]byte, error) {
+			body, err := SomeToJSON[A](y)
+			if err != nil {
+				return nil, fmt.Errorf("f.OptionToJSON[A]: %w", err)
+			}
+			return json.Marshal(OptionUnionJSON[A]{
+				Type: "f.Some",
+				Some: body,
+			})
+		},
 	)
+}
+
+func NoneFromJSON[A any](x []byte) (*None[A], error) {
+	result := new(None[A])
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, fmt.Errorf("f.NoneFromJSON[A]: %w", err)
+	}
+	return result, nil
+}
+
+func NoneToJSON[A any](x *None[A]) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*None[any])(nil)
+	_ json.Marshaler   = (*None[any])(nil)
+)
+
+func (r *None[A]) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONNoneLb_A_bL(*r)
+}
+func (r *None[A]) _marshalJSONNoneLb_A_bL(x None[A]) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	var err error
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("f: None[A]._marshalJSONNoneLb_A_bL: struct; %w", err)
+	}
+	return result, nil
+}
+func (r *None[A]) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONNoneLb_A_bL(data)
+	if err != nil {
+		return fmt.Errorf("f: None[A].UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *None[A]) _unmarshalJSONNoneLb_A_bL(data []byte) (None[A], error) {
+	result := None[A]{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("f: None[A]._unmarshalJSONNoneLb_A_bL: native struct unwrap; %w", err)
+	}
+	return result, nil
 }
 
 func SomeFromJSON[A any](x []byte) (*Some[A], error) {
@@ -526,57 +577,6 @@ func (r *Some[A]) _unmarshalJSONA(data []byte) (A, error) {
 	result, err := shared.JSONUnmarshal[A](data)
 	if err != nil {
 		return result, fmt.Errorf("f: Some[A]._unmarshalJSONA: native ref unwrap; %w", err)
-	}
-	return result, nil
-}
-
-func NoneFromJSON[A any](x []byte) (*None[A], error) {
-	result := new(None[A])
-	err := result.UnmarshalJSON(x)
-	if err != nil {
-		return nil, fmt.Errorf("f.NoneFromJSON[A]: %w", err)
-	}
-	return result, nil
-}
-
-func NoneToJSON[A any](x *None[A]) ([]byte, error) {
-	return x.MarshalJSON()
-}
-
-var (
-	_ json.Unmarshaler = (*None[any])(nil)
-	_ json.Marshaler   = (*None[any])(nil)
-)
-
-func (r *None[A]) MarshalJSON() ([]byte, error) {
-	if r == nil {
-		return nil, nil
-	}
-	return r._marshalJSONNoneLb_A_bL(*r)
-}
-func (r *None[A]) _marshalJSONNoneLb_A_bL(x None[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("f: None[A]._marshalJSONNoneLb_A_bL: struct; %w", err)
-	}
-	return result, nil
-}
-func (r *None[A]) UnmarshalJSON(data []byte) error {
-	result, err := r._unmarshalJSONNoneLb_A_bL(data)
-	if err != nil {
-		return fmt.Errorf("f: None[A].UnmarshalJSON: %w", err)
-	}
-	*r = result
-	return nil
-}
-func (r *None[A]) _unmarshalJSONNoneLb_A_bL(data []byte) (None[A], error) {
-	result := None[A]{}
-	var partial map[string]json.RawMessage
-	err := json.Unmarshal(data, &partial)
-	if err != nil {
-		return result, fmt.Errorf("f: None[A]._unmarshalJSONNoneLb_A_bL: native struct unwrap; %w", err)
 	}
 	return result, nil
 }

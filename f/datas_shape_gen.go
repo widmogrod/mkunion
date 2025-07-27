@@ -121,8 +121,27 @@ func OptionShape() shape.Shape {
 			},
 		},
 		Variant: []shape.Shape{
-			SomeShape(),
 			NoneShape(),
+			SomeShape(),
+		},
+	}
+}
+
+func NoneShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "None",
+		PkgName:       "f",
+		PkgImportName: "github.com/widmogrod/mkunion/f",
+		TypeParams: []shape.TypeParam{
+			shape.TypeParam{
+				Name: "A",
+				Type: &shape.Any{},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion": {
+				Value: "Option",
+			},
 		},
 	}
 }
@@ -146,25 +165,6 @@ func SomeShape() shape.Shape {
 					PkgName:       "",
 					PkgImportName: "",
 				},
-			},
-		},
-		Tags: map[string]shape.Tag{
-			"mkunion": {
-				Value: "Option",
-			},
-		},
-	}
-}
-
-func NoneShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "None",
-		PkgName:       "f",
-		PkgImportName: "github.com/widmogrod/mkunion/f",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
 			},
 		},
 		Tags: map[string]shape.Tag{
