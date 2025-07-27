@@ -143,7 +143,7 @@ func TestMkRefNameFromReflect(t *testing.T) {
 
 	typeName := ToGoTypeName(got, WithPkgImportName())
 	assert.Equal(t,
-		"github.com/widmogrod/mkunion/x/shape.someOf2[string,someOf2[int,float64]]",
+		"github.com/widmogrod/mkunion/x/shape.someOf2[string,github.com/widmogrod/mkunion/x/shape.someOf2[int,float64]]",
 		typeName,
 	)
 }

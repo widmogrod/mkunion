@@ -83,10 +83,12 @@ func WithInstantiation() ToGoTypeNameOptionFunc {
 func WithPkgImportName() ToGoTypeNameOptionFunc {
 	return func(o *toGoOption) {
 		o.usePkgImportName = true
+		o.rootPkgName = ""
+		o.rootPkgImportName = ""
 	}
 }
 
-func WithRootPackage(pkgName string) ToGoTypeNameOptionFunc {
+func WithRootPkgName(pkgName string) ToGoTypeNameOptionFunc {
 	return func(o *toGoOption) {
 		o.rootPkgName = pkgName
 		o.removeRootPkgName = true

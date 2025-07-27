@@ -1041,7 +1041,7 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker) (bytes.Buffer, erro
 		inst := found[key]
 		instantiatedTypeName := shape.ToGoTypeName(inst,
 			shape.WithInstantiation(),
-			shape.WithRootPackage(packageName),
+			shape.WithRootPkgName(packageName),
 		)
 		fullTypeName := shape.ToGoTypeName(inst,
 			shape.WithInstantiation(),

@@ -62,28 +62,28 @@ func TestToGoTypeName(t *testing.T) {
 			typeName: "A",
 			expected: "A",
 			options: []ToGoTypeNameOptionFunc{
-				WithRootPackage(inferred.PackageName()),
+				WithRootPkgName(inferred.PackageName()),
 			},
 		},
 		{
 			typeName: "ListOf2",
 			expected: "ListOf2[T1,T2]",
 			options: []ToGoTypeNameOptionFunc{
-				WithRootPackage(inferred.PackageName()),
+				WithRootPkgName(inferred.PackageName()),
 			},
 		},
 		{
 			typeName: "Example",
 			expected: "Example",
 			options: []ToGoTypeNameOptionFunc{
-				WithRootPackage(inferred.PackageName()),
+				WithRootPkgName(inferred.PackageName()),
 			},
 		},
 		{
 			typeName: "Option",
 			expected: "Option[AZ]",
 			options: []ToGoTypeNameOptionFunc{
-				WithRootPackage(inferred.PackageName()),
+				WithRootPkgName(inferred.PackageName()),
 			},
 		},
 		{
@@ -146,5 +146,5 @@ func TestToGoTypeNameInst(t *testing.T) {
 	}
 
 	result := ToGoTypeName(subject, WithPkgImportName(), WithInstantiation())
-	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[A,B]", result)
+	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[github.com/widmogrod/mkunion/x/shape/testasset.A,github.com/widmogrod/mkunion/x/shape/testasset.B]", result)
 }
