@@ -27,8 +27,6 @@ type APIError struct {
 // FetchResult combine unions for rich error handling
 type FetchResult = Result[Option[User], APIError]
 
-var _ = 
-
 // handleFetch uses nested pattern matching to handle result
 func handleFetch(result FetchResult) string {
 	return MatchResultR1(result,
