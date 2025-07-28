@@ -56,12 +56,12 @@ func (g *VisitorGenerator) Generate() ([]byte, error) {
 
 func (g *VisitorGenerator) variantType(x shape.Shape) string {
 	return shape.ToGoTypeName(x,
-		shape.WithRootPackage(shape.ToGoPkgName(g.union)))
+		shape.WithRootPkgName(shape.ToGoPkgName(g.union)))
 }
 
 func (g *VisitorGenerator) variantTypeInstantiated(x shape.Shape) string {
 	return shape.ToGoTypeName(x,
-		shape.WithRootPackage(shape.ToGoPkgName(g.union)),
+		shape.WithRootPkgName(shape.ToGoPkgName(g.union)),
 		shape.WithInstantiation())
 }
 
@@ -109,7 +109,7 @@ func MatchUnionFuncName(x *shape.UnionLike, returns int) string {
 func (g *VisitorGenerator) GenerateMatchFunctions(x *shape.UnionLike, returns int) ([]byte, error) {
 	result := &bytes.Buffer{}
 
-	typeName := shape.ToGoTypeName(x, shape.WithRootPackage(shape.ToGoPkgName(g.union)))
+	typeName := shape.ToGoTypeName(x, shape.WithRootPkgName(shape.ToGoPkgName(g.union)))
 	genTypes := g.mkOutTypeNamesForTypeParams(x.TypeParams)
 
 	for ; returns > 0; returns-- {
@@ -198,7 +198,7 @@ func (g *VisitorGenerator) mkOutTypeNamesForTypeParams(x []shape.TypeParam) stri
 		return ""
 	}
 
-	rootPackage := shape.WithRootPackage(shape.ToGoPkgName(g.union))
+	rootPackage := shape.WithRootPkgName(shape.ToGoPkgName(g.union))
 
 	var result string
 	for i := 0; i < len(x); i++ {
@@ -220,7 +220,7 @@ func (g *VisitorGenerator) variantName(x shape.Shape) string {
 }
 
 func (g *VisitorGenerator) typeParamsNames(x *shape.UnionLike) string {
-	rootPackage := shape.WithRootPackage(shape.ToGoPkgName(g.union))
+	rootPackage := shape.WithRootPkgName(shape.ToGoPkgName(g.union))
 
 	var result string
 	for _, typeParam := range x.TypeParams {
@@ -238,7 +238,7 @@ func (g *VisitorGenerator) typeParamsNames(x *shape.UnionLike) string {
 }
 
 func (g *VisitorGenerator) typeParamsNamesInstantiated(x *shape.UnionLike) string {
-	rootPackage := shape.WithRootPackage(shape.ToGoPkgName(g.union))
+	rootPackage := shape.WithRootPkgName(shape.ToGoPkgName(g.union))
 
 	var result string
 	for _, typeParam := range x.TypeParams {

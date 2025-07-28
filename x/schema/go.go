@@ -759,7 +759,10 @@ func ToGoReflect(xshape shape.Shape, ydata Schema, zreflect reflect.Type) (refle
 				_, found := (*data)[variantName]
 				if found {
 					// zreflect is interface, so we need to find the actual type
-					fullPkgName := shape.ToGoTypeName(variant, shape.WithPkgImportName())
+					fullPkgName := shape.ToGoTypeName(variant,
+						shape.WithPkgImportName(),
+						shape.WithInstantiation(),
+					)
 					typ, found := shared.TypeRegistryLoad(fullPkgName)
 					if !found {
 						return reflect.Value{}, fmt.Errorf("schema.ToGoReflect: shape.UnionLike %s not found %s", x.Name, fullPkgName)

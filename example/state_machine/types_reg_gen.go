@@ -10,9 +10,6 @@ import (
 )
 
 func init() {
-	shared.TypeRegistryStore[machine.Machine[Dependencies, Command, State]]("github.com/widmogrod/mkunion/x/machine.Machine[github.com/widmogrod/mkunion/example/state_machine.Dependencies,github.com/widmogrod/mkunion/example/state_machine.Command,github.com/widmogrod/mkunion/example/state_machine.State]")
-	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/example/state_machine.State]")
-	shared.TypeRegistryStore[schemaless.Repository[schema.Schema]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[CancelOrderCMD]("github.com/widmogrod/mkunion/example/state_machine.CancelOrderCMD")
 	shared.TypeRegistryStore[CompleteOrderCMD]("github.com/widmogrod/mkunion/example/state_machine.CompleteOrderCMD")
 	shared.TypeRegistryStore[ConfirmOrderCMD]("github.com/widmogrod/mkunion/example/state_machine.ConfirmOrderCMD")
@@ -22,5 +19,8 @@ func init() {
 	shared.TypeRegistryStore[OrderPending]("github.com/widmogrod/mkunion/example/state_machine.OrderPending")
 	shared.TypeRegistryStore[OrderProcessing]("github.com/widmogrod/mkunion/example/state_machine.OrderProcessing")
 	shared.TypeRegistryStore[StartProcessingCMD]("github.com/widmogrod/mkunion/example/state_machine.StartProcessingCMD")
+	shared.TypeRegistryStore[machine.Machine[Dependencies, Command, State]]("github.com/widmogrod/mkunion/x/machine.Machine[github.com/widmogrod/mkunion/example/state_machine.Dependencies,github.com/widmogrod/mkunion/example/state_machine.Command,github.com/widmogrod/mkunion/example/state_machine.State]")
+	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/example/state_machine.State]")
+	shared.TypeRegistryStore[schemaless.Repository[schema.Schema]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 }

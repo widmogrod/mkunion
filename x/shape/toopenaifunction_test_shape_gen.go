@@ -42,14 +42,14 @@ func weatherInputShape() Shape {
 					"desc": {
 						Value: "c or f",
 					},
-					"name": {
-						Value: "unit",
-					},
 					"enum": {
 						Value: "c",
 						Options: []string{
 							"f",
 						},
+					},
+					"name": {
+						Value: "unit",
 					},
 				},
 			},

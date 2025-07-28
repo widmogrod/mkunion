@@ -128,6 +128,7 @@ func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 // LookupPkgShapeOnDisk scans filesystem for all shapes in pkgImportName.
 // it's suited for generators, that parse AST
 func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
+	log.Debugf("shape.LookupPkgShapeOnDisk: looking for shapes in %s", pkgImportName)
 	pkgPath, err := findPackagePath(pkgImportName)
 	if err != nil {
 		log.Warnf("shape.LookupPkgShapeOnDisk: could not find package path %s", err.Error())

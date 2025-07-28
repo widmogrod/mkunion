@@ -4,6 +4,8 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"go/ast"
+	"go/token"
+	"strings"
 )
 
 type FromASTOption func(x Shape)
@@ -31,6 +33,18 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 		}
 
 		return result
+
+	case *ast.BasicLit:
+		if y.Kind != token.STRING {
+			return &Any{}
+		}
+
+		return &RefName{
+			Name:          strings.Trim(y.Value, `"`),
+			PkgName:       "",
+			PkgImportName: "",
+			Indexed:       nil,
+		}
 
 	case *ast.IndexExpr:
 		result := FromAST(y.X, fx...)
@@ -154,6 +168,23 @@ func InjectPkgImportName(pkgNameToImportName map[string]string) func(x Shape) {
 					y.PkgImportName = pkgImportName
 				} else {
 					log.Warnf("InjectPkgImportName: could not find pkgNameToImportName for %s", y.PkgName)
+				}
+			}
+		}
+	}
+}
+
+// InjectDotImportResolver provides a function to resolve unqualified types from dot imports
+func InjectDotImportResolver(resolver func(name string) (pkgName, pkgImportName string, found bool)) func(x Shape) {
+	return func(x Shape) {
+		switch y := x.(type) {
+		case *RefName:
+			// Only apply to unqualified types (no package name set)
+			if y.PkgName == "" && y.PkgImportName == "" {
+				pkgName, pkgImportName, found := resolver(y.Name)
+				if found {
+					y.PkgName = pkgName
+					y.PkgImportName = pkgImportName
 				}
 			}
 		}

@@ -24,8 +24,6 @@ jobs:
 
       # generate code with mkunion
       - run: ./cmd/mkunion/mkunion watch -g ./...
-      # generate code with go generate
-      - run: go generate ./...
 
       - run: pip install awscli-local
       - run: dev/bootstrap.sh -nologs

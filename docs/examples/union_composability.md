@@ -15,6 +15,13 @@ Let's start by implementing two of the most popular union types from functional 
 
 ## Basic Implementation
 
+```go title="f/datas.go"
+// package "github.com/widmogrod/mkunion/f"
+
+--8<-- "f/datas.go:result"
+--8<-- "f/datas.go:option"
+```
+
 ```go title="example/datas.go"
 --8<-- "example/datas.go:example"
 ```

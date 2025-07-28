@@ -83,10 +83,12 @@ func WithInstantiation() ToGoTypeNameOptionFunc {
 func WithPkgImportName() ToGoTypeNameOptionFunc {
 	return func(o *toGoOption) {
 		o.usePkgImportName = true
+		o.rootPkgName = ""
+		o.rootPkgImportName = ""
 	}
 }
 
-func WithRootPackage(pkgName string) ToGoTypeNameOptionFunc {
+func WithRootPkgName(pkgName string) ToGoTypeNameOptionFunc {
 	return func(o *toGoOption) {
 		o.rootPkgName = pkgName
 		o.removeRootPkgName = true
@@ -655,6 +657,39 @@ func Name(x Shape) string {
 		},
 		func(x *UnionLike) string {
 			return x.Name
+		},
+	)
+}
+
+func PkgName(x Shape) string {
+	return MatchShapeR1(
+		x,
+		func(x *Any) string {
+			return ""
+		},
+		func(x *RefName) string {
+			return x.PkgName
+		},
+		func(x *PointerLike) string {
+			return PkgName(x.Type)
+		},
+		func(x *AliasLike) string {
+			return x.PkgName
+		},
+		func(x *PrimitiveLike) string {
+			return ""
+		},
+		func(x *ListLike) string {
+			return ""
+		},
+		func(x *MapLike) string {
+			return ""
+		},
+		func(x *StructLike) string {
+			return x.PkgName
+		},
+		func(x *UnionLike) string {
+			return x.PkgName
 		},
 	)
 }
