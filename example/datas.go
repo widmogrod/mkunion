@@ -1,11 +1,10 @@
 package example
 
+// --8<-- [start:example]
 import (
 	"fmt"
 	. "github.com/widmogrod/mkunion/f"
 )
-
-// --8<-- [start:example]
 
 type User struct{ Name string }
 
