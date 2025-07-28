@@ -28,11 +28,9 @@ func FromAST(x any, fx ...FromASTOption) Shape {
 			Indexed:       nil,
 		}
 
-		log.Debugf("FromAST: Creating RefName for %s (before options)", y.Name)
 		for _, f := range fx {
 			f(result)
 		}
-		log.Debugf("FromAST: RefName for %s after options: pkg=%s, pkgImport=%s", y.Name, result.PkgName, result.PkgImportName)
 
 		return result
 
