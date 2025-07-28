@@ -258,29 +258,7 @@ func (f *InferredInfo) ResolveUnqualifiedType(name string) (pkgName, pkgImportNa
 		return f.pkgName, f.pkgImportName, false
 	}
 
-	// Check each dot import to see if it contains this type
-	for _, dotImportPath := range f.dotImports {
-		// Try to look up the shape in the dot imported package
-		shapes := LookupPkgShapeOnDisk(dotImportPath)
-		for _, shape := range shapes {
-			if Name(shape) == name {
-				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
-				return pkgName, dotImportPath, true
-			}
-
-			if union, ok := shape.(*UnionLike); ok {
-				for _, variant := range union.Variant {
-					if Name(variant) == name {
-						pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
-						return pkgName, dotImportPath, true
-					}
-				}
-			}
-		}
-	}
-
-	// Fall back to current package
-	return f.pkgName, f.pkgImportName, false
+	return resolveTypeFromDotImports(name, f.dotImports)
 }
 
 func (f *InferredInfo) RetrieveUnions() []*UnionLike {
@@ -1307,31 +1285,7 @@ func (walker *IndexedTypeWalker) IndexedShapes() map[string]Shape {
 // ResolveUnqualifiedType checks if an unqualified type name comes from a dot import
 // Returns the package name, package import path, and whether it was found in dot imports
 func (walker *IndexedTypeWalker) ResolveUnqualifiedType(name string) (pkgName, pkgImportName string, foundInDotImport bool) {
-	// Check each dot import to see if it contains this type
-	for _, dotImportPath := range walker.dotImports {
-		// Try to look up the shape in the dot imported package
-		shapes := LookupPkgShapeOnDisk(dotImportPath)
-
-		for _, shape := range shapes {
-			// When shape is union look for variant with a name
-			if Name(shape) == name {
-				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
-				return pkgName, dotImportPath, true
-			}
-
-			if union, ok := shape.(*UnionLike); ok {
-				for _, variant := range union.Variant {
-					if Name(variant) == name {
-						pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
-						return pkgName, dotImportPath, true
-					}
-				}
-			}
-		}
-	}
-
-	// Fall back to current package
-	return walker.pkgName, walker.pkgImportName, false
+	return resolveTypeFromDotImports(name, walker.dotImports)
 }
 
 func (walker *IndexedTypeWalker) PackageTags() map[string]Tag {
@@ -1684,4 +1638,26 @@ func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 			walker.indexedShapes[name] = indexed
 		}
 	}
+}
+
+func resolveTypeFromDotImports(typeName string, dotImports []string) (pkgName, pkgImportName string, found bool) {
+	for _, dotImportPath := range dotImports {
+		shapes := LookupPkgShapeOnDisk(dotImportPath)
+		for _, shape := range shapes {
+			if Name(shape) == typeName {
+				pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
+				return pkgName, dotImportPath, true
+			}
+
+			if union, ok := shape.(*UnionLike); ok {
+				for _, variant := range union.Variant {
+					if Name(variant) == typeName {
+						pkgName = tryToFindPkgName(dotImportPath, path.Base(dotImportPath))
+						return pkgName, dotImportPath, true
+					}
+				}
+			}
+		}
+	}
+	return "", "", false
 }
