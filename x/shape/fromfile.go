@@ -74,7 +74,7 @@ func InferFromFileWithContentBody(x string, pkgImportName string) (*InferredInfo
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, result.fileName, []byte(x), parser.ParseComments)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("shape.InferFromFileWithContentBody: %w", err)
 	}
 
 	ast.Walk(result, f)
