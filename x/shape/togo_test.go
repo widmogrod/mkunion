@@ -2,6 +2,7 @@ package shape
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -147,4 +148,66 @@ func TestToGoTypeNameInst(t *testing.T) {
 
 	result := ToGoTypeName(subject, WithPkgImportName(), WithInstantiation())
 	assert.Equal(t, "github.com/widmogrod/mkunion/x/shape/testasset.ListOf2[github.com/widmogrod/mkunion/x/shape/testasset.A,github.com/widmogrod/mkunion/x/shape/testasset.B]", result)
+}
+
+func TestPkgName(t *testing.T) {
+	useCases := []struct {
+		input    Shape
+		expected string
+	}{
+		{
+			input: &RefName{
+				Name:          "ListOf2",
+				PkgName:       "testasset",
+				PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+				Indexed: []Shape{
+					&RefName{
+						Name:          "A",
+						PkgName:       "testasset",
+						PkgImportName: "github.com/widmogrod/mkunion/x/shape/testasset",
+					},
+				},
+			},
+			expected: "testasset",
+		},
+		{
+			input: &AliasLike{
+				Name:          "FetchResult",
+				PkgName:       "testutils",
+				PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				IsAlias:       true,
+				Type: &RefName{
+					Name:          "Result",
+					PkgName:       "f",
+					PkgImportName: "github.com/widmogrod/mkunion/f",
+					Indexed: []Shape{
+						&RefName{
+							Name:          "Option",
+							PkgName:       "f",
+							PkgImportName: "github.com/widmogrod/mkunion/f",
+							Indexed: []Shape{
+								&RefName{
+									Name:          "User",
+									PkgName:       "testutils",
+									PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+								},
+							},
+						},
+						&RefName{
+							Name:          "APIError",
+							PkgName:       "testutils",
+							PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						},
+					},
+				},
+			},
+			expected: "testutils",
+		},
+	}
+	for _, uc := range useCases {
+		t.Run(ToStr(uc.input), func(t *testing.T) {
+			actual := PkgName(uc.input)
+			require.Equal(t, uc.expected, actual)
+		})
+	}
 }
