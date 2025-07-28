@@ -63,7 +63,6 @@ var onDiskCache = sync.Map{}
 // it's suited for generators, that parse AST
 func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 	key := shapeFullName(x)
-	log.Debugf("shape.LookupShapeOnDisk: %s", key)
 	if v, ok := onDiskCache.Load(key); ok {
 		return v.(Shape), true
 	}
@@ -181,10 +180,6 @@ func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
 		return nil
 	}
 
-	log.Debugf("LookupPkgShapeOnDisk: found %d shapes in %s", len(result), pkgImportName)
-	for _, shape := range result {
-		log.Debugf("LookupPkgShapeOnDisk:   - %s", Name(shape))
-	}
 	return result
 }
 
