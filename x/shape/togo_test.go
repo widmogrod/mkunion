@@ -211,3 +211,93 @@ func TestPkgName(t *testing.T) {
 		})
 	}
 }
+
+func TestToGoPkgName(t *testing.T) {
+	subject := &StructLike{
+		Name:          "Err",
+		PkgName:       "f",
+		PkgImportName: "github.com/widmogrod/mkunion/f",
+		TypeParams: []TypeParam{
+			TypeParam{
+				Name: "A",
+				Type: &RefName{
+					Name:          "Option",
+					PkgName:       "f",
+					PkgImportName: "github.com/widmogrod/mkunion/f",
+					Indexed: []Shape{
+						&RefName{
+							Name:          "User",
+							PkgName:       "testutils",
+							PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+						},
+					},
+				},
+			},
+			TypeParam{
+				Name: "E",
+				Type: &RefName{
+					Name:          "APIError",
+					PkgName:       "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				},
+			},
+		},
+		Fields: []*FieldLike{
+			{
+				Name: "Error",
+				Type: &RefName{
+					Name:          "APIError",
+					PkgName:       "testutils",
+					PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+				},
+			},
+		},
+		Tags: map[string]Tag{
+			"mkunion": {
+				Value: "Result",
+			},
+		},
+	}
+
+	assert.Equal(t, "f", ToGoPkgName(subject), "root package name is incorrect")
+
+	result := ToGoTypeName(subject,
+		WithInstantiation(),
+		WithPkgImportName(),
+	)
+	assert.Equal(t, "github.com/widmogrod/mkunion/f.Err[github.com/widmogrod/mkunion/f.Option[github.com/widmogrod/mkunion/x/generators/testutils.User],github.com/widmogrod/mkunion/x/generators/testutils.APIError]", result)
+
+	result2 := ToGoTypeName(subject,
+		WithInstantiation(),
+	)
+	assert.Equal(t, "f.Err[Option[testutils.User],testutils.APIError]", result2)
+
+	result3 := ToGoTypeName(subject,
+		WithPkgImportName(),
+	)
+	assert.Equal(t, "github.com/widmogrod/mkunion/f.Err[A,E]", result3)
+
+	result4 := ToGoTypeName(subject,
+		WithRootPkgName("f"),
+	)
+	assert.Equal(t, "Err[A,E]", result4)
+
+	result5 := ToGoTypeName(subject,
+		WithInstantiation(),
+		WithRootPkgName("f"),
+	)
+	assert.Equal(t, "Err[Option[testutils.User],testutils.APIError]", result5)
+
+	result5b := ToGoTypeName(subject,
+		WithInstantiation(),
+		WithRootPkgName("testutils"),
+	)
+	assert.Equal(t, "f.Err[f.Option[User],APIError]", result5b)
+
+	result6 := ToGoTypeName(subject,
+		WithInstantiation(),
+		WithPkgImportName(),
+		WithRootPkgName("f"),
+	)
+	assert.Equal(t, "Err[Option[github.com/widmogrod/mkunion/x/generators/testutils.User],github.com/widmogrod/mkunion/x/generators/testutils.APIError]", result6)
+}
