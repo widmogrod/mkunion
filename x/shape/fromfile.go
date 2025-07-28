@@ -1634,67 +1634,54 @@ func (walker *IndexedTypeWalker) guessParamNamesReceiver(x *ast.FieldList) []str
 }
 
 func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
-	// Check if this is a type we should register
-	shouldRegister := false
-	switch t := arg.(type) {
+	switch arg.(type) {
 	case *ast.IndexExpr, *ast.IndexListExpr, *ast.StarExpr:
-		shouldRegister = true
-	case *ast.Ident:
-		// Only register exported identifiers that aren't primitive types
-		if t.IsExported() && NameToPrimitiveShape(t.Name) == nil {
-			shouldRegister = true
+		options := []FromASTOption{
+			InjectDotImportResolver(walker.ResolveUnqualifiedType),
+			InjectPkgName(walker.pkgName),
+			InjectPkgImportName(walker.packageNameToPackageImport),
 		}
-	}
+		indexed := FromAST(arg, options...)
 
-	if !shouldRegister {
-		return
-	}
+		// if is pointer unwrap it
+		ptr, ok := indexed.(*PointerLike)
+		if ok {
+			indexed = ptr.Type
+		}
 
-	options := []FromASTOption{
-		InjectDotImportResolver(walker.ResolveUnqualifiedType),
-		InjectPkgName(walker.pkgName),
-		InjectPkgImportName(walker.packageNameToPackageImport),
-	}
-	indexed := FromAST(arg, options...)
-
-	// if is pointer unwrap it
-	ptr, ok := indexed.(*PointerLike)
-	if ok {
-		indexed = ptr.Type
-	}
-
-	if len(walker.filterGenericTypes) > 0 {
-		indexedName := Name(indexed)
-		for _, name := range walker.filterGenericTypes {
-			if name == indexedName {
-				// we extracted type parameter, not interested in it
-				return
-			}
-
-			typeParams := ExtractIndexedTypes(indexed)
-			for {
-				if len(typeParams) == 0 {
-					break
-				}
-
-				tp := typeParams[0]
-				typeParams = typeParams[1:]
-				if Name(tp) == name {
+		if len(walker.filterGenericTypes) > 0 {
+			indexedName := Name(indexed)
+			for _, name := range walker.filterGenericTypes {
+				if name == indexedName {
 					// we extracted type parameter, not interested in it
 					return
 				}
 
-				typeParams = append(typeParams, ExtractIndexedTypes(tp)...)
+				typeParams := ExtractIndexedTypes(indexed)
+				for {
+					if len(typeParams) == 0 {
+						break
+					}
+
+					tp := typeParams[0]
+					typeParams = typeParams[1:]
+					if Name(tp) == name {
+						// we extracted type parameter, not interested in it
+						return
+					}
+
+					typeParams = append(typeParams, ExtractIndexedTypes(tp)...)
+				}
 			}
 		}
-	}
 
-	name := ToGoTypeName(indexed,
-		WithPkgImportName(),
-		WithInstantiation(),
-	)
+		name := ToGoTypeName(indexed,
+			WithPkgImportName(),
+			WithInstantiation(),
+		)
 
-	if _, ok := walker.indexedShapes[name]; !ok {
-		walker.indexedShapes[name] = indexed
+		if _, ok := walker.indexedShapes[name]; !ok {
+			walker.indexedShapes[name] = indexed
+		}
 	}
 }

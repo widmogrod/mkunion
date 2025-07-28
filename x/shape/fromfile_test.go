@@ -756,7 +756,6 @@ func handleFetch(result FetchResult) string {
 					},
 					Tags: map[string]Tag{"mkunion": {Value: "Result"}},
 				},
-
 				"github.com/widmogrod/mkunion/f.None[github.com/test_package.User]": &StructLike{
 					Name:          "None",
 					PkgName:       "f",
@@ -774,7 +773,6 @@ func handleFetch(result FetchResult) string {
 					Fields: nil,
 					Tags:   map[string]Tag{"mkunion": {Value: "Option"}},
 				},
-
 				"github.com/widmogrod/mkunion/f.Ok[github.com/widmogrod/mkunion/f.Option[github.com/test_package.User],github.com/test_package.APIError]": &StructLike{
 					Name:          "Ok",
 					PkgName:       "f",
@@ -823,7 +821,6 @@ func handleFetch(result FetchResult) string {
 					},
 					Tags: map[string]Tag{"mkunion": {Value: "Result"}},
 				},
-
 				"github.com/widmogrod/mkunion/f.Some[github.com/test_package.User]": &StructLike{
 					Name:          "Some",
 					PkgName:       "f",
@@ -849,12 +846,6 @@ func handleFetch(result FetchResult) string {
 						},
 					},
 					Tags: map[string]Tag{"mkunion": {Value: "Option"}},
-				},
-
-				"github.com/test_package.FetchResult": &RefName{
-					Name:          "FetchResult",
-					PkgName:       "test_package",
-					PkgImportName: "github.com/test_package",
 				},
 			},
 			expectedDotImports: []string{
