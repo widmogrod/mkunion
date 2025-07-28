@@ -393,7 +393,7 @@ func TestCleanGeneratedFiles(t *testing.T) {
 		// Create various generated files
 		generatedFiles := []string{
 			"test_union_gen.go",
-			"test_shape_gen.go", 
+			"test_shape_gen.go",
 			"test_serde_gen.go",
 			"test_match_gen.go",
 			"types_reg_gen.go",
@@ -488,10 +488,10 @@ func TestCleanGeneratedFiles(t *testing.T) {
 
 		// Create generated files in different directories
 		files := map[string]string{
-			filepath.Join(tempDir, "root_union_gen.go"):  "package test",
-			filepath.Join(subDir1, "sub1_shape_gen.go"):  "package sub1",
-			filepath.Join(subDir2, "sub2_serde_gen.go"):  "package sub2",
-			filepath.Join(subDir2, "types_reg_gen.go"):   "package sub2",
+			filepath.Join(tempDir, "root_union_gen.go"): "package test",
+			filepath.Join(subDir1, "sub1_shape_gen.go"): "package sub1",
+			filepath.Join(subDir2, "sub2_serde_gen.go"): "package sub2",
+			filepath.Join(subDir2, "types_reg_gen.go"):  "package sub2",
 		}
 
 		for filePath, content := range files {
@@ -592,7 +592,7 @@ func TestIsGeneratedFile(t *testing.T) {
 		{"test_serde_gen.go", true},
 		{"test_match_gen.go", true},
 		{"types_reg_gen.go", true},
-		
+
 		// Non-generated files
 		{"test.go", false},
 		{"test_test.go", false},
@@ -601,9 +601,9 @@ func TestIsGeneratedFile(t *testing.T) {
 		{"main.go", false},
 		{"gen.go", false},
 		{"_gen.go", false},
-		{"test_gen.go", false}, // Missing specific suffix
+		{"test_gen.go", false},   // Missing specific suffix
 		{"test_union.go", false}, // Missing _gen suffix
-		
+
 		// Edge cases
 		{"", false},
 		{"a_union_gen.go", true},
@@ -615,7 +615,7 @@ func TestIsGeneratedFile(t *testing.T) {
 			// Create a temporary file path for testing
 			tempDir := t.TempDir()
 			fullPath := filepath.Join(tempDir, tt.fileName)
-			
+
 			result := isGeneratedFile(fullPath)
 			assert.Equal(t, tt.expected, result, "isGeneratedFile(%q) = %v, want %v", tt.fileName, result, tt.expected)
 		})
@@ -628,12 +628,12 @@ func TestFindGeneratedFiles(t *testing.T) {
 
 		// Create mix of generated and non-generated files
 		files := map[string]bool{
-			"test_union_gen.go":  true,  // generated
-			"test_shape_gen.go":  true,  // generated
-			"types_reg_gen.go":   true,  // generated
-			"test.go":            false, // not generated
-			"helper.go":          false, // not generated
-			"README.md":          false, // not a go file
+			"test_union_gen.go": true,  // generated
+			"test_shape_gen.go": true,  // generated
+			"types_reg_gen.go":  true,  // generated
+			"test.go":           false, // not generated
+			"helper.go":         false, // not generated
+			"README.md":         false, // not a go file
 		}
 
 		for fileName := range files {
