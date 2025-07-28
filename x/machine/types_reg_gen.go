@@ -9,6 +9,5 @@ import (
 func init() {
 	shared.TypeRegistryStore[Case[any, string, int]]("github.com/widmogrod/mkunion/x/machine.Case[any,string,int]")
 	shared.TypeRegistryStore[Machine[any, string, int]]("github.com/widmogrod/mkunion/x/machine.Machine[any,string,int]")
-	shared.TypeRegistryStore[ParsedTransition]("github.com/widmogrod/mkunion/x/machine.ParsedTransition")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 }
