@@ -13,7 +13,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.35.3
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.5
 	github.com/confluentinc/confluent-kafka-go/v2 v2.10.1
-	github.com/fatih/structtag v1.2.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/go-cmp v0.7.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
@@ -23,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
-	golang.org/x/mod v0.24.0
+	golang.org/x/mod v0.26.0
 )
 
 require (
