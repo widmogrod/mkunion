@@ -6,14 +6,13 @@ toolchain go1.24.3
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.4
-	github.com/aws/aws-sdk-go-v2 v1.36.5
+	github.com/aws/aws-sdk-go-v2 v1.39.2
 	github.com/aws/aws-sdk-go-v2/config v1.29.14
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.19.4
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.44.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.35.3
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.38.5
 	github.com/confluentinc/confluent-kafka-go/v2 v2.10.1
-	github.com/fatih/structtag v1.2.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/go-cmp v0.7.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
@@ -40,7 +39,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19 // indirect
-	github.com/aws/smithy-go v1.22.4 // indirect
+	github.com/aws/smithy-go v1.23.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
