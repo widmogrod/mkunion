@@ -1,6 +1,6 @@
 module github.com/widmogrod/mkunion
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.3
 
@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
-	golang.org/x/mod v0.24.0
+	golang.org/x/mod v0.28.0
 )
 
 require (
