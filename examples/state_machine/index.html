@@ -1,0 +1,1338 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../json/">
+      
+      
+        <link rel="next" href="../state_machine_best_practices/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.21">
+    
+    
+      
+        <title>State Machines and unions - mkunion - strongly typed union types in Golang</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.2a3383ac.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mkunion-and-state-machines-in-go" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mkunion - strongly typed union types in Golang" class="md-header__button md-logo" aria-label="mkunion - strongly typed union types in Golang" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mkunion - strongly typed union types in Golang
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              State Machines and unions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/widmogrod/mkunion" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mkunion - strongly typed union types in Golang" class="md-nav__button md-logo" aria-label="mkunion - strongly typed union types in Golang" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    mkunion - strongly typed union types in Golang
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/widmogrod/mkunion" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../value_proposition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Value Proposition
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing and development
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Roadmap
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom_pattern_matching/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Custom Pattern Matching
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic_union/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Union and generic types
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../json/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Marshaling union as JSON
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    State Machines and unions
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Machines and unions
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#working-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Working example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modeling-commands-and-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modeling commands and states
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modeling-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modeling transitions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-state-machines-self-documenting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing state machines &amp; self-documenting
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-state-diagram-from-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generating state diagram from tests
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#state-machines-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      State machines builder
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next steps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../state_machine_best_practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Machine Best Practices
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../state_storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Persisting union in database
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../type_script/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    End-to-End types between Go and TypeScript
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../union_composability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Composability and Type Safety
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../union_phanthom_types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Phantom Types
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#working-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Working example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modeling-commands-and-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modeling commands and states
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modeling-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modeling transitions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-state-machines-self-documenting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing state machines &amp; self-documenting
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-state-diagram-from-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generating state diagram from tests
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#state-machines-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      State machines builder
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next steps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/widmogrod/mkunion/edit/main/docs/examples/state_machine.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="mkunion-and-state-machines-in-go">MkUnion and state machines in Go</h1>
+<p>This document will show how to use <code>mkunion</code> to manage application state using the example of an Order Service. 
+You will learn:</p>
+<ul>
+<li>how to model state machines in Go, and find similarities to "<strong>clean architecture</strong>"</li>
+<li>How to <strong>test state machines</strong> (with fuzzing), and as a bonus, you will get mermaid diagrams for free</li>
+<li>How to <strong>persist state in a database</strong> and how optimistic concurrency helps <strong>resolve concurrency conflicts</strong></li>
+<li>How to <strong>handle errors</strong> in state machines and build foundations for <strong>self-healing</strong> systems</li>
+</ul>
+<h2 id="working-example">Working example</h2>
+<p>As a driving example, we will use an e-commerce inspired Order Service that can be in one of the following states:</p>
+<ul>
+<li><code>Pending</code> - The order is created and is waiting for someone to process it.</li>
+<li><code>Processing</code> - The order is being processed; a human is going to pick up items from the warehouse and pack them.</li>
+<li><code>Cancelled</code> - The order was cancelled. There can be many reasons, one of them being that the warehouse is out of stock.</li>
+<li><code>Completed</code> - The order is completed and can be shipped to the customer.</li>
+</ul>
+<p>Such states have rules that govern <strong>transitions</strong>; for example, an order cannot be cancelled if it's already completed, and so on.</p>
+<p>We need to have a way to trigger changes in state, like creating an order that is pending for processing, or cancelling an order. We will call these triggers <strong>commands</strong>.</p>
+<p>Some of these rules could change in the future, and we want to be able to change them without rewriting the whole application.
+This also informs us that our design should be open for extension.</p>
+<p>Side note: if you want to go straight to the final code product, then go into the <a href="https://github.com/widmogrod/mkunion/tree/main/example/state">example/state/</a> directory and have fun exploring.</p>
+<h2 id="modeling-commands-and-states">Modeling commands and states</h2>
+<p>Our example can be represented as a state machine that looks like this:
+<a href="https://github.com/widmogrod/mkunion/tree/main/example/state/simple_machine_test.go.state_diagram.mmd">simple_machine_test.go.state_diagram.mmd</a>
+<pre class="mermaid"><code>stateDiagram
+    state_OrderCancelled: *state.OrderCancelled
+    state_OrderCompleted: *state.OrderCompleted
+    state_OrderError: *state.OrderError
+    state_OrderPending: *state.OrderPending
+    state_OrderProcessing: *state.OrderProcessing
+
+    state_OrderProcessing --&gt; state_OrderCancelled: *state.CancelOrderCMD
+    [*] --&gt; state_OrderPending: *state.CreateOrderCMD
+    state_OrderPending --&gt; state_OrderProcessing: *state.MarkAsProcessingCMD
+    state_OrderProcessing --&gt; state_OrderCompleted: *state.MarkOrderCompleteCMD
+    state_OrderProcessing --&gt; state_OrderError: *state.MarkOrderCompleteCMD
+    state_OrderError --&gt; state_OrderCompleted: *state.TryRecoverErrorCMD
+</code></pre></p>
+<p>In this diagram, we can see that we have 5 states and 6 commands that can trigger transitions between states, shown as arrows.</p>
+<p>Because this diagram is generated from code, it has names that represent types in Go that we use in the implementation. </p>
+<p>For example, <code>*state.CreateOrderCMD</code>:</p>
+<ul>
+<li><code>state</code> is the package name.</li>
+<li><code>CreateOrderCMD</code> is a struct name in that package.</li>
+<li>The <code>CMD</code> suffix is a naming convention that is optional, but I find it makes the code more readable and easier to distinguish commands from states.</li>
+</ul>
+<p>Below is a code snippet that demonstrates a complete model of the <strong>state</strong> and <strong>commands</strong> of the Order Service that we discussed.</p>
+<p><strong>Notice</strong> that we use <code>mkunion</code> to group commands and states. (Look for <code>//go:tag mkunion:"Command"</code>)</p>
+<p>This is one example of how union types can be used in Go. 
+Historically in Go, it would be very hard to achieve such a thing, and it would require a lot of boilerplate code.
+Here, the interface that groups these types is generated automatically. You can focus on modeling your domain.</p>
+<div class="language-go highlight"><span class="filename">example/state/model.go</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">package</span><span class="w"> </span><span class="nx">state</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;time&quot;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1">//</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1">//go:tag mkunion:&quot;Command&quot;</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kd">type</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">CreateOrderCMD</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="nx">OrderID</span><span class="w"> </span><span class="nx">OrderID</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="nx">Attr</span><span class="w">    </span><span class="nx">OrderAttr</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">MarkAsProcessingCMD</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="nx">OrderID</span><span class="w">  </span><span class="nx">OrderID</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="nx">WorkerID</span><span class="w"> </span><span class="nx">WorkerID</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="nx">CancelOrderCMD</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">        </span><span class="nx">OrderID</span><span class="w"> </span><span class="nx">OrderID</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">        </span><span class="nx">Reason</span><span class="w">  </span><span class="kt">string</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="nx">MarkOrderCompleteCMD</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">        </span><span class="nx">OrderID</span><span class="w">  </span><span class="nx">OrderID</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">        </span><span class="nx">WorkerID</span><span class="w"> </span><span class="nx">WorkerID</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">    </span><span class="c1">// TryRecoverErrorCMD is a special command that can be used to recover from error state</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">    </span><span class="c1">// you can have different &quot;self-healing&quot; rules based on the error code or even return to previous healthy state</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">    </span><span class="nx">TryRecoverErrorCMD</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">        </span><span class="nx">OrderID</span><span class="w"> </span><span class="nx">OrderID</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="p">)</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="c1">//</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="c1">//go:tag mkunion:&quot;State&quot;</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="kd">type</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="w">    </span><span class="nx">OrderPending</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="w">        </span><span class="nx">Order</span><span class="w"> </span><span class="nx">Order</span>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="w">    </span><span class="nx">OrderProcessing</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="w">        </span><span class="nx">Order</span><span class="w"> </span><span class="nx">Order</span>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="w">    </span><span class="nx">OrderCompleted</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="w">        </span><span class="nx">Order</span><span class="w"> </span><span class="nx">Order</span>
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="w">    </span><span class="nx">OrderCancelled</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a><span class="w">        </span><span class="nx">Order</span><span class="w"> </span><span class="nx">Order</span>
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a><span class="w">    </span><span class="c1">// OrderError is a special state that represent an error</span>
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a><span class="w">    </span><span class="c1">// during order processing, you can have different &quot;self-healing jobs&quot; based on the error code</span>
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a><span class="w">    </span><span class="c1">// like retrying the order, cancel the order, etc.</span>
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a><span class="w">    </span><span class="c1">//</span>
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a><span class="w">    </span><span class="c1">// This pattern enables:</span>
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a><span class="w">    </span><span class="c1">// 1. Perfect reproduction of the failure</span>
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a><span class="w">    </span><span class="c1">// 2. Automatic retry with the same command</span>
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a><span class="w">    </span><span class="c1">// 3. Debugging with full context</span>
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a><span class="w">    </span><span class="c1">// 4. Recovery to previous valid state</span>
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a><span class="w">    </span><span class="nx">OrderError</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="w">        </span><span class="c1">// error information</span>
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="w">        </span><span class="nx">Retried</span><span class="w">   </span><span class="kt">int</span>
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a><span class="w">        </span><span class="nx">RetriedAt</span><span class="w"> </span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a><span class="w">        </span><span class="nx">ProblemCode</span><span class="w"> </span><span class="nx">ProblemCode</span>
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a><span class="w">        </span><span class="nx">ProblemCommand</span><span class="w"> </span><span class="nx">Command</span>
+</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a><span class="w">        </span><span class="nx">ProblemState</span><span class="w">   </span><span class="nx">State</span>
+</span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a><span class="p">)</span>
+</span><span id="__span-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>
+</span><span id="__span-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>
+</span><span id="__span-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a><span class="kd">type</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a><span class="w">    </span><span class="c1">// OrderID Price, Quantity are placeholders for value objects, to ensure better data semantic and type safety</span>
+</span><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a><span class="w">    </span><span class="nx">OrderID</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="kt">string</span>
+</span><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a><span class="w">    </span><span class="nx">Price</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="kt">float64</span>
+</span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a><span class="w">    </span><span class="nx">Quantity</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kt">int</span>
+</span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>
+</span><span id="__span-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a><span class="w">    </span><span class="nx">OrderAttr</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a><span class="w">        </span><span class="c1">// placeholder for order attributes</span>
+</span><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a><span class="w">        </span><span class="c1">// like customer name, address, etc.</span>
+</span><span id="__span-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a><span class="w">        </span><span class="c1">// like product name, price, etc.</span>
+</span><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a><span class="w">        </span><span class="c1">// for simplicity we only have Price and Quantity</span>
+</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a><span class="w">        </span><span class="nx">Price</span><span class="w">    </span><span class="nx">Price</span>
+</span><span id="__span-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a><span class="w">        </span><span class="nx">Quantity</span><span class="w"> </span><span class="nx">Quantity</span>
+</span><span id="__span-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>
+</span><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a><span class="w">    </span><span class="c1">// WorkerID represent human that process the order</span>
+</span><span id="__span-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a><span class="w">    </span><span class="nx">WorkerID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kt">string</span>
+</span><span id="__span-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a>
+</span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a><span class="w">    </span><span class="c1">// Order everything we know about order</span>
+</span><span id="__span-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a><span class="w">    </span><span class="nx">Order</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a><span class="w">        </span><span class="nx">ID</span><span class="w">               </span><span class="nx">OrderID</span>
+</span><span id="__span-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a><span class="w">        </span><span class="nx">OrderAttr</span><span class="w">        </span><span class="nx">OrderAttr</span>
+</span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a><span class="w">        </span><span class="nx">WorkerID</span><span class="w">         </span><span class="nx">WorkerID</span>
+</span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a><span class="w">        </span><span class="nx">StockRemovedAt</span><span class="w">   </span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+</span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a><span class="w">        </span><span class="nx">PaymentChargedAt</span><span class="w"> </span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+</span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a><span class="w">        </span><span class="nx">DeliveredAt</span><span class="w">      </span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a><span class="w">        </span><span class="nx">CancelledAt</span><span class="w">      </span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+</span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a><span class="w">        </span><span class="nx">CancelledReason</span><span class="w">  </span><span class="kt">string</span>
+</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a><span class="p">)</span>
+</span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a>
+</span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ProblemCode</span><span class="w"> </span><span class="kt">int</span>
+</span><span id="__span-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>
+</span><span id="__span-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a><span class="w">    </span><span class="nx">ProblemWarehouseAPIUnreachable</span><span class="w"> </span><span class="nx">ProblemCode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">iota</span>
+</span><span id="__span-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a><span class="w">    </span><span class="nx">ProblemPaymentAPIUnreachable</span>
+</span><span id="__span-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="modeling-transitions">Modeling transitions</h2>
+<p>One thing that is missing is the implementation of transitions between states. 
+There are a few ways to do it. I will show you how to do it using a functional approach (think <code>reduce</code> or <code>map</code> function).</p>
+<p>Let's name the function that we will build <code>Transition</code> and define it as:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">Transition</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">dep</span><span class="w"> </span><span class="nx">Dependencies</span><span class="p">,</span><span class="w"> </span><span class="nx">cmd</span><span class="w"> </span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="nx">state</span><span class="w"> </span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">State</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Our function has a few arguments; let's break them down:</p>
+<ul>
+<li><code>ctx</code> is the standard Go context, which is used to pass deadlines, cancellation signals, etc.</li>
+<li><code>dep</code> encapsulates dependencies like API clients, database connections, configuration, context, etc.
+   — everything that is needed for a complete production implementation.</li>
+<li><code>cmd</code> is a command that we want to apply to the state, 
+   and it has the <code>Command</code> interface, which was generated by <code>mkunion</code> when it was used to group commands.</li>
+<li><code>state</code> is a state that we want to apply our command to and change, 
+   and it has the <code>State</code> interface, which was generated similarly to the <code>Command</code> interface.</li>
+</ul>
+<p>Our function must return either a new state or an error if something went wrong during the transition, like a network error or a validation error.</p>
+<p>Below is a snippet of the implementation of the <code>Transition</code> function for our Order Service:</p>
+<div class="language-go highlight"><span class="filename">example/state/machine.go</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="w">        </span><span class="kd">func</span><span class="p">(</span><span class="nx">x</span><span class="w"> </span><span class="o">*</span><span class="nx">CreateOrderCMD</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">State</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">            </span><span class="c1">// 1. Structural validation as simple checks and explicit error type</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">x</span><span class="p">.</span><span class="nx">OrderID</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">ErrOrderIDRequired</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">            </span><span class="p">}</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">            </span><span class="k">switch</span><span class="w"> </span><span class="nx">state</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="kc">nil</span><span class="p">:</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">                </span><span class="nx">o</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">Order</span><span class="p">{</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">                    </span><span class="nx">ID</span><span class="p">:</span><span class="w">        </span><span class="nx">x</span><span class="p">.</span><span class="nx">OrderID</span><span class="p">,</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">                    </span><span class="nx">OrderAttr</span><span class="p">:</span><span class="w"> </span><span class="nx">x</span><span class="p">.</span><span class="nx">Attr</span><span class="p">,</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">                </span><span class="p">}</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">OrderPending</span><span class="p">{</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">                    </span><span class="nx">Order</span><span class="p">:</span><span class="w"> </span><span class="nx">o</span><span class="p">,</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">                </span><span class="p">},</span><span class="w"> </span><span class="kc">nil</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">            </span><span class="p">}</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">ErrOrderAlreadyExist</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">        </span><span class="p">},</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="c1">// ...</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="c1">// rest removed for brevity </span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="c1">// ...</span>
+</span></code></pre></div>
+<p>You can notice a few patterns in this snippet:</p>
+<ul>
+<li>The <code>Dependency</code> interface helps us to keep dependencies well-defined, which greatly helps in testability and readability of the code. </li>
+<li>The use of the generated function <code>MatchCommandR2</code> to exhaustively match all commands. 
+  This is powerful; when a new command is added, you can be sure that you will get a compile-time error if you don't handle it.</li>
+<li>Validation of commands is done in the transition function. The current implementation is simple, but you can use go-validate to make it more robust, or refactor the code and introduce domain helper functions or methods to the types.</li>
+<li>Each command checks the state to which it is being applied using a <code>switch</code> statement; it ignores states that it doesn't care about. 
+  This means as an implementer, you have to focus only on a small part of the picture and not worry about the rest of the states. 
+  This is also an example where non-exhaustive use of the <code>switch</code> statement is welcome.</li>
+</ul>
+<p>Simple, isn't it? Simplicity also comes from the fact that we don't have to worry about marshalling/unmarshalling data or working with the database; those are things that will be done in other parts of the application, keeping this part clean and focused on business logic.</p>
+<p>Note: The implementation for educational purposes is kept in one big function, 
+but for large projects, it may be better to split it into smaller functions, 
+or define an <code>OrderService</code> struct that conforms to the visitor pattern interface, which was also generated for you:</p>
+<div class="language-go highlight"><span class="filename">example/state/model_union_gen.go</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">CommandVisitor</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">VisitCreateOrderCMD</span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="o">*</span><span class="nx">CreateOrderCMD</span><span class="p">)</span><span class="w"> </span><span class="kt">any</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">VisitMarkAsProcessingCMD</span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="o">*</span><span class="nx">MarkAsProcessingCMD</span><span class="p">)</span><span class="w"> </span><span class="kt">any</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">VisitCancelOrderCMD</span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="o">*</span><span class="nx">CancelOrderCMD</span><span class="p">)</span><span class="w"> </span><span class="kt">any</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">VisitMarkOrderCompleteCMD</span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="o">*</span><span class="nx">MarkOrderCompleteCMD</span><span class="p">)</span><span class="w"> </span><span class="kt">any</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">VisitTryRecoverErrorCMD</span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="o">*</span><span class="nx">TryRecoverErrorCMD</span><span class="p">)</span><span class="w"> </span><span class="kt">any</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="testing-state-machines-self-documenting">Testing state machines &amp; self-documenting</h2>
+<p>Before we go further, let's talk about testing our implementation.</p>
+<p>Testing will not only help us ensure that our implementation is correct but also help us document our state machine 
+and discover transitions that we didn't think about, that should or shouldn't be possible.</p>
+<p>Here is how you can test a state machine in a declarative way, using the <code>mkunion/x/machine</code> package:</p>
+<p><div class="language-go highlight"><span class="filename">example/state/machine_test.go</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestSuite</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">now</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">()</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">di</span><span class="w"> </span><span class="nx">Dependency</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">DependencyMock</span><span class="p">{</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="nx">TimeNowFunc</span><span class="p">:</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">now</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="p">},</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nx">suite</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">machine</span><span class="p">.</span><span class="nx">NewTestSuite</span><span class="p">(</span><span class="nx">di</span><span class="p">,</span><span class="w"> </span><span class="nx">NewMachine</span><span class="p">)</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">suite</span><span class="p">.</span><span class="nx">Case</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;happy path of order state transition&quot;</span><span class="p">,</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="kd">func</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">,</span><span class="w"> </span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">machine</span><span class="p">.</span><span class="nx">Case</span><span class="p">[</span><span class="nx">Dependency</span><span class="p">,</span><span class="w"> </span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="nx">State</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">            </span><span class="nx">c</span><span class="p">.</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">                </span><span class="nx">GivenCommand</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">CreateOrderCMD</span><span class="p">{</span><span class="nx">OrderID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;123&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">Attr</span><span class="p">:</span><span class="w"> </span><span class="nx">order</span><span class="p">}).</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">                </span><span class="nx">ThenState</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">OrderPending</span><span class="p">{</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">                    </span><span class="nx">Order</span><span class="p">:</span><span class="w"> </span><span class="nx">Order</span><span class="p">{</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">                        </span><span class="nx">ID</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;123&quot;</span><span class="p">,</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">                        </span><span class="nx">OrderAttr</span><span class="p">:</span><span class="w"> </span><span class="nx">order</span><span class="p">,</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">                    </span><span class="p">},</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">                </span><span class="p">}).</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">                </span><span class="nx">ForkCase</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;start processing order&quot;</span><span class="p">,</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">,</span><span class="w"> </span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">machine</span><span class="p">.</span><span class="nx">Case</span><span class="p">[</span><span class="nx">Dependency</span><span class="p">,</span><span class="w"> </span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="nx">State</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">                    </span><span class="nx">c</span><span class="p">.</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">                        </span><span class="nx">GivenCommand</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">MarkAsProcessingCMD</span><span class="p">{</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">                            </span><span class="nx">OrderID</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;123&quot;</span><span class="p">,</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">                            </span><span class="nx">WorkerID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;worker-1&quot;</span><span class="p">,</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">                        </span><span class="p">}).</span>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="w">                        </span><span class="nx">ThenState</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">OrderProcessing</span><span class="p">{</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">                            </span><span class="nx">Order</span><span class="p">:</span><span class="w"> </span><span class="nx">Order</span><span class="p">{</span>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">                                </span><span class="nx">ID</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;123&quot;</span><span class="p">,</span>
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">                                </span><span class="nx">OrderAttr</span><span class="p">:</span><span class="w"> </span><span class="nx">order</span><span class="p">,</span>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">                                </span><span class="nx">WorkerID</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;worker-1&quot;</span><span class="p">,</span>
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="w">                            </span><span class="p">},</span>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">                        </span><span class="p">}).</span>
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">                        </span><span class="nx">ForkCase</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mark order as completed&quot;</span><span class="p">,</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">,</span><span class="w"> </span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">machine</span><span class="p">.</span><span class="nx">Case</span><span class="p">[</span><span class="nx">Dependency</span><span class="p">,</span><span class="w"> </span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="nx">State</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="w">                            </span><span class="nx">c</span><span class="p">.</span>
+</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="w">                                </span><span class="nx">GivenCommand</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">MarkOrderCompleteCMD</span><span class="p">{</span>
+</span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="w">                                    </span><span class="nx">OrderID</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;123&quot;</span><span class="p">,</span>
+</span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="w">                                    </span><span class="nx">WorkerID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;worker-2&quot;</span><span class="p">,</span>
+</span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="w">                                </span><span class="p">}).</span>
+</span><span id="__span-4-38"><a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a><span class="w">                                </span><span class="nx">ThenState</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">OrderCompleted</span><span class="p">{</span>
+</span><span id="__span-4-39"><a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a><span class="w">                                    </span><span class="nx">Order</span><span class="p">:</span><span class="w"> </span><span class="nx">Order</span><span class="p">{</span>
+</span><span id="__span-4-40"><a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a><span class="w">                                        </span><span class="nx">ID</span><span class="p">:</span><span class="w">               </span><span class="s">&quot;123&quot;</span><span class="p">,</span>
+</span><span id="__span-4-41"><a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a><span class="w">                                        </span><span class="nx">OrderAttr</span><span class="p">:</span><span class="w">        </span><span class="nx">order</span><span class="p">,</span>
+</span><span id="__span-4-42"><a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a><span class="w">                                        </span><span class="nx">WorkerID</span><span class="p">:</span><span class="w">         </span><span class="s">&quot;worker-1&quot;</span><span class="p">,</span>
+</span><span id="__span-4-43"><a id="__codelineno-4-43" name="__codelineno-4-43" href="#__codelineno-4-43"></a><span class="w">                                        </span><span class="nx">DeliveredAt</span><span class="p">:</span><span class="w">      </span><span class="o">&amp;</span><span class="nx">now</span><span class="p">,</span>
+</span><span id="__span-4-44"><a id="__codelineno-4-44" name="__codelineno-4-44" href="#__codelineno-4-44"></a><span class="w">                                        </span><span class="nx">StockRemovedAt</span><span class="p">:</span><span class="w">   </span><span class="o">&amp;</span><span class="nx">now</span><span class="p">,</span>
+</span><span id="__span-4-45"><a id="__codelineno-4-45" name="__codelineno-4-45" href="#__codelineno-4-45"></a><span class="w">                                        </span><span class="nx">PaymentChargedAt</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">now</span><span class="p">,</span>
+</span><span id="__span-4-46"><a id="__codelineno-4-46" name="__codelineno-4-46" href="#__codelineno-4-46"></a><span class="w">                                    </span><span class="p">},</span>
+</span><span id="__span-4-47"><a id="__codelineno-4-47" name="__codelineno-4-47" href="#__codelineno-4-47"></a><span class="w">                                </span><span class="p">})</span>
+</span><span id="__span-4-48"><a id="__codelineno-4-48" name="__codelineno-4-48" href="#__codelineno-4-48"></a><span class="w">                        </span><span class="p">}).</span>
+</span></code></pre></div>
+A few things to notice in this test:</p>
+<ul>
+<li>We use standard Go testing.</li>
+<li>We use <code>machine.NewTestSuite</code> as a standard way to test state machines.</li>
+<li>We start with describing the <strong>happy path</strong> and use <code>suite.Case</code> to define a test case.</li>
+<li>But most importantly, we define test cases using <code>GivenCommand</code> and <code>ThenState</code> functions, which help make the test more readable and hopefully self-documenting.</li>
+<li>You can see the use of the <code>ForkCase</code> command, which allows you to take the definition of a state declared in the <code>ThenState</code> command, apply a new command to it, and expect a new state.</li>
+<li>Less visible is the use of <code>moq</code> to generate <code>DependencyMock</code> for dependencies, but it's still important for writing more concise code.</li>
+</ul>
+<p>I know it's subjective, but I find it very readable and easy to understand, even for non-programmers.</p>
+<blockquote>
+<p><strong>Important Design Principle</strong>: The test suite enforces that all states must be created through command sequences rather than direct instantiation. This ensures tests only work with reachable states and self-document valid state transitions. See <a href="../state_machine_best_practices/#testing-philosophy">Testing Philosophy</a> in the best practices guide for details.</p>
+</blockquote>
+<h2 id="generating-state-diagram-from-tests">Generating state diagram from tests</h2>
+<p>The last bit is this line at the bottom of the test file:</p>
+<div class="language-go highlight"><span class="filename">example/state/machine_test.go</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">suite</span><span class="p">.</span><span class="nx">AssertSelfDocumentStateDiagram</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;machine_test.go&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">        </span><span class="nx">suite</span><span class="p">.</span><span class="nx">SelfDocumentStateDiagram</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;machine_test.go&quot;</span><span class="p">)</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="p">}</span>
+</span></code></pre></div>
+<p>This code takes all inputs provided in the test suite and fuzzes them, applies commands to random states, and records the results of those transitions.</p>
+<ul>
+<li><code>SelfDocumentStateDiagram</code> - produces two <code>mermaid</code> diagrams that show all possible transitions that are possible in our state machine.</li>
+<li><code>AssertSelfDocumentStateDiagram</code> can be used to compare newly generated diagrams to diagrams committed to the repository and fail the test if they are different.
+   You don't have to use it, but it's good practice to ensure that your state machine is well-tested and doesn't regress without you noticing.</li>
+</ul>
+<p>There are two diagrams that are generated.</p>
+<p>One is a diagram of ONLY successful transitions that you saw at the beginning of this post.</p>
+<pre class="mermaid"><code>stateDiagram
+    state_OrderCancelled: *state.OrderCancelled
+    state_OrderCompleted: *state.OrderCompleted
+    state_OrderError: *state.OrderError
+    state_OrderPending: *state.OrderPending
+    state_OrderProcessing: *state.OrderProcessing
+
+    state_OrderProcessing --&gt; state_OrderCancelled: *state.CancelOrderCMD
+    [*] --&gt; state_OrderPending: *state.CreateOrderCMD
+    state_OrderPending --&gt; state_OrderProcessing: *state.MarkAsProcessingCMD
+    state_OrderProcessing --&gt; state_OrderCompleted: *state.MarkOrderCompleteCMD
+    state_OrderProcessing --&gt; state_OrderError: *state.MarkOrderCompleteCMD
+    state_OrderError --&gt; state_OrderCompleted: *state.TryRecoverErrorCMD
+</code></pre>
+<p>Second is a diagram that includes commands that resulted in errors:
+<pre class="mermaid"><code>stateDiagram
+    state_OrderCancelled: *state.OrderCancelled
+    state_OrderCompleted: *state.OrderCompleted
+    state_OrderError: *state.OrderError
+    state_OrderPending: *state.OrderPending
+    state_OrderProcessing: *state.OrderProcessing
+
+    %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+    state_OrderCancelled --&gt; state_OrderCancelled: ❌*state.CancelOrderCMD
+    %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+    state_OrderCompleted --&gt; state_OrderCompleted: ❌*state.CancelOrderCMD
+    %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+    state_OrderError --&gt; state_OrderError: ❌*state.CancelOrderCMD
+    %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+    state_OrderPending --&gt; state_OrderPending: ❌*state.CancelOrderCMD
+    state_OrderProcessing --&gt; state_OrderCancelled: *state.CancelOrderCMD
+    %% error=cannot cancel order, order must be processing to cancel it; invalid transition 
+    [*] --&gt; [*]: ❌*state.CancelOrderCMD
+    %% error=cannot attemp order creation, order exists: invalid transition 
+    state_OrderCancelled --&gt; state_OrderCancelled: ❌*state.CreateOrderCMD
+    %% error=cannot attemp order creation, order exists: invalid transition 
+    state_OrderCompleted --&gt; state_OrderCompleted: ❌*state.CreateOrderCMD
+    %% error=cannot attemp order creation, order exists: invalid transition 
+    state_OrderError --&gt; state_OrderError: ❌*state.CreateOrderCMD
+    %% error=cannot attemp order creation, order exists: invalid transition 
+    state_OrderPending --&gt; state_OrderPending: ❌*state.CreateOrderCMD
+    %% error=cannot attemp order creation, order exists: invalid transition 
+    state_OrderProcessing --&gt; state_OrderProcessing: ❌*state.CreateOrderCMD
+    [*] --&gt; state_OrderPending: *state.CreateOrderCMD
+    %% error=invalid transition 
+    state_OrderCancelled --&gt; state_OrderCancelled: ❌*state.MarkAsProcessingCMD
+    %% error=invalid transition 
+    state_OrderCompleted --&gt; state_OrderCompleted: ❌*state.MarkAsProcessingCMD
+    %% error=invalid transition 
+    state_OrderError --&gt; state_OrderError: ❌*state.MarkAsProcessingCMD
+    state_OrderPending --&gt; state_OrderProcessing: *state.MarkAsProcessingCMD
+    %% error=invalid transition 
+    state_OrderProcessing --&gt; state_OrderProcessing: ❌*state.MarkAsProcessingCMD
+    %% error=invalid transition 
+    [*] --&gt; [*]: ❌*state.MarkAsProcessingCMD
+    %% error=cannot mark order as complete, order is not being process; invalid transition 
+    state_OrderCancelled --&gt; state_OrderCancelled: ❌*state.MarkOrderCompleteCMD
+    %% error=cannot mark order as complete, order is not being process; invalid transition 
+    state_OrderCompleted --&gt; state_OrderCompleted: ❌*state.MarkOrderCompleteCMD
+    %% error=cannot mark order as complete, order is not being process; invalid transition 
+    state_OrderError --&gt; state_OrderError: ❌*state.MarkOrderCompleteCMD
+    %% error=cannot mark order as complete, order is not being process; invalid transition 
+    state_OrderPending --&gt; state_OrderPending: ❌*state.MarkOrderCompleteCMD
+    state_OrderProcessing --&gt; state_OrderCompleted: *state.MarkOrderCompleteCMD
+    state_OrderProcessing --&gt; state_OrderError: *state.MarkOrderCompleteCMD
+    %% error=cannot self approve order; validation failed 
+    state_OrderProcessing --&gt; state_OrderProcessing: ❌*state.MarkOrderCompleteCMD
+    %% error=cannot mark order as complete, order is not being process; invalid transition 
+    [*] --&gt; [*]: ❌*state.MarkOrderCompleteCMD
+    %% error=cannot recover from non error state; invalid transition 
+    state_OrderCancelled --&gt; state_OrderCancelled: ❌*state.TryRecoverErrorCMD
+    %% error=cannot recover from non error state; invalid transition 
+    state_OrderCompleted --&gt; state_OrderCompleted: ❌*state.TryRecoverErrorCMD
+    state_OrderError --&gt; state_OrderCompleted: *state.TryRecoverErrorCMD
+    %% error=cannot recover from non error state; invalid transition 
+    state_OrderPending --&gt; state_OrderPending: ❌*state.TryRecoverErrorCMD
+    %% error=cannot recover from non error state; invalid transition 
+    state_OrderProcessing --&gt; state_OrderProcessing: ❌*state.TryRecoverErrorCMD
+    %% error=cannot recover from non error state; invalid transition 
+    [*] --&gt; [*]: ❌*state.TryRecoverErrorCMD
+</code></pre></p>
+<p>Those diagrams are stored in the same directory as the test file and are prefixed with the name used in the <code>AssertSelfDocumentStateDiagram</code> function.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>machine_test.go.state_diagram.mmd
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>machine_test.go.state_diagram_with_errors.mmd
+</span></code></pre></div></p>
+<h2 id="state-machines-builder">State machines builder</h2>
+<p>MkUnion provides a <code>*machine.Machine[Dependency, Command, State]</code> struct that wires the Transition, dependencies, and state together.
+It provides methods like:</p>
+<ul>
+<li><code>Handle(ctx context.Context, cmd C) error</code> that applies a command to the state and returns an error if something went wrong during the transition.</li>
+<li><code>State() S</code> that returns the current state of the machine.</li>
+<li><code>Dep() D</code> that returns the dependencies the machine was built with.</li>
+</ul>
+<p>This standard helps build on top of it; for example, the testing library we use in <a href="#testing-state-machines-self-documenting">Testing state machines &amp; self-documenting</a> leverages it.</p>
+<p>Another good practice is that every package that defines a state machine in the way described here 
+should provide a <code>NewMachine</code> function that will return a bootstrapped machine with package types, like so:</p>
+<div class="language-go highlight"><span class="filename">example/state/machine.go</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">NewMachine</span><span class="p">(</span><span class="nx">di</span><span class="w"> </span><span class="nx">Dependency</span><span class="p">,</span><span class="w"> </span><span class="nx">init</span><span class="w"> </span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">machine</span><span class="p">.</span><span class="nx">Machine</span><span class="p">[</span><span class="nx">Dependency</span><span class="p">,</span><span class="w"> </span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="nx">State</span><span class="p">]</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">machine</span><span class="p">.</span><span class="nx">NewMachine</span><span class="p">(</span><span class="nx">di</span><span class="p">,</span><span class="w"> </span><span class="nx">Transition</span><span class="p">,</span><span class="w"> </span><span class="nx">init</span><span class="p">)</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="conclusion">Conclusion</h2>
+<p>Now we have all the pieces in place, and we can start building our application.</p>
+<ul>
+<li>We have a <code>NewMachine</code> constructor that will give us an object to use in our application.</li>
+<li>We have tests that will ensure that our state machine is correct; fuzzy tests help discover edge cases, and lastly, we get diagrams showing which paths we tested and covered.</li>
+<li>We saw how this approach focuses on business logic and keeps it separate from other concerns like the database or API clients. This is one of the principles of clean architecture.</li>
+</ul>
+<p>For a comprehensive guide on best practices, patterns, and advanced techniques, see our <strong><a href="../state_machine_best_practices/">State Machine Best Practices</a></strong> guide.</p>
+<h2 id="next-steps">Next steps</h2>
+<ul>
+<li><strong><a href="../state_machine_best_practices/">State Machine Best Practices</a></strong> - Learn about file organization, naming conventions, testing strategies, and advanced patterns</li>
+<li><strong><a href="../state_storage/">Persisting union in database</a></strong> - Learn how to persist state in a database and handle concurrency conflicts</li>
+<li><strong><a href="../state_storage/">Handling errors in state machines</a></strong> - Build self-healing systems by treating errors as states</li>
+<li><strong><a href="../union_composability/">Composability and Type Safety</a></strong> - Learn about composability of types</li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy", "navigation.expand", "content.action.edit"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>
