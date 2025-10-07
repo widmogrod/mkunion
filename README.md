@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/widmogrod/mkunion/branch/main/graph/badge.svg?token=3Z3Z3Z3Z3Z)](https://codecov.io/gh/widmogrod/mkunion)
 
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.0
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
 ```
 
 ```
