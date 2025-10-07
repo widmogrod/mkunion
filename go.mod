@@ -1,8 +1,6 @@
 module github.com/widmogrod/mkunion
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.25.1
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.4
