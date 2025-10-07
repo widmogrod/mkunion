@@ -2,6 +2,8 @@ module github.com/widmogrod/mkunion
 
 go 1.25.1
 
+retract v0.0.0-20220926122055-0884a4bef836 // Contains replace directives, cannot be installed
+
 require (
 	github.com/alecthomas/participle/v2 v2.1.4
 	github.com/aws/aws-sdk-go-v2 v1.39.2
