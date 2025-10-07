@@ -18,7 +18,7 @@ jobs:
       - run: cd cmd/mkunion; go get -v -t -d ./...
       - run: cd cmd/mkunion; go build -o mkunion
 
-      - run: go install github.com/matryer/moq@latest
+      - run: go install github.com/matryer/moq@v0.6.0
 
       - run: go get -v -t -d ./...
 
