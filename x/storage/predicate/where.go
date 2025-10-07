@@ -75,7 +75,7 @@ func Where(query string, params ParamBinds, opts *WhereOpt) (*WherePredicates, e
 			message.WriteString(fmt.Sprintf(`extra params: "%s"`, strings.Join(extraParams, `", "`)))
 		}
 
-		return nil, fmt.Errorf(message.String())
+		return nil, fmt.Errorf("%s", message.String())
 	}
 
 	return &WherePredicates{
