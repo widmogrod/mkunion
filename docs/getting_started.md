@@ -3,7 +3,7 @@
 ### Install mkunion
 Run in your terminal
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@latest
+go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.0
 ```
 
 ### Define your first union type
