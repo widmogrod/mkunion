@@ -338,7 +338,7 @@ func ShapeToString(x shape.Shape) string {
 			if len(x.Fields) > 0 {
 				fmt.Fprintf(result, "\tFields: []*shape.FieldLike{\n")
 				for _, field := range x.Fields {
-					fmt.Fprintf(result, fmt.Sprintf("%s,\n", padLeftTabs(2, FieldLikeToString(field, true))))
+					fmt.Fprintf(result, "%s,\n", padLeftTabs(2, FieldLikeToString(field, true)))
 				}
 				fmt.Fprintf(result, "\t},\n")
 			}
