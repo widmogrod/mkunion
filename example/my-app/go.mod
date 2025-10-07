@@ -1,8 +1,6 @@
 module github.com/widmogrod/mkunion/example/my-app
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.25.1
 
 replace github.com/widmogrod/mkunion => ../../
 
@@ -27,7 +25,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.8 // indirect
 	github.com/aws/smithy-go v1.23.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
