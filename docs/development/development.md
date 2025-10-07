@@ -23,6 +23,12 @@ In a separate terminal, run:
 echo "Build mkunion ..."
 go build -C cmd/mkunion .
 
+echo "Instal moq"
+go install github.com/matryer/moq@v0.6.0
+
+echo "Make moq available in PATH"
+export PATH=$PATH:$GOPATH/bin
+
 echo "Generate files ..."
 cmd/mkunion/mkunion watch -g ./...
 
