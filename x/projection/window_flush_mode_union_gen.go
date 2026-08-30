@@ -147,13 +147,7 @@ func (r *Discard) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDiscard(*r)
 }
 func (r *Discard) _marshalJSONDiscard(x Discard) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Discard._marshalJSONDiscard: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Discard) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONDiscard(data)

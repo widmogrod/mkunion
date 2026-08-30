@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -240,27 +241,37 @@ func (r *DoWindow) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDoWindow(*r)
 }
 func (r *DoWindow) _marshalJSONDoWindow(x DoWindow) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldCtx []byte
 	fieldCtx, err = r._marshalJSONPtrDefaultContext(x.Ctx)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoWindow._marshalJSONDoWindow: field name Ctx; %w", err)
 	}
-	if fieldCtx != nil {
-		partial["Ctx"] = fieldCtx
+	if len(fieldCtx) == 0 {
+		fieldCtx = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Ctx\":")
+	buf.Write(fieldCtx)
 	var fieldInput []byte
 	fieldInput, err = r._marshalJSONNode(x.Input)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoWindow._marshalJSONDoWindow: field name Input; %w", err)
 	}
-	partial["Input"] = fieldInput
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: DoWindow._marshalJSONDoWindow: struct; %w", err)
+	if len(fieldInput) == 0 {
+		fieldInput = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Input\":")
+	buf.Write(fieldInput)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *DoWindow) _marshalJSONPtrDefaultContext(x *DefaultContext) ([]byte, error) {
 	if x == nil {
@@ -364,33 +375,50 @@ func (r *DoMap) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDoMap(*r)
 }
 func (r *DoMap) _marshalJSONDoMap(x DoMap) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldCtx []byte
 	fieldCtx, err = r._marshalJSONPtrDefaultContext(x.Ctx)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoMap._marshalJSONDoMap: field name Ctx; %w", err)
 	}
-	if fieldCtx != nil {
-		partial["Ctx"] = fieldCtx
+	if len(fieldCtx) == 0 {
+		fieldCtx = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Ctx\":")
+	buf.Write(fieldCtx)
 	var fieldOnMap []byte
 	fieldOnMap, err = r._marshalJSONHandler(x.OnMap)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoMap._marshalJSONDoMap: field name OnMap; %w", err)
 	}
-	partial["OnMap"] = fieldOnMap
+	if len(fieldOnMap) == 0 {
+		fieldOnMap = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"OnMap\":")
+	buf.Write(fieldOnMap)
 	var fieldInput []byte
 	fieldInput, err = r._marshalJSONNode(x.Input)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoMap._marshalJSONDoMap: field name Input; %w", err)
 	}
-	partial["Input"] = fieldInput
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: DoMap._marshalJSONDoMap: struct; %w", err)
+	if len(fieldInput) == 0 {
+		fieldInput = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Input\":")
+	buf.Write(fieldInput)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *DoMap) _marshalJSONPtrDefaultContext(x *DefaultContext) ([]byte, error) {
 	if x == nil {
@@ -514,27 +542,37 @@ func (r *DoLoad) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDoLoad(*r)
 }
 func (r *DoLoad) _marshalJSONDoLoad(x DoLoad) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldCtx []byte
 	fieldCtx, err = r._marshalJSONPtrDefaultContext(x.Ctx)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoLoad._marshalJSONDoLoad: field name Ctx; %w", err)
 	}
-	if fieldCtx != nil {
-		partial["Ctx"] = fieldCtx
+	if len(fieldCtx) == 0 {
+		fieldCtx = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Ctx\":")
+	buf.Write(fieldCtx)
 	var fieldOnLoad []byte
 	fieldOnLoad, err = r._marshalJSONHandler(x.OnLoad)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoLoad._marshalJSONDoLoad: field name OnLoad; %w", err)
 	}
-	partial["OnLoad"] = fieldOnLoad
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: DoLoad._marshalJSONDoLoad: struct; %w", err)
+	if len(fieldOnLoad) == 0 {
+		fieldOnLoad = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"OnLoad\":")
+	buf.Write(fieldOnLoad)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *DoLoad) _marshalJSONPtrDefaultContext(x *DefaultContext) ([]byte, error) {
 	if x == nil {
@@ -638,27 +676,37 @@ func (r *DoJoin) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDoJoin(*r)
 }
 func (r *DoJoin) _marshalJSONDoJoin(x DoJoin) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldCtx []byte
 	fieldCtx, err = r._marshalJSONPtrDefaultContext(x.Ctx)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoJoin._marshalJSONDoJoin: field name Ctx; %w", err)
 	}
-	if fieldCtx != nil {
-		partial["Ctx"] = fieldCtx
+	if len(fieldCtx) == 0 {
+		fieldCtx = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Ctx\":")
+	buf.Write(fieldCtx)
 	var fieldInput []byte
 	fieldInput, err = r._marshalJSONSliceNode(x.Input)
 	if err != nil {
 		return nil, fmt.Errorf("projection: DoJoin._marshalJSONDoJoin: field name Input; %w", err)
 	}
-	partial["Input"] = fieldInput
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: DoJoin._marshalJSONDoJoin: struct; %w", err)
+	if len(fieldInput) == 0 {
+		fieldInput = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Input\":")
+	buf.Write(fieldInput)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *DoJoin) _marshalJSONPtrDefaultContext(x *DefaultContext) ([]byte, error) {
 	if x == nil {

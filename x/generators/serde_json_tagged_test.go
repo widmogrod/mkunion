@@ -21,6 +21,7 @@ func TestNewSerdeJSONTagged_ListOf2(t *testing.T) {
 	assert.Equal(t, `package testutils
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -40,63 +41,115 @@ func (r *ListOf2[T1,T2]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONListOf2Lb_T1CommaT2_bL(*r)
 }
 func (r *ListOf2[T1,T2]) _marshalJSONListOf2Lb_T1CommaT2_bL(x ListOf2[T1,T2]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldID []byte
 	fieldID, err = r._marshalJSONstring(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name ID; %w", err)
 	}
-	partial["ID"] = fieldID
+	if len(fieldID) == 0 {
+		fieldID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ID\":")
+	buf.Write(fieldID)
 	var fieldData []byte
 	fieldData, err = r._marshalJSONT1(x.Data)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name Data; %w", err)
 	}
-	partial["Data"] = fieldData
+	if len(fieldData) == 0 {
+		fieldData = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Data\":")
+	buf.Write(fieldData)
 	var fieldList []byte
 	fieldList, err = r._marshalJSONSliceT2(x.List)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name List; %w", err)
 	}
-	partial["List"] = fieldList
+	if len(fieldList) == 0 {
+		fieldList = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"List\":")
+	buf.Write(fieldList)
 	var fieldMap []byte
 	fieldMap, err = r._marshalJSONmapLb_T1_bLT2(x.Map)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name Map; %w", err)
 	}
-	partial["map_of_tree"] = fieldMap
+	if len(fieldMap) == 0 {
+		fieldMap = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"map_of_tree\":")
+	buf.Write(fieldMap)
 	var fieldListOf []byte
 	fieldListOf, err = r._marshalJSONListOfLb_T1_bL(x.ListOf)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name ListOf; %w", err)
 	}
-	partial["ListOf"] = fieldListOf
+	if len(fieldListOf) == 0 {
+		fieldListOf = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ListOf\":")
+	buf.Write(fieldListOf)
 	var fieldListOfPtr []byte
 	fieldListOfPtr, err = r._marshalJSONPtrListOfLb_T2_bL(x.ListOfPtr)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name ListOfPtr; %w", err)
 	}
-	if fieldListOfPtr != nil {
-		partial["ListOfPtr"] = fieldListOfPtr
+	if len(fieldListOfPtr) == 0 {
+		fieldListOfPtr = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ListOfPtr\":")
+	buf.Write(fieldListOfPtr)
 	var fieldTime []byte
 	fieldTime, err = r._marshalJSONtime_Time(x.Time)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name Time; %w", err)
 	}
-	partial["Time"] = fieldTime
+	if len(fieldTime) == 0 {
+		fieldTime = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Time\":")
+	buf.Write(fieldTime)
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONschema_Schema(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("testutils: ListOf2[T1,T2]._marshalJSONListOf2Lb_T1CommaT2_bL: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ListOf2[T1,T2]) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

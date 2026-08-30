@@ -2,6 +2,7 @@
 package example
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -209,19 +210,24 @@ func (r *Circle) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONCircle(*r)
 }
 func (r *Circle) _marshalJSONCircle(x Circle) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldRadius []byte
 	fieldRadius, err = r._marshalJSONfloat64(x.Radius)
 	if err != nil {
 		return nil, fmt.Errorf("example: Circle._marshalJSONCircle: field name Radius; %w", err)
 	}
-	partial["Radius"] = fieldRadius
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("example: Circle._marshalJSONCircle: struct; %w", err)
+	if len(fieldRadius) == 0 {
+		fieldRadius = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Radius\":")
+	buf.Write(fieldRadius)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Circle) _marshalJSONfloat64(x float64) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -287,25 +293,37 @@ func (r *Rectangle) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRectangle(*r)
 }
 func (r *Rectangle) _marshalJSONRectangle(x Rectangle) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldWidth []byte
 	fieldWidth, err = r._marshalJSONfloat64(x.Width)
 	if err != nil {
 		return nil, fmt.Errorf("example: Rectangle._marshalJSONRectangle: field name Width; %w", err)
 	}
-	partial["Width"] = fieldWidth
+	if len(fieldWidth) == 0 {
+		fieldWidth = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Width\":")
+	buf.Write(fieldWidth)
 	var fieldHeight []byte
 	fieldHeight, err = r._marshalJSONfloat64(x.Height)
 	if err != nil {
 		return nil, fmt.Errorf("example: Rectangle._marshalJSONRectangle: field name Height; %w", err)
 	}
-	partial["Height"] = fieldHeight
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("example: Rectangle._marshalJSONRectangle: struct; %w", err)
+	if len(fieldHeight) == 0 {
+		fieldHeight = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Height\":")
+	buf.Write(fieldHeight)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Rectangle) _marshalJSONfloat64(x float64) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -377,19 +395,24 @@ func (r *Square) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSquare(*r)
 }
 func (r *Square) _marshalJSONSquare(x Square) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldSide []byte
 	fieldSide, err = r._marshalJSONfloat64(x.Side)
 	if err != nil {
 		return nil, fmt.Errorf("example: Square._marshalJSONSquare: field name Side; %w", err)
 	}
-	partial["Side"] = fieldSide
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("example: Square._marshalJSONSquare: struct; %w", err)
+	if len(fieldSide) == 0 {
+		fieldSide = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Side\":")
+	buf.Write(fieldSide)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Square) _marshalJSONfloat64(x float64) ([]byte, error) {
 	result, err := json.Marshal(x)

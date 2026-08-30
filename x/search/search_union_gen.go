@@ -2,6 +2,7 @@
 package search
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -178,19 +179,24 @@ func (r *Term) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONTerm(*r)
 }
 func (r *Term) _marshalJSONTerm(x Term) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTerm []byte
 	fieldTerm, err = r._marshalJSONstring(x.Term)
 	if err != nil {
 		return nil, fmt.Errorf("search: Term._marshalJSONTerm: field name Term; %w", err)
 	}
-	partial["Term"] = fieldTerm
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("search: Term._marshalJSONTerm: struct; %w", err)
+	if len(fieldTerm) == 0 {
+		fieldTerm = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Term\":")
+	buf.Write(fieldTerm)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Term) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -256,19 +262,24 @@ func (r *Fulltext) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFulltext(*r)
 }
 func (r *Fulltext) _marshalJSONFulltext(x Fulltext) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldQuery []byte
 	fieldQuery, err = r._marshalJSONstring(x.Query)
 	if err != nil {
 		return nil, fmt.Errorf("search: Fulltext._marshalJSONFulltext: field name Query; %w", err)
 	}
-	partial["Query"] = fieldQuery
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("search: Fulltext._marshalJSONFulltext: struct; %w", err)
+	if len(fieldQuery) == 0 {
+		fieldQuery = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Query\":")
+	buf.Write(fieldQuery)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Fulltext) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

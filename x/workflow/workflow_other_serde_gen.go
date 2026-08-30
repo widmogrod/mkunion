@@ -2,6 +2,7 @@
 package workflow
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -20,31 +21,50 @@ func (r *FunctionInput) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFunctionInput(*r)
 }
 func (r *FunctionInput) _marshalJSONFunctionInput(x FunctionInput) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: FunctionInput._marshalJSONFunctionInput: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldCallbackID []byte
 	fieldCallbackID, err = r._marshalJSONstring(x.CallbackID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: FunctionInput._marshalJSONFunctionInput: field name CallbackID; %w", err)
 	}
-	partial["CallbackID"] = fieldCallbackID
+	if len(fieldCallbackID) == 0 {
+		fieldCallbackID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"CallbackID\":")
+	buf.Write(fieldCallbackID)
 	var fieldArgs []byte
 	fieldArgs, err = r._marshalJSONSliceschema_Schema(x.Args)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: FunctionInput._marshalJSONFunctionInput: field name Args; %w", err)
 	}
-	partial["Args"] = fieldArgs
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: FunctionInput._marshalJSONFunctionInput: struct; %w", err)
+	if len(fieldArgs) == 0 {
+		fieldArgs = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Args\":")
+	buf.Write(fieldArgs)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *FunctionInput) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -154,19 +174,24 @@ func (r *FunctionOutput) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFunctionOutput(*r)
 }
 func (r *FunctionOutput) _marshalJSONFunctionOutput(x FunctionOutput) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldResult []byte
 	fieldResult, err = r._marshalJSONschema_Schema(x.Result)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONFunctionOutput: field name Result; %w", err)
 	}
-	partial["Result"] = fieldResult
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: FunctionOutput._marshalJSONFunctionOutput: struct; %w", err)
+	if len(fieldResult) == 0 {
+		fieldResult = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Result\":")
+	buf.Write(fieldResult)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *FunctionOutput) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
 	result, err := shared.JSONMarshal[schema.Schema](x)

@@ -149,13 +149,7 @@ func (r *AtWatermark) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAtWatermark(*r)
 }
 func (r *AtWatermark) _marshalJSONAtWatermark(x AtWatermark) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AtWatermark._marshalJSONAtWatermark: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *AtWatermark) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONAtWatermark(data)

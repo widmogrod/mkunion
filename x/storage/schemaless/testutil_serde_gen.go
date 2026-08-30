@@ -2,6 +2,7 @@
 package schemaless
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 )
@@ -18,25 +19,37 @@ func (r *ExampleRecord) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONExampleRecord(*r)
 }
 func (r *ExampleRecord) _marshalJSONExampleRecord(x ExampleRecord) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: ExampleRecord._marshalJSONExampleRecord: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldAge []byte
 	fieldAge, err = r._marshalJSONint(x.Age)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: ExampleRecord._marshalJSONExampleRecord: field name Age; %w", err)
 	}
-	partial["Age"] = fieldAge
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: ExampleRecord._marshalJSONExampleRecord: struct; %w", err)
+	if len(fieldAge) == 0 {
+		fieldAge = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Age\":")
+	buf.Write(fieldAge)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ExampleRecord) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

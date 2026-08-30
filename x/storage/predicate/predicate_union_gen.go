@@ -2,6 +2,7 @@
 package predicate
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -210,19 +211,24 @@ func (r *BindValue) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONBindValue(*r)
 }
 func (r *BindValue) _marshalJSONBindValue(x BindValue) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldBindName []byte
 	fieldBindName, err = r._marshalJSONBindName(x.BindName)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: BindValue._marshalJSONBindValue: field name BindName; %w", err)
 	}
-	partial["BindName"] = fieldBindName
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: BindValue._marshalJSONBindValue: struct; %w", err)
+	if len(fieldBindName) == 0 {
+		fieldBindName = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BindName\":")
+	buf.Write(fieldBindName)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *BindValue) _marshalJSONBindName(x BindName) ([]byte, error) {
 	result, err := shared.JSONMarshal[BindName](x)
@@ -287,19 +293,24 @@ func (r *Literal) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLiteral(*r)
 }
 func (r *Literal) _marshalJSONLiteral(x Literal) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONschema_Schema(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: Literal._marshalJSONLiteral: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: Literal._marshalJSONLiteral: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Literal) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
 	result, err := shared.JSONMarshal[schema.Schema](x)
@@ -364,19 +375,24 @@ func (r *Locatable) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLocatable(*r)
 }
 func (r *Locatable) _marshalJSONLocatable(x Locatable) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldLocation []byte
 	fieldLocation, err = r._marshalJSONstring(x.Location)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: Locatable._marshalJSONLocatable: field name Location; %w", err)
 	}
-	partial["Location"] = fieldLocation
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: Locatable._marshalJSONLocatable: struct; %w", err)
+	if len(fieldLocation) == 0 {
+		fieldLocation = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Location\":")
+	buf.Write(fieldLocation)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Locatable) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -650,19 +666,24 @@ func (r *And) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAnd(*r)
 }
 func (r *And) _marshalJSONAnd(x And) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldL []byte
 	fieldL, err = r._marshalJSONSlicePredicate(x.L)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: And._marshalJSONAnd: field name L; %w", err)
 	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: And._marshalJSONAnd: struct; %w", err)
+	if len(fieldL) == 0 {
+		fieldL = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"L\":")
+	buf.Write(fieldL)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *And) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -758,19 +779,24 @@ func (r *Or) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOr(*r)
 }
 func (r *Or) _marshalJSONOr(x Or) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldL []byte
 	fieldL, err = r._marshalJSONSlicePredicate(x.L)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: Or._marshalJSONOr: field name L; %w", err)
 	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: Or._marshalJSONOr: struct; %w", err)
+	if len(fieldL) == 0 {
+		fieldL = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"L\":")
+	buf.Write(fieldL)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Or) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -866,19 +892,24 @@ func (r *Not) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONNot(*r)
 }
 func (r *Not) _marshalJSONNot(x Not) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldP []byte
 	fieldP, err = r._marshalJSONPredicate(x.P)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: Not._marshalJSONNot: field name P; %w", err)
 	}
-	partial["P"] = fieldP
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: Not._marshalJSONNot: struct; %w", err)
+	if len(fieldP) == 0 {
+		fieldP = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"P\":")
+	buf.Write(fieldP)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Not) _marshalJSONPredicate(x Predicate) ([]byte, error) {
 	result, err := shared.JSONMarshal[Predicate](x)
@@ -943,31 +974,50 @@ func (r *Compare) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONCompare(*r)
 }
 func (r *Compare) _marshalJSONCompare(x Compare) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldLocation []byte
 	fieldLocation, err = r._marshalJSONstring(x.Location)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: field name Location; %w", err)
 	}
-	partial["Location"] = fieldLocation
+	if len(fieldLocation) == 0 {
+		fieldLocation = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Location\":")
+	buf.Write(fieldLocation)
 	var fieldOperation []byte
 	fieldOperation, err = r._marshalJSONstring(x.Operation)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: field name Operation; %w", err)
 	}
-	partial["Operation"] = fieldOperation
+	if len(fieldOperation) == 0 {
+		fieldOperation = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Operation\":")
+	buf.Write(fieldOperation)
 	var fieldBindValue []byte
 	fieldBindValue, err = r._marshalJSONBindable(x.BindValue)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: field name BindValue; %w", err)
 	}
-	partial["BindValue"] = fieldBindValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: Compare._marshalJSONCompare: struct; %w", err)
+	if len(fieldBindValue) == 0 {
+		fieldBindValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BindValue\":")
+	buf.Write(fieldBindValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Compare) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

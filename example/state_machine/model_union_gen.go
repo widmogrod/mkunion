@@ -2,6 +2,7 @@
 package state_machine
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -271,25 +272,37 @@ func (r *CreateOrderCMD) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONCreateOrderCMD(*r)
 }
 func (r *CreateOrderCMD) _marshalJSONCreateOrderCMD(x CreateOrderCMD) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOrderID []byte
 	fieldOrderID, err = r._marshalJSONstring(x.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: CreateOrderCMD._marshalJSONCreateOrderCMD: field name OrderID; %w", err)
 	}
-	partial["OrderID"] = fieldOrderID
+	if len(fieldOrderID) == 0 {
+		fieldOrderID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"OrderID\":")
+	buf.Write(fieldOrderID)
 	var fieldItems []byte
 	fieldItems, err = r._marshalJSONSliceOrderItem(x.Items)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: CreateOrderCMD._marshalJSONCreateOrderCMD: field name Items; %w", err)
 	}
-	partial["Items"] = fieldItems
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: CreateOrderCMD._marshalJSONCreateOrderCMD: struct; %w", err)
+	if len(fieldItems) == 0 {
+		fieldItems = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Items\":")
+	buf.Write(fieldItems)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *CreateOrderCMD) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -406,19 +419,24 @@ func (r *StartProcessingCMD) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONStartProcessingCMD(*r)
 }
 func (r *StartProcessingCMD) _marshalJSONStartProcessingCMD(x StartProcessingCMD) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldWorkerID []byte
 	fieldWorkerID, err = r._marshalJSONstring(x.WorkerID)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: StartProcessingCMD._marshalJSONStartProcessingCMD: field name WorkerID; %w", err)
 	}
-	partial["WorkerID"] = fieldWorkerID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: StartProcessingCMD._marshalJSONStartProcessingCMD: struct; %w", err)
+	if len(fieldWorkerID) == 0 {
+		fieldWorkerID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"WorkerID\":")
+	buf.Write(fieldWorkerID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *StartProcessingCMD) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -484,19 +502,24 @@ func (r *CompleteOrderCMD) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONCompleteOrderCMD(*r)
 }
 func (r *CompleteOrderCMD) _marshalJSONCompleteOrderCMD(x CompleteOrderCMD) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTotalAmount []byte
 	fieldTotalAmount, err = r._marshalJSONfloat64(x.TotalAmount)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: CompleteOrderCMD._marshalJSONCompleteOrderCMD: field name TotalAmount; %w", err)
 	}
-	partial["TotalAmount"] = fieldTotalAmount
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: CompleteOrderCMD._marshalJSONCompleteOrderCMD: struct; %w", err)
+	if len(fieldTotalAmount) == 0 {
+		fieldTotalAmount = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"TotalAmount\":")
+	buf.Write(fieldTotalAmount)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *CompleteOrderCMD) _marshalJSONfloat64(x float64) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -562,19 +585,24 @@ func (r *CancelOrderCMD) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONCancelOrderCMD(*r)
 }
 func (r *CancelOrderCMD) _marshalJSONCancelOrderCMD(x CancelOrderCMD) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldReason []byte
 	fieldReason, err = r._marshalJSONstring(x.Reason)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: CancelOrderCMD._marshalJSONCancelOrderCMD: field name Reason; %w", err)
 	}
-	partial["Reason"] = fieldReason
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: CancelOrderCMD._marshalJSONCancelOrderCMD: struct; %w", err)
+	if len(fieldReason) == 0 {
+		fieldReason = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Reason\":")
+	buf.Write(fieldReason)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *CancelOrderCMD) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -640,13 +668,7 @@ func (r *ConfirmOrderCMD) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONConfirmOrderCMD(*r)
 }
 func (r *ConfirmOrderCMD) _marshalJSONConfirmOrderCMD(x ConfirmOrderCMD) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: ConfirmOrderCMD._marshalJSONConfirmOrderCMD: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *ConfirmOrderCMD) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONConfirmOrderCMD(data)
@@ -899,25 +921,37 @@ func (r *OrderPending) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOrderPending(*r)
 }
 func (r *OrderPending) _marshalJSONOrderPending(x OrderPending) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOrderID []byte
 	fieldOrderID, err = r._marshalJSONstring(x.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderPending._marshalJSONOrderPending: field name OrderID; %w", err)
 	}
-	partial["OrderID"] = fieldOrderID
+	if len(fieldOrderID) == 0 {
+		fieldOrderID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"OrderID\":")
+	buf.Write(fieldOrderID)
 	var fieldItems []byte
 	fieldItems, err = r._marshalJSONSliceOrderItem(x.Items)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderPending._marshalJSONOrderPending: field name Items; %w", err)
 	}
-	partial["Items"] = fieldItems
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: OrderPending._marshalJSONOrderPending: struct; %w", err)
+	if len(fieldItems) == 0 {
+		fieldItems = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Items\":")
+	buf.Write(fieldItems)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *OrderPending) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -1034,31 +1068,50 @@ func (r *OrderProcessing) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOrderProcessing(*r)
 }
 func (r *OrderProcessing) _marshalJSONOrderProcessing(x OrderProcessing) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOrderID []byte
 	fieldOrderID, err = r._marshalJSONstring(x.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderProcessing._marshalJSONOrderProcessing: field name OrderID; %w", err)
 	}
-	partial["OrderID"] = fieldOrderID
+	if len(fieldOrderID) == 0 {
+		fieldOrderID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"OrderID\":")
+	buf.Write(fieldOrderID)
 	var fieldItems []byte
 	fieldItems, err = r._marshalJSONSliceOrderItem(x.Items)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderProcessing._marshalJSONOrderProcessing: field name Items; %w", err)
 	}
-	partial["Items"] = fieldItems
+	if len(fieldItems) == 0 {
+		fieldItems = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Items\":")
+	buf.Write(fieldItems)
 	var fieldWorkerID []byte
 	fieldWorkerID, err = r._marshalJSONstring(x.WorkerID)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderProcessing._marshalJSONOrderProcessing: field name WorkerID; %w", err)
 	}
-	partial["WorkerID"] = fieldWorkerID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: OrderProcessing._marshalJSONOrderProcessing: struct; %w", err)
+	if len(fieldWorkerID) == 0 {
+		fieldWorkerID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"WorkerID\":")
+	buf.Write(fieldWorkerID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *OrderProcessing) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -1181,31 +1234,50 @@ func (r *OrderCompleted) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOrderCompleted(*r)
 }
 func (r *OrderCompleted) _marshalJSONOrderCompleted(x OrderCompleted) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOrderID []byte
 	fieldOrderID, err = r._marshalJSONstring(x.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderCompleted._marshalJSONOrderCompleted: field name OrderID; %w", err)
 	}
-	partial["OrderID"] = fieldOrderID
+	if len(fieldOrderID) == 0 {
+		fieldOrderID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"OrderID\":")
+	buf.Write(fieldOrderID)
 	var fieldItems []byte
 	fieldItems, err = r._marshalJSONSliceOrderItem(x.Items)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderCompleted._marshalJSONOrderCompleted: field name Items; %w", err)
 	}
-	partial["Items"] = fieldItems
+	if len(fieldItems) == 0 {
+		fieldItems = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Items\":")
+	buf.Write(fieldItems)
 	var fieldTotalAmount []byte
 	fieldTotalAmount, err = r._marshalJSONfloat64(x.TotalAmount)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderCompleted._marshalJSONOrderCompleted: field name TotalAmount; %w", err)
 	}
-	partial["TotalAmount"] = fieldTotalAmount
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: OrderCompleted._marshalJSONOrderCompleted: struct; %w", err)
+	if len(fieldTotalAmount) == 0 {
+		fieldTotalAmount = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"TotalAmount\":")
+	buf.Write(fieldTotalAmount)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *OrderCompleted) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -1343,25 +1415,37 @@ func (r *OrderCancelled) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOrderCancelled(*r)
 }
 func (r *OrderCancelled) _marshalJSONOrderCancelled(x OrderCancelled) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOrderID []byte
 	fieldOrderID, err = r._marshalJSONstring(x.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderCancelled._marshalJSONOrderCancelled: field name OrderID; %w", err)
 	}
-	partial["OrderID"] = fieldOrderID
+	if len(fieldOrderID) == 0 {
+		fieldOrderID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"OrderID\":")
+	buf.Write(fieldOrderID)
 	var fieldReason []byte
 	fieldReason, err = r._marshalJSONstring(x.Reason)
 	if err != nil {
 		return nil, fmt.Errorf("state_machine: OrderCancelled._marshalJSONOrderCancelled: field name Reason; %w", err)
 	}
-	partial["Reason"] = fieldReason
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("state_machine: OrderCancelled._marshalJSONOrderCancelled: struct; %w", err)
+	if len(fieldReason) == 0 {
+		fieldReason = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Reason\":")
+	buf.Write(fieldReason)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *OrderCancelled) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

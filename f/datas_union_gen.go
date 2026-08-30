@@ -2,6 +2,7 @@
 package f
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -178,19 +179,24 @@ func (r *Left[A, B]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLeftLb_ACommaB_bL(*r)
 }
 func (r *Left[A, B]) _marshalJSONLeftLb_ACommaB_bL(x Left[A, B]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONA(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("f: Left[A,B]._marshalJSONLeftLb_ACommaB_bL: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("f: Left[A,B]._marshalJSONLeftLb_ACommaB_bL: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Left[A, B]) _marshalJSONA(x A) ([]byte, error) {
 	result, err := shared.JSONMarshal[A](x)
@@ -255,19 +261,24 @@ func (r *Right[A, B]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRightLb_ACommaB_bL(*r)
 }
 func (r *Right[A, B]) _marshalJSONRightLb_ACommaB_bL(x Right[A, B]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONB(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("f: Right[A,B]._marshalJSONRightLb_ACommaB_bL: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("f: Right[A,B]._marshalJSONRightLb_ACommaB_bL: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Right[A, B]) _marshalJSONB(x B) ([]byte, error) {
 	result, err := shared.JSONMarshal[B](x)
@@ -478,13 +489,7 @@ func (r *None[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONNoneLb_A_bL(*r)
 }
 func (r *None[A]) _marshalJSONNoneLb_A_bL(x None[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("f: None[A]._marshalJSONNoneLb_A_bL: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *None[A]) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONNoneLb_A_bL(data)
@@ -529,19 +534,24 @@ func (r *Some[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSomeLb_A_bL(*r)
 }
 func (r *Some[A]) _marshalJSONSomeLb_A_bL(x Some[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONA(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("f: Some[A]._marshalJSONSomeLb_A_bL: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("f: Some[A]._marshalJSONSomeLb_A_bL: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Some[A]) _marshalJSONA(x A) ([]byte, error) {
 	result, err := shared.JSONMarshal[A](x)
@@ -752,19 +762,24 @@ func (r *Ok[A, E]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOkLb_ACommaE_bL(*r)
 }
 func (r *Ok[A, E]) _marshalJSONOkLb_ACommaE_bL(x Ok[A, E]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONA(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("f: Ok[A,E]._marshalJSONOkLb_ACommaE_bL: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("f: Ok[A,E]._marshalJSONOkLb_ACommaE_bL: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Ok[A, E]) _marshalJSONA(x A) ([]byte, error) {
 	result, err := shared.JSONMarshal[A](x)
@@ -829,19 +844,24 @@ func (r *Err[A, E]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONErrLb_ACommaE_bL(*r)
 }
 func (r *Err[A, E]) _marshalJSONErrLb_ACommaE_bL(x Err[A, E]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldError []byte
 	fieldError, err = r._marshalJSONE(x.Error)
 	if err != nil {
 		return nil, fmt.Errorf("f: Err[A,E]._marshalJSONErrLb_ACommaE_bL: field name Error; %w", err)
 	}
-	partial["Error"] = fieldError
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("f: Err[A,E]._marshalJSONErrLb_ACommaE_bL: struct; %w", err)
+	if len(fieldError) == 0 {
+		fieldError = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Error\":")
+	buf.Write(fieldError)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Err[A, E]) _marshalJSONE(x E) ([]byte, error) {
 	result, err := shared.JSONMarshal[E](x)

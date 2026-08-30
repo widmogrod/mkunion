@@ -2,6 +2,7 @@
 package predicate
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shape"
@@ -20,31 +21,50 @@ func (r *WherePredicates) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONWherePredicates(*r)
 }
 func (r *WherePredicates) _marshalJSONWherePredicates(x WherePredicates) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldPredicate []byte
 	fieldPredicate, err = r._marshalJSONPredicate(x.Predicate)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: WherePredicates._marshalJSONWherePredicates: field name Predicate; %w", err)
 	}
-	partial["Predicate"] = fieldPredicate
+	if len(fieldPredicate) == 0 {
+		fieldPredicate = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Predicate\":")
+	buf.Write(fieldPredicate)
 	var fieldParams []byte
 	fieldParams, err = r._marshalJSONParamBinds(x.Params)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: WherePredicates._marshalJSONWherePredicates: field name Params; %w", err)
 	}
-	partial["Params"] = fieldParams
+	if len(fieldParams) == 0 {
+		fieldParams = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Params\":")
+	buf.Write(fieldParams)
 	var fieldShape []byte
 	fieldShape, err = r._marshalJSONshape_Shape(x.Shape)
 	if err != nil {
 		return nil, fmt.Errorf("predicate: WherePredicates._marshalJSONWherePredicates: field name Shape; %w", err)
 	}
-	partial["Shape"] = fieldShape
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("predicate: WherePredicates._marshalJSONWherePredicates: struct; %w", err)
+	if len(fieldShape) == 0 {
+		fieldShape = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Shape\":")
+	buf.Write(fieldShape)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *WherePredicates) _marshalJSONPredicate(x Predicate) ([]byte, error) {
 	result, err := shared.JSONMarshal[Predicate](x)

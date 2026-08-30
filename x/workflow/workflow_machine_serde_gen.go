@@ -2,6 +2,7 @@
 package workflow
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -20,19 +21,24 @@ func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONApplyAwaitOptions(*r)
 }
 func (r *ApplyAwaitOptions) _marshalJSONApplyAwaitOptions(x ApplyAwaitOptions) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTimeoutSeconds []byte
 	fieldTimeoutSeconds, err = r._marshalJSONint64(x.TimeoutSeconds)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: field name TimeoutSeconds; %w", err)
 	}
-	partial["TimeoutSeconds"] = fieldTimeoutSeconds
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ApplyAwaitOptions._marshalJSONApplyAwaitOptions: struct; %w", err)
+	if len(fieldTimeoutSeconds) == 0 {
+		fieldTimeoutSeconds = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"TimeoutSeconds\":")
+	buf.Write(fieldTimeoutSeconds)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ApplyAwaitOptions) _marshalJSONint64(x int64) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -85,55 +91,102 @@ func (r *BaseState) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONBaseState(*r)
 }
 func (r *BaseState) _marshalJSONBaseState(x BaseState) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldFlow []byte
 	fieldFlow, err = r._marshalJSONWorkflow(x.Flow)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name Flow; %w", err)
 	}
-	partial["Flow"] = fieldFlow
+	if len(fieldFlow) == 0 {
+		fieldFlow = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Flow\":")
+	buf.Write(fieldFlow)
 	var fieldRunID []byte
 	fieldRunID, err = r._marshalJSONRunID(x.RunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name RunID; %w", err)
 	}
-	partial["RunID"] = fieldRunID
+	if len(fieldRunID) == 0 {
+		fieldRunID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"RunID\":")
+	buf.Write(fieldRunID)
 	var fieldStepID []byte
 	fieldStepID, err = r._marshalJSONStepID(x.StepID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name StepID; %w", err)
 	}
-	partial["StepID"] = fieldStepID
+	if len(fieldStepID) == 0 {
+		fieldStepID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"StepID\":")
+	buf.Write(fieldStepID)
 	var fieldVariables []byte
 	fieldVariables, err = r._marshalJSONmapLb_string_bLschema_Schema(x.Variables)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name Variables; %w", err)
 	}
-	partial["Variables"] = fieldVariables
+	if len(fieldVariables) == 0 {
+		fieldVariables = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Variables\":")
+	buf.Write(fieldVariables)
 	var fieldExprResult []byte
 	fieldExprResult, err = r._marshalJSONmapLb_string_bLschema_Schema(x.ExprResult)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name ExprResult; %w", err)
 	}
-	partial["ExprResult"] = fieldExprResult
+	if len(fieldExprResult) == 0 {
+		fieldExprResult = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ExprResult\":")
+	buf.Write(fieldExprResult)
 	var fieldDefaultMaxRetries []byte
 	fieldDefaultMaxRetries, err = r._marshalJSONint64(x.DefaultMaxRetries)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name DefaultMaxRetries; %w", err)
 	}
-	partial["DefaultMaxRetries"] = fieldDefaultMaxRetries
+	if len(fieldDefaultMaxRetries) == 0 {
+		fieldDefaultMaxRetries = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"DefaultMaxRetries\":")
+	buf.Write(fieldDefaultMaxRetries)
 	var fieldRunOption []byte
 	fieldRunOption, err = r._marshalJSONRunOption(x.RunOption)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: field name RunOption; %w", err)
 	}
-	partial["RunOption"] = fieldRunOption
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: BaseState._marshalJSONBaseState: struct; %w", err)
+	if len(fieldRunOption) == 0 {
+		fieldRunOption = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"RunOption\":")
+	buf.Write(fieldRunOption)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *BaseState) _marshalJSONWorkflow(x Workflow) ([]byte, error) {
 	result, err := shared.JSONMarshal[Workflow](x)
@@ -340,19 +393,24 @@ func (r *ResumeOptions) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONResumeOptions(*r)
 }
 func (r *ResumeOptions) _marshalJSONResumeOptions(x ResumeOptions) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTimeout []byte
 	fieldTimeout, err = r._marshalJSONint64(x.Timeout)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: field name Timeout; %w", err)
 	}
-	partial["Timeout"] = fieldTimeout
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeOptions._marshalJSONResumeOptions: struct; %w", err)
+	if len(fieldTimeout) == 0 {
+		fieldTimeout = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Timeout\":")
+	buf.Write(fieldTimeout)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ResumeOptions) _marshalJSONint64(x int64) ([]byte, error) {
 	result, err := json.Marshal(x)

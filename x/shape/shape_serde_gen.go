@@ -2,6 +2,7 @@
 package shape
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -19,25 +20,37 @@ func (r *TypeParam) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONTypeParam(*r)
 }
 func (r *TypeParam) _marshalJSONTypeParam(x TypeParam) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("shape: TypeParam._marshalJSONTypeParam: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldType []byte
 	fieldType, err = r._marshalJSONShape(x.Type)
 	if err != nil {
 		return nil, fmt.Errorf("shape: TypeParam._marshalJSONTypeParam: field name Type; %w", err)
 	}
-	partial["Type"] = fieldType
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: TypeParam._marshalJSONTypeParam: struct; %w", err)
+	if len(fieldType) == 0 {
+		fieldType = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Type\":")
+	buf.Write(fieldType)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *TypeParam) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

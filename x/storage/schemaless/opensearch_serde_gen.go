@@ -2,6 +2,7 @@
 package schemaless
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -19,19 +20,24 @@ func (r *OpenSearchSearchResult[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOpenSearchSearchResultLb_A_bL(*r)
 }
 func (r *OpenSearchSearchResult[A]) _marshalJSONOpenSearchSearchResultLb_A_bL(x OpenSearchSearchResult[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldHits []byte
 	fieldHits, err = r._marshalJSONOpenSearchSearchResultHitsLb_A_bL(x.Hits)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultLb_A_bL: field name Hits; %w", err)
 	}
-	partial["hits"] = fieldHits
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResult[A]._marshalJSONOpenSearchSearchResultLb_A_bL: struct; %w", err)
+	if len(fieldHits) == 0 {
+		fieldHits = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"hits\":")
+	buf.Write(fieldHits)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *OpenSearchSearchResult[A]) _marshalJSONOpenSearchSearchResultHitsLb_A_bL(x OpenSearchSearchResultHits[A]) ([]byte, error) {
 	result, err := shared.JSONMarshal[OpenSearchSearchResultHits[A]](x)
@@ -83,25 +89,37 @@ func (r *OpenSearchSearchResultHit[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOpenSearchSearchResultHitLb_A_bL(*r)
 }
 func (r *OpenSearchSearchResultHit[A]) _marshalJSONOpenSearchSearchResultHitLb_A_bL(x OpenSearchSearchResultHit[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldItem []byte
 	fieldItem, err = r._marshalJSONA(x.Item)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONOpenSearchSearchResultHitLb_A_bL: field name Item; %w", err)
 	}
-	partial["_source"] = fieldItem
+	if len(fieldItem) == 0 {
+		fieldItem = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"_source\":")
+	buf.Write(fieldItem)
 	var fieldSort []byte
 	fieldSort, err = r._marshalJSONSlicestring(x.Sort)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONOpenSearchSearchResultHitLb_A_bL: field name Sort; %w", err)
 	}
-	partial["sort"] = fieldSort
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONOpenSearchSearchResultHitLb_A_bL: struct; %w", err)
+	if len(fieldSort) == 0 {
+		fieldSort = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"sort\":")
+	buf.Write(fieldSort)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *OpenSearchSearchResultHit[A]) _marshalJSONA(x A) ([]byte, error) {
 	result, err := shared.JSONMarshal[A](x)
@@ -205,19 +223,24 @@ func (r *OpenSearchSearchResultHits[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOpenSearchSearchResultHitsLb_A_bL(*r)
 }
 func (r *OpenSearchSearchResultHits[A]) _marshalJSONOpenSearchSearchResultHitsLb_A_bL(x OpenSearchSearchResultHits[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldHits []byte
 	fieldHits, err = r._marshalJSONSliceOpenSearchSearchResultHitLb_A_bL(x.Hits)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHits[A]._marshalJSONOpenSearchSearchResultHitsLb_A_bL: field name Hits; %w", err)
 	}
-	partial["hits"] = fieldHits
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHits[A]._marshalJSONOpenSearchSearchResultHitsLb_A_bL: struct; %w", err)
+	if len(fieldHits) == 0 {
+		fieldHits = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"hits\":")
+	buf.Write(fieldHits)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *OpenSearchSearchResultHits[A]) _marshalJSONSliceOpenSearchSearchResultHitLb_A_bL(x []OpenSearchSearchResultHit[A]) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))

@@ -1,6 +1,7 @@
 package generators
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shape"
 	"strings"
@@ -166,6 +167,43 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 		func(x *shape.UnionLike) (string, error) {
 			panic("not implemented union var casting")
 		},
+	)
+}
+
+// fieldJSONInfo interprets the field's json tag the same way encoding/json does:
+// json:"-" skips the field, json:"name" renames it, and the omitempty option
+// drops the field when its value is empty.
+func fieldJSONInfo(field *shape.FieldLike) (name string, skip bool, omitEmpty bool) {
+	name = shape.TagGetValue(field.Tags, "json", field.Name)
+	if name == "-" {
+		return "", true, false
+	}
+	return name, false, shape.TagHasOption(field.Tags, "json", "omitempty")
+}
+
+// omitEmptyCond returns a Go expression that is true when the field value is
+// non-empty in the encoding/json omitempty sense. It returns "" when the type
+// has no notion of emptiness (structs and unresolved references are always
+// emitted, matching encoding/json behaviour for structs).
+func omitEmptyCond(expr string, t shape.Shape) string {
+	return shape.MatchShapeR1(
+		t,
+		func(*shape.Any) string { return expr + " != nil" },
+		func(*shape.RefName) string { return "" },
+		func(*shape.PointerLike) string { return expr + " != nil" },
+		func(y *shape.AliasLike) string { return omitEmptyCond(expr, y.Type) },
+		func(y *shape.PrimitiveLike) string {
+			return shape.MatchPrimitiveKindR1(
+				y.Kind,
+				func(*shape.BooleanLike) string { return expr + " != false" },
+				func(*shape.StringLike) string { return expr + ` != ""` },
+				func(*shape.NumberLike) string { return expr + " != 0" },
+			)
+		},
+		func(*shape.ListLike) string { return "len(" + expr + ") != 0" },
+		func(*shape.MapLike) string { return "len(" + expr + ") != 0" },
+		func(*shape.StructLike) string { return "" },
+		func(*shape.UnionLike) string { return expr + " != nil" },
 	)
 }
 
@@ -432,32 +470,62 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			return result + keyMethods + valMethods, nil
 		},
 		func(y *shape.StructLike) (string, error) {
-			body := &strings.Builder{}
-
-			body.WriteString(fmt.Sprintf("partial := make(map[string]json.RawMessage)\n"))
-			body.WriteString(fmt.Sprintf("var err error\n"))
+			var emitted []*shape.FieldLike
 			for _, field := range y.Fields {
-				jsonFieldName := shape.TagGetValue(field.Tags, "json", field.Name)
-
-				body.WriteString(fmt.Sprintf("var field%s []byte\n", field.Name))
-				body.WriteString(fmt.Sprintf("field%s, err = r.%s(x.%s)\n", field.Name, g.methodNameWithPrefix(field.Type, marshalJSONMethodPrefix), field.Name))
-				body.WriteString(fmt.Sprintf("if err != nil {\n"))
-				body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s field name %s; %%w\", err)\n", errorContext, field.Name))
-				body.WriteString(fmt.Sprintf("}\n"))
-
-				if shape.IsPointer(field.Type) {
-					body.WriteString(fmt.Sprintf("if field%s != nil {\n", field.Name))
-					body.WriteString(fmt.Sprintf("\tpartial[\"%s\"] = field%s\n", jsonFieldName, field.Name))
-					body.WriteString(fmt.Sprintf("}\n"))
-				} else {
-					body.WriteString(fmt.Sprintf("partial[\"%s\"] = field%s\n", jsonFieldName, field.Name))
+				_, skip, _ := fieldJSONInfo(field)
+				if !skip {
+					emitted = append(emitted, field)
 				}
 			}
-			body.WriteString(fmt.Sprintf("result, err := json.Marshal(partial)\n"))
-			body.WriteString(fmt.Sprintf("if err != nil {\n"))
-			body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s struct; %%w\", err)\n", errorContext))
-			body.WriteString(fmt.Sprintf("}\n"))
-			body.WriteString(fmt.Sprintf("return result, nil\n"))
+
+			body := &strings.Builder{}
+
+			if len(emitted) == 0 {
+				body.WriteString("return []byte(\"{}\"), nil\n")
+				return methodWrap(body)
+			}
+
+			g.pkgUsed["bytes"] = "bytes"
+
+			body.WriteString(fmt.Sprintf("buf := bytes.Buffer{}\n"))
+			body.WriteString(fmt.Sprintf("buf.WriteByte('{')\n"))
+			body.WriteString(fmt.Sprintf("var err error\n"))
+			for _, field := range emitted {
+				jsonFieldName, _, omitEmpty := fieldJSONInfo(field)
+				keyJSON, err := json.Marshal(jsonFieldName)
+				if err != nil {
+					return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: field %s json key; %w", field.Name, err)
+				}
+
+				inner := &strings.Builder{}
+				inner.WriteString(fmt.Sprintf("var field%s []byte\n", field.Name))
+				inner.WriteString(fmt.Sprintf("field%s, err = r.%s(x.%s)\n", field.Name, g.methodNameWithPrefix(field.Type, marshalJSONMethodPrefix), field.Name))
+				inner.WriteString(fmt.Sprintf("if err != nil {\n"))
+				inner.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s field name %s; %%w\", err)\n", errorContext, field.Name))
+				inner.WriteString(fmt.Sprintf("}\n"))
+				inner.WriteString(fmt.Sprintf("if len(field%s) == 0 {\n", field.Name))
+				inner.WriteString(fmt.Sprintf("\tfield%s = []byte(\"null\")\n", field.Name))
+				inner.WriteString(fmt.Sprintf("}\n"))
+				inner.WriteString(fmt.Sprintf("if buf.Len() > 1 {\n"))
+				inner.WriteString(fmt.Sprintf("\tbuf.WriteByte(',')\n"))
+				inner.WriteString(fmt.Sprintf("}\n"))
+				inner.WriteString(fmt.Sprintf("buf.WriteString(%q)\n", string(keyJSON)+":"))
+				inner.WriteString(fmt.Sprintf("buf.Write(field%s)\n", field.Name))
+
+				cond := ""
+				if omitEmpty {
+					cond = omitEmptyCond("x."+field.Name, field.Type)
+				}
+				if cond != "" {
+					body.WriteString(fmt.Sprintf("if %s {\n", cond))
+					body.WriteString(padLeftTabs(1, inner.String()))
+					body.WriteString(fmt.Sprintf("}\n"))
+				} else {
+					body.WriteString(inner.String())
+				}
+			}
+			body.WriteString(fmt.Sprintf("buf.WriteByte('}')\n"))
+			body.WriteString(fmt.Sprintf("return buf.Bytes(), nil\n"))
 
 			result, err := methodWrap(body)
 			if err != nil {
@@ -465,7 +533,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			}
 
 			methods := ""
-			for _, field := range y.Fields {
+			for _, field := range emitted {
 				fieldMethods, err := g.GenerateMarshalJSONMethods(field.Type)
 				if err != nil {
 					return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: field %s methods; %w", field.Name, err)
@@ -751,7 +819,10 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			body.WriteString(fmt.Sprintf("\treturn result, fmt.Errorf(\"%s native struct unwrap; %%w\", err)\n", errorContext))
 			body.WriteString(fmt.Sprintf("}\n"))
 			for _, field := range y.Fields {
-				jsonFieldName := shape.TagGetValue(field.Tags, "json", field.Name)
+				jsonFieldName, skip, _ := fieldJSONInfo(field)
+				if skip {
+					continue
+				}
 
 				body.WriteString(fmt.Sprintf("if field%s, ok := partial[\"%s\"]; ok {\n", field.Name, jsonFieldName))
 				body.WriteString(fmt.Sprintf("\tresult.%s, err = r.%s(field%s)\n", field.Name, g.methodNameWithPrefix(field.Type, unmarshalJSONMethodPrefix), field.Name))
@@ -770,6 +841,9 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 
 			methods := ""
 			for _, field := range y.Fields {
+				if _, skip, _ := fieldJSONInfo(field); skip {
+					continue
+				}
 				fieldMethods, err := g.GenerateUnmarshalJSONMethods(field.Type)
 				if err != nil {
 					return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: field %s methods; %w", field.Name, err)

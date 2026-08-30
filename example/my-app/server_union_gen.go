@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/sashabaranov/go-openai"
@@ -148,19 +149,24 @@ func (r *UserMessage) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUserMessage(*r)
 }
 func (r *UserMessage) _marshalJSONUserMessage(x UserMessage) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldMessage []byte
 	fieldMessage, err = r._marshalJSONstring(x.Message)
 	if err != nil {
 		return nil, fmt.Errorf("main: UserMessage._marshalJSONUserMessage: field name Message; %w", err)
 	}
-	partial["Message"] = fieldMessage
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("main: UserMessage._marshalJSONUserMessage: struct; %w", err)
+	if len(fieldMessage) == 0 {
+		fieldMessage = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Message\":")
+	buf.Write(fieldMessage)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *UserMessage) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -403,25 +409,37 @@ func (r *SystemResponse) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSystemResponse(*r)
 }
 func (r *SystemResponse) _marshalJSONSystemResponse(x SystemResponse) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldMessage []byte
 	fieldMessage, err = r._marshalJSONstring(x.Message)
 	if err != nil {
 		return nil, fmt.Errorf("main: SystemResponse._marshalJSONSystemResponse: field name Message; %w", err)
 	}
-	partial["Message"] = fieldMessage
+	if len(fieldMessage) == 0 {
+		fieldMessage = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Message\":")
+	buf.Write(fieldMessage)
 	var fieldToolCalls []byte
 	fieldToolCalls, err = r._marshalJSONSliceopenai_ToolCall(x.ToolCalls)
 	if err != nil {
 		return nil, fmt.Errorf("main: SystemResponse._marshalJSONSystemResponse: field name ToolCalls; %w", err)
 	}
-	partial["ToolCalls"] = fieldToolCalls
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("main: SystemResponse._marshalJSONSystemResponse: struct; %w", err)
+	if len(fieldToolCalls) == 0 {
+		fieldToolCalls = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ToolCalls\":")
+	buf.Write(fieldToolCalls)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *SystemResponse) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -538,19 +556,24 @@ func (r *UserResponse) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUserResponse(*r)
 }
 func (r *UserResponse) _marshalJSONUserResponse(x UserResponse) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldMessage []byte
 	fieldMessage, err = r._marshalJSONstring(x.Message)
 	if err != nil {
 		return nil, fmt.Errorf("main: UserResponse._marshalJSONUserResponse: field name Message; %w", err)
 	}
-	partial["Message"] = fieldMessage
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("main: UserResponse._marshalJSONUserResponse: struct; %w", err)
+	if len(fieldMessage) == 0 {
+		fieldMessage = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Message\":")
+	buf.Write(fieldMessage)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *UserResponse) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -616,19 +639,24 @@ func (r *ChatResponses) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONChatResponses(*r)
 }
 func (r *ChatResponses) _marshalJSONChatResponses(x ChatResponses) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldResponses []byte
 	fieldResponses, err = r._marshalJSONSliceChatResult(x.Responses)
 	if err != nil {
 		return nil, fmt.Errorf("main: ChatResponses._marshalJSONChatResponses: field name Responses; %w", err)
 	}
-	partial["Responses"] = fieldResponses
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("main: ChatResponses._marshalJSONChatResponses: struct; %w", err)
+	if len(fieldResponses) == 0 {
+		fieldResponses = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Responses\":")
+	buf.Write(fieldResponses)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ChatResponses) _marshalJSONSliceChatResult(x []ChatResult) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))

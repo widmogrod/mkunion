@@ -2,6 +2,7 @@
 package stream
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -178,19 +179,24 @@ func (r *FromBeginning) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFromBeginning(*r)
 }
 func (r *FromBeginning) _marshalJSONFromBeginning(x FromBeginning) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTopic []byte
 	fieldTopic, err = r._marshalJSONTopic(x.Topic)
 	if err != nil {
 		return nil, fmt.Errorf("stream: FromBeginning._marshalJSONFromBeginning: field name Topic; %w", err)
 	}
-	partial["Topic"] = fieldTopic
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("stream: FromBeginning._marshalJSONFromBeginning: struct; %w", err)
+	if len(fieldTopic) == 0 {
+		fieldTopic = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Topic\":")
+	buf.Write(fieldTopic)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *FromBeginning) _marshalJSONTopic(x Topic) ([]byte, error) {
 	result, err := shared.JSONMarshal[Topic](x)
@@ -255,27 +261,37 @@ func (r *FromOffset) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFromOffset(*r)
 }
 func (r *FromOffset) _marshalJSONFromOffset(x FromOffset) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTopic []byte
 	fieldTopic, err = r._marshalJSONTopic(x.Topic)
 	if err != nil {
 		return nil, fmt.Errorf("stream: FromOffset._marshalJSONFromOffset: field name Topic; %w", err)
 	}
-	partial["Topic"] = fieldTopic
+	if len(fieldTopic) == 0 {
+		fieldTopic = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Topic\":")
+	buf.Write(fieldTopic)
 	var fieldOffset []byte
 	fieldOffset, err = r._marshalJSONPtrOffset(x.Offset)
 	if err != nil {
 		return nil, fmt.Errorf("stream: FromOffset._marshalJSONFromOffset: field name Offset; %w", err)
 	}
-	if fieldOffset != nil {
-		partial["Offset"] = fieldOffset
+	if len(fieldOffset) == 0 {
+		fieldOffset = []byte("null")
 	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("stream: FromOffset._marshalJSONFromOffset: struct; %w", err)
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
 	}
-	return result, nil
+	buf.WriteString("\"Offset\":")
+	buf.Write(fieldOffset)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *FromOffset) _marshalJSONTopic(x Topic) ([]byte, error) {
 	result, err := shared.JSONMarshal[Topic](x)
