@@ -59,6 +59,18 @@ func LookupShape(x *RefName) (Shape, bool) {
 
 var onDiskCache = sync.Map{}
 
+// InvalidateOnDiskCache clears cached shape lookups and package paths.
+// Call it when files on disk changed (e.g. in watch mode) before re-generating.
+// Cached file parses invalidate themselves via file modification time.
+func InvalidateOnDiskCache() {
+	for _, m := range []*sync.Map{&onDiskCache, &pkgShapesOnDiskCache, &pkgPathCache} {
+		m.Range(func(key, _ any) bool {
+			m.Delete(key)
+			return true
+		})
+	}
+}
+
 // LookupShapeOnDisk scans filesystem for shapes.
 // it's suited for generators, that parse AST
 func LookupShapeOnDisk(x *RefName) (Shape, bool) {
@@ -74,6 +86,7 @@ func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 		return nil, false
 	}
 
+	statPkgWalks.Add(1)
 	err = filepath.WalkDir(
 		pkgPath,
 		func(path string, d os.DirEntry, err error) error {
@@ -125,16 +138,27 @@ func LookupShapeOnDisk(x *RefName) (Shape, bool) {
 	return nil, false
 }
 
+// pkgShapesOnDiskCache memoizes LookupPkgShapeOnDisk results per package import name.
+// Without it, every dot-import type resolution re-walks and re-parses the whole package.
+var pkgShapesOnDiskCache = sync.Map{}
+
 // LookupPkgShapeOnDisk scans filesystem for all shapes in pkgImportName.
 // it's suited for generators, that parse AST
 func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
+	if v, ok := pkgShapesOnDiskCache.Load(pkgImportName); ok {
+		statPkgWalksHit.Add(1)
+		return v.([]Shape)
+	}
+
 	log.Debugf("shape.LookupPkgShapeOnDisk: looking for shapes in %s", pkgImportName)
 	pkgPath, err := findPackagePath(pkgImportName)
 	if err != nil {
 		log.Warnf("shape.LookupPkgShapeOnDisk: could not find package path %s", err.Error())
+		pkgShapesOnDiskCache.Store(pkgImportName, []Shape(nil))
 		return nil
 	}
 
+	statPkgWalks.Add(1)
 	var result []Shape
 	err = filepath.WalkDir(
 		pkgPath,
@@ -181,10 +205,31 @@ func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
 		return nil
 	}
 
+	pkgShapesOnDiskCache.Store(pkgImportName, result)
 	return result
 }
 
+type pkgPathCacheEntry struct {
+	path string
+	err  error
+}
+
+// pkgPathCache memoizes findPackagePath results,
+// so go.mod is not re-read and re-parsed on every lookup.
+var pkgPathCache = sync.Map{}
+
 func findPackagePath(pkgImportName string) (string, error) {
+	if v, ok := pkgPathCache.Load(pkgImportName); ok {
+		entry := v.(pkgPathCacheEntry)
+		return entry.path, entry.err
+	}
+
+	p, err := findPackagePathUncached(pkgImportName)
+	pkgPathCache.Store(pkgImportName, pkgPathCacheEntry{path: p, err: err})
+	return p, err
+}
+
+func findPackagePathUncached(pkgImportName string) (string, error) {
 	if strings.Trim(pkgImportName, " ") == "" {
 		return "", fmt.Errorf("shape.findPackagePath: empty package name")
 	}

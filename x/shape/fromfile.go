@@ -30,15 +30,45 @@ func isCurrentlyInferring(filename string) bool {
 	return ok
 }
 
+type inferredFileCacheKey struct {
+	filename string
+	modTime  int64
+	size     int64
+}
+
+// inferredFilesCache memoizes InferFromFile results.
+// Keyed by (filename, modTime, size), so a changed file is re-parsed automatically.
+var inferredFilesCache = sync.Map{}
+
 func InferFromFile(filename string) (*InferredInfo, error) {
 	if !path.IsAbs(filename) {
 		cwd, _ := os.Getwd()
 		filename = path.Join(cwd, filename)
 	}
 
+	var cacheKey inferredFileCacheKey
+	if info, err := os.Stat(filename); err == nil {
+		cacheKey = inferredFileCacheKey{
+			filename: filename,
+			modTime:  info.ModTime().UnixNano(),
+			size:     info.Size(),
+		}
+		if v, ok := inferredFilesCache.Load(cacheKey); ok {
+			statFileParseHit.Add(1)
+			return v.(*InferredInfo), nil
+		}
+	}
+
+	// If the file is already being inferred higher up the stack,
+	// this nested parse runs with dot-import resolution disabled (see ResolveUnqualifiedType).
+	// Such a result is incomplete and must not be cached.
+	wasAlreadyInferring := isCurrentlyInferring(filename)
+
 	// Mark that we're processing this file
 	inferringFiles.Store(filename, true)
 	defer inferringFiles.Delete(filename)
+
+	statFileParses.Add(1)
 
 	result := &InferredInfo{
 		fileName:             filename,
@@ -57,6 +87,11 @@ func InferFromFile(filename string) (*InferredInfo, error) {
 	}
 
 	ast.Walk(result, f)
+
+	if cacheKey.filename != "" && !wasAlreadyInferring {
+		inferredFilesCache.Store(cacheKey, result)
+	}
+
 	return result, nil
 }
 

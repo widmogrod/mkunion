@@ -5,6 +5,7 @@ func init() {
 	Register(IndexedTypeWalkerShape())
 	Register(InferredInfoShape())
 	Register(NodeAndTagShape())
+	Register(inferredFileCacheKeyShape())
 }
 
 //shape:shape
@@ -53,5 +54,14 @@ func NodeAndTagShape() Shape {
 				},
 			},
 		},
+	}
+}
+
+//shape:shape
+func inferredFileCacheKeyShape() Shape {
+	return &StructLike{
+		Name:          "inferredFileCacheKey",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 	}
 }

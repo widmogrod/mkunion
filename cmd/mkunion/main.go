@@ -273,6 +273,7 @@ func main() {
 								}
 
 								if len(deleted) > 0 {
+									shape.InvalidateOnDiskCache()
 									prevLevel := log.GetLevel()
 									log.SetLevel(log.ErrorLevel)
 									savedFiles, err := GenerateTypeRegistryForDir(deleted)
@@ -308,6 +309,7 @@ func main() {
 								})
 
 								if len(changedSourcePaths) > 0 {
+									shape.InvalidateOnDiskCache()
 									prevLevel := log.GetLevel()
 									log.SetLevel(log.ErrorLevel)
 									savedFiles, err := GenerateMain(changedSourcePaths, c.Bool("type-registry"))
@@ -385,6 +387,12 @@ func main() {
 					if !c.Bool("dont-run-go-generate") {
 						// Errors are already logged by runGoGenerate
 						_ = runGoGenerate(paths)
+					}
+
+					if os.Getenv("MKUNION_STATS") != "" {
+						for k, v := range shape.StatsSnapshot() {
+							fmt.Fprintf(os.Stderr, "stats: %s=%d\n", k, v)
+						}
 					}
 
 					if c.Bool("generate-only") {
