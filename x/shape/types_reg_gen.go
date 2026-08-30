@@ -22,6 +22,7 @@ func init() {
 	shared.TypeRegistryStore[FieldLike]("github.com/widmogrod/mkunion/x/shape.FieldLike")
 	shared.TypeRegistryStore[Float32]("github.com/widmogrod/mkunion/x/shape.Float32")
 	shared.TypeRegistryStore[Float64]("github.com/widmogrod/mkunion/x/shape.Float64")
+	shared.TypeRegistryStore[Index]("github.com/widmogrod/mkunion/x/shape.Index")
 	shared.TypeRegistryStore[IndexedTypeWalker]("github.com/widmogrod/mkunion/x/shape.IndexedTypeWalker")
 	shared.TypeRegistryStore[InferredInfo]("github.com/widmogrod/mkunion/x/shape.InferredInfo")
 	shared.TypeRegistryStore[Int]("github.com/widmogrod/mkunion/x/shape.Int")

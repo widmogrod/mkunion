@@ -57,134 +57,28 @@ func LookupShape(x *RefName) (Shape, bool) {
 	return nil, false
 }
 
-var onDiskCache = sync.Map{}
-
 // LookupShapeOnDisk scans filesystem for shapes.
-// it's suited for generators, that parse AST
+// it's suited for generators, that parse AST.
+// Backed by DefaultIndex: each package directory is walked at most once.
 func LookupShapeOnDisk(x *RefName) (Shape, bool) {
-	key := shapeFullName(x)
-	log.Debugf("shape.LookupShapeOnDisk: %s", key)
-	if v, ok := onDiskCache.Load(key); ok {
-		return v.(Shape), true
-	}
-
-	pkgPath, err := findPackagePath(x.PkgImportName)
-	if err != nil {
-		log.Warnf("shape.LookupShapeOnDisk: could not find package path %s", err.Error())
-		return nil, false
-	}
-
-	err = filepath.WalkDir(
-		pkgPath,
-		func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				// ignore errors
-				return nil
-			}
-
-			if d.IsDir() {
-				if path != pkgPath {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-
-			if filepath.Ext(path) != ".go" {
-				return nil
-			}
-
-			inferred, err := InferFromFile(path)
-			if err != nil {
-				return fmt.Errorf("shape.LookupShapeOnDisk: error during infer %w", err)
-			}
-
-			for _, y := range inferred.RetrieveShapes() {
-				onDiskCache.Store(shapeFullName(y), y)
-				switch z := y.(type) {
-				case *UnionLike:
-					for _, v := range z.Variant {
-						onDiskCache.Store(shapeFullName(v), v)
-					}
-				}
-			}
-
-			// continue scanning
-			return nil
-		})
-
-	if err != nil {
-		log.Warnf("shape.LookupShapeOnDisk: error during walk %s", err.Error())
-		return nil, false
-	}
-
-	// if not found, return nil, false
-	if v, ok := onDiskCache.Load(key); ok {
-		return v.(Shape), true
-	}
-
-	return nil, false
+	return DefaultIndex.Lookup(x)
 }
 
 // LookupPkgShapeOnDisk scans filesystem for all shapes in pkgImportName.
-// it's suited for generators, that parse AST
+// it's suited for generators, that parse AST.
+// Backed by DefaultIndex: each package directory is walked at most once.
 func LookupPkgShapeOnDisk(pkgImportName string) []Shape {
-	log.Debugf("shape.LookupPkgShapeOnDisk: looking for shapes in %s", pkgImportName)
-	pkgPath, err := findPackagePath(pkgImportName)
-	if err != nil {
-		log.Warnf("shape.LookupPkgShapeOnDisk: could not find package path %s", err.Error())
-		return nil
-	}
-
-	var result []Shape
-	err = filepath.WalkDir(
-		pkgPath,
-		func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				// ignore errors
-				return nil
-			}
-
-			if d.IsDir() {
-				if path != pkgPath {
-					return filepath.SkipDir
-				}
-
-				return nil
-			}
-
-			if filepath.Ext(path) != ".go" {
-				return nil
-			}
-
-			inferred, err := InferFromFile(path)
-			if err != nil {
-				return fmt.Errorf("shape.LookupPkgShapeOnDisk: error during infer %w", err)
-			}
-
-			for _, y := range inferred.RetrieveShapes() {
-				result = append(result, y)
-				onDiskCache.Store(shapeFullName(y), y)
-				switch z := y.(type) {
-				case *UnionLike:
-					for _, v := range z.Variant {
-						onDiskCache.Store(shapeFullName(v), v)
-					}
-				}
-			}
-
-			// continue scanning
-			return nil
-		})
-
-	if err != nil {
-		log.Warnf("shape.LookupPkgShapeOnDisk: error during walk %s", err.Error())
-		return nil
-	}
-
-	return result
+	return DefaultIndex.LoadPackage(pkgImportName)
 }
 
+// findPackagePath resolves a package import name to a directory on disk,
+// memoized in DefaultIndex.
 func findPackagePath(pkgImportName string) (string, error) {
+	return DefaultIndex.packagePath(pkgImportName)
+}
+
+func findPackagePathUncached(pkgImportName string) (string, error) {
+
 	if strings.Trim(pkgImportName, " ") == "" {
 		return "", fmt.Errorf("shape.findPackagePath: empty package name")
 	}
