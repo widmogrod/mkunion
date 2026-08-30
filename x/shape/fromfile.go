@@ -17,29 +17,23 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 )
 
-// Track files currently being inferred to prevent infinite recursion
-var (
-	inferringFiles sync.Map
-)
-
+// isCurrentlyInferring reports if a file is being parsed higher up the stack,
+// to prevent infinite recursion via dot-import resolution.
 func isCurrentlyInferring(filename string) bool {
-	_, ok := inferringFiles.Load(filename)
-	return ok
+	return DefaultIndex.inferring[filename]
 }
 
+// InferFromFile parses one Go file through the DefaultIndex,
+// so each file is parsed at most once per file version.
 func InferFromFile(filename string) (*InferredInfo, error) {
-	if !path.IsAbs(filename) {
-		cwd, _ := os.Getwd()
-		filename = path.Join(cwd, filename)
-	}
+	return DefaultIndex.LoadFile(filename)
+}
 
-	// Mark that we're processing this file
-	inferringFiles.Store(filename, true)
-	defer inferringFiles.Delete(filename)
-
+// parseFile does the actual parsing. Use Index.LoadFile instead,
+// which memoizes results.
+func parseFile(filename string) (*InferredInfo, error) {
 	result := &InferredInfo{
 		fileName:             filename,
 		pkgImportName:        tryToFindPkgImportName(filename),
