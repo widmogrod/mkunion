@@ -194,20 +194,22 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 		records = newRecords
 
 		prev = &FindingRecords[Record[A]]{
-			Where:  query.Where,
-			Sort:   query.Sort,
-			Limit:  query.Limit,
-			Before: &positionID,
+			RecordType: query.RecordType,
+			Where:      query.Where,
+			Sort:       query.Sort,
+			Limit:      query.Limit,
+			Before:     &positionID,
 		}
 
 		if query.Limit > 0 {
 			if len(records) > int(query.Limit) {
 				records = records[:query.Limit]
 				next = &FindingRecords[Record[A]]{
-					Where: query.Where,
-					Sort:  query.Sort,
-					Limit: query.Limit,
-					After: &records[len(records)-1].ID,
+					RecordType: query.RecordType,
+					Where:      query.Where,
+					Sort:       query.Sort,
+					Limit:      query.Limit,
+					After:      &records[len(records)-1].ID,
 				}
 			}
 		}
@@ -224,10 +226,11 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 		records = newRecords
 
 		next = &FindingRecords[Record[A]]{
-			Where: query.Where,
-			Sort:  query.Sort,
-			Limit: query.Limit,
-			After: &positionID,
+			RecordType: query.RecordType,
+			Where:      query.Where,
+			Sort:       query.Sort,
+			Limit:      query.Limit,
+			After:      &positionID,
 		}
 
 		if query.Limit > 0 {
@@ -235,10 +238,11 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 				records = records[len(records)-int(query.Limit):]
 
 				prev = &FindingRecords[Record[A]]{
-					Where:  query.Where,
-					Sort:   query.Sort,
-					Limit:  query.Limit,
-					Before: &records[0].ID,
+					RecordType: query.RecordType,
+					Where:      query.Where,
+					Sort:       query.Sort,
+					Limit:      query.Limit,
+					Before:     &records[0].ID,
 				}
 			}
 		}
@@ -247,10 +251,11 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 			if len(records) > int(query.Limit) {
 				records = records[:query.Limit]
 				next = &FindingRecords[Record[A]]{
-					Where: query.Where,
-					Sort:  query.Sort,
-					Limit: query.Limit,
-					After: &records[len(records)-1].ID,
+					RecordType: query.RecordType,
+					Where:      query.Where,
+					Sort:       query.Sort,
+					Limit:      query.Limit,
+					After:      &records[len(records)-1].ID,
 				}
 			}
 		}
