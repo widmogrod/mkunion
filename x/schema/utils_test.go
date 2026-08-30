@@ -1,238 +1,112 @@
 package schema
 
 import (
-	"github.com/stretchr/testify/assert"
+	"fmt"
+	"math"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+// Compare orders values of different types by type rank:
+// None < Bool < Number < String < Binary < List < Map
+func TestCompareTypeOrdering(t *testing.T) {
+	ordered := []struct {
+		name  string
+		value Schema
+	}{
+		{"none", &None{}},
+		{"bool", MkBool(true)},
+		{"number", MkInt(1)},
+		{"string", MkString("some cool string")},
+		{"binary", MkBinary([]byte("some cool string"))},
+		{"list", &List{}},
+		{"map", &Map{}},
+	}
+	for i, a := range ordered {
+		for j, b := range ordered {
+			if i == j {
+				continue
+			}
+			want := 1
+			if i < j {
+				want = -1
+			}
+			t.Run(fmt.Sprintf("%s and %s = %d", a.name, b.name, want), func(t *testing.T) {
+				assert.Equal(t, want, Compare(a.value, b.value))
+			})
+		}
+	}
+}
 
 func TestCompare(t *testing.T) {
 	useCases := map[string]struct {
 		a, b Schema
 		cmp  int
 	}{
-		"nil and nil = 0": {
-			a:   nil,
-			b:   nil,
-			cmp: 0,
-		},
-		"nil and none = 0": {
-			a:   nil,
-			b:   &None{},
-			cmp: 0,
-		},
-		"none and nil = 0": {
-			a:   &None{},
-			b:   nil,
-			cmp: 0,
-		},
-		"none and none = 0": {
-			a:   &None{},
-			b:   &None{},
-			cmp: 0,
-		},
-		"none and true = -1": {
-			a:   &None{},
-			b:   MkBool(true),
-			cmp: -1,
-		},
-		"none and false = -1": {
-			a:   &None{},
-			b:   MkBool(false),
-			cmp: -1,
-		},
-		"none and number = -1": {
-			a:   &None{},
-			b:   MkInt(1),
-			cmp: -1,
-		},
-		"none and string = -1": {
-			a:   &None{},
-			b:   MkString("some cool string"),
-			cmp: -1,
-		},
-		"none and binary = -1": {
-			a:   &None{},
-			b:   MkBinary([]byte("some cool string")),
-			cmp: -1,
-		},
-		"none and list = -1": {
-			a:   &None{},
-			b:   &List{},
-			cmp: -1,
-		},
-		"none and map = -1": {
-			a:   &None{},
-			b:   &Map{},
-			cmp: -1,
-		},
-		"true and none = 1": {
-			a:   MkBool(true),
-			b:   &None{},
-			cmp: 1,
-		},
-		"true and true = 0": {
-			a:   MkBool(true),
-			b:   MkBool(true),
-			cmp: 0,
-		},
-		"true and false = 1": {
-			a:   MkBool(true),
-			b:   MkBool(false),
-			cmp: 1,
-		},
-		"true and number = -1": {
-			a:   MkBool(true),
-			b:   MkInt(1),
-			cmp: -1,
-		},
-		"true and string = -1": {
-			a:   MkBool(true),
-			b:   MkString("some cool string"),
-			cmp: -1,
-		},
-		"true and binary = -1": {
-			a:   MkBool(true),
-			b:   MkBinary([]byte("some cool string")),
-			cmp: -1,
-		},
-		"true and list = -1": {
-			a:   MkBool(true),
-			b:   &List{},
-			cmp: -1,
-		},
-		"true and map = -1": {
-			a:   MkBool(true),
-			b:   &Map{},
-			cmp: -1,
-		},
-		"string and none = 1": {
-			a:   MkString("some cool string"),
-			b:   &None{},
-			cmp: 1,
-		},
-		"string and true = 1": {
-			a:   MkString("some cool string"),
-			b:   MkBool(true),
-			cmp: 1,
-		},
-		"string and false = 1": {
-			a:   MkString("some cool string"),
-			b:   MkBool(false),
-			cmp: 1,
-		},
-		"string and number = -1": {
-			a:   MkString("some cool string"),
-			b:   MkInt(1),
-			cmp: 1,
-		},
+		"nil and nil = 0":    {nil, nil, 0},
+		"nil and none = 0":   {nil, &None{}, 0},
+		"none and nil = 0":   {&None{}, nil, 0},
+		"none and none = 0":  {&None{}, &None{}, 0},
+		"true and true = 0":  {MkBool(true), MkBool(true), 0},
+		"true and false = 1": {MkBool(true), MkBool(false), 1},
 		"string and string = 0": {
-			a:   MkString("some cool string"),
-			b:   MkString("some cool string"),
-			cmp: 0,
-		},
-		"string and binary = -1": {
-			a:   MkString("some cool string"),
-			b:   MkBinary([]byte("some cool string")),
-			cmp: -1,
-		},
-		"string and list = -1": {
-			a:   MkString("some cool string"),
-			b:   &List{},
-			cmp: -1,
-		},
-		"string and map = -1": {
-			a:   MkString("some cool string"),
-			b:   &Map{},
-			cmp: -1,
-		},
-		"list and none = 1": {
-			a:   &List{},
-			b:   &None{},
-			cmp: 1,
-		},
-		"list and true = 1": {
-			a:   &List{},
-			b:   MkBool(true),
-			cmp: 1,
-		},
-		"list and false = 1": {
-			a:   &List{},
-			b:   MkBool(false),
-			cmp: 1,
-		},
-		"list and number = 1": {
-			a:   &List{},
-			b:   MkInt(1),
-			cmp: 1,
-		},
-		"list and string = 1": {
-			a:   &List{},
-			b:   MkString("some cool string"),
-			cmp: 1,
-		},
-		"list and binary = 1": {
-			a:   &List{},
-			b:   MkBinary([]byte("some cool string")),
-			cmp: 1,
+			MkString("some cool string"), MkString("some cool string"), 0,
 		},
 		"list and list = 0": {
-			a: MkList(MkInt(1), MkInt(2), MkInt(3)),
-			b: MkList(MkInt(1), MkInt(2), MkInt(3)),
-		},
-		"list and map = -1": {
-			a:   &List{},
-			b:   &Map{},
-			cmp: -1,
-		},
-		"map and none = 1": {
-			a:   &Map{},
-			b:   &None{},
-			cmp: 1,
-		},
-		"map and true = 1": {
-			a:   &Map{},
-			b:   MkBool(true),
-			cmp: 1,
-		},
-		"map and false = 1": {
-			a:   &Map{},
-			b:   MkBool(false),
-			cmp: 1,
-		},
-		"map and number = 1": {
-			a:   &Map{},
-			b:   MkInt(1),
-			cmp: 1,
-		},
-		"map and string = 1": {
-			a:   &Map{},
-			b:   MkString("some cool string"),
-			cmp: 1,
-		},
-		"map and binary = 1": {
-			a:   &Map{},
-			b:   MkBinary([]byte("some cool string")),
-			cmp: 1,
-		},
-		"map and list = 1": {
-			a:   &Map{},
-			b:   &List{},
-			cmp: 1,
+			MkList(MkInt(1), MkInt(2), MkInt(3)),
+			MkList(MkInt(1), MkInt(2), MkInt(3)),
+			0,
 		},
 		"map and map = 0": {
-			a:   MkMap(MkField("a", MkInt(1)), MkField("b", MkInt(2)), MkField("c", MkInt(3))),
-			b:   MkMap(MkField("a", MkInt(1)), MkField("b", MkInt(2)), MkField("c", MkInt(3))),
-			cmp: 0,
+			MkMap(MkField("a", MkInt(1)), MkField("b", MkInt(2)), MkField("c", MkInt(3))),
+			MkMap(MkField("a", MkInt(1)), MkField("b", MkInt(2)), MkField("c", MkInt(3))),
+			0,
 		},
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
-			cmp := Compare(uc.a, uc.b)
-			if cmp != uc.cmp {
-				t.Fatalf("expected %d, got %d", uc.cmp, cmp)
-			}
+			assert.Equal(t, uc.cmp, Compare(uc.a, uc.b))
 		})
 	}
+}
+
+// Reproduces: Compare on numbers does int(*x - *y), so any difference
+// smaller than 1 collapses to 0 — 1.9 "equals" 1.2 in WHERE and sort.
+func TestCompareNumbers(t *testing.T) {
+	useCases := map[string]struct {
+		a, b Schema
+		cmp  int
+	}{
+		"1 and 1 = 0":       {MkInt(1), MkInt(1), 0},
+		"2 and 1 = 1":       {MkInt(2), MkInt(1), 1},
+		"1 and 2 = -1":      {MkInt(1), MkInt(2), -1},
+		"1.9 and 1.2 = 1":   {MkFloat(1.9), MkFloat(1.2), 1},
+		"1.2 and 1.9 = -1":  {MkFloat(1.2), MkFloat(1.9), -1},
+		"-1.2 and -1.9 = 1": {MkFloat(-1.2), MkFloat(-1.9), 1},
+		"0.1 and 0 = 1":     {MkFloat(0.1), MkFloat(0), 1},
+		"huge and tiny = 1 (no int overflow)": {
+			MkFloat(math.MaxFloat64), MkFloat(-math.MaxFloat64), 1,
+		},
+	}
+	for name, uc := range useCases {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, uc.cmp, Compare(uc.a, uc.b))
+		})
+	}
+}
+
+// Reproduces: schema.Number is float64 only, so int64 values above 2^53
+// lose precision and distinct values become equal.
+func TestCompareBigInt64(t *testing.T) {
+	t.Run("adjacent int64 above 2^53 stay distinct", func(t *testing.T) {
+		big := int64(1) << 60
+		assert.Equal(t, 1, Compare(MkInt(big+1), MkInt(big)))
+		assert.Equal(t, -1, Compare(MkInt(big), MkInt(big+1)))
+	})
+	t.Run("math.MaxInt64 and math.MaxInt64-1 stay distinct", func(t *testing.T) {
+		assert.Equal(t, 1, Compare(MkInt(math.MaxInt64), MkInt(math.MaxInt64-1)))
+	})
 }
 
 func TestGet(t *testing.T) {
