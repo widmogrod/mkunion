@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 )
 
 // Index is the single owner of all shape information read from disk.
@@ -18,9 +19,17 @@ import (
 // directory is walked at most once. All lookups (by file, by package,
 // by type reference) read from the same three maps below.
 //
-// The Index is not safe for concurrent use. mkunion generation is
-// single-threaded; the watch loop calls Reset() before each re-generation.
+// The Index is safe for concurrent use. A single mutex guards the maps
+// and counters. The mutex is never held while parsing a file or walking
+// a directory, because parsing can call back into the Index
+// (dot-import resolution); holding the lock across a parse would deadlock.
+// The watch loop calls Reset() before each re-generation.
 type Index struct {
+	// mu guards every field below. Lock it only around map/counter
+	// access, never across parseFile, filepath.WalkDir or
+	// findPackagePathUncached calls (they can re-enter the Index).
+	mu sync.Mutex
+
 	// files: absolute file path -> parse result.
 	// The (modTime, size) pair invalidates an entry when the file changes.
 	files map[string]indexedFile
@@ -81,11 +90,23 @@ func ResetIndex() {
 
 // Reset drops all indexed state, so the next load re-reads from disk.
 func (ix *Index) Reset() {
-	*ix = *NewIndex()
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+	ix.files = map[string]indexedFile{}
+	ix.pkgShapes = map[string][]Shape{}
+	ix.shapes = map[string]Shape{}
+	ix.pkgPaths = map[string]pkgPathResult{}
+	ix.inferring = map[string]bool{}
+	ix.fileParses = 0
+	ix.fileParseHits = 0
+	ix.pkgWalks = 0
+	ix.pkgWalkHits = 0
 }
 
 // Stats returns counters that describe how much work the index did.
 func (ix *Index) Stats() map[string]int64 {
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
 	return map[string]int64{
 		"file_parses":     ix.fileParses,
 		"file_parse_hits": ix.fileParseHits,
@@ -106,8 +127,13 @@ func (ix *Index) LoadFile(filename string) (*InferredInfo, error) {
 	if stat, err := os.Stat(filename); err == nil {
 		modTime, size = stat.ModTime().UnixNano(), stat.Size()
 		cacheable = true
+	}
+
+	ix.mu.Lock()
+	if cacheable {
 		if entry, ok := ix.files[filename]; ok && entry.modTime == modTime && entry.size == size {
 			ix.fileParseHits++
+			ix.mu.Unlock()
 			return entry.info, nil
 		}
 	}
@@ -115,22 +141,30 @@ func (ix *Index) LoadFile(filename string) (*InferredInfo, error) {
 	// A nested parse of a file already being parsed runs with dot-import
 	// resolution disabled (see InferredInfo.ResolveUnqualifiedType) and
 	// produces an incomplete result, so it must not be cached.
-	if ix.inferring[filename] {
+	nested := ix.inferring[filename]
+	if nested {
 		cacheable = false
 	}
-
 	ix.inferring[filename] = true
-	defer delete(ix.inferring, filename)
-
 	ix.fileParses++
+	ix.mu.Unlock()
+
+	// The lock is NOT held here: parseFile can call back into the Index.
 	info, err := parseFile(filename)
+
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+	if !nested {
+		delete(ix.inferring, filename)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
 	if cacheable {
 		ix.files[filename] = indexedFile{modTime: modTime, size: size, info: info}
-		ix.registerShapes(info.RetrieveShapes())
+		ix.registerShapesLocked(info.RetrieveShapes())
 	}
 
 	return info, nil
@@ -138,19 +172,29 @@ func (ix *Index) LoadFile(filename string) (*InferredInfo, error) {
 
 // LoadPackage walks a package directory once and returns all shapes in it.
 func (ix *Index) LoadPackage(pkgImportName string) []Shape {
+	ix.mu.Lock()
 	if shapes, ok := ix.pkgShapes[pkgImportName]; ok {
 		ix.pkgWalkHits++
+		ix.mu.Unlock()
 		return shapes
 	}
+	ix.mu.Unlock()
 
 	pkgPath, err := ix.packagePath(pkgImportName)
 	if err != nil {
 		log.Warnf("shape.Index.LoadPackage: could not find package path %s", err.Error())
+		ix.mu.Lock()
 		ix.pkgShapes[pkgImportName] = nil
+		ix.mu.Unlock()
 		return nil
 	}
 
+	ix.mu.Lock()
 	ix.pkgWalks++
+	ix.mu.Unlock()
+
+	// The lock is NOT held during the walk: LoadFile locks on its own,
+	// and parsing can call back into the Index.
 	var result []Shape
 	err = filepath.WalkDir(
 		pkgPath,
@@ -180,13 +224,16 @@ func (ix *Index) LoadPackage(pkgImportName string) []Shape {
 			return nil
 		})
 
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+
 	if err != nil {
 		log.Warnf("shape.Index.LoadPackage: error during walk %s", err.Error())
 		ix.pkgShapes[pkgImportName] = nil
 		return nil
 	}
 
-	ix.registerShapes(result)
+	ix.registerShapesLocked(result)
 	ix.pkgShapes[pkgImportName] = result
 	return result
 }
@@ -194,28 +241,48 @@ func (ix *Index) LoadPackage(pkgImportName string) []Shape {
 // Lookup finds a shape by reference, loading its package on first miss.
 func (ix *Index) Lookup(x *RefName) (Shape, bool) {
 	key := shapeFullName(x)
+
+	ix.mu.Lock()
 	if v, ok := ix.shapes[key]; ok {
+		ix.mu.Unlock()
 		return v, true
 	}
+	ix.mu.Unlock()
 
 	ix.LoadPackage(x.PkgImportName)
 
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
 	v, ok := ix.shapes[key]
 	return v, ok
 }
 
+// isInferring reports if a file is currently being parsed by this index.
+func (ix *Index) isInferring(filename string) bool {
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+	return ix.inferring[filename]
+}
+
 // packagePath resolves a package import name to a directory on disk, memoized.
 func (ix *Index) packagePath(pkgImportName string) (string, error) {
+	ix.mu.Lock()
 	if entry, ok := ix.pkgPaths[pkgImportName]; ok {
+		ix.mu.Unlock()
 		return entry.path, entry.err
 	}
+	ix.mu.Unlock()
 
 	p, err := findPackagePathUncached(pkgImportName)
+
+	ix.mu.Lock()
 	ix.pkgPaths[pkgImportName] = pkgPathResult{path: p, err: err}
+	ix.mu.Unlock()
 	return p, err
 }
 
-func (ix *Index) registerShapes(shapes []Shape) {
+// registerShapesLocked stores shapes; the caller must hold ix.mu.
+func (ix *Index) registerShapesLocked(shapes []Shape) {
 	for _, y := range shapes {
 		ix.shapes[shapeFullName(y)] = y
 		if union, ok := y.(*UnionLike); ok {
