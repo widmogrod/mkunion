@@ -88,6 +88,9 @@ Alternatively, you can run the `mkunion` command directly on specific files:
 go tool mkunion -i example/shape.go
 ```
 
+If you ever need a clean slate, `go tool mkunion clean ./...` removes all generated files.
+All commands and flags are described in the [CLI reference](cli.md).
+
 
 #### Automatic `go generate` execution
 As of the latest version, `mkunion watch` automatically runs `go generate ./...` after generating union types and shapes. This eliminates the need to run two separate commands.
