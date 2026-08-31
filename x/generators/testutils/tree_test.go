@@ -116,7 +116,10 @@ func TestTree_JSON(t *testing.T) {
           "Value": 444
         }
       }
-    }
+    },
+    "just_of": null,
+    "L": null,
+    "IntPtr": null
   }
 }
 `

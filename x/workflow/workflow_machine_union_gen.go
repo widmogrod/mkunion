@@ -2,6 +2,7 @@
 package workflow
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -303,31 +304,50 @@ func (r *Run) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRun(*r)
 }
 func (r *Run) _marshalJSONRun(x Run) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldFlow []byte
 	fieldFlow, err = r._marshalJSONWorkflow(x.Flow)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Run._marshalJSONRun: field name Flow; %w", err)
 	}
-	partial["Flow"] = fieldFlow
+	if len(fieldFlow) == 0 {
+		fieldFlow = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Flow\":")
+	buf.Write(fieldFlow)
 	var fieldInput []byte
 	fieldInput, err = r._marshalJSONschema_Schema(x.Input)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Run._marshalJSONRun: field name Input; %w", err)
 	}
-	partial["Input"] = fieldInput
+	if len(fieldInput) == 0 {
+		fieldInput = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Input\":")
+	buf.Write(fieldInput)
 	var fieldRunOption []byte
 	fieldRunOption, err = r._marshalJSONRunOption(x.RunOption)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Run._marshalJSONRun: field name RunOption; %w", err)
 	}
-	partial["RunOption"] = fieldRunOption
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Run._marshalJSONRun: struct; %w", err)
+	if len(fieldRunOption) == 0 {
+		fieldRunOption = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"RunOption\":")
+	buf.Write(fieldRunOption)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Run) _marshalJSONWorkflow(x Workflow) ([]byte, error) {
 	result, err := shared.JSONMarshal[Workflow](x)
@@ -432,25 +452,37 @@ func (r *Callback) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONCallback(*r)
 }
 func (r *Callback) _marshalJSONCallback(x Callback) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldCallbackID []byte
 	fieldCallbackID, err = r._marshalJSONstring(x.CallbackID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Callback._marshalJSONCallback: field name CallbackID; %w", err)
 	}
-	partial["CallbackID"] = fieldCallbackID
+	if len(fieldCallbackID) == 0 {
+		fieldCallbackID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"CallbackID\":")
+	buf.Write(fieldCallbackID)
 	var fieldResult []byte
 	fieldResult, err = r._marshalJSONschema_Schema(x.Result)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Callback._marshalJSONCallback: field name Result; %w", err)
 	}
-	partial["Result"] = fieldResult
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Callback._marshalJSONCallback: struct; %w", err)
+	if len(fieldResult) == 0 {
+		fieldResult = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Result\":")
+	buf.Write(fieldResult)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Callback) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -536,19 +568,24 @@ func (r *TryRecover) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONTryRecover(*r)
 }
 func (r *TryRecover) _marshalJSONTryRecover(x TryRecover) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldRunID []byte
 	fieldRunID, err = r._marshalJSONRunID(x.RunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: TryRecover._marshalJSONTryRecover: field name RunID; %w", err)
 	}
-	partial["RunID"] = fieldRunID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: TryRecover._marshalJSONTryRecover: struct; %w", err)
+	if len(fieldRunID) == 0 {
+		fieldRunID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"RunID\":")
+	buf.Write(fieldRunID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *TryRecover) _marshalJSONRunID(x RunID) ([]byte, error) {
 	result, err := shared.JSONMarshal[RunID](x)
@@ -613,19 +650,24 @@ func (r *StopSchedule) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONStopSchedule(*r)
 }
 func (r *StopSchedule) _marshalJSONStopSchedule(x StopSchedule) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldParentRunID []byte
 	fieldParentRunID, err = r._marshalJSONRunID(x.ParentRunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: StopSchedule._marshalJSONStopSchedule: field name ParentRunID; %w", err)
 	}
-	partial["ParentRunID"] = fieldParentRunID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: StopSchedule._marshalJSONStopSchedule: struct; %w", err)
+	if len(fieldParentRunID) == 0 {
+		fieldParentRunID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ParentRunID\":")
+	buf.Write(fieldParentRunID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *StopSchedule) _marshalJSONRunID(x RunID) ([]byte, error) {
 	result, err := shared.JSONMarshal[RunID](x)
@@ -690,19 +732,24 @@ func (r *ResumeSchedule) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONResumeSchedule(*r)
 }
 func (r *ResumeSchedule) _marshalJSONResumeSchedule(x ResumeSchedule) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldParentRunID []byte
 	fieldParentRunID, err = r._marshalJSONRunID(x.ParentRunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ResumeSchedule._marshalJSONResumeSchedule: field name ParentRunID; %w", err)
 	}
-	partial["ParentRunID"] = fieldParentRunID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ResumeSchedule._marshalJSONResumeSchedule: struct; %w", err)
+	if len(fieldParentRunID) == 0 {
+		fieldParentRunID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ParentRunID\":")
+	buf.Write(fieldParentRunID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ResumeSchedule) _marshalJSONRunID(x RunID) ([]byte, error) {
 	result, err := shared.JSONMarshal[RunID](x)
@@ -767,19 +814,24 @@ func (r *ExpireAsync) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONExpireAsync(*r)
 }
 func (r *ExpireAsync) _marshalJSONExpireAsync(x ExpireAsync) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldRunID []byte
 	fieldRunID, err = r._marshalJSONRunID(x.RunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ExpireAsync._marshalJSONExpireAsync: field name RunID; %w", err)
 	}
-	partial["RunID"] = fieldRunID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ExpireAsync._marshalJSONExpireAsync: struct; %w", err)
+	if len(fieldRunID) == 0 {
+		fieldRunID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"RunID\":")
+	buf.Write(fieldRunID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ExpireAsync) _marshalJSONRunID(x RunID) ([]byte, error) {
 	result, err := shared.JSONMarshal[RunID](x)
@@ -1052,25 +1104,37 @@ func (r *End) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONEnd(*r)
 }
 func (r *End) _marshalJSONEnd(x End) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldID []byte
 	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: field name ID; %w", err)
 	}
-	partial["ID"] = fieldID
+	if len(fieldID) == 0 {
+		fieldID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ID\":")
+	buf.Write(fieldID)
 	var fieldResult []byte
 	fieldResult, err = r._marshalJSONReshaper(x.Result)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: field name Result; %w", err)
 	}
-	partial["Result"] = fieldResult
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: End._marshalJSONEnd: struct; %w", err)
+	if len(fieldResult) == 0 {
+		fieldResult = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Result\":")
+	buf.Write(fieldResult)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *End) _marshalJSONStepID(x StepID) ([]byte, error) {
 	result, err := shared.JSONMarshal[StepID](x)
@@ -1155,37 +1219,63 @@ func (r *Assign) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAssign(*r)
 }
 func (r *Assign) _marshalJSONAssign(x Assign) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldID []byte
 	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name ID; %w", err)
 	}
-	partial["ID"] = fieldID
+	if len(fieldID) == 0 {
+		fieldID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ID\":")
+	buf.Write(fieldID)
 	var fieldVarOk []byte
 	fieldVarOk, err = r._marshalJSONstring(x.VarOk)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name VarOk; %w", err)
 	}
-	partial["VarOk"] = fieldVarOk
+	if len(fieldVarOk) == 0 {
+		fieldVarOk = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"VarOk\":")
+	buf.Write(fieldVarOk)
 	var fieldVarErr []byte
 	fieldVarErr, err = r._marshalJSONstring(x.VarErr)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name VarErr; %w", err)
 	}
-	partial["VarErr"] = fieldVarErr
+	if len(fieldVarErr) == 0 {
+		fieldVarErr = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"VarErr\":")
+	buf.Write(fieldVarErr)
 	var fieldVal []byte
 	fieldVal, err = r._marshalJSONExpr(x.Val)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: field name Val; %w", err)
 	}
-	partial["Val"] = fieldVal
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Assign._marshalJSONAssign: struct; %w", err)
+	if len(fieldVal) == 0 {
+		fieldVal = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Val\":")
+	buf.Write(fieldVal)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Assign) _marshalJSONStepID(x StepID) ([]byte, error) {
 	result, err := shared.JSONMarshal[StepID](x)
@@ -1297,39 +1387,63 @@ func (r *Apply) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONApply(*r)
 }
 func (r *Apply) _marshalJSONApply(x Apply) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldID []byte
 	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name ID; %w", err)
 	}
-	partial["ID"] = fieldID
+	if len(fieldID) == 0 {
+		fieldID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ID\":")
+	buf.Write(fieldID)
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldArgs []byte
 	fieldArgs, err = r._marshalJSONSliceReshaper(x.Args)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Args; %w", err)
 	}
-	partial["Args"] = fieldArgs
+	if len(fieldArgs) == 0 {
+		fieldArgs = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Args\":")
+	buf.Write(fieldArgs)
 	var fieldAwait []byte
 	fieldAwait, err = r._marshalJSONPtrApplyAwaitOptions(x.Await)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: field name Await; %w", err)
 	}
-	if fieldAwait != nil {
-		partial["Await"] = fieldAwait
+	if len(fieldAwait) == 0 {
+		fieldAwait = []byte("null")
 	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Apply._marshalJSONApply: struct; %w", err)
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
 	}
-	return result, nil
+	buf.WriteString("\"Await\":")
+	buf.Write(fieldAwait)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Apply) _marshalJSONStepID(x StepID) ([]byte, error) {
 	result, err := shared.JSONMarshal[StepID](x)
@@ -1505,37 +1619,63 @@ func (r *Choose) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONChoose(*r)
 }
 func (r *Choose) _marshalJSONChoose(x Choose) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldID []byte
 	fieldID, err = r._marshalJSONStepID(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name ID; %w", err)
 	}
-	partial["ID"] = fieldID
+	if len(fieldID) == 0 {
+		fieldID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ID\":")
+	buf.Write(fieldID)
 	var fieldIf []byte
 	fieldIf, err = r._marshalJSONPredicate(x.If)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name If; %w", err)
 	}
-	partial["If"] = fieldIf
+	if len(fieldIf) == 0 {
+		fieldIf = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"If\":")
+	buf.Write(fieldIf)
 	var fieldThen []byte
 	fieldThen, err = r._marshalJSONSliceExpr(x.Then)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name Then; %w", err)
 	}
-	partial["Then"] = fieldThen
+	if len(fieldThen) == 0 {
+		fieldThen = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Then\":")
+	buf.Write(fieldThen)
 	var fieldElse []byte
 	fieldElse, err = r._marshalJSONSliceExpr(x.Else)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: field name Else; %w", err)
 	}
-	partial["Else"] = fieldElse
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Choose._marshalJSONChoose: struct; %w", err)
+	if len(fieldElse) == 0 {
+		fieldElse = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Else\":")
+	buf.Write(fieldElse)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Choose) _marshalJSONStepID(x StepID) ([]byte, error) {
 	result, err := shared.JSONMarshal[StepID](x)
@@ -1885,19 +2025,24 @@ func (r *And) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAnd(*r)
 }
 func (r *And) _marshalJSONAnd(x And) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldL []byte
 	fieldL, err = r._marshalJSONSlicePredicate(x.L)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: And._marshalJSONAnd: field name L; %w", err)
 	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: And._marshalJSONAnd: struct; %w", err)
+	if len(fieldL) == 0 {
+		fieldL = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"L\":")
+	buf.Write(fieldL)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *And) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -1993,19 +2138,24 @@ func (r *Or) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONOr(*r)
 }
 func (r *Or) _marshalJSONOr(x Or) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldL []byte
 	fieldL, err = r._marshalJSONSlicePredicate(x.L)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Or._marshalJSONOr: field name L; %w", err)
 	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Or._marshalJSONOr: struct; %w", err)
+	if len(fieldL) == 0 {
+		fieldL = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"L\":")
+	buf.Write(fieldL)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Or) _marshalJSONSlicePredicate(x []Predicate) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -2101,19 +2251,24 @@ func (r *Not) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONNot(*r)
 }
 func (r *Not) _marshalJSONNot(x Not) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldP []byte
 	fieldP, err = r._marshalJSONPredicate(x.P)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Not._marshalJSONNot: field name P; %w", err)
 	}
-	partial["P"] = fieldP
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Not._marshalJSONNot: struct; %w", err)
+	if len(fieldP) == 0 {
+		fieldP = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"P\":")
+	buf.Write(fieldP)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Not) _marshalJSONPredicate(x Predicate) ([]byte, error) {
 	result, err := shared.JSONMarshal[Predicate](x)
@@ -2178,31 +2333,50 @@ func (r *Compare) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONCompare(*r)
 }
 func (r *Compare) _marshalJSONCompare(x Compare) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOperation []byte
 	fieldOperation, err = r._marshalJSONstring(x.Operation)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Operation; %w", err)
 	}
-	partial["Operation"] = fieldOperation
+	if len(fieldOperation) == 0 {
+		fieldOperation = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Operation\":")
+	buf.Write(fieldOperation)
 	var fieldLeft []byte
 	fieldLeft, err = r._marshalJSONReshaper(x.Left)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Left; %w", err)
 	}
-	partial["Left"] = fieldLeft
+	if len(fieldLeft) == 0 {
+		fieldLeft = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Left\":")
+	buf.Write(fieldLeft)
 	var fieldRight []byte
 	fieldRight, err = r._marshalJSONReshaper(x.Right)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: field name Right; %w", err)
 	}
-	partial["Right"] = fieldRight
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Compare._marshalJSONCompare: struct; %w", err)
+	if len(fieldRight) == 0 {
+		fieldRight = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Right\":")
+	buf.Write(fieldRight)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Compare) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -2440,19 +2614,24 @@ func (r *GetValue) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONGetValue(*r)
 }
 func (r *GetValue) _marshalJSONGetValue(x GetValue) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldPath []byte
 	fieldPath, err = r._marshalJSONstring(x.Path)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: GetValue._marshalJSONGetValue: field name Path; %w", err)
 	}
-	partial["Path"] = fieldPath
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: GetValue._marshalJSONGetValue: struct; %w", err)
+	if len(fieldPath) == 0 {
+		fieldPath = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Path\":")
+	buf.Write(fieldPath)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *GetValue) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -2518,19 +2697,24 @@ func (r *SetValue) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSetValue(*r)
 }
 func (r *SetValue) _marshalJSONSetValue(x SetValue) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONschema_Schema(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: SetValue._marshalJSONSetValue: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: SetValue._marshalJSONSetValue: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *SetValue) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
 	result, err := shared.JSONMarshal[schema.Schema](x)
@@ -2741,25 +2925,37 @@ func (r *ScheduleRun) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONScheduleRun(*r)
 }
 func (r *ScheduleRun) _marshalJSONScheduleRun(x ScheduleRun) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldInterval []byte
 	fieldInterval, err = r._marshalJSONstring(x.Interval)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: field name Interval; %w", err)
 	}
-	partial["Interval"] = fieldInterval
+	if len(fieldInterval) == 0 {
+		fieldInterval = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Interval\":")
+	buf.Write(fieldInterval)
 	var fieldParentRunID []byte
 	fieldParentRunID, err = r._marshalJSONstring(x.ParentRunID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: field name ParentRunID; %w", err)
 	}
-	partial["ParentRunID"] = fieldParentRunID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ScheduleRun._marshalJSONScheduleRun: struct; %w", err)
+	if len(fieldParentRunID) == 0 {
+		fieldParentRunID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ParentRunID\":")
+	buf.Write(fieldParentRunID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ScheduleRun) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -2831,19 +3027,24 @@ func (r *DelayRun) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDelayRun(*r)
 }
 func (r *DelayRun) _marshalJSONDelayRun(x DelayRun) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldDelayBySeconds []byte
 	fieldDelayBySeconds, err = r._marshalJSONint64(x.DelayBySeconds)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONDelayRun: field name DelayBySeconds; %w", err)
 	}
-	partial["DelayBySeconds"] = fieldDelayBySeconds
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: DelayRun._marshalJSONDelayRun: struct; %w", err)
+	if len(fieldDelayBySeconds) == 0 {
+		fieldDelayBySeconds = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"DelayBySeconds\":")
+	buf.Write(fieldDelayBySeconds)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *DelayRun) _marshalJSONint64(x int64) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -3179,25 +3380,37 @@ func (r *NextOperation) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONNextOperation(*r)
 }
 func (r *NextOperation) _marshalJSONNextOperation(x NextOperation) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldResult []byte
 	fieldResult, err = r._marshalJSONschema_Schema(x.Result)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: NextOperation._marshalJSONNextOperation: field name Result; %w", err)
 	}
-	partial["Result"] = fieldResult
+	if len(fieldResult) == 0 {
+		fieldResult = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Result\":")
+	buf.Write(fieldResult)
 	var fieldBaseState []byte
 	fieldBaseState, err = r._marshalJSONBaseState(x.BaseState)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: NextOperation._marshalJSONNextOperation: field name BaseState; %w", err)
 	}
-	partial["BaseState"] = fieldBaseState
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: NextOperation._marshalJSONNextOperation: struct; %w", err)
+	if len(fieldBaseState) == 0 {
+		fieldBaseState = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BaseState\":")
+	buf.Write(fieldBaseState)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *NextOperation) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
 	result, err := shared.JSONMarshal[schema.Schema](x)
@@ -3282,25 +3495,37 @@ func (r *Done) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDone(*r)
 }
 func (r *Done) _marshalJSONDone(x Done) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldResult []byte
 	fieldResult, err = r._marshalJSONschema_Schema(x.Result)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Done._marshalJSONDone: field name Result; %w", err)
 	}
-	partial["Result"] = fieldResult
+	if len(fieldResult) == 0 {
+		fieldResult = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Result\":")
+	buf.Write(fieldResult)
 	var fieldBaseState []byte
 	fieldBaseState, err = r._marshalJSONBaseState(x.BaseState)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Done._marshalJSONDone: field name BaseState; %w", err)
 	}
-	partial["BaseState"] = fieldBaseState
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Done._marshalJSONDone: struct; %w", err)
+	if len(fieldBaseState) == 0 {
+		fieldBaseState = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BaseState\":")
+	buf.Write(fieldBaseState)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Done) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
 	result, err := shared.JSONMarshal[schema.Schema](x)
@@ -3385,37 +3610,63 @@ func (r *Error) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONError(*r)
 }
 func (r *Error) _marshalJSONError(x Error) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldCode []byte
 	fieldCode, err = r._marshalJSONstring(x.Code)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Error._marshalJSONError: field name Code; %w", err)
 	}
-	partial["Code"] = fieldCode
+	if len(fieldCode) == 0 {
+		fieldCode = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Code\":")
+	buf.Write(fieldCode)
 	var fieldReason []byte
 	fieldReason, err = r._marshalJSONstring(x.Reason)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Error._marshalJSONError: field name Reason; %w", err)
 	}
-	partial["Reason"] = fieldReason
+	if len(fieldReason) == 0 {
+		fieldReason = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Reason\":")
+	buf.Write(fieldReason)
 	var fieldRetried []byte
 	fieldRetried, err = r._marshalJSONint64(x.Retried)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Error._marshalJSONError: field name Retried; %w", err)
 	}
-	partial["Retried"] = fieldRetried
+	if len(fieldRetried) == 0 {
+		fieldRetried = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Retried\":")
+	buf.Write(fieldRetried)
 	var fieldBaseState []byte
 	fieldBaseState, err = r._marshalJSONBaseState(x.BaseState)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Error._marshalJSONError: field name BaseState; %w", err)
 	}
-	partial["BaseState"] = fieldBaseState
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Error._marshalJSONError: struct; %w", err)
+	if len(fieldBaseState) == 0 {
+		fieldBaseState = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BaseState\":")
+	buf.Write(fieldBaseState)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Error) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -3528,31 +3779,50 @@ func (r *Await) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAwait(*r)
 }
 func (r *Await) _marshalJSONAwait(x Await) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldCallbackID []byte
 	fieldCallbackID, err = r._marshalJSONstring(x.CallbackID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Await._marshalJSONAwait: field name CallbackID; %w", err)
 	}
-	partial["CallbackID"] = fieldCallbackID
+	if len(fieldCallbackID) == 0 {
+		fieldCallbackID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"CallbackID\":")
+	buf.Write(fieldCallbackID)
 	var fieldExpectedTimeoutTimestamp []byte
 	fieldExpectedTimeoutTimestamp, err = r._marshalJSONint64(x.ExpectedTimeoutTimestamp)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Await._marshalJSONAwait: field name ExpectedTimeoutTimestamp; %w", err)
 	}
-	partial["ExpectedTimeoutTimestamp"] = fieldExpectedTimeoutTimestamp
+	if len(fieldExpectedTimeoutTimestamp) == 0 {
+		fieldExpectedTimeoutTimestamp = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ExpectedTimeoutTimestamp\":")
+	buf.Write(fieldExpectedTimeoutTimestamp)
 	var fieldBaseState []byte
 	fieldBaseState, err = r._marshalJSONBaseState(x.BaseState)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Await._marshalJSONAwait: field name BaseState; %w", err)
 	}
-	partial["BaseState"] = fieldBaseState
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Await._marshalJSONAwait: struct; %w", err)
+	if len(fieldBaseState) == 0 {
+		fieldBaseState = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BaseState\":")
+	buf.Write(fieldBaseState)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Await) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -3659,25 +3929,37 @@ func (r *Scheduled) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONScheduled(*r)
 }
 func (r *Scheduled) _marshalJSONScheduled(x Scheduled) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldExpectedRunTimestamp []byte
 	fieldExpectedRunTimestamp, err = r._marshalJSONint64(x.ExpectedRunTimestamp)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Scheduled._marshalJSONScheduled: field name ExpectedRunTimestamp; %w", err)
 	}
-	partial["ExpectedRunTimestamp"] = fieldExpectedRunTimestamp
+	if len(fieldExpectedRunTimestamp) == 0 {
+		fieldExpectedRunTimestamp = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ExpectedRunTimestamp\":")
+	buf.Write(fieldExpectedRunTimestamp)
 	var fieldBaseState []byte
 	fieldBaseState, err = r._marshalJSONBaseState(x.BaseState)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Scheduled._marshalJSONScheduled: field name BaseState; %w", err)
 	}
-	partial["BaseState"] = fieldBaseState
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Scheduled._marshalJSONScheduled: struct; %w", err)
+	if len(fieldBaseState) == 0 {
+		fieldBaseState = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BaseState\":")
+	buf.Write(fieldBaseState)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Scheduled) _marshalJSONint64(x int64) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -3763,19 +4045,24 @@ func (r *ScheduleStopped) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONScheduleStopped(*r)
 }
 func (r *ScheduleStopped) _marshalJSONScheduleStopped(x ScheduleStopped) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldBaseState []byte
 	fieldBaseState, err = r._marshalJSONBaseState(x.BaseState)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: ScheduleStopped._marshalJSONScheduleStopped: field name BaseState; %w", err)
 	}
-	partial["BaseState"] = fieldBaseState
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: ScheduleStopped._marshalJSONScheduleStopped: struct; %w", err)
+	if len(fieldBaseState) == 0 {
+		fieldBaseState = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"BaseState\":")
+	buf.Write(fieldBaseState)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ScheduleStopped) _marshalJSONBaseState(x BaseState) ([]byte, error) {
 	result, err := shared.JSONMarshal[BaseState](x)
@@ -3986,31 +4273,50 @@ func (r *Flow) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFlow(*r)
 }
 func (r *Flow) _marshalJSONFlow(x Flow) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Flow._marshalJSONFlow: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldArg []byte
 	fieldArg, err = r._marshalJSONstring(x.Arg)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Flow._marshalJSONFlow: field name Arg; %w", err)
 	}
-	partial["Arg"] = fieldArg
+	if len(fieldArg) == 0 {
+		fieldArg = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Arg\":")
+	buf.Write(fieldArg)
 	var fieldBody []byte
 	fieldBody, err = r._marshalJSONSliceExpr(x.Body)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: Flow._marshalJSONFlow: field name Body; %w", err)
 	}
-	partial["Body"] = fieldBody
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: Flow._marshalJSONFlow: struct; %w", err)
+	if len(fieldBody) == 0 {
+		fieldBody = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Body\":")
+	buf.Write(fieldBody)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Flow) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -4133,19 +4439,24 @@ func (r *FlowRef) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFlowRef(*r)
 }
 func (r *FlowRef) _marshalJSONFlowRef(x FlowRef) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldFlowID []byte
 	fieldFlowID, err = r._marshalJSONstring(x.FlowID)
 	if err != nil {
 		return nil, fmt.Errorf("workflow: FlowRef._marshalJSONFlowRef: field name FlowID; %w", err)
 	}
-	partial["FlowID"] = fieldFlowID
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("workflow: FlowRef._marshalJSONFlowRef: struct; %w", err)
+	if len(fieldFlowID) == 0 {
+		fieldFlowID = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"FlowID\":")
+	buf.Write(fieldFlowID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *FlowRef) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

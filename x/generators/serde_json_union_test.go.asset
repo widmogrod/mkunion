@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -181,61 +182,102 @@ func (r *Branch) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONBranch(*r)
 }
 func (r *Branch) _marshalJSONBranch(x Branch) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldLit []byte
 	fieldLit, err = r._marshalJSONTree(x.Lit)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Lit; %w", err)
 	}
-	partial["Lit"] = fieldLit
+	if len(fieldLit) == 0 {
+		fieldLit = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Lit\":")
+	buf.Write(fieldLit)
 	var fieldList []byte
 	fieldList, err = r._marshalJSONSliceTree(x.List)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name List; %w", err)
 	}
-	partial["List"] = fieldList
+	if len(fieldList) == 0 {
+		fieldList = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"List\":")
+	buf.Write(fieldList)
 	var fieldMap []byte
 	fieldMap, err = r._marshalJSONmapLb_string_bLTree(x.Map)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Map; %w", err)
 	}
-	partial["Map"] = fieldMap
+	if len(fieldMap) == 0 {
+		fieldMap = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Map\":")
+	buf.Write(fieldMap)
 	var fieldOf []byte
 	fieldOf, err = r._marshalJSONPtrListOfLb_Tree_bL(x.Of)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Of; %w", err)
 	}
-	if fieldOf != nil {
-		partial["just_of"] = fieldOf
+	if len(fieldOf) == 0 {
+		fieldOf = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"just_of\":")
+	buf.Write(fieldOf)
 	var fieldL []byte
 	fieldL, err = r._marshalJSONPtrLeaf(x.L)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name L; %w", err)
 	}
-	if fieldL != nil {
-		partial["L"] = fieldL
+	if len(fieldL) == 0 {
+		fieldL = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"L\":")
+	buf.Write(fieldL)
 	var fieldKattr []byte
 	fieldKattr, err = r._marshalJSONLb_2_bLPtrLeaf(x.Kattr)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name Kattr; %w", err)
 	}
-	partial["Kattr"] = fieldKattr
+	if len(fieldKattr) == 0 {
+		fieldKattr = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Kattr\":")
+	buf.Write(fieldKattr)
 	var fieldIntPtr []byte
 	fieldIntPtr, err = r._marshalJSONPtrint64(x.IntPtr)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: field name IntPtr; %w", err)
 	}
-	if fieldIntPtr != nil {
-		partial["IntPtr"] = fieldIntPtr
+	if len(fieldIntPtr) == 0 {
+		fieldIntPtr = []byte("null")
 	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("testutils: Branch._marshalJSONBranch: struct; %w", err)
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
 	}
-	return result, nil
+	buf.WriteString("\"IntPtr\":")
+	buf.Write(fieldIntPtr)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Branch) _marshalJSONTree(x Tree) ([]byte, error) {
 	result, err := shared.JSONMarshal[Tree](x)
@@ -546,19 +588,24 @@ func (r *Leaf) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLeaf(*r)
 }
 func (r *Leaf) _marshalJSONLeaf(x Leaf) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONint64(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("testutils: Leaf._marshalJSONLeaf: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("testutils: Leaf._marshalJSONLeaf: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Leaf) _marshalJSONint64(x int64) ([]byte, error) {
 	result, err := json.Marshal(x)

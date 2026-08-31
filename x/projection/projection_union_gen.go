@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -178,31 +179,50 @@ func (r *Record[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRecordLb_A_bL(*r)
 }
 func (r *Record[A]) _marshalJSONRecordLb_A_bL(x Record[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldKey []byte
 	fieldKey, err = r._marshalJSONstring(x.Key)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Record[A]._marshalJSONRecordLb_A_bL: field name Key; %w", err)
 	}
-	partial["Key"] = fieldKey
+	if len(fieldKey) == 0 {
+		fieldKey = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Key\":")
+	buf.Write(fieldKey)
 	var fieldData []byte
 	fieldData, err = r._marshalJSONA(x.Data)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Record[A]._marshalJSONRecordLb_A_bL: field name Data; %w", err)
 	}
-	partial["Data"] = fieldData
+	if len(fieldData) == 0 {
+		fieldData = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Data\":")
+	buf.Write(fieldData)
 	var fieldEventTime []byte
 	fieldEventTime, err = r._marshalJSONEventTime(x.EventTime)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Record[A]._marshalJSONRecordLb_A_bL: field name EventTime; %w", err)
 	}
-	partial["EventTime"] = fieldEventTime
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Record[A]._marshalJSONRecordLb_A_bL: struct; %w", err)
+	if len(fieldEventTime) == 0 {
+		fieldEventTime = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"EventTime\":")
+	buf.Write(fieldEventTime)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Record[A]) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -308,19 +328,24 @@ func (r *Watermark[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONWatermarkLb_A_bL(*r)
 }
 func (r *Watermark[A]) _marshalJSONWatermarkLb_A_bL(x Watermark[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldEventTime []byte
 	fieldEventTime, err = r._marshalJSONEventTime(x.EventTime)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Watermark[A]._marshalJSONWatermarkLb_A_bL: field name EventTime; %w", err)
 	}
-	partial["EventTime"] = fieldEventTime
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Watermark[A]._marshalJSONWatermarkLb_A_bL: struct; %w", err)
+	if len(fieldEventTime) == 0 {
+		fieldEventTime = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"EventTime\":")
+	buf.Write(fieldEventTime)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Watermark[A]) _marshalJSONEventTime(x EventTime) ([]byte, error) {
 	result, err := shared.JSONMarshal[EventTime](x)
@@ -531,19 +556,24 @@ func (r *Left[A, B]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLeftLb_ACommaB_bL(*r)
 }
 func (r *Left[A, B]) _marshalJSONLeftLb_ACommaB_bL(x Left[A, B]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldLeft []byte
 	fieldLeft, err = r._marshalJSONA(x.Left)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Left[A,B]._marshalJSONLeftLb_ACommaB_bL: field name Left; %w", err)
 	}
-	partial["Left"] = fieldLeft
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Left[A,B]._marshalJSONLeftLb_ACommaB_bL: struct; %w", err)
+	if len(fieldLeft) == 0 {
+		fieldLeft = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Left\":")
+	buf.Write(fieldLeft)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Left[A, B]) _marshalJSONA(x A) ([]byte, error) {
 	result, err := shared.JSONMarshal[A](x)
@@ -608,19 +638,24 @@ func (r *Right[A, B]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRightLb_ACommaB_bL(*r)
 }
 func (r *Right[A, B]) _marshalJSONRightLb_ACommaB_bL(x Right[A, B]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldRight []byte
 	fieldRight, err = r._marshalJSONB(x.Right)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Right[A,B]._marshalJSONRightLb_ACommaB_bL: field name Right; %w", err)
 	}
-	partial["Right"] = fieldRight
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Right[A,B]._marshalJSONRightLb_ACommaB_bL: struct; %w", err)
+	if len(fieldRight) == 0 {
+		fieldRight = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Right\":")
+	buf.Write(fieldRight)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Right[A, B]) _marshalJSONB(x B) ([]byte, error) {
 	result, err := shared.JSONMarshal[B](x)

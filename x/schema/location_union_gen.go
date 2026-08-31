@@ -2,6 +2,7 @@
 package schema
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -209,19 +210,24 @@ func (r *LocationField) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLocationField(*r)
 }
 func (r *LocationField) _marshalJSONLocationField(x LocationField) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("schema: LocationField._marshalJSONLocationField: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schema: LocationField._marshalJSONLocationField: struct; %w", err)
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *LocationField) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -287,19 +293,24 @@ func (r *LocationIndex) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLocationIndex(*r)
 }
 func (r *LocationIndex) _marshalJSONLocationIndex(x LocationIndex) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldIndex []byte
 	fieldIndex, err = r._marshalJSONint(x.Index)
 	if err != nil {
 		return nil, fmt.Errorf("schema: LocationIndex._marshalJSONLocationIndex: field name Index; %w", err)
 	}
-	partial["Index"] = fieldIndex
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schema: LocationIndex._marshalJSONLocationIndex: struct; %w", err)
+	if len(fieldIndex) == 0 {
+		fieldIndex = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Index\":")
+	buf.Write(fieldIndex)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *LocationIndex) _marshalJSONint(x int) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -365,13 +376,7 @@ func (r *LocationAnything) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONLocationAnything(*r)
 }
 func (r *LocationAnything) _marshalJSONLocationAnything(x LocationAnything) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schema: LocationAnything._marshalJSONLocationAnything: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *LocationAnything) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONLocationAnything(data)

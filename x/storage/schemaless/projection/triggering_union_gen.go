@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -278,19 +279,24 @@ func (r *AtPeriod) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAtPeriod(*r)
 }
 func (r *AtPeriod) _marshalJSONAtPeriod(x AtPeriod) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldDuration []byte
 	fieldDuration, err = r._marshalJSONtime_Duration(x.Duration)
 	if err != nil {
 		return nil, fmt.Errorf("projection: AtPeriod._marshalJSONAtPeriod: field name Duration; %w", err)
 	}
-	partial["Duration"] = fieldDuration
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AtPeriod._marshalJSONAtPeriod: struct; %w", err)
+	if len(fieldDuration) == 0 {
+		fieldDuration = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Duration\":")
+	buf.Write(fieldDuration)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AtPeriod) _marshalJSONtime_Duration(x time.Duration) ([]byte, error) {
 	result, err := shared.JSONMarshal[time.Duration](x)
@@ -355,19 +361,24 @@ func (r *AtWindowItemSize) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAtWindowItemSize(*r)
 }
 func (r *AtWindowItemSize) _marshalJSONAtWindowItemSize(x AtWindowItemSize) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldNumber []byte
 	fieldNumber, err = r._marshalJSONint(x.Number)
 	if err != nil {
 		return nil, fmt.Errorf("projection: AtWindowItemSize._marshalJSONAtWindowItemSize: field name Number; %w", err)
 	}
-	partial["Number"] = fieldNumber
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AtWindowItemSize._marshalJSONAtWindowItemSize: struct; %w", err)
+	if len(fieldNumber) == 0 {
+		fieldNumber = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Number\":")
+	buf.Write(fieldNumber)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AtWindowItemSize) _marshalJSONint(x int) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -433,19 +444,24 @@ func (r *AtWatermark) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAtWatermark(*r)
 }
 func (r *AtWatermark) _marshalJSONAtWatermark(x AtWatermark) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTimestamp []byte
 	fieldTimestamp, err = r._marshalJSONint64(x.Timestamp)
 	if err != nil {
 		return nil, fmt.Errorf("projection: AtWatermark._marshalJSONAtWatermark: field name Timestamp; %w", err)
 	}
-	partial["Timestamp"] = fieldTimestamp
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AtWatermark._marshalJSONAtWatermark: struct; %w", err)
+	if len(fieldTimestamp) == 0 {
+		fieldTimestamp = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Timestamp\":")
+	buf.Write(fieldTimestamp)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AtWatermark) _marshalJSONint64(x int64) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -511,19 +527,24 @@ func (r *AnyOf) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAnyOf(*r)
 }
 func (r *AnyOf) _marshalJSONAnyOf(x AnyOf) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTriggers []byte
 	fieldTriggers, err = r._marshalJSONSliceTriggerDescription(x.Triggers)
 	if err != nil {
 		return nil, fmt.Errorf("projection: AnyOf._marshalJSONAnyOf: field name Triggers; %w", err)
 	}
-	partial["Triggers"] = fieldTriggers
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AnyOf._marshalJSONAnyOf: struct; %w", err)
+	if len(fieldTriggers) == 0 {
+		fieldTriggers = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Triggers\":")
+	buf.Write(fieldTriggers)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AnyOf) _marshalJSONSliceTriggerDescription(x []TriggerDescription) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -619,19 +640,24 @@ func (r *AllOf) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAllOf(*r)
 }
 func (r *AllOf) _marshalJSONAllOf(x AllOf) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldTriggers []byte
 	fieldTriggers, err = r._marshalJSONSliceTriggerDescription(x.Triggers)
 	if err != nil {
 		return nil, fmt.Errorf("projection: AllOf._marshalJSONAllOf: field name Triggers; %w", err)
 	}
-	partial["Triggers"] = fieldTriggers
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AllOf._marshalJSONAllOf: struct; %w", err)
+	if len(fieldTriggers) == 0 {
+		fieldTriggers = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Triggers\":")
+	buf.Write(fieldTriggers)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AllOf) _marshalJSONSliceTriggerDescription(x []TriggerDescription) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -1139,19 +1165,24 @@ func (r *Accumulate) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAccumulate(*r)
 }
 func (r *Accumulate) _marshalJSONAccumulate(x Accumulate) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldAllowLateArrival []byte
 	fieldAllowLateArrival, err = r._marshalJSONtime_Duration(x.AllowLateArrival)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Accumulate._marshalJSONAccumulate: field name AllowLateArrival; %w", err)
 	}
-	partial["AllowLateArrival"] = fieldAllowLateArrival
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Accumulate._marshalJSONAccumulate: struct; %w", err)
+	if len(fieldAllowLateArrival) == 0 {
+		fieldAllowLateArrival = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"AllowLateArrival\":")
+	buf.Write(fieldAllowLateArrival)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Accumulate) _marshalJSONtime_Duration(x time.Duration) ([]byte, error) {
 	result, err := shared.JSONMarshal[time.Duration](x)
@@ -1216,13 +1247,7 @@ func (r *Discard) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONDiscard(*r)
 }
 func (r *Discard) _marshalJSONDiscard(x Discard) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Discard._marshalJSONDiscard: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Discard) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONDiscard(data)
@@ -1267,19 +1292,24 @@ func (r *AccumulatingAndRetracting) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAccumulatingAndRetracting(*r)
 }
 func (r *AccumulatingAndRetracting) _marshalJSONAccumulatingAndRetracting(x AccumulatingAndRetracting) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldAllowLateArrival []byte
 	fieldAllowLateArrival, err = r._marshalJSONtime_Duration(x.AllowLateArrival)
 	if err != nil {
 		return nil, fmt.Errorf("projection: AccumulatingAndRetracting._marshalJSONAccumulatingAndRetracting: field name AllowLateArrival; %w", err)
 	}
-	partial["AllowLateArrival"] = fieldAllowLateArrival
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: AccumulatingAndRetracting._marshalJSONAccumulatingAndRetracting: struct; %w", err)
+	if len(fieldAllowLateArrival) == 0 {
+		fieldAllowLateArrival = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"AllowLateArrival\":")
+	buf.Write(fieldAllowLateArrival)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AccumulatingAndRetracting) _marshalJSONtime_Duration(x time.Duration) ([]byte, error) {
 	result, err := shared.JSONMarshal[time.Duration](x)

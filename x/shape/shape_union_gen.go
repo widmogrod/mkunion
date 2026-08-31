@@ -2,6 +2,7 @@
 package shape
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -209,19 +210,24 @@ func (r *Enum) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONEnum(*r)
 }
 func (r *Enum) _marshalJSONEnum(x Enum) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldVal []byte
 	fieldVal, err = r._marshalJSONSlicestring(x.Val)
 	if err != nil {
 		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: field name Val; %w", err)
 	}
-	partial["Val"] = fieldVal
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Enum._marshalJSONEnum: struct; %w", err)
+	if len(fieldVal) == 0 {
+		fieldVal = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Val\":")
+	buf.Write(fieldVal)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Enum) _marshalJSONSlicestring(x []string) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -318,13 +324,7 @@ func (r *Required) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRequired(*r)
 }
 func (r *Required) _marshalJSONRequired(x Required) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Required._marshalJSONRequired: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Required) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONRequired(data)
@@ -369,19 +369,24 @@ func (r *AndGuard) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAndGuard(*r)
 }
 func (r *AndGuard) _marshalJSONAndGuard(x AndGuard) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldL []byte
 	fieldL, err = r._marshalJSONSliceGuard(x.L)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: field name L; %w", err)
 	}
-	partial["L"] = fieldL
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: AndGuard._marshalJSONAndGuard: struct; %w", err)
+	if len(fieldL) == 0 {
+		fieldL = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"L\":")
+	buf.Write(fieldL)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AndGuard) _marshalJSONSliceGuard(x []Guard) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -933,13 +938,7 @@ func (r *UInt) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUInt(*r)
 }
 func (r *UInt) _marshalJSONUInt(x UInt) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt._marshalJSONUInt: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *UInt) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONUInt(data)
@@ -984,13 +983,7 @@ func (r *UInt8) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUInt8(*r)
 }
 func (r *UInt8) _marshalJSONUInt8(x UInt8) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt8._marshalJSONUInt8: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *UInt8) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONUInt8(data)
@@ -1035,13 +1028,7 @@ func (r *UInt16) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUInt16(*r)
 }
 func (r *UInt16) _marshalJSONUInt16(x UInt16) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt16._marshalJSONUInt16: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *UInt16) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONUInt16(data)
@@ -1086,13 +1073,7 @@ func (r *UInt32) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUInt32(*r)
 }
 func (r *UInt32) _marshalJSONUInt32(x UInt32) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt32._marshalJSONUInt32: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *UInt32) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONUInt32(data)
@@ -1137,13 +1118,7 @@ func (r *UInt64) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUInt64(*r)
 }
 func (r *UInt64) _marshalJSONUInt64(x UInt64) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UInt64._marshalJSONUInt64: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *UInt64) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONUInt64(data)
@@ -1188,13 +1163,7 @@ func (r *Int) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONInt(*r)
 }
 func (r *Int) _marshalJSONInt(x Int) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int._marshalJSONInt: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Int) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONInt(data)
@@ -1239,13 +1208,7 @@ func (r *Int8) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONInt8(*r)
 }
 func (r *Int8) _marshalJSONInt8(x Int8) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int8._marshalJSONInt8: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Int8) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONInt8(data)
@@ -1290,13 +1253,7 @@ func (r *Int16) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONInt16(*r)
 }
 func (r *Int16) _marshalJSONInt16(x Int16) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int16._marshalJSONInt16: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Int16) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONInt16(data)
@@ -1341,13 +1298,7 @@ func (r *Int32) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONInt32(*r)
 }
 func (r *Int32) _marshalJSONInt32(x Int32) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int32._marshalJSONInt32: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Int32) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONInt32(data)
@@ -1392,13 +1343,7 @@ func (r *Int64) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONInt64(*r)
 }
 func (r *Int64) _marshalJSONInt64(x Int64) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Int64._marshalJSONInt64: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Int64) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONInt64(data)
@@ -1443,13 +1388,7 @@ func (r *Float32) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFloat32(*r)
 }
 func (r *Float32) _marshalJSONFloat32(x Float32) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Float32._marshalJSONFloat32: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Float32) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONFloat32(data)
@@ -1494,13 +1433,7 @@ func (r *Float64) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFloat64(*r)
 }
 func (r *Float64) _marshalJSONFloat64(x Float64) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Float64._marshalJSONFloat64: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Float64) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONFloat64(data)
@@ -1722,13 +1655,7 @@ func (r *BooleanLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONBooleanLike(*r)
 }
 func (r *BooleanLike) _marshalJSONBooleanLike(x BooleanLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: BooleanLike._marshalJSONBooleanLike: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *BooleanLike) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONBooleanLike(data)
@@ -1773,13 +1700,7 @@ func (r *StringLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONStringLike(*r)
 }
 func (r *StringLike) _marshalJSONStringLike(x StringLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: StringLike._marshalJSONStringLike: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *StringLike) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONStringLike(data)
@@ -1824,19 +1745,24 @@ func (r *NumberLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONNumberLike(*r)
 }
 func (r *NumberLike) _marshalJSONNumberLike(x NumberLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldKind []byte
 	fieldKind, err = r._marshalJSONNumberKind(x.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberLike: field name Kind; %w", err)
 	}
-	partial["Kind"] = fieldKind
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: NumberLike._marshalJSONNumberLike: struct; %w", err)
+	if len(fieldKind) == 0 {
+		fieldKind = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Kind\":")
+	buf.Write(fieldKind)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *NumberLike) _marshalJSONNumberKind(x NumberKind) ([]byte, error) {
 	result, err := shared.JSONMarshal[NumberKind](x)
@@ -2264,13 +2190,7 @@ func (r *Any) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAny(*r)
 }
 func (r *Any) _marshalJSONAny(x Any) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: Any._marshalJSONAny: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *Any) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONAny(data)
@@ -2315,37 +2235,63 @@ func (r *RefName) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRefName(*r)
 }
 func (r *RefName) _marshalJSONRefName(x RefName) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("shape: RefName._marshalJSONRefName: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldPkgName []byte
 	fieldPkgName, err = r._marshalJSONstring(x.PkgName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: RefName._marshalJSONRefName: field name PkgName; %w", err)
 	}
-	partial["PkgName"] = fieldPkgName
+	if len(fieldPkgName) == 0 {
+		fieldPkgName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgName\":")
+	buf.Write(fieldPkgName)
 	var fieldPkgImportName []byte
 	fieldPkgImportName, err = r._marshalJSONstring(x.PkgImportName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: RefName._marshalJSONRefName: field name PkgImportName; %w", err)
 	}
-	partial["PkgImportName"] = fieldPkgImportName
+	if len(fieldPkgImportName) == 0 {
+		fieldPkgImportName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgImportName\":")
+	buf.Write(fieldPkgImportName)
 	var fieldIndexed []byte
 	fieldIndexed, err = r._marshalJSONSliceShape(x.Indexed)
 	if err != nil {
 		return nil, fmt.Errorf("shape: RefName._marshalJSONRefName: field name Indexed; %w", err)
 	}
-	partial["Indexed"] = fieldIndexed
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: RefName._marshalJSONRefName: struct; %w", err)
+	if len(fieldIndexed) == 0 {
+		fieldIndexed = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Indexed\":")
+	buf.Write(fieldIndexed)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *RefName) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -2474,19 +2420,24 @@ func (r *PointerLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONPointerLike(*r)
 }
 func (r *PointerLike) _marshalJSONPointerLike(x PointerLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldType []byte
 	fieldType, err = r._marshalJSONShape(x.Type)
 	if err != nil {
 		return nil, fmt.Errorf("shape: PointerLike._marshalJSONPointerLike: field name Type; %w", err)
 	}
-	partial["Type"] = fieldType
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: PointerLike._marshalJSONPointerLike: struct; %w", err)
+	if len(fieldType) == 0 {
+		fieldType = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Type\":")
+	buf.Write(fieldType)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *PointerLike) _marshalJSONShape(x Shape) ([]byte, error) {
 	result, err := shared.JSONMarshal[Shape](x)
@@ -2551,55 +2502,102 @@ func (r *AliasLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONAliasLike(*r)
 }
 func (r *AliasLike) _marshalJSONAliasLike(x AliasLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldPkgName []byte
 	fieldPkgName, err = r._marshalJSONstring(x.PkgName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name PkgName; %w", err)
 	}
-	partial["PkgName"] = fieldPkgName
+	if len(fieldPkgName) == 0 {
+		fieldPkgName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgName\":")
+	buf.Write(fieldPkgName)
 	var fieldPkgImportName []byte
 	fieldPkgImportName, err = r._marshalJSONstring(x.PkgImportName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name PkgImportName; %w", err)
 	}
-	partial["PkgImportName"] = fieldPkgImportName
+	if len(fieldPkgImportName) == 0 {
+		fieldPkgImportName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgImportName\":")
+	buf.Write(fieldPkgImportName)
 	var fieldTypeParams []byte
 	fieldTypeParams, err = r._marshalJSONSliceTypeParam(x.TypeParams)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name TypeParams; %w", err)
 	}
-	partial["TypeParams"] = fieldTypeParams
+	if len(fieldTypeParams) == 0 {
+		fieldTypeParams = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"TypeParams\":")
+	buf.Write(fieldTypeParams)
 	var fieldIsAlias []byte
 	fieldIsAlias, err = r._marshalJSONbool(x.IsAlias)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name IsAlias; %w", err)
 	}
-	partial["IsAlias"] = fieldIsAlias
+	if len(fieldIsAlias) == 0 {
+		fieldIsAlias = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"IsAlias\":")
+	buf.Write(fieldIsAlias)
 	var fieldType []byte
 	fieldType, err = r._marshalJSONShape(x.Type)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name Type; %w", err)
 	}
-	partial["Type"] = fieldType
+	if len(fieldType) == 0 {
+		fieldType = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Type\":")
+	buf.Write(fieldType)
 	var fieldTags []byte
 	fieldTags, err = r._marshalJSONmapLb_string_bLTag(x.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: field name Tags; %w", err)
 	}
-	partial["Tags"] = fieldTags
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: AliasLike._marshalJSONAliasLike: struct; %w", err)
+	if len(fieldTags) == 0 {
+		fieldTags = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Tags\":")
+	buf.Write(fieldTags)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *AliasLike) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -2822,19 +2820,24 @@ func (r *PrimitiveLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONPrimitiveLike(*r)
 }
 func (r *PrimitiveLike) _marshalJSONPrimitiveLike(x PrimitiveLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldKind []byte
 	fieldKind, err = r._marshalJSONPrimitiveKind(x.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("shape: PrimitiveLike._marshalJSONPrimitiveLike: field name Kind; %w", err)
 	}
-	partial["Kind"] = fieldKind
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: PrimitiveLike._marshalJSONPrimitiveLike: struct; %w", err)
+	if len(fieldKind) == 0 {
+		fieldKind = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Kind\":")
+	buf.Write(fieldKind)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *PrimitiveLike) _marshalJSONPrimitiveKind(x PrimitiveKind) ([]byte, error) {
 	result, err := shared.JSONMarshal[PrimitiveKind](x)
@@ -2899,27 +2902,37 @@ func (r *ListLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONListLike(*r)
 }
 func (r *ListLike) _marshalJSONListLike(x ListLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldElement []byte
 	fieldElement, err = r._marshalJSONShape(x.Element)
 	if err != nil {
 		return nil, fmt.Errorf("shape: ListLike._marshalJSONListLike: field name Element; %w", err)
 	}
-	partial["Element"] = fieldElement
+	if len(fieldElement) == 0 {
+		fieldElement = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Element\":")
+	buf.Write(fieldElement)
 	var fieldArrayLen []byte
 	fieldArrayLen, err = r._marshalJSONPtrint(x.ArrayLen)
 	if err != nil {
 		return nil, fmt.Errorf("shape: ListLike._marshalJSONListLike: field name ArrayLen; %w", err)
 	}
-	if fieldArrayLen != nil {
-		partial["ArrayLen"] = fieldArrayLen
+	if len(fieldArrayLen) == 0 {
+		fieldArrayLen = []byte("null")
 	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: ListLike._marshalJSONListLike: struct; %w", err)
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
 	}
-	return result, nil
+	buf.WriteString("\"ArrayLen\":")
+	buf.Write(fieldArrayLen)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ListLike) _marshalJSONShape(x Shape) ([]byte, error) {
 	result, err := shared.JSONMarshal[Shape](x)
@@ -3024,25 +3037,37 @@ func (r *MapLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONMapLike(*r)
 }
 func (r *MapLike) _marshalJSONMapLike(x MapLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldKey []byte
 	fieldKey, err = r._marshalJSONShape(x.Key)
 	if err != nil {
 		return nil, fmt.Errorf("shape: MapLike._marshalJSONMapLike: field name Key; %w", err)
 	}
-	partial["Key"] = fieldKey
+	if len(fieldKey) == 0 {
+		fieldKey = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Key\":")
+	buf.Write(fieldKey)
 	var fieldVal []byte
 	fieldVal, err = r._marshalJSONShape(x.Val)
 	if err != nil {
 		return nil, fmt.Errorf("shape: MapLike._marshalJSONMapLike: field name Val; %w", err)
 	}
-	partial["Val"] = fieldVal
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: MapLike._marshalJSONMapLike: struct; %w", err)
+	if len(fieldVal) == 0 {
+		fieldVal = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Val\":")
+	buf.Write(fieldVal)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *MapLike) _marshalJSONShape(x Shape) ([]byte, error) {
 	result, err := shared.JSONMarshal[Shape](x)
@@ -3113,49 +3138,89 @@ func (r *StructLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONStructLike(*r)
 }
 func (r *StructLike) _marshalJSONStructLike(x StructLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldPkgName []byte
 	fieldPkgName, err = r._marshalJSONstring(x.PkgName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: field name PkgName; %w", err)
 	}
-	partial["PkgName"] = fieldPkgName
+	if len(fieldPkgName) == 0 {
+		fieldPkgName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgName\":")
+	buf.Write(fieldPkgName)
 	var fieldPkgImportName []byte
 	fieldPkgImportName, err = r._marshalJSONstring(x.PkgImportName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: field name PkgImportName; %w", err)
 	}
-	partial["PkgImportName"] = fieldPkgImportName
+	if len(fieldPkgImportName) == 0 {
+		fieldPkgImportName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgImportName\":")
+	buf.Write(fieldPkgImportName)
 	var fieldTypeParams []byte
 	fieldTypeParams, err = r._marshalJSONSliceTypeParam(x.TypeParams)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: field name TypeParams; %w", err)
 	}
-	partial["TypeParams"] = fieldTypeParams
+	if len(fieldTypeParams) == 0 {
+		fieldTypeParams = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"TypeParams\":")
+	buf.Write(fieldTypeParams)
 	var fieldFields []byte
 	fieldFields, err = r._marshalJSONSlicePtrFieldLike(x.Fields)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: field name Fields; %w", err)
 	}
-	partial["Fields"] = fieldFields
+	if len(fieldFields) == 0 {
+		fieldFields = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Fields\":")
+	buf.Write(fieldFields)
 	var fieldTags []byte
 	fieldTags, err = r._marshalJSONmapLb_string_bLTag(x.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: field name Tags; %w", err)
 	}
-	partial["Tags"] = fieldTags
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: StructLike._marshalJSONStructLike: struct; %w", err)
+	if len(fieldTags) == 0 {
+		fieldTags = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Tags\":")
+	buf.Write(fieldTags)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *StructLike) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -3407,49 +3472,89 @@ func (r *UnionLike) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONUnionLike(*r)
 }
 func (r *UnionLike) _marshalJSONUnionLike(x UnionLike) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldPkgName []byte
 	fieldPkgName, err = r._marshalJSONstring(x.PkgName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name PkgName; %w", err)
 	}
-	partial["PkgName"] = fieldPkgName
+	if len(fieldPkgName) == 0 {
+		fieldPkgName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgName\":")
+	buf.Write(fieldPkgName)
 	var fieldPkgImportName []byte
 	fieldPkgImportName, err = r._marshalJSONstring(x.PkgImportName)
 	if err != nil {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name PkgImportName; %w", err)
 	}
-	partial["PkgImportName"] = fieldPkgImportName
+	if len(fieldPkgImportName) == 0 {
+		fieldPkgImportName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PkgImportName\":")
+	buf.Write(fieldPkgImportName)
 	var fieldTypeParams []byte
 	fieldTypeParams, err = r._marshalJSONSliceTypeParam(x.TypeParams)
 	if err != nil {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name TypeParams; %w", err)
 	}
-	partial["TypeParams"] = fieldTypeParams
+	if len(fieldTypeParams) == 0 {
+		fieldTypeParams = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"TypeParams\":")
+	buf.Write(fieldTypeParams)
 	var fieldVariant []byte
 	fieldVariant, err = r._marshalJSONSliceShape(x.Variant)
 	if err != nil {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name Variant; %w", err)
 	}
-	partial["Variant"] = fieldVariant
+	if len(fieldVariant) == 0 {
+		fieldVariant = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Variant\":")
+	buf.Write(fieldVariant)
 	var fieldTags []byte
 	fieldTags, err = r._marshalJSONmapLb_string_bLTag(x.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: field name Tags; %w", err)
 	}
-	partial["Tags"] = fieldTags
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("shape: UnionLike._marshalJSONUnionLike: struct; %w", err)
+	if len(fieldTags) == 0 {
+		fieldTags = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Tags\":")
+	buf.Write(fieldTags)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *UnionLike) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

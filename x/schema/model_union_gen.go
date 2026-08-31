@@ -333,13 +333,7 @@ func (r *None) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONNone(*r)
 }
 func (r *None) _marshalJSONNone(x None) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
-	var err error
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schema: None._marshalJSONNone: struct; %w", err)
-	}
-	return result, nil
+	return []byte("{}"), nil
 }
 func (r *None) UnmarshalJSON(data []byte) error {
 	result, err := r._unmarshalJSONNone(data)

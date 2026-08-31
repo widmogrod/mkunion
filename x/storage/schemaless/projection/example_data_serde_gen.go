@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 )
@@ -18,37 +19,63 @@ func (r *Game) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONGame(*r)
 }
 func (r *Game) _marshalJSONGame(x Game) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldSessionID []byte
 	fieldSessionID, err = r._marshalJSONstring(x.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Game._marshalJSONGame: field name SessionID; %w", err)
 	}
-	partial["SessionID"] = fieldSessionID
+	if len(fieldSessionID) == 0 {
+		fieldSessionID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"SessionID\":")
+	buf.Write(fieldSessionID)
 	var fieldPlayers []byte
 	fieldPlayers, err = r._marshalJSONSlicestring(x.Players)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Game._marshalJSONGame: field name Players; %w", err)
 	}
-	partial["Players"] = fieldPlayers
+	if len(fieldPlayers) == 0 {
+		fieldPlayers = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Players\":")
+	buf.Write(fieldPlayers)
 	var fieldWinner []byte
 	fieldWinner, err = r._marshalJSONstring(x.Winner)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Game._marshalJSONGame: field name Winner; %w", err)
 	}
-	partial["Winner"] = fieldWinner
+	if len(fieldWinner) == 0 {
+		fieldWinner = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Winner\":")
+	buf.Write(fieldWinner)
 	var fieldIsDraw []byte
 	fieldIsDraw, err = r._marshalJSONbool(x.IsDraw)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Game._marshalJSONGame: field name IsDraw; %w", err)
 	}
-	partial["IsDraw"] = fieldIsDraw
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Game._marshalJSONGame: struct; %w", err)
+	if len(fieldIsDraw) == 0 {
+		fieldIsDraw = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"IsDraw\":")
+	buf.Write(fieldIsDraw)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Game) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -165,31 +192,50 @@ func (r *SessionsStats) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSessionsStats(*r)
 }
 func (r *SessionsStats) _marshalJSONSessionsStats(x SessionsStats) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldWins []byte
 	fieldWins, err = r._marshalJSONint(x.Wins)
 	if err != nil {
 		return nil, fmt.Errorf("projection: SessionsStats._marshalJSONSessionsStats: field name Wins; %w", err)
 	}
-	partial["Wins"] = fieldWins
+	if len(fieldWins) == 0 {
+		fieldWins = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Wins\":")
+	buf.Write(fieldWins)
 	var fieldDraws []byte
 	fieldDraws, err = r._marshalJSONint(x.Draws)
 	if err != nil {
 		return nil, fmt.Errorf("projection: SessionsStats._marshalJSONSessionsStats: field name Draws; %w", err)
 	}
-	partial["Draws"] = fieldDraws
+	if len(fieldDraws) == 0 {
+		fieldDraws = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Draws\":")
+	buf.Write(fieldDraws)
 	var fieldLoose []byte
 	fieldLoose, err = r._marshalJSONint(x.Loose)
 	if err != nil {
 		return nil, fmt.Errorf("projection: SessionsStats._marshalJSONSessionsStats: field name Loose; %w", err)
 	}
-	partial["Loose"] = fieldLoose
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: SessionsStats._marshalJSONSessionsStats: struct; %w", err)
+	if len(fieldLoose) == 0 {
+		fieldLoose = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Loose\":")
+	buf.Write(fieldLoose)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *SessionsStats) _marshalJSONint(x int) ([]byte, error) {
 	result, err := json.Marshal(x)

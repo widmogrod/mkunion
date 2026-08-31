@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -20,45 +21,76 @@ func (r *Item) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONItem(*r)
 }
 func (r *Item) _marshalJSONItem(x Item) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldKey []byte
 	fieldKey, err = r._marshalJSONstring(x.Key)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Key; %w", err)
 	}
-	partial["Key"] = fieldKey
+	if len(fieldKey) == 0 {
+		fieldKey = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Key\":")
+	buf.Write(fieldKey)
 	var fieldData []byte
 	fieldData, err = r._marshalJSONschema_Schema(x.Data)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Data; %w", err)
 	}
-	partial["Data"] = fieldData
+	if len(fieldData) == 0 {
+		fieldData = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Data\":")
+	buf.Write(fieldData)
 	var fieldEventTime []byte
 	fieldEventTime, err = r._marshalJSONEventTime(x.EventTime)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name EventTime; %w", err)
 	}
-	partial["EventTime"] = fieldEventTime
+	if len(fieldEventTime) == 0 {
+		fieldEventTime = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"EventTime\":")
+	buf.Write(fieldEventTime)
 	var fieldWindow []byte
 	fieldWindow, err = r._marshalJSONPtrWindow(x.Window)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Window; %w", err)
 	}
-	if fieldWindow != nil {
-		partial["Window"] = fieldWindow
+	if len(fieldWindow) == 0 {
+		fieldWindow = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Window\":")
+	buf.Write(fieldWindow)
 	var fieldType []byte
 	fieldType, err = r._marshalJSONItemType(x.Type)
 	if err != nil {
 		return nil, fmt.Errorf("projection: Item._marshalJSONItem: field name Type; %w", err)
 	}
-	partial["Type"] = fieldType
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: Item._marshalJSONItem: struct; %w", err)
+	if len(fieldType) == 0 {
+		fieldType = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Type\":")
+	buf.Write(fieldType)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Item) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -210,25 +242,37 @@ func (r *ItemGroupedByKey) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONItemGroupedByKey(*r)
 }
 func (r *ItemGroupedByKey) _marshalJSONItemGroupedByKey(x ItemGroupedByKey) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldKey []byte
 	fieldKey, err = r._marshalJSONstring(x.Key)
 	if err != nil {
 		return nil, fmt.Errorf("projection: ItemGroupedByKey._marshalJSONItemGroupedByKey: field name Key; %w", err)
 	}
-	partial["Key"] = fieldKey
+	if len(fieldKey) == 0 {
+		fieldKey = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Key\":")
+	buf.Write(fieldKey)
 	var fieldData []byte
 	fieldData, err = r._marshalJSONSliceItem(x.Data)
 	if err != nil {
 		return nil, fmt.Errorf("projection: ItemGroupedByKey._marshalJSONItemGroupedByKey: field name Data; %w", err)
 	}
-	partial["Data"] = fieldData
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: ItemGroupedByKey._marshalJSONItemGroupedByKey: struct; %w", err)
+	if len(fieldData) == 0 {
+		fieldData = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Data\":")
+	buf.Write(fieldData)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ItemGroupedByKey) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -332,35 +376,50 @@ func (r *ItemGroupedByWindow) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONItemGroupedByWindow(*r)
 }
 func (r *ItemGroupedByWindow) _marshalJSONItemGroupedByWindow(x ItemGroupedByWindow) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldKey []byte
 	fieldKey, err = r._marshalJSONstring(x.Key)
 	if err != nil {
 		return nil, fmt.Errorf("projection: ItemGroupedByWindow._marshalJSONItemGroupedByWindow: field name Key; %w", err)
 	}
-	partial["Key"] = fieldKey
+	if len(fieldKey) == 0 {
+		fieldKey = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Key\":")
+	buf.Write(fieldKey)
 	var fieldData []byte
 	fieldData, err = r._marshalJSONPtrschema_List(x.Data)
 	if err != nil {
 		return nil, fmt.Errorf("projection: ItemGroupedByWindow._marshalJSONItemGroupedByWindow: field name Data; %w", err)
 	}
-	if fieldData != nil {
-		partial["Data"] = fieldData
+	if len(fieldData) == 0 {
+		fieldData = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Data\":")
+	buf.Write(fieldData)
 	var fieldWindow []byte
 	fieldWindow, err = r._marshalJSONPtrWindow(x.Window)
 	if err != nil {
 		return nil, fmt.Errorf("projection: ItemGroupedByWindow._marshalJSONItemGroupedByWindow: field name Window; %w", err)
 	}
-	if fieldWindow != nil {
-		partial["Window"] = fieldWindow
+	if len(fieldWindow) == 0 {
+		fieldWindow = []byte("null")
 	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: ItemGroupedByWindow._marshalJSONItemGroupedByWindow: struct; %w", err)
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
 	}
-	return result, nil
+	buf.WriteString("\"Window\":")
+	buf.Write(fieldWindow)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *ItemGroupedByWindow) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

@@ -2,6 +2,7 @@
 package schema
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -19,25 +20,37 @@ func (r *Field) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONField(*r)
 }
 func (r *Field) _marshalJSONField(x Field) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldName []byte
 	fieldName, err = r._marshalJSONstring(x.Name)
 	if err != nil {
 		return nil, fmt.Errorf("schema: Field._marshalJSONField: field name Name; %w", err)
 	}
-	partial["Name"] = fieldName
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
 	var fieldValue []byte
 	fieldValue, err = r._marshalJSONSchema(x.Value)
 	if err != nil {
 		return nil, fmt.Errorf("schema: Field._marshalJSONField: field name Value; %w", err)
 	}
-	partial["Value"] = fieldValue
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schema: Field._marshalJSONField: struct; %w", err)
+	if len(fieldValue) == 0 {
+		fieldValue = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Value\":")
+	buf.Write(fieldValue)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Field) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)

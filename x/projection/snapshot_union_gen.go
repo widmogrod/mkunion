@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -183,41 +184,63 @@ func (r *PullPushContextState) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONPullPushContextState(*r)
 }
 func (r *PullPushContextState) _marshalJSONPullPushContextState(x PullPushContextState) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOffset []byte
 	fieldOffset, err = r._marshalJSONPtrstream_Offset(x.Offset)
 	if err != nil {
 		return nil, fmt.Errorf("projection: PullPushContextState._marshalJSONPullPushContextState: field name Offset; %w", err)
 	}
-	if fieldOffset != nil {
-		partial["Offset"] = fieldOffset
+	if len(fieldOffset) == 0 {
+		fieldOffset = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Offset\":")
+	buf.Write(fieldOffset)
 	var fieldWatermark []byte
 	fieldWatermark, err = r._marshalJSONPtrstream_EventTime(x.Watermark)
 	if err != nil {
 		return nil, fmt.Errorf("projection: PullPushContextState._marshalJSONPullPushContextState: field name Watermark; %w", err)
 	}
-	if fieldWatermark != nil {
-		partial["Watermark"] = fieldWatermark
+	if len(fieldWatermark) == 0 {
+		fieldWatermark = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Watermark\":")
+	buf.Write(fieldWatermark)
 	var fieldPullTopic []byte
 	fieldPullTopic, err = r._marshalJSONstream_Topic(x.PullTopic)
 	if err != nil {
 		return nil, fmt.Errorf("projection: PullPushContextState._marshalJSONPullPushContextState: field name PullTopic; %w", err)
 	}
-	partial["PullTopic"] = fieldPullTopic
+	if len(fieldPullTopic) == 0 {
+		fieldPullTopic = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PullTopic\":")
+	buf.Write(fieldPullTopic)
 	var fieldPushTopic []byte
 	fieldPushTopic, err = r._marshalJSONstream_Topic(x.PushTopic)
 	if err != nil {
 		return nil, fmt.Errorf("projection: PullPushContextState._marshalJSONPullPushContextState: field name PushTopic; %w", err)
 	}
-	partial["PushTopic"] = fieldPushTopic
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: PullPushContextState._marshalJSONPullPushContextState: struct; %w", err)
+	if len(fieldPushTopic) == 0 {
+		fieldPushTopic = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PushTopic\":")
+	buf.Write(fieldPushTopic)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *PullPushContextState) _marshalJSONPtrstream_Offset(x *stream.Offset) ([]byte, error) {
 	if x == nil {
@@ -366,59 +389,102 @@ func (r *JoinContextState) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONJoinContextState(*r)
 }
 func (r *JoinContextState) _marshalJSONJoinContextState(x JoinContextState) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldOffset1 []byte
 	fieldOffset1, err = r._marshalJSONPtrstream_Offset(x.Offset1)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name Offset1; %w", err)
 	}
-	if fieldOffset1 != nil {
-		partial["Offset1"] = fieldOffset1
+	if len(fieldOffset1) == 0 {
+		fieldOffset1 = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Offset1\":")
+	buf.Write(fieldOffset1)
 	var fieldPullTopic1 []byte
 	fieldPullTopic1, err = r._marshalJSONstream_Topic(x.PullTopic1)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name PullTopic1; %w", err)
 	}
-	partial["PullTopic1"] = fieldPullTopic1
+	if len(fieldPullTopic1) == 0 {
+		fieldPullTopic1 = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PullTopic1\":")
+	buf.Write(fieldPullTopic1)
 	var fieldOffset2 []byte
 	fieldOffset2, err = r._marshalJSONPtrstream_Offset(x.Offset2)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name Offset2; %w", err)
 	}
-	if fieldOffset2 != nil {
-		partial["Offset2"] = fieldOffset2
+	if len(fieldOffset2) == 0 {
+		fieldOffset2 = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Offset2\":")
+	buf.Write(fieldOffset2)
 	var fieldPullTopic2 []byte
 	fieldPullTopic2, err = r._marshalJSONstream_Topic(x.PullTopic2)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name PullTopic2; %w", err)
 	}
-	partial["PullTopic2"] = fieldPullTopic2
+	if len(fieldPullTopic2) == 0 {
+		fieldPullTopic2 = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PullTopic2\":")
+	buf.Write(fieldPullTopic2)
 	var fieldLeftOrRight []byte
 	fieldLeftOrRight, err = r._marshalJSONbool(x.LeftOrRight)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name LeftOrRight; %w", err)
 	}
-	partial["LeftOrRight"] = fieldLeftOrRight
+	if len(fieldLeftOrRight) == 0 {
+		fieldLeftOrRight = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"LeftOrRight\":")
+	buf.Write(fieldLeftOrRight)
 	var fieldPushTopic []byte
 	fieldPushTopic, err = r._marshalJSONstream_Topic(x.PushTopic)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name PushTopic; %w", err)
 	}
-	partial["PushTopic"] = fieldPushTopic
+	if len(fieldPushTopic) == 0 {
+		fieldPushTopic = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"PushTopic\":")
+	buf.Write(fieldPushTopic)
 	var fieldWatermark []byte
 	fieldWatermark, err = r._marshalJSONstream_EventTime(x.Watermark)
 	if err != nil {
 		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: field name Watermark; %w", err)
 	}
-	partial["Watermark"] = fieldWatermark
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: JoinContextState._marshalJSONJoinContextState: struct; %w", err)
+	if len(fieldWatermark) == 0 {
+		fieldWatermark = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Watermark\":")
+	buf.Write(fieldWatermark)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *JoinContextState) _marshalJSONPtrstream_Offset(x *stream.Offset) ([]byte, error) {
 	if x == nil {

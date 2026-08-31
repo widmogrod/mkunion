@@ -2,6 +2,7 @@
 package projection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -216,19 +217,24 @@ func (r *SessionWindow) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSessionWindow(*r)
 }
 func (r *SessionWindow) _marshalJSONSessionWindow(x SessionWindow) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldGapDuration []byte
 	fieldGapDuration, err = r._marshalJSONtime_Duration(x.GapDuration)
 	if err != nil {
 		return nil, fmt.Errorf("projection: SessionWindow._marshalJSONSessionWindow: field name GapDuration; %w", err)
 	}
-	partial["GapDuration"] = fieldGapDuration
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: SessionWindow._marshalJSONSessionWindow: struct; %w", err)
+	if len(fieldGapDuration) == 0 {
+		fieldGapDuration = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"GapDuration\":")
+	buf.Write(fieldGapDuration)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *SessionWindow) _marshalJSONtime_Duration(x time.Duration) ([]byte, error) {
 	result, err := shared.JSONMarshal[time.Duration](x)
@@ -293,25 +299,37 @@ func (r *SlidingWindow) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSlidingWindow(*r)
 }
 func (r *SlidingWindow) _marshalJSONSlidingWindow(x SlidingWindow) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldWidth []byte
 	fieldWidth, err = r._marshalJSONtime_Duration(x.Width)
 	if err != nil {
 		return nil, fmt.Errorf("projection: SlidingWindow._marshalJSONSlidingWindow: field name Width; %w", err)
 	}
-	partial["Width"] = fieldWidth
+	if len(fieldWidth) == 0 {
+		fieldWidth = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Width\":")
+	buf.Write(fieldWidth)
 	var fieldPeriod []byte
 	fieldPeriod, err = r._marshalJSONtime_Duration(x.Period)
 	if err != nil {
 		return nil, fmt.Errorf("projection: SlidingWindow._marshalJSONSlidingWindow: field name Period; %w", err)
 	}
-	partial["Period"] = fieldPeriod
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: SlidingWindow._marshalJSONSlidingWindow: struct; %w", err)
+	if len(fieldPeriod) == 0 {
+		fieldPeriod = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Period\":")
+	buf.Write(fieldPeriod)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *SlidingWindow) _marshalJSONtime_Duration(x time.Duration) ([]byte, error) {
 	result, err := shared.JSONMarshal[time.Duration](x)
@@ -382,19 +400,24 @@ func (r *FixedWindow) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONFixedWindow(*r)
 }
 func (r *FixedWindow) _marshalJSONFixedWindow(x FixedWindow) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldWidth []byte
 	fieldWidth, err = r._marshalJSONtime_Duration(x.Width)
 	if err != nil {
 		return nil, fmt.Errorf("projection: FixedWindow._marshalJSONFixedWindow: field name Width; %w", err)
 	}
-	partial["Width"] = fieldWidth
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("projection: FixedWindow._marshalJSONFixedWindow: struct; %w", err)
+	if len(fieldWidth) == 0 {
+		fieldWidth = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Width\":")
+	buf.Write(fieldWidth)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *FixedWindow) _marshalJSONtime_Duration(x time.Duration) ([]byte, error) {
 	result, err := shared.JSONMarshal[time.Duration](x)

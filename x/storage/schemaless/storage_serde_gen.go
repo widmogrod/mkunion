@@ -2,6 +2,7 @@
 package schemaless
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -19,35 +20,50 @@ func (r *PageResult[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONPageResultLb_A_bL(*r)
 }
 func (r *PageResult[A]) _marshalJSONPageResultLb_A_bL(x PageResult[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldItems []byte
 	fieldItems, err = r._marshalJSONSliceA(x.Items)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Items; %w", err)
 	}
-	partial["Items"] = fieldItems
+	if len(fieldItems) == 0 {
+		fieldItems = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Items\":")
+	buf.Write(fieldItems)
 	var fieldNext []byte
 	fieldNext, err = r._marshalJSONPtrFindingRecordsLb_A_bL(x.Next)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Next; %w", err)
 	}
-	if fieldNext != nil {
-		partial["Next"] = fieldNext
+	if len(fieldNext) == 0 {
+		fieldNext = []byte("null")
 	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Next\":")
+	buf.Write(fieldNext)
 	var fieldPrev []byte
 	fieldPrev, err = r._marshalJSONPtrFindingRecordsLb_A_bL(x.Prev)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: field name Prev; %w", err)
 	}
-	if fieldPrev != nil {
-		partial["Prev"] = fieldPrev
+	if len(fieldPrev) == 0 {
+		fieldPrev = []byte("null")
 	}
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: PageResult[A]._marshalJSONPageResultLb_A_bL: struct; %w", err)
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
 	}
-	return result, nil
+	buf.WriteString("\"Prev\":")
+	buf.Write(fieldPrev)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *PageResult[A]) _marshalJSONSliceA(x []A) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
@@ -175,37 +191,63 @@ func (r *Record[A]) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONRecordLb_A_bL(*r)
 }
 func (r *Record[A]) _marshalJSONRecordLb_A_bL(x Record[A]) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldID []byte
 	fieldID, err = r._marshalJSONstring(x.ID)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name ID; %w", err)
 	}
-	partial["ID"] = fieldID
+	if len(fieldID) == 0 {
+		fieldID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ID\":")
+	buf.Write(fieldID)
 	var fieldType []byte
 	fieldType, err = r._marshalJSONstring(x.Type)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Type; %w", err)
 	}
-	partial["Type"] = fieldType
+	if len(fieldType) == 0 {
+		fieldType = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Type\":")
+	buf.Write(fieldType)
 	var fieldData []byte
 	fieldData, err = r._marshalJSONA(x.Data)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Data; %w", err)
 	}
-	partial["Data"] = fieldData
+	if len(fieldData) == 0 {
+		fieldData = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Data\":")
+	buf.Write(fieldData)
 	var fieldVersion []byte
 	fieldVersion, err = r._marshalJSONuint16(x.Version)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: field name Version; %w", err)
 	}
-	partial["Version"] = fieldVersion
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: Record[A]._marshalJSONRecordLb_A_bL: struct; %w", err)
+	if len(fieldVersion) == 0 {
+		fieldVersion = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Version\":")
+	buf.Write(fieldVersion)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *Record[A]) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
@@ -305,25 +347,37 @@ func (r *SortField) MarshalJSON() ([]byte, error) {
 	return r._marshalJSONSortField(*r)
 }
 func (r *SortField) _marshalJSONSortField(x SortField) ([]byte, error) {
-	partial := make(map[string]json.RawMessage)
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
 	var err error
 	var fieldField []byte
 	fieldField, err = r._marshalJSONstring(x.Field)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: SortField._marshalJSONSortField: field name Field; %w", err)
 	}
-	partial["Field"] = fieldField
+	if len(fieldField) == 0 {
+		fieldField = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Field\":")
+	buf.Write(fieldField)
 	var fieldDescending []byte
 	fieldDescending, err = r._marshalJSONbool(x.Descending)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: SortField._marshalJSONSortField: field name Descending; %w", err)
 	}
-	partial["Descending"] = fieldDescending
-	result, err := json.Marshal(partial)
-	if err != nil {
-		return nil, fmt.Errorf("schemaless: SortField._marshalJSONSortField: struct; %w", err)
+	if len(fieldDescending) == 0 {
+		fieldDescending = []byte("null")
 	}
-	return result, nil
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Descending\":")
+	buf.Write(fieldDescending)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 func (r *SortField) _marshalJSONstring(x string) ([]byte, error) {
 	result, err := json.Marshal(x)
