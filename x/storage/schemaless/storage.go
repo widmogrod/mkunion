@@ -10,6 +10,19 @@ type RecordType = string
 
 type Repository[T any] interface {
 	Get(recordID string, recordType RecordType) (Record[T], error)
+	// UpdateRecords saves and deletes records under the command's UpdatingPolicy.
+	// The default policy, PolicyIfServerNotChanged, is optimistic locking:
+	// a record is written only when its Version matches the stored one, or when
+	// no stored record exists; a stale write fails with ErrVersionConflict.
+	//
+	// Atomicity of a batch depends on the backend:
+	//   - transactional backends (in-memory, DynamoDB) are all-or-nothing and
+	//     return a nil result on error;
+	//   - non-transactional backends (OpenSearch) are atomic per record only;
+	//     on error they return the error together with a non-nil result that
+	//     lists the records durably written before the failure.
+	// Callers that need to react to partial failure must inspect the result
+	// even when err != nil.
 	UpdateRecords(command UpdateRecords[Record[T]]) (*UpdateRecordsResult[Record[T]], error)
 	FindingRecords(query FindingRecords[Record[T]]) (PageResult[Record[T]], error)
 }
