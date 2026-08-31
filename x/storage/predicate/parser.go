@@ -12,18 +12,19 @@ import (
 var (
 	predicateLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{"Whitespace", `\s+`},
-		{"Keyword", `\b(AND|OR|NOT)\b`},
+		{"Keyword", `(?i)\b(AND|OR|NOT)\b`},
 		{"Operator", `[\<\>\!\=]+`},
 		{"Paren", `[()]`},
 		{"Bind", `:[a-zA-Z][a-zA-Z0-9]*`},
 		{"Location", `[a-zA-Z][a-zA-Z0-9\$\.\[\]'"\*]*`},
 		{"Number", `[-+]?[0-9]*\.?[0-9]+`},
-		{"String", `"[^"]+"`},
+		{"String", `"(\\.|[^"\\])*"`},
 	})
 	predicateParser = participle.MustBuild[Expression](
 		participle.Lexer(predicateLexer),
 		participle.Elide("Whitespace"),
 		participle.Unquote("String"),
+		participle.CaseInsensitive("Keyword"),
 		participle.UseLookahead(2),
 	)
 )
@@ -42,7 +43,7 @@ func Parse(input string) (Predicate, error) {
 type Comparable struct {
 	Location string `( @Location`
 	Operator string `  @Operator`
-	BindName Value  `  @@)`
+	Value    Value  `  @@)`
 }
 
 type Value struct {
@@ -108,7 +109,7 @@ func (a Comparable) ToPredicate() (Predicate, error) {
 	return &Compare{
 		Location:  a.Location,
 		Operation: a.Operator,
-		BindValue: a.BindName.ToBindable(),
+		BindValue: a.Value.ToBindable(),
 	}, nil
 }
 

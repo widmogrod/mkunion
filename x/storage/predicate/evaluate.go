@@ -5,18 +5,31 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shape"
 	"reflect"
+	"sync"
 )
+
+// evaluateShapeCache holds indexed shapes keyed by reflect.Type,
+// so repeated Evaluate calls skip the lookup and re-indexing.
+var evaluateShapeCache sync.Map
 
 func Evaluate[A any](predicate Predicate, data A, bind ParamBinds) bool {
 	v := reflect.TypeOf(new(A)).Elem()
-	original := shape.MkRefNameFromReflect(v)
 
-	s, found := shape.LookupShape(original)
-	if !found {
-		panic(fmt.Errorf("predicate.Evaluate: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
+	var s shape.Shape
+	if cached, ok := evaluateShapeCache.Load(v); ok {
+		s = cached.(shape.Shape)
+	} else {
+		original := shape.MkRefNameFromReflect(v)
+
+		found := false
+		s, found = shape.LookupShape(original)
+		if !found {
+			panic(fmt.Errorf("predicate.Evaluate: shape.RefName not found %s; %w", v.String(), shape.ErrShapeNotFound))
+		}
+
+		s = shape.IndexWith(s, original)
+		evaluateShapeCache.Store(v, s)
 	}
-
-	s = shape.IndexWith(s, original)
 
 	sdata := schema.FromGo[A](data)
 

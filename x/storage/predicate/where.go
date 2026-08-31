@@ -37,13 +37,17 @@ func Where(query string, params ParamBinds, opts *WhereOpt) (*WherePredicates, e
 		opts = &DefaultWhereOpt
 	}
 
+	var predicates Predicate
 	if query == "" {
-		return nil, nil
-	}
-
-	predicates, err := Parse(query)
-	if err != nil {
-		return nil, err
+		// an empty query matches everything;
+		// params passed alongside it are reported as extra params below
+		predicates = &And{}
+	} else {
+		var err error
+		predicates, err = Parse(query)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var missingParams, extraParams []string

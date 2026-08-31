@@ -4,27 +4,35 @@ func Optimize(p Predicate) Predicate {
 	return MatchPredicateR1(
 		p,
 		func(x *And) Predicate {
-			// flatten nested predicates
-			if len(x.L) == 1 {
-				return x.L[0]
+			l := make([]Predicate, 0, len(x.L))
+			for _, c := range x.L {
+				l = append(l, Optimize(c))
 			}
-			return x
+			// flatten nested predicates
+			if len(l) == 1 {
+				return l[0]
+			}
+			return &And{L: l}
 		},
 		func(x *Or) Predicate {
-			// flatten nested predicates
-			if len(x.L) == 1 {
-				return x.L[0]
+			l := make([]Predicate, 0, len(x.L))
+			for _, c := range x.L {
+				l = append(l, Optimize(c))
 			}
-			return x
+			// flatten nested predicates
+			if len(l) == 1 {
+				return l[0]
+			}
+			return &Or{L: l}
 		},
 		func(x *Not) Predicate {
-			y, ok := x.P.(*Not)
-			if ok {
+			inner := Optimize(x.P)
+			if y, ok := inner.(*Not); ok {
 				// double negation is the same as the original
 				// !(!x) == x
-				return Optimize(y.P)
+				return y.P
 			}
-			return x
+			return &Not{P: inner}
 		},
 		func(x *Compare) Predicate {
 			return x
