@@ -28,49 +28,136 @@ type OpenSearchRepository[A any] struct {
 	indexName string
 }
 
-func (os *OpenSearchRepository[A]) Get(recordID string, recordType RecordType) (Record[A], error) {
-	response, err := os.client.Get(os.indexName, os.recordID(recordType, recordID))
+// openSearchDocMeta carries the document source together with the
+// concurrency-control metadata needed for compare-and-swap writes.
+type openSearchDocMeta[A any] struct {
+	Item        A    `json:"_source"`
+	SeqNo       *int `json:"_seq_no"`
+	PrimaryTerm *int `json:"_primary_term"`
+}
+
+// getDocMeta returns nil (and no error) when the document does not exist.
+func (os *OpenSearchRepository[A]) getDocMeta(documentID string) (*openSearchDocMeta[Record[A]], error) {
+	response, err := os.client.Get(os.indexName, documentID)
 	if err != nil {
-		return Record[A]{}, err
+		return nil, fmt.Errorf("OpenSearchRepository.getDocMeta: request error=%s. %w", err, ErrInternalError)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode == 404 {
+		return nil, nil
+	}
+	if response.IsError() {
+		return nil, fmt.Errorf("OpenSearchRepository.getDocMeta: response %s. %w", response.String(), ErrInternalError)
 	}
 
 	result, err := io.ReadAll(response.Body)
 	if err != nil {
-		return Record[A]{}, err
+		return nil, fmt.Errorf("OpenSearchRepository.getDocMeta: read body error=%s. %w", err, ErrInternalError)
 	}
 
-	log.Println("OpenSearchRepository.GetSchema result=", string(result))
-
-	typed, err := shared.JSONUnmarshal[OpenSearchSearchResultHit[Record[A]]](result)
+	typed, err := shared.JSONUnmarshal[openSearchDocMeta[Record[A]]](result)
 	if err != nil {
-		return Record[A]{}, fmt.Errorf("DynamoDBRepository.GetSchema type conversion error=%s. %w", err, ErrInvalidType)
+		return nil, fmt.Errorf("OpenSearchRepository.getDocMeta: type conversion error=%s. %w", err, ErrInvalidType)
 	}
 
-	return typed.Item, nil
+	return &typed, nil
+}
+
+func (os *OpenSearchRepository[A]) Get(recordID string, recordType RecordType) (Record[A], error) {
+	meta, err := os.getDocMeta(os.recordID(recordType, recordID))
+	if err != nil {
+		return Record[A]{}, fmt.Errorf("OpenSearchRepository.Get: %w", err)
+	}
+	if meta == nil {
+		return Record[A]{}, fmt.Errorf("OpenSearchRepository.Get: id=%s type=%s. %w", recordID, recordType, ErrNotFound)
+	}
+
+	return meta.Item, nil
 }
 
 func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) (*UpdateRecordsResult[Record[A]], error) {
+	if command.IsEmpty() {
+		return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: empty command. %w", ErrEmptyCommand)
+	}
+
 	for _, record := range command.Saving {
+		documentID := os.toDocumentID(record)
+
+		// Mimic the DynamoDB backend's optimistic locking condition
+		// "Version = :version OR attribute_not_exists(Version)":
+		// when the document exists its stored version must match the record's,
+		// and the write is a compare-and-swap on the document's sequence number;
+		// when it does not exist the write must be a creation.
+		var current *openSearchDocMeta[Record[A]]
+		if command.UpdatingPolicy == PolicyIfServerNotChanged {
+			var err error
+			current, err = os.getDocMeta(documentID)
+			if err != nil {
+				return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: %w", err)
+			}
+			if current != nil && current.Item.Version != record.Version {
+				return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: id=%s stored version %d != %d. %w",
+					record.ID, current.Item.Version, record.Version, ErrVersionConflict)
+			}
+		}
+
+		record.Version++
 		data, err := shared.JSONMarshal[Record[A]](record)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: marshal error=%s. %w", err, ErrInternalError)
 		}
-		_, err = os.client.Index(os.indexName, bytes.NewReader(data), func(request *opensearchapi.IndexRequest) {
-			request.DocumentID = os.toDocumentID(record)
+		response, err := os.client.Index(os.indexName, bytes.NewReader(data), func(request *opensearchapi.IndexRequest) {
+			request.DocumentID = documentID
+			// make the write visible to searches immediately,
+			// matching the read-after-write behaviour of the other backends
+			request.Refresh = "true"
+			if command.UpdatingPolicy == PolicyIfServerNotChanged {
+				if current == nil {
+					request.OpType = "create"
+				} else {
+					request.IfSeqNo = current.SeqNo
+					request.IfPrimaryTerm = current.PrimaryTerm
+				}
+			}
 		})
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: index error=%s. %w", err, ErrInternalError)
+		}
+		err = func() error {
+			defer response.Body.Close()
+			if response.StatusCode == 409 {
+				return fmt.Errorf("OpenSearchRepository.UpdateRecords: id=%s. %w", record.ID, ErrVersionConflict)
+			}
+			if response.IsError() {
+				return fmt.Errorf("OpenSearchRepository.UpdateRecords: index response %s. %w", response.String(), ErrInternalError)
+			}
+			return nil
+		}()
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	for _, record := range command.Deleting {
-		_, err := os.client.Delete(os.indexName, os.toDocumentID(record))
+		response, err := os.client.Delete(os.indexName, os.toDocumentID(record), func(request *opensearchapi.DeleteRequest) {
+			request.Refresh = "true"
+		})
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: delete error=%s. %w", err, ErrInternalError)
+		}
+		err = func() error {
+			defer response.Body.Close()
+			// 404 means the record is already gone, which is the desired outcome
+			if response.IsError() && response.StatusCode != 404 {
+				return fmt.Errorf("OpenSearchRepository.UpdateRecords: delete response %s. %w", response.String(), ErrInternalError)
+			}
+			return nil
+		}()
+		if err != nil {
+			return nil, err
 		}
 	}
-
-	//TODO: SavingPolicy check
 
 	result := &UpdateRecordsResult[Record[A]]{
 		Saved:   make(map[string]Record[A]),
@@ -87,8 +174,6 @@ func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]
 	}
 
 	return result, nil
-
-	return nil, nil
 }
 
 type (
@@ -126,7 +211,7 @@ func (os *OpenSearchRepository[A]) FindingRecords(query FindingRecords[Record[A]
 	if query.After != nil {
 		afterSearch, err := shared.JSONUnmarshal[any]([]byte(*query.After))
 		if err != nil {
-			panic(err)
+			return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: after cursor unmarshal error=%s. %w", err, ErrInternalError)
 		}
 
 		queryTemplate["search_after"] = afterSearch
@@ -139,43 +224,37 @@ func (os *OpenSearchRepository[A]) FindingRecords(query FindingRecords[Record[A]
 		queryTemplate["sort"] = sorters
 	}
 
+	body, err := json.Marshal(queryTemplate)
+	if err != nil {
+		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: query marshal error=%s. %w", err, ErrInternalError)
+	}
+
+	log.Infof("OpenSearchRepository FindingRecords %s", string(body))
+
 	response, err := os.client.Search(func(request *opensearchapi.SearchRequest) {
 		request.Index = []string{
 			os.indexName,
 		}
-		body, err := json.Marshal(queryTemplate)
-		if err != nil {
-			panic(err)
-		}
-
-		log.Infof("OpenSearchRepository FindingRecords %s", string(body))
-
 		request.Body = bytes.NewReader(body)
 	})
 	if err != nil {
-		panic(err)
-		//return PageResult[Record[A]]{}, err
+		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: request error=%s. %w", err, ErrInternalError)
 	}
+	defer response.Body.Close()
+
+	if response.IsError() {
+		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: response %s. %w", response.String(), ErrInternalError)
+	}
+
 	result, err := io.ReadAll(response.Body)
 	if err != nil {
-		panic(err)
-		//return PageResult[Record[A]]{}, err
+		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: read body error=%s. %w", err, ErrInternalError)
 	}
 
 	hits, err := shared.JSONUnmarshal[OpenSearchSearchResult[Record[A]]](result)
 	if err != nil {
-		panic(err)
-		//return PageResult[Record[A]]{}, err
+		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: result unmarshal error=%s. %w", err, ErrInvalidType)
 	}
-	//
-	//schemed, err := schema.FromJSON(result)
-	//if err != nil {
-	//	panic(err)
-	//	//return PageResult[Record[A]]{}, err
-	//}
-	//
-	//hists := schema.GetSchema(schemed, "hits.hits")
-	//var lastSort schema.Schema
 
 	var lastSort []string
 	var items []Record[A]
@@ -184,28 +263,13 @@ func (os *OpenSearchRepository[A]) FindingRecords(query FindingRecords[Record[A]
 		lastSort = hit.Sort
 	}
 
-	//items := schema.Reduce(
-	//	hits.Hits,
-	//	[]Record[A]{},
-	//	func(s schema.Schema, result []Record[A]) []Record[A] {
-	//		typed, err := schema.ToGoG[*Record[A]](schema.GetSchema(s, "_source"))
-	//		if err != nil {
-	//			panic(err)
-	//		}
-	//		result = append(result, *typed)
-	//
-	//		//lastSort = schema.GetSchema(s, "sort")
-	//
-	//		return result
-	//	})
-
 	if len(items) == int(query.Limit) && lastSort != nil {
 		// has next page of results
 		next := query
 
 		data, err := shared.JSONMarshal[any](lastSort)
 		if err != nil {
-			panic(err)
+			return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: after cursor marshal error=%s. %w", err, ErrInternalError)
 		}
 		after := string(data)
 		next.After = &after
@@ -231,10 +295,13 @@ func (os *OpenSearchRepository[A]) recordID(recordType, recordID string) string 
 }
 
 func (os *OpenSearchRepository[A]) toFiltersAndSorters(query FindingRecords[Record[A]]) (filters map[string]any, sorters []any) {
-	filters = os.toFilters(
-		predicate.Optimize(query.Where.Predicate),
-		query.Where.Params,
-	)
+	filters = map[string]any{}
+	if query.Where != nil {
+		filters = os.toFilters(
+			predicate.Optimize(query.Where.Predicate),
+			query.Where.Params,
+		)
+	}
 
 	if query.RecordType != "" {
 		if filters["bool"] == nil {
