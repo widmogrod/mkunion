@@ -15,15 +15,12 @@ jobs:
       - name: Set up Docker Compose
         uses: docker/setup-compose-action@v1
 
-      - run: cd cmd/mkunion; go get -v -t -d ./...
-      - run: cd cmd/mkunion; go build -o mkunion
-
-      - run: go install github.com/matryer/moq@v0.6.0
-
       - run: go get -v -t -d ./...
 
+      # mkunion and moq are `tool` dependencies in go.mod, so there is
+      # nothing to install here.
       # generate code with mkunion
-      - run: ./cmd/mkunion/mkunion watch -g ./...
+      - run: go tool mkunion watch -g ./...
 
       - run: pip install awscli-local
       - run: dev/bootstrap.sh -nologs

@@ -2,8 +2,6 @@
 package shape
 
 import (
-	"github.com/sashabaranov/go-openai"
-	"github.com/sashabaranov/go-openai/jsonschema"
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
 	"strings"
@@ -12,8 +10,6 @@ import (
 
 func init() {
 	shared.TypeRegistryStore[any]("any")
-	shared.TypeRegistryStore[openai.FunctionDefinition]("github.com/sashabaranov/go-openai.FunctionDefinition")
-	shared.TypeRegistryStore[jsonschema.Definition]("github.com/sashabaranov/go-openai/jsonschema.Definition")
 	shared.TypeRegistryStore[AliasLike]("github.com/widmogrod/mkunion/x/shape.AliasLike")
 	shared.TypeRegistryStore[AndGuard]("github.com/widmogrod/mkunion/x/shape.AndGuard")
 	shared.TypeRegistryStore[Any]("github.com/widmogrod/mkunion/x/shape.Any")
@@ -56,5 +52,6 @@ func init() {
 	shared.TypeRegistryStore[int]("int")
 	shared.TypeRegistryStore[string]("string")
 	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
+	shared.TypeRegistryStore[testing.B]("testing.B")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 }

@@ -4,12 +4,14 @@
 [![codecov](https://codecov.io/gh/widmogrod/mkunion/branch/main/graph/badge.svg?token=3Z3Z3Z3Z3Z)](https://codecov.io/gh/widmogrod/mkunion)
 
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
+go get -tool github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
 ```
 
 ```
-mkunion watch -g ./...
+go tool mkunion watch -g ./...
 ```
+
+<sub>Needs Go 1.24+. On older toolchains use `go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1` and run `mkunion` directly.</sub>
 
 ## About
 Strongly typed **union type** in golang that supports generics*.

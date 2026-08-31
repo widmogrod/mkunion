@@ -15,28 +15,29 @@ mkunion is a Go code generation tool that implements strongly typed union types 
 
 ### Building mkunion
 ```bash
-# Build the mkunion tool
-go build -C cmd/mkunion .
+# mkunion, mkfunc and moq are `tool` dependencies in go.mod.
+# `go tool` builds them from this checkout - nothing to install, nothing on PATH.
+go tool mkunion --help
 
-# Install from latest release
-go install github.com/widmogrod/mkunion/cmd/mkunion@latest
+# Add mkunion to another module (Go 1.24+)
+go get -tool github.com/widmogrod/mkunion/cmd/mkunion@latest
 ```
 
 ### Code Generation Workflow
 ```bash
 # Generate union types and shapes, then automatically run go generate (run from project root)
-mkunion watch ./...
+go tool mkunion watch ./...
 
 # For one-time generation without watching (also runs go generate automatically)
-mkunion watch -g ./...
+go tool mkunion watch -g ./...
 
 # Skip running go generate after mkunion generation
-mkunion watch -G ./...
+go tool mkunion watch -G ./...
 # or
-mkunion watch --dont-run-go-generate ./...
+go tool mkunion watch --dont-run-go-generate ./...
 
 # Generate TypeScript types
-mkunion shape-export --language typescript --output-dir ./output -i file.go
+go tool mkunion shape-export --language typescript --output-dir ./output -i file.go
 ```
 
 **Note:** As of the latest version, `mkunion watch` automatically runs `go generate ./...` after generating union types and shapes. This eliminates the need to run two separate commands. Use the `-G` flag if you want to skip the automatic `go generate` step.
@@ -173,7 +174,7 @@ suite.SelfDocumentStateDiagram(t, "filename.go")
 ## Important Notes
 
 - Go version: 1.23.0 with toolchain 1.24.3
-- Always run `mkunion watch -g ./...` to generate new files including go:generate tag
+- Always run `go tool mkunion watch -g ./...` to generate new files including go:generate tag
 - The type registry can be disabled with `//go:tag mkunion:",no-type-registry"`
 - When running tests that use AWS services, ensure the development environment is bootstrapped
 - On Mac with Colima: ensure Colima is running before executing `dev/bootstrap.sh`

@@ -20,17 +20,11 @@ This command starts a Docker container with all the necessary tools to develop a
 
 In a separate terminal, run:
 ```
-echo "Build mkunion ..."
-go build -C cmd/mkunion .
-
-echo "Instal moq"
-go install github.com/matryer/moq@v0.6.0
-
-echo "Make moq available in PATH"
-export PATH=$PATH:$GOPATH/bin
-
 echo "Generate files ..."
-cmd/mkunion/mkunion watch -g ./...
+# mkunion, mkfunc and moq are `tool` dependencies in go.mod.
+# `go tool` builds them from this checkout, so there is nothing to install
+# and nothing to add to PATH.
+go tool mkunion watch -g ./...
 
 echo "Add vaiables manualy..."
 source .envrc

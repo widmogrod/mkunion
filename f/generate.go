@@ -1,3 +1,3 @@
 package f
 
-//go:generate go run ../cmd/mkfunc/main.go --max-size=20
+//go:generate go tool mkfunc --max-size=20
