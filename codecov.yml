@@ -1,0 +1,12 @@
+# Generated code (mkunion output and mocks) is excluded from coverage.
+# It is exercised indirectly through the tests of the packages that use it.
+ignore:
+  - "**/*_gen.go"
+  - "**/*_mock.go"
+
+coverage:
+  status:
+    project:
+      default:
+        # allow small fluctuations
+        threshold: 1%
