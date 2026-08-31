@@ -10,6 +10,14 @@ import (
 	"strings"
 )
 
+// primitive is the set of Go types a Schema value can be converted to with As.
+type primitive interface {
+	int | int8 | int16 | int32 | int64 |
+		uint | uint8 | uint16 | uint32 | uint64 |
+		float32 | float64 |
+		bool | string | []byte
+}
+
 func As[A int | int8 | int16 | int32 | int64 |
 	uint | uint8 | uint16 | uint32 | uint64 |
 	float32 | float64 |
@@ -39,85 +47,10 @@ func As[A int | int8 | int16 | int32 | int64 |
 			return def, false
 		},
 		func(x *Number) (A, bool) {
-			switch any(def).(type) {
-			case float32:
-				return any(float32(*x)).(A), true
-			case float64:
-				return any(float64(*x)).(A), true
-			case int:
-				return any(int(*x)).(A), true
-			case int8:
-				return any(int8(*x)).(A), true
-			case int16:
-				return any(int16(*x)).(A), true
-			case int32:
-				return any(int32(*x)).(A), true
-			case int64:
-				return any(int64(*x)).(A), true
-			case uint:
-				return any(uint(*x)).(A), true
-			case uint8:
-				return any(uint8(*x)).(A), true
-			case uint16:
-				return any(uint16(*x)).(A), true
-			case uint32:
-				return any(uint32(*x)).(A), true
-			case uint64:
-				return any(uint64(*x)).(A), true
-			}
-			return def, false
+			return asFromNumber[A](x)
 		},
 		func(x *String) (A, bool) {
-			switch any(def).(type) {
-			case string:
-				return any(string(*x)).(A), true
-			case []byte:
-				return any([]byte((*x))).(A), true
-			case float64:
-				v, err := strconv.ParseFloat(string(*x), 64)
-				if err != nil {
-					return def, false
-				}
-				return any(v).(A), true
-			case float32:
-				v, err := strconv.ParseFloat(string(*x), 32)
-				if err != nil {
-					return def, false
-				}
-				return any(float32(v)).(A), true
-			case int:
-				v, err := strconv.Atoi(string(*x))
-				if err != nil {
-					return def, false
-				}
-				return any(v).(A), true
-			case int8:
-				v, err := strconv.ParseInt(string(*x), 10, 8)
-				if err != nil {
-					return def, false
-				}
-				return any(int8(v)).(A), true
-			case int16:
-				v, err := strconv.ParseInt(string(*x), 10, 16)
-				if err != nil {
-					return def, false
-				}
-				return any(int16(v)).(A), true
-			case int32:
-				v, err := strconv.ParseInt(string(*x), 10, 32)
-				if err != nil {
-					return def, false
-				}
-				return any(int32(v)).(A), true
-			case int64:
-				v, err := strconv.ParseInt(string(*x), 10, 64)
-				if err != nil {
-					return def, false
-				}
-				return any(v).(A), true
-			}
-
-			return def, false
+			return asFromString[A](x)
 		},
 		func(x *Binary) (A, bool) {
 			switch any(def).(type) {
@@ -135,6 +68,94 @@ func As[A int | int8 | int16 | int32 | int64 |
 		func(x *Map) (A, bool) {
 			return def, false
 		})
+}
+
+// asFromNumber converts with plain Go conversions; values outside the
+// target range wrap or saturate the way Go conversions do.
+func asFromNumber[A primitive](x *Number) (A, bool) {
+	var def A
+	switch any(def).(type) {
+	case float32:
+		return any(float32(*x)).(A), true
+	case float64:
+		return any(float64(*x)).(A), true
+	case int:
+		return any(int(*x)).(A), true
+	case int8:
+		return any(int8(*x)).(A), true
+	case int16:
+		return any(int16(*x)).(A), true
+	case int32:
+		return any(int32(*x)).(A), true
+	case int64:
+		return any(int64(*x)).(A), true
+	case uint:
+		return any(uint(*x)).(A), true
+	case uint8:
+		return any(uint8(*x)).(A), true
+	case uint16:
+		return any(uint16(*x)).(A), true
+	case uint32:
+		return any(uint32(*x)).(A), true
+	case uint64:
+		return any(uint64(*x)).(A), true
+	}
+	return def, false
+}
+
+// asFromString parses numeric targets; unsigned targets have no parse path.
+func asFromString[A primitive](x *String) (A, bool) {
+	var def A
+	switch any(def).(type) {
+	case string:
+		return any(string(*x)).(A), true
+	case []byte:
+		return any([]byte(*x)).(A), true
+	case float64:
+		v, err := strconv.ParseFloat(string(*x), 64)
+		if err != nil {
+			return def, false
+		}
+		return any(v).(A), true
+	case float32:
+		v, err := strconv.ParseFloat(string(*x), 32)
+		if err != nil {
+			return def, false
+		}
+		return any(float32(v)).(A), true
+	case int:
+		v, err := strconv.Atoi(string(*x))
+		if err != nil {
+			return def, false
+		}
+		return any(v).(A), true
+	case int8:
+		v, err := strconv.ParseInt(string(*x), 10, 8)
+		if err != nil {
+			return def, false
+		}
+		return any(int8(v)).(A), true
+	case int16:
+		v, err := strconv.ParseInt(string(*x), 10, 16)
+		if err != nil {
+			return def, false
+		}
+		return any(int16(v)).(A), true
+	case int32:
+		v, err := strconv.ParseInt(string(*x), 10, 32)
+		if err != nil {
+			return def, false
+		}
+		return any(int32(v)).(A), true
+	case int64:
+		v, err := strconv.ParseInt(string(*x), 10, 64)
+		if err != nil {
+			return def, false
+		}
+		return any(v).(A), true
+	}
+
+	return def, false
 }
 
 func AsDefault[A int | int8 | int16 | int32 | int64 |
