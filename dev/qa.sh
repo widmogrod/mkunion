@@ -4,8 +4,8 @@
 #   dev/qa.sh          # codegen + short tests + CRAP gate
 #   QA_FULL=1 dev/qa.sh # same, but the full test suite (needs dev/bootstrap.sh services)
 #
-# The CRAP gate (go tool mkcrap) fails when a function is both complex and
-# untested, unless it is a pre-existing offender accepted in .crap-baseline.json.
+# The CRAP gate (go tool mkcrap) fails when any function is both complex
+# and untested. No exceptions.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

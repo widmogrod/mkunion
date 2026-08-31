@@ -73,24 +73,6 @@ func TestIsGenerated(t *testing.T) {
 	assert.False(t, isGenerated(plain))
 }
 
-func TestBaselineRoundTrip(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "baseline.json")
-
-	missing, err := readBaseline(path)
-	require.NoError(t, err)
-	assert.Empty(t, missing)
-
-	stats := []funcStat{
-		{Name: "big", File: "a.go", Crap: 100.04},
-		{Name: "small", File: "a.go", Crap: 3},
-	}
-	require.NoError(t, writeBaseline(path, stats, 30))
-
-	baseline, err := readBaseline(path)
-	require.NoError(t, err)
-	assert.Equal(t, map[string]float64{"a.go:big": 100.1}, baseline)
-}
-
 func TestCollectStats(t *testing.T) {
 	root := t.TempDir()
 	writeFile := func(rel, content string) {
@@ -131,7 +113,7 @@ func Uncovered(a bool) int {
 
 	byKey := map[string]funcStat{}
 	for _, s := range stats {
-		byKey[s.Key()] = s
+		byKey[s.File+":"+s.Name] = s
 	}
 	require.Len(t, byKey, 2, "test, generated and skipped files must be excluded")
 

@@ -75,16 +75,14 @@ The CRAP metric (Change Risk Anti-Patterns) scores every function:
 A complex function with no tests scores high; adding tests or splitting
 the function lowers the score. The gate fails above threshold 30.
 
+There are no exceptions and no baseline: every function over the
+threshold fails the gate. Do not raise the threshold to get past it —
+add tests or reduce complexity instead.
+
 ```bash
 # Run standalone (needs a coverage profile first)
 go test -short -coverprofile=coverage.out ./...
 go tool mkcrap
-
-# Pre-existing offenders are accepted in .crap-baseline.json; new complex
-# untested code fails. Never add new entries to the baseline to get past
-# the gate — add tests or reduce complexity instead. Refresh the baseline
-# only when scores improved:
-go tool mkcrap --update-baseline
 ```
 
 ### Development Setup

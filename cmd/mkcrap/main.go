@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -66,16 +65,6 @@ func main() {
 				Name:  "skip",
 				Usage: "path prefixes to skip (relative to module root), can be repeated",
 			},
-			&cli.StringFlag{
-				Name:  "baseline",
-				Value: ".crap-baseline.json",
-				Usage: "baseline file with accepted pre-existing offenders; functions listed there fail only when their score grows",
-			},
-			&cli.BoolFlag{
-				Name:  "update-baseline",
-				Value: false,
-				Usage: "write the current offenders to the baseline file and exit 0",
-			},
 		},
 		Action: func(c *cli.Context) error {
 			root, err := os.Getwd()
@@ -108,27 +97,11 @@ func main() {
 
 			threshold := c.Float64("threshold")
 
-			if c.Bool("update-baseline") {
-				return writeBaseline(c.String("baseline"), stats, threshold)
-			}
-
-			baseline, err := readBaseline(c.String("baseline"))
-			if err != nil {
-				return err
-			}
-
-			// baselineSlack absorbs run-to-run coverage noise (e.g. -short vs
-			// full test runs) so a baselined function fails only on real growth.
-			const baselineSlack = 0.5
 			var failing []funcStat
 			for _, s := range stats {
-				if s.Crap <= threshold {
-					continue
+				if s.Crap > threshold {
+					failing = append(failing, s)
 				}
-				if allowed, ok := baseline[s.Key()]; ok && s.Crap <= allowed+baselineSlack {
-					continue
-				}
-				failing = append(failing, s)
 			}
 
 			top := c.Int("top")
@@ -139,21 +112,20 @@ func main() {
 			for _, s := range stats[:top] {
 				marker := " "
 				if s.Crap > threshold {
-					marker = "*" // over threshold, accepted by baseline
+					marker = "!"
 				}
 				fmt.Printf("%-8.1f %-6d %-6.1f %s%s (%s:%d)\n",
 					s.Crap, s.Complexity, s.Coverage*100, marker, s.Name, s.File, s.Line)
 			}
 
 			if len(failing) > 0 {
-				fmt.Printf("\nFAIL: %d function(s) exceed CRAP threshold %.1f and are not accepted by %s:\n",
-					len(failing), threshold, c.String("baseline"))
+				fmt.Printf("\nFAIL: %d function(s) exceed CRAP threshold %.1f:\n", len(failing), threshold)
 				for _, s := range failing {
 					fmt.Printf("  %.1f %s (%s:%d)\n", s.Crap, s.Name, s.File, s.Line)
 				}
 				return cli.Exit("add tests or reduce complexity (see list above)", 1)
 			}
-			fmt.Printf("\nOK: no function exceeds CRAP threshold %.1f beyond the accepted baseline\n", threshold)
+			fmt.Printf("\nOK: all %d functions are at or below CRAP threshold %.1f\n", len(stats), threshold)
 			return nil
 		},
 	}
@@ -165,45 +137,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-}
-
-// Key identifies a function across runs; line numbers are excluded on
-// purpose so unrelated edits in the same file do not invalidate the baseline.
-func (s funcStat) Key() string {
-	return s.File + ":" + s.Name
-}
-
-func readBaseline(path string) (map[string]float64, error) {
-	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return map[string]float64{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	baseline := map[string]float64{}
-	if err := json.Unmarshal(data, &baseline); err != nil {
-		return nil, fmt.Errorf("cannot parse baseline %s: %w", path, err)
-	}
-	return baseline, nil
-}
-
-func writeBaseline(path string, stats []funcStat, threshold float64) error {
-	baseline := map[string]float64{}
-	for _, s := range stats {
-		if s.Crap > threshold {
-			baseline[s.Key()] = math.Ceil(s.Crap*10) / 10
-		}
-	}
-	data, err := json.MarshalIndent(baseline, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, append(data, '\n'), 0644); err != nil {
-		return err
-	}
-	fmt.Printf("wrote %d accepted offender(s) to %s\n", len(baseline), path)
-	return nil
 }
 
 func readModulePath(gomod string) (string, error) {
