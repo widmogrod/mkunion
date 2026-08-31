@@ -48,6 +48,13 @@ echo "export OPENSEARCH_USERNAME=admin" >> $envrc_file
 echo "export AWS_SQS_QUEUE_URL=$queue_url" >> $envrc_file
 echo "export KAFKA_SERVERS=localhost:9092" >> $envrc_file
 
+# on GitHub Actions there is no direnv, so propagate the same variables
+# to later workflow steps through $GITHUB_ENV
+if [ -n "$GITHUB_ENV" ]; then
+  echo "Exporting environment variables to \$GITHUB_ENV"
+  sed 's/^export //' $envrc_file >> "$GITHUB_ENV"
+fi
+
 echo "Localstack is UI is at port"
 echo "http://localhost:8080"
 

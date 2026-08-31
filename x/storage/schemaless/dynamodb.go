@@ -155,10 +155,10 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 	return result, nil
 }
 
-func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {
+func (d *DynamoDBRepository[A]) buildScanInput(query FindingRecords[Record[A]]) (*dynamodb.ScanInput, error) {
 	filterExpression, paramsExpression, expressionNames, err := d.buildFilterExpression(query)
 	if err != nil {
-		return PageResult[Record[A]]{}, err
+		return nil, err
 	}
 
 	log.Infof("\nfilterExpression: %#v \n", filterExpression)
@@ -171,17 +171,26 @@ func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 	}
 
 	scanInput := &dynamodb.ScanInput{
-		TableName:                 &d.tableName,
-		ExpressionAttributeNames:  expressionNames,
-		ExpressionAttributeValues: paramsExpression,
-		FilterExpression:          aws.String(filterExpression),
-		//ConsistentRead:            aws.Bool(true),
+		TableName: &d.tableName,
+		//ConsistentRead: aws.Bool(true),
+	}
+
+	// DynamoDB rejects an empty FilterExpression (and empty attribute maps)
+	// with a ValidationException, so "list all" must send none of them.
+	if filterExpression != "" {
+		scanInput.FilterExpression = aws.String(filterExpression)
+		if len(expressionNames) > 0 {
+			scanInput.ExpressionAttributeNames = expressionNames
+		}
+		if len(paramsExpression) > 0 {
+			scanInput.ExpressionAttributeValues = paramsExpression
+		}
 	}
 
 	if query.After != nil {
 		schemed, err := shared.JSONUnmarshal[schema.Schema]([]byte(*query.After))
 		if err != nil {
-			return PageResult[Record[A]]{}, fmt.Errorf("dynamodb.FindingRecords: after cursor unmarshal err ;%w", err)
+			return nil, fmt.Errorf("dynamodb.FindingRecords: after cursor unmarshal err ;%w", err)
 		}
 
 		scanInput.ExclusiveStartKey = map[string]types.AttributeValue{
@@ -197,6 +206,39 @@ func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 	// Be aware that DynamoDB limit is scan limit, not page limit!
 	if query.Limit > 0 {
 		scanInput.Limit = aws.Int32(int32(query.Limit))
+	}
+
+	return scanInput, nil
+}
+
+func (d *DynamoDBRepository[A]) nextPageQuery(query FindingRecords[Record[A]], lastEvaluatedKey map[string]types.AttributeValue) (*FindingRecords[Record[A]], error) {
+	after := &types.AttributeValueMemberM{
+		Value: lastEvaluatedKey,
+	}
+
+	schemed, err := schema.FromDynamoDB(after)
+	if err != nil {
+		return nil, fmt.Errorf("DynamoDBRepository.FindingRecords: error calculating after cursor %s. %w", err, ErrInternalError)
+	}
+
+	json, err := shared.JSONMarshal[schema.Schema](schemed)
+	if err != nil {
+		return nil, fmt.Errorf("DynamoDBRepository.FindingRecords: error serializing after cursor %s. %w", err, ErrInternalError)
+	}
+	cursor := string(json)
+	return &FindingRecords[Record[A]]{
+		RecordType: query.RecordType,
+		Where:      query.Where,
+		Sort:       query.Sort,
+		Limit:      query.Limit,
+		After:      &cursor,
+	}, nil
+}
+
+func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {
+	scanInput, err := d.buildScanInput(query)
+	if err != nil {
+		return PageResult[Record[A]]{}, err
 	}
 
 	items, err := d.client.Scan(context.Background(), scanInput)
@@ -227,26 +269,11 @@ func (d *DynamoDBRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 	}
 
 	if items.LastEvaluatedKey != nil {
-		after := &types.AttributeValueMemberM{
-			Value: items.LastEvaluatedKey,
-		}
-
-		schemed, err := schema.FromDynamoDB(after)
+		next, err := d.nextPageQuery(query, items.LastEvaluatedKey)
 		if err != nil {
-			return PageResult[Record[A]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error calculating after cursor %s. %w", err, ErrInternalError)
+			return PageResult[Record[A]]{}, err
 		}
-
-		json, err := shared.JSONMarshal[schema.Schema](schemed)
-		if err != nil {
-			return PageResult[Record[A]]{}, fmt.Errorf("DynamoDBRepository.FindingRecords: error serializing after cursor %s. %w", err, ErrInternalError)
-		}
-		cursor := string(json)
-		result.Next = &FindingRecords[Record[A]]{
-			Where: query.Where,
-			Sort:  query.Sort,
-			Limit: query.Limit,
-			After: &cursor,
-		}
+		result.Next = next
 	}
 
 	return result, nil
@@ -270,7 +297,9 @@ func (d *DynamoDBRepository[A]) buildFilterExpression(query FindingRecords[Recor
 	if query.Where != nil {
 		if where == nil {
 			where = query.Where.Predicate
-			binds = query.Where.Params
+			for k, v := range query.Where.Params {
+				binds[k] = v
+			}
 		} else {
 			where = &predicate.And{
 				L: []predicate.Predicate{where, query.Where.Predicate},
@@ -290,7 +319,11 @@ func (d *DynamoDBRepository[A]) buildFilterExpression(query FindingRecords[Recor
 		return "", nil, nil, nil
 	}
 
-	expression := toExpression(where, names)
+	builder := &dynamoDBExpressionBuilder{names: names, binds: binds}
+	expression, err := builder.toExpression(where)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("store.DynamoDBRepository.FindingRecords: %w", err)
+	}
 
 	// reverse names
 	reverser := map[string]string{}
@@ -298,97 +331,152 @@ func (d *DynamoDBRepository[A]) buildFilterExpression(query FindingRecords[Recor
 		reverser[v] = k
 	}
 
-	return expression, toAttributes(binds), reverser, nil
+	return expression, toAttributes(builder.binds), reverser, nil
 }
 
-func toExpression(where predicate.Predicate, names map[string]string) string {
-	return predicate.MatchPredicateR1(
+type dynamoDBExpressionBuilder struct {
+	names      map[string]string
+	binds      predicate.ParamBinds
+	litCounter int
+}
+
+func (b *dynamoDBExpressionBuilder) toExpression(where predicate.Predicate) (string, error) {
+	return predicate.MatchPredicateR2(
 		where,
-		func(x *predicate.And) string {
-			var result []string
-			for _, v := range x.L {
-				result = append(result, toExpression(v, names))
-			}
-
-			return strings.Join(result, " AND ")
-		},
-		func(x *predicate.Or) string {
-			var result []string
-			for _, v := range x.L {
-				result = append(result, toExpression(v, names))
-			}
-
-			return strings.Join(result, " OR ")
-
-		},
-		func(x *predicate.Not) string {
-			return "NOT " + toExpression(x.P, names)
-		},
-		func(x *predicate.Compare) string {
-			// Because of https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html
-			// we need to make sure that all names are not reserved keyword, so we add a counter to the end of the name in case of collision
-			var named []string
-			//var parts []string = strings.Split(x.Location, ".")
-
-			locs, err := schema.ParseLocation(x.Location)
+		func(x *predicate.And) (string, error) {
+			result, err := b.groupExpressions(x.L)
 			if err != nil {
-				panic(err)
+				return "", err
 			}
 
-			for _, loc := range locs {
-				part := schema.MatchLocationR1(
-					loc,
-					func(x *schema.LocationField) string {
-						return x.Name
-					},
-					func(x *schema.LocationIndex) string {
-						panic("implement me")
-					},
-					func(x *schema.LocationAnything) string {
-						return "schema.Map"
-					},
-				)
-
-				name := part
-				if strings.Contains(name, ".") {
-					name = strings.ReplaceAll(name, ".", "_")
-				}
-
-				if _, ok := names[part]; !ok {
-					names[part] = "#" + name
-				}
-
-				named = append(named, names[part])
+			return strings.Join(result, " AND "), nil
+		},
+		func(x *predicate.Or) (string, error) {
+			result, err := b.groupExpressions(x.L)
+			if err != nil {
+				return "", err
 			}
 
-			//for _, part := range parts {
-			//	if _, ok := names[part]; !ok {
-			//		// TODO(schema.union) find a better way to handle # union separator
-			//		// for example insteaf hard coded schema.Map use schema.UnionType....
-			//		if part == "[*]" {
-			//			part = "schema.Map"
-			//			names[part] = "#hash"
-			//		} else {
-			//			names[part] = "#" + part
-			//		}
-			//	}
-			//	named = append(named, names[part])
-			//}
+			return strings.Join(result, " OR "), nil
+		},
+		func(x *predicate.Not) (string, error) {
+			expr, err := b.groupExpression(x.P)
+			if err != nil {
+				return "", err
+			}
 
-			return predicate.MatchBindableR1(
+			return "NOT " + expr, nil
+		},
+		func(x *predicate.Compare) (string, error) {
+			left, err := b.locationToPath(x.Location)
+			if err != nil {
+				return "", err
+			}
+
+			return predicate.MatchBindableR2(
 				x.BindValue,
-				func(y *predicate.BindValue) string {
-					return strings.Join(named, ".") + " " + x.Operation + " " + y.BindName
+				func(y *predicate.BindValue) (string, error) {
+					return left + " " + x.Operation + " " + y.BindName, nil
 				},
-				func(y *predicate.Literal) string {
-					panic("implement me")
+				func(y *predicate.Literal) (string, error) {
+					bindName := fmt.Sprintf(":lit%d", b.litCounter)
+					b.litCounter++
+					b.binds[bindName] = y.Value
+					return left + " " + x.Operation + " " + bindName, nil
 				},
-				func(y *predicate.Locatable) string {
-					panic("implement me")
+				func(y *predicate.Locatable) (string, error) {
+					right, err := b.locationToPath(y.Location)
+					if err != nil {
+						return "", err
+					}
+					return left + " " + x.Operation + " " + right, nil
 				},
 			)
 		},
 	)
+}
+
+func (b *dynamoDBExpressionBuilder) groupExpressions(xs []predicate.Predicate) ([]string, error) {
+	var result []string
+	for _, v := range xs {
+		expr, err := b.groupExpression(v)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, expr)
+	}
+
+	return result, nil
+}
+
+// groupExpression parenthesises And/Or sub-expressions, so that operator
+// precedence in DynamoDB (NOT > AND > OR) cannot regroup them,
+// i.e. Not{Or{a,b}} renders as `NOT (a OR b)`, never `NOT a OR b`.
+func (b *dynamoDBExpressionBuilder) groupExpression(p predicate.Predicate) (string, error) {
+	expr, err := b.toExpression(p)
+	if err != nil {
+		return "", err
+	}
+
+	needsParens := false
+	switch x := p.(type) {
+	case *predicate.And:
+		needsParens = len(x.L) > 1
+	case *predicate.Or:
+		needsParens = len(x.L) > 1
+	}
+
+	if needsParens {
+		return "(" + expr + ")", nil
+	}
+
+	return expr, nil
+}
+
+func (b *dynamoDBExpressionBuilder) locationToPath(location string) (string, error) {
+	locs, err := schema.ParseLocation(location)
+	if err != nil {
+		return "", fmt.Errorf("dynamodb.locationToPath: parse location %q: %w", location, err)
+	}
+
+	var path strings.Builder
+	for _, loc := range locs {
+		part, err := schema.MatchLocationR2(
+			loc,
+			func(x *schema.LocationField) (string, error) {
+				return b.nameAlias(x.Name), nil
+			},
+			func(x *schema.LocationIndex) (string, error) {
+				return fmt.Sprintf("[%d]", x.Index), nil
+			},
+			func(x *schema.LocationAnything) (string, error) {
+				// TODO(schema.union) find a better way to handle # union separator
+				// for example instead of hard coded schema.Map use schema.UnionType....
+				return b.nameAlias("schema.Map"), nil
+			},
+		)
+		if err != nil {
+			return "", err
+		}
+
+		if path.Len() > 0 && !strings.HasPrefix(part, "[") {
+			path.WriteString(".")
+		}
+		path.WriteString(part)
+	}
+
+	return path.String(), nil
+}
+
+// nameAlias maps an attribute name to an expression alias (#name), because
+// attribute names can collide with DynamoDB reserved keywords
+// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html
+func (b *dynamoDBExpressionBuilder) nameAlias(part string) string {
+	if _, ok := b.names[part]; !ok {
+		b.names[part] = "#" + strings.ReplaceAll(part, ".", "_")
+	}
+
+	return b.names[part]
 }
 
 func toAttributes(binds predicate.ParamBinds) map[string]types.AttributeValue {
