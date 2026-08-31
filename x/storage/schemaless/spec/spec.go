@@ -358,6 +358,41 @@ func RunRepositorySpec(t *testing.T, backend string, newRepo NewRepoFunc, caps C
 		assert.ElementsMatch(t, []string{"Alice", "Jane", "Zarlie"}, names(items))
 	})
 
+	r.run("batch result maps key records by ID and type", func(t *testing.T) {
+		repo := newRepo(t)
+		recordTypeA := uniqueRecordType()
+		recordTypeB := uniqueRecordType()
+
+		result, err := repo.UpdateRecords(schemaless.Save(
+			schemaless.Record[schemaless.ExampleRecord]{ID: "7", Type: recordTypeA, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39}},
+			schemaless.Record[schemaless.ExampleRecord]{ID: "7", Type: recordTypeB, Data: schemaless.ExampleRecord{Name: "Bob", Age: 40}},
+		))
+		require.NoError(t, err)
+
+		assert.Len(t, result.Saved, 2,
+			"records sharing an ID across types must not collide in the result")
+		assert.Contains(t, result.Saved, "7:"+recordTypeA)
+		assert.Contains(t, result.Saved, "7:"+recordTypeB)
+	})
+
+	r.run("where predicate accepts literal values", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, seedRecords(recordType)...)
+
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
+			RecordType: recordType,
+			Where: predicate.MustWhere(
+				`Data.Age > 25 AND Data.Name <> "Jane"`,
+				nil,
+				nil,
+			),
+			Limit: 10,
+		})
+		assert.ElementsMatch(t, []string{"Alice", "Bob", "Zarlie"}, names(items),
+			"literals in the query string must filter like bind params do")
+	})
+
 	r.run("empty where query matches all records", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
@@ -495,6 +530,27 @@ func RunRepositorySpec(t *testing.T, backend string, newRepo NewRepoFunc, caps C
 			})
 			require.NoError(t, err)
 			assert.Equal(t, []string{"Zarlie", "John", "Jane", "Bob", "Alice"}, names(descending.Items))
+		})
+
+	r.runGated(caps.SortByDataField, "SortByDataField",
+		"sorting orders records by a numeric data field", func(t *testing.T) {
+			repo := newRepo(t)
+			recordType := uniqueRecordType()
+			mustSave(t, repo, seedRecords(recordType)...)
+
+			result, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
+				RecordType: recordType,
+				Sort:       []schemaless.SortField{{Field: "Data.Age", Descending: false}},
+				Limit:      10,
+			})
+			require.NoError(t, err)
+
+			ages := make([]int, len(result.Items))
+			for i, item := range result.Items {
+				ages[i] = item.Data.Age
+			}
+			assert.Equal(t, []int{20, 30, 39, 39, 40}, ages,
+				"sorting must work on number fields, not only strings")
 		})
 
 	r.runGated(caps.SortByDataField, "SortByDataField",
