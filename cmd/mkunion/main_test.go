@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/widmogrod/mkunion/x/generators"
 )
 
 func TestSaveFile_FormatsGeneratedGoCode(t *testing.T) {
@@ -407,9 +408,13 @@ func TestCleanGeneratedFiles(t *testing.T) {
 			"types.go",
 		}
 
-		// Write all files
-		allFiles := append(generatedFiles, nonGeneratedFiles...)
-		for _, fileName := range allFiles {
+		// Write all files; only generated files carry the mkunion header
+		for _, fileName := range generatedFiles {
+			filePath := filepath.Join(tempDir, fileName)
+			err := os.WriteFile(filePath, []byte(generators.Header+"\npackage test"), 0644)
+			require.NoError(t, err)
+		}
+		for _, fileName := range nonGeneratedFiles {
 			filePath := filepath.Join(tempDir, fileName)
 			err := os.WriteFile(filePath, []byte("package test"), 0644)
 			require.NoError(t, err)
@@ -458,7 +463,7 @@ func TestCleanGeneratedFiles(t *testing.T) {
 
 		for _, fileName := range generatedFiles {
 			filePath := filepath.Join(tempDir, fileName)
-			err := os.WriteFile(filePath, []byte("package test"), 0644)
+			err := os.WriteFile(filePath, []byte(generators.Header+"\npackage test"), 0644)
 			require.NoError(t, err)
 		}
 
@@ -488,10 +493,10 @@ func TestCleanGeneratedFiles(t *testing.T) {
 
 		// Create generated files in different directories
 		files := map[string]string{
-			filepath.Join(tempDir, "root_union_gen.go"): "package test",
-			filepath.Join(subDir1, "sub1_shape_gen.go"): "package sub1",
-			filepath.Join(subDir2, "sub2_serde_gen.go"): "package sub2",
-			filepath.Join(subDir2, "types_reg_gen.go"):  "package sub2",
+			filepath.Join(tempDir, "root_union_gen.go"): generators.Header + "\npackage test",
+			filepath.Join(subDir1, "sub1_shape_gen.go"): generators.Header + "\npackage sub1",
+			filepath.Join(subDir2, "sub2_serde_gen.go"): generators.Header + "\npackage sub2",
+			filepath.Join(subDir2, "types_reg_gen.go"):  generators.Header + "\npackage sub2",
 		}
 
 		for filePath, content := range files {
@@ -523,13 +528,13 @@ func TestCleanGeneratedFiles(t *testing.T) {
 
 		for _, fileName := range files1 {
 			filePath := filepath.Join(tempDir1, fileName)
-			err := os.WriteFile(filePath, []byte("package test1"), 0644)
+			err := os.WriteFile(filePath, []byte(generators.Header+"\npackage test1"), 0644)
 			require.NoError(t, err)
 		}
 
 		for _, fileName := range files2 {
 			filePath := filepath.Join(tempDir2, fileName)
-			err := os.WriteFile(filePath, []byte("package test2"), 0644)
+			err := os.WriteFile(filePath, []byte(generators.Header+"\npackage test2"), 0644)
 			require.NoError(t, err)
 		}
 
@@ -560,6 +565,29 @@ func TestCleanGeneratedFiles(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to find generated files")
 	})
 
+	t.Run("keeps_files_without_generated_header_even_if_name_matches", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Hand-written file whose name matches a generated pattern
+		handWritten := filepath.Join(tempDir, "custom_union_gen.go")
+		err := os.WriteFile(handWritten, []byte("package test\n\n// hand written"), 0644)
+		require.NoError(t, err)
+
+		// Real generated file with the mkunion header
+		generated := filepath.Join(tempDir, "real_union_gen.go")
+		err = os.WriteFile(generated, []byte(generators.Header+"\npackage test"), 0644)
+		require.NoError(t, err)
+
+		removedFiles, err := CleanGeneratedFiles([]string{tempDir}, false)
+		require.NoError(t, err)
+
+		assert.Len(t, removedFiles, 1)
+		assert.Equal(t, generated, removedFiles[0])
+
+		_, err = os.Stat(handWritten)
+		assert.NoError(t, err, "hand-written file should not be removed")
+	})
+
 	t.Run("deduplicates_files_from_overlapping_directories", func(t *testing.T) {
 		tempDir := t.TempDir()
 		subDir := filepath.Join(tempDir, "sub")
@@ -568,7 +596,7 @@ func TestCleanGeneratedFiles(t *testing.T) {
 
 		// Create a generated file in subdirectory
 		filePath := filepath.Join(subDir, "test_union_gen.go")
-		err = os.WriteFile(filePath, []byte("package test"), 0644)
+		err = os.WriteFile(filePath, []byte(generators.Header+"\npackage test"), 0644)
 		require.NoError(t, err)
 
 		// Test with both parent and child directory
@@ -636,9 +664,13 @@ func TestFindGeneratedFiles(t *testing.T) {
 			"README.md":         false, // not a go file
 		}
 
-		for fileName := range files {
+		for fileName, isGenerated := range files {
 			filePath := filepath.Join(tempDir, fileName)
-			err := os.WriteFile(filePath, []byte("content"), 0644)
+			content := "content"
+			if isGenerated {
+				content = generators.Header + "\npackage test"
+			}
+			err := os.WriteFile(filePath, []byte(content), 0644)
 			require.NoError(t, err)
 		}
 
@@ -672,9 +704,9 @@ func TestFindGeneratedFiles(t *testing.T) {
 		rootFile := filepath.Join(tempDir, "root_union_gen.go")
 		subFile := filepath.Join(subDir, "sub_shape_gen.go")
 
-		err = os.WriteFile(rootFile, []byte("package root"), 0644)
+		err = os.WriteFile(rootFile, []byte(generators.Header+"\npackage root"), 0644)
 		require.NoError(t, err)
-		err = os.WriteFile(subFile, []byte("package sub"), 0644)
+		err = os.WriteFile(subFile, []byte(generators.Header+"\npackage sub"), 0644)
 		require.NoError(t, err)
 
 		generatedFiles, err := findGeneratedFiles(tempDir)
@@ -693,12 +725,12 @@ func TestFindGeneratedFiles(t *testing.T) {
 
 		// Create generated file in hidden directory
 		hiddenFile := filepath.Join(hiddenDir, "hidden_union_gen.go")
-		err = os.WriteFile(hiddenFile, []byte("package hidden"), 0644)
+		err = os.WriteFile(hiddenFile, []byte(generators.Header+"\npackage hidden"), 0644)
 		require.NoError(t, err)
 
 		// Create generated file in visible directory
 		visibleFile := filepath.Join(tempDir, "visible_union_gen.go")
-		err = os.WriteFile(visibleFile, []byte("package visible"), 0644)
+		err = os.WriteFile(visibleFile, []byte(generators.Header+"\npackage visible"), 0644)
 		require.NoError(t, err)
 
 		generatedFiles, err := findGeneratedFiles(tempDir)
