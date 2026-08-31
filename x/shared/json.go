@@ -91,7 +91,7 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 	fromTo, ok := registerJSONMarshaller.Load(key)
 	if !ok {
 		// null is always a valid zero value, even for unregistered interfaces
-		if data == nil || bytes.Equal(data, []byte("null")) {
+		if data == nil || bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
 			return destinationType, nil
 		}
 

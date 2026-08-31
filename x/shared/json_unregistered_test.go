@@ -48,12 +48,14 @@ func TestJSONUnmarshal_UnregisteredUnion_FailsLoudly(t *testing.T) {
 }
 
 func TestJSONUnmarshal_UnregisteredUnion_NullIsStillValid(t *testing.T) {
-	result, err := JSONUnmarshal[unregisteredUnion]([]byte(`null`))
-	if err != nil {
-		t.Fatalf("null must unmarshal to the zero value without error, got: %v", err)
-	}
-	if result != nil {
-		t.Fatalf("expected nil result for null, got: %#v", result)
+	for _, input := range []string{`null`, ` null `, "\n\tnull\n"} {
+		result, err := JSONUnmarshal[unregisteredUnion]([]byte(input))
+		if err != nil {
+			t.Fatalf("input %q must unmarshal to the zero value without error, got: %v", input, err)
+		}
+		if result != nil {
+			t.Fatalf("expected nil result for input %q, got: %#v", input, result)
+		}
 	}
 }
 
