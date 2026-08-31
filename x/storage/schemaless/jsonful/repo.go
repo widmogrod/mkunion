@@ -32,10 +32,14 @@ func NewInMemoryRepository[T any]() (*InMemoryRepository[T], error) {
 		return nil, fmt.Errorf("jsonful.NewInMemoryRepository: %w", shape.ErrShapeNotFound)
 	}
 
+	evaluator := predicate.NewJSONEvaluator(recordShape(dataShape))
 	return &InMemoryRepository[T]{
 		store:     make(map[string]entry[T]),
-		evaluator: predicate.NewJSONEvaluator(recordShape(dataShape)),
-		appendLog: schemaless.NewAppendLog[T](dataShape),
+		evaluator: evaluator,
+		appendLog: &AppendLog[T]{
+			inner:     schemaless.NewAppendLog[T](dataShape),
+			evaluator: evaluator,
+		},
 	}, nil
 }
 
@@ -44,7 +48,7 @@ var _ schemaless.Repository[any] = (*InMemoryRepository[any])(nil)
 type InMemoryRepository[T any] struct {
 	store     map[string]entry[T]
 	evaluator *predicate.JSONEvaluator
-	appendLog *schemaless.AppendLog[T]
+	appendLog *AppendLog[T]
 	mux       sync.RWMutex
 }
 
@@ -232,7 +236,7 @@ func (s *InMemoryRepository[T]) FindingRecords(query schemaless.FindingRecords[s
 	}, nil
 }
 
-func (s *InMemoryRepository[T]) AppendLog() *schemaless.AppendLog[T] {
+func (s *InMemoryRepository[T]) AppendLog() *AppendLog[T] {
 	return s.appendLog
 }
 

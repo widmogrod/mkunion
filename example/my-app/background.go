@@ -6,12 +6,11 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
-	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"github.com/widmogrod/mkunion/x/taskqueue"
 	"github.com/widmogrod/mkunion/x/workflow"
 )
 
-func backgroundScheduled(di *workflow.DI, statesRepo *typedful.TypedRepoWithAggregator[workflow.State, any]) (*taskqueue.FunctionProcessor[schemaless.Record[workflow.State]], *taskqueue.Description) {
+func backgroundScheduled(di *workflow.DI, statesRepo schemaless.Repository[workflow.State]) (*taskqueue.FunctionProcessor[schemaless.Record[workflow.State]], *taskqueue.Description) {
 	procScheduled := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
 			log := log.
@@ -91,7 +90,7 @@ func backgroundScheduled(di *workflow.DI, statesRepo *typedful.TypedRepoWithAggr
 	return procScheduled, descScheduled
 }
 
-func backgroundRetry(di *workflow.DI, statesRepo *typedful.TypedRepoWithAggregator[workflow.State, any]) (*taskqueue.FunctionProcessor[schemaless.Record[workflow.State]], *taskqueue.Description) {
+func backgroundRetry(di *workflow.DI, statesRepo schemaless.Repository[workflow.State]) (*taskqueue.FunctionProcessor[schemaless.Record[workflow.State]], *taskqueue.Description) {
 	procRetry := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
 			log := log.
@@ -153,7 +152,7 @@ func backgroundRetry(di *workflow.DI, statesRepo *typedful.TypedRepoWithAggregat
 	return procRetry, descRetry
 }
 
-func backgroundTimeout(di *workflow.DI, statesRepo *typedful.TypedRepoWithAggregator[workflow.State, any]) (*taskqueue.FunctionProcessor[schemaless.Record[workflow.State]], *taskqueue.Description) {
+func backgroundTimeout(di *workflow.DI, statesRepo schemaless.Repository[workflow.State]) (*taskqueue.FunctionProcessor[schemaless.Record[workflow.State]], *taskqueue.Description) {
 	procTimeout := &taskqueue.FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task taskqueue.Task[schemaless.Record[workflow.State]]) {
 			log := log.

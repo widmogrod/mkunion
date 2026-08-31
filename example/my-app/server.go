@@ -14,7 +14,6 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
-	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
 	"github.com/widmogrod/mkunion/x/workflow"
 	_ "github.com/widmogrod/mkunion/x/workflow"
 	"io"
@@ -200,7 +199,7 @@ func TypedJSONRequest[A, B any](handle func(ctx context.Context, x A) (B, error)
 
 func NewService[Dep any, CMD any, State any](
 	recordType string,
-	statesRepo *typedful.TypedRepoWithAggregator[State, any],
+	statesRepo schemaless.Repository[State],
 	newMachine func(state State) *machine.Machine[Dep, CMD, State],
 	extractWhere func(CMD) (*predicate.WherePredicates, bool),
 	extractIDFromState func(State) (string, bool),
@@ -215,7 +214,7 @@ func NewService[Dep any, CMD any, State any](
 }
 
 type Service[Dep any, CMD any, State any] struct {
-	repo                     *typedful.TypedRepoWithAggregator[State, any]
+	repo                     schemaless.Repository[State]
 	extractWhereFromCommandF func(CMD) (*predicate.WherePredicates, bool)
 	extractIDFromStateF      func(State) (string, bool)
 	recordType               string
