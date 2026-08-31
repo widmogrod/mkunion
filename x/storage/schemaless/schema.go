@@ -31,16 +31,29 @@ type InMemoryRepository[A any] struct {
 	shapeDef  shape.Shape
 }
 
+// Get goes through FindingRecords on purpose: the repository keeps one
+// well-tested read path, so every Get also exercises the query machinery.
 func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], error) {
-	s.mux.RLock()
-	defer s.mux.RUnlock()
+	result, err := s.FindingRecords(FindingRecords[Record[A]]{
+		RecordType: recordType,
+		Where: predicate.MustWhere(
+			"ID = :id",
+			predicate.ParamBinds{
+				":id": schema.MkString(recordID),
+			},
+			nil,
+		),
+		Limit: 1,
+	})
+	if err != nil {
+		return Record[A]{}, err
+	}
 
-	record, ok := s.store[RecordKey(Record[A]{ID: recordID, Type: recordType})]
-	if !ok {
+	if len(result.Items) == 0 {
 		return Record[A]{}, ErrNotFound
 	}
 
-	return record, nil
+	return result.Items[0], nil
 }
 
 func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*UpdateRecordsResult[Record[A]], error) {
