@@ -21,7 +21,7 @@ func ToDynamoDB(x Schema) types.AttributeValue {
 		},
 		func(x *Number) types.AttributeValue {
 			return &types.AttributeValueMemberN{
-				Value: fmt.Sprintf("%f", *x),
+				Value: strconv.FormatFloat(float64(*x), 'f', -1, 64),
 			}
 		},
 		func(x *String) types.AttributeValue {

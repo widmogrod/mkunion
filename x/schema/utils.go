@@ -2,6 +2,7 @@ package schema
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/shape"
@@ -663,7 +664,7 @@ func Compare(a, b Schema) int {
 			case *None, *Bool:
 				return 1
 			case *Number:
-				return int(*x - *y)
+				return cmp.Compare(*x, *y)
 			}
 
 			return -1

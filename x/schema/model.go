@@ -4,8 +4,11 @@ import "github.com/widmogrod/mkunion/x/shape"
 
 //go:tag mkunion:"Schema"
 type (
-	None   struct{}
-	Bool   bool
+	None struct{}
+	Bool bool
+	// Number holds every numeric value as float64.
+	// Integers are exact only up to ±2^53 (float64 mantissa limit);
+	// larger int64/uint64 values lose precision. See MkInt and MkUint.
 	Number float64
 	String string
 	Binary []byte
@@ -34,11 +37,15 @@ func MkBool(b bool) *Bool {
 	return (*Bool)(&b)
 }
 
+// MkInt converts x to a Number (float64).
+// Values outside ±2^53 lose precision.
 func MkInt(x int64) *Number {
 	v := float64(x)
 	return (*Number)(&v)
 }
 
+// MkUint converts x to a Number (float64).
+// Values above 2^53 lose precision.
 func MkUint(x uint64) *Number {
 	v := float64(x)
 	return (*Number)(&v)
