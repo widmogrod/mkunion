@@ -313,10 +313,11 @@ func GenerateDocs() error {
 
 	if len(repoReports) > 0 {
 		renderSection(b, sectionSpec{
-			title: "Capability matrix",
-			prose: "Every backend passes the same behavioural spec (`x/storage/schemaless/spec`),\n" +
-				"modulo the capabilities it explicitly downgrades. The in-memory repository\n" +
-				"defines the full contract.",
+			title:           "Repository capability matrix",
+			behavioursTitle: "Repository verified behaviours",
+			prose: "Every `Repository` backend passes the same behavioural spec\n" +
+				"(`spec.RunRepositorySpec`), modulo the capabilities it explicitly\n" +
+				"downgrades. The in-memory repository defines the full contract.",
 			capabilities: capabilityNames(Capabilities{}),
 			displayName: func(backend string) string {
 				return backendDisplayName[backend]
@@ -327,7 +328,8 @@ func GenerateDocs() error {
 
 	if len(appendLogReports) > 0 {
 		renderSection(b, sectionSpec{
-			title: "Append log capability matrix",
+			title:           "Append log capability matrix",
+			behavioursTitle: "Append log verified behaviours",
 			prose: "Every `AppendLoger` implementation passes the same behavioural spec\n" +
 				"(`spec.RunAppendLogSpec`), modulo the capabilities it explicitly downgrades.\n" +
 				"The in-memory append log defines the full contract.",
@@ -351,11 +353,12 @@ func GenerateDocs() error {
 }
 
 type sectionSpec struct {
-	title        string
-	prose        string
-	capabilities []string
-	displayName  func(backend string) string
-	reports      []*BackendReport
+	title           string
+	behavioursTitle string
+	prose           string
+	capabilities    []string
+	displayName     func(backend string) string
+	reports         []*BackendReport
 }
 
 func renderSection(b *strings.Builder, section sectionSpec) {
@@ -389,7 +392,7 @@ func renderSection(b *strings.Builder, section sectionSpec) {
 		fmt.Fprintf(b, "\n")
 	}
 
-	fmt.Fprintf(b, "\n#### Verified behaviours\n\n")
+	fmt.Fprintf(b, "\n#### %s\n\n", section.behavioursTitle)
 	fmt.Fprintf(b, "Each row is a spec subtest; ✅ verified, ⛔ skipped by a declared capability\n")
 	fmt.Fprintf(b, "downgrade, ❌ failing when the report was generated.\n\n")
 
