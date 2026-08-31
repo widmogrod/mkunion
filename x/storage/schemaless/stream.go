@@ -40,16 +40,17 @@ var _ AppendLoger[any] = (*AppendLog[any])(nil)
 
 // AppendLog is a stream of events, and in context of schemaless, it is a stream of changes to records, or deleted record with past state
 type AppendLog[T any] struct {
-	log      list.List
-	mux      *sync.RWMutex
-	cond     *sync.Cond
-	closed   bool
-	shapeDef shape.Shape
+	log        list.List
+	mux        *sync.RWMutex
+	cond       *sync.Cond
+	closed     bool
+	nextOffset int
+	shapeDef   shape.Shape
 }
 
 func (a *AppendLog[T]) Close() {
-	a.mux.RLock()
-	defer a.mux.RUnlock()
+	a.mux.Lock()
+	defer a.mux.Unlock()
 
 	a.closed = true
 	a.cond.Broadcast()
@@ -63,13 +64,20 @@ func (a *AppendLog[T]) Change(from, to *Record[T]) error {
 		panic("cannot append to closed log")
 	}
 
-	a.log.PushBack(Change[T]{
+	a.pushBack(Change[T]{
 		Before:  from,
 		After:   to,
 		Deleted: false,
 	})
 	a.cond.Broadcast()
 	return nil
+}
+
+// pushBack stamps the change with the next offset; callers hold the write lock.
+func (a *AppendLog[T]) pushBack(x Change[T]) {
+	x.Offset = a.nextOffset
+	a.nextOffset++
+	a.log.PushBack(x)
 }
 
 func (a *AppendLog[T]) Delete(data Record[T]) error {
@@ -80,7 +88,7 @@ func (a *AppendLog[T]) Delete(data Record[T]) error {
 		panic("cannot append to closed log")
 	}
 
-	a.log.PushBack(Change[T]{
+	a.pushBack(Change[T]{
 		Before:  &data,
 		Deleted: true,
 	})
@@ -96,7 +104,7 @@ func (a *AppendLog[T]) Push(x Change[T]) {
 		panic("cannot append to closed log")
 	}
 
-	a.log.PushBack(x)
+	a.pushBack(x)
 	a.cond.Broadcast()
 }
 
@@ -112,18 +120,35 @@ func (a *AppendLog[T]) Append(b *AppendLog[T]) {
 	}
 
 	for e := b.log.Front(); e != nil; e = e.Next() {
-		a.log.PushBack(e.Value)
+		// re-stamp offsets so they stay monotonic within this log
+		a.pushBack(e.Value.(Change[T]))
 	}
 	a.cond.Broadcast()
 }
 
 func (a *AppendLog[T]) Subscribe(ctx context.Context, fromOffset int, filter *predicate.WherePredicates, f func(Change[T])) error {
+	// wake parked waiters when the context is cancelled;
+	// cond.Wait cannot observe ctx on its own
+	stopWatch := context.AfterFunc(ctx, func() {
+		a.cond.Broadcast()
+	})
+	defer stopWatch()
+
 	var prev *list.Element = nil
 
-	// Until, there is no messages, wait
+	// Until there are messages, wait; Close and ctx cancellation unblock
 	a.cond.L.Lock()
-	for a.log.Len() == 0 {
+	for a.log.Len() == 0 && !a.closed && ctx.Err() == nil {
 		a.cond.Wait()
+	}
+	if err := ctx.Err(); err != nil {
+		a.cond.L.Unlock()
+		return err
+	}
+	if a.log.Len() == 0 {
+		// closed with nothing to consume
+		a.cond.L.Unlock()
+		return nil
 	}
 
 	// Select the offset to start reading messages from
@@ -133,14 +158,16 @@ func (a *AppendLog[T]) Subscribe(ctx context.Context, fromOffset int, filter *pr
 	case -1:
 		prev = a.log.Back()
 	default:
+		found := false
 		for e := a.log.Front(); e != nil; e = e.Next() {
-			prev = e
 			if e.Value.(Change[T]).Offset == fromOffset {
+				prev = e
+				found = true
 				break
 			}
 		}
 
-		if prev == a.log.Back() {
+		if !found {
 			a.cond.L.Unlock()
 			return errors.New("offset not found")
 		}
@@ -148,38 +175,40 @@ func (a *AppendLog[T]) Subscribe(ctx context.Context, fromOffset int, filter *pr
 	a.cond.L.Unlock()
 
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-
-		default:
-			msg := prev.Value.(Change[T])
-
-			validCondition := true
-			if filter != nil && msg.After != nil {
-				validCondition = predicate.EvaluateSchema(filter.Predicate, schema.FromGo[Record[T]](*msg.After), filter.Params)
-				//validCondition = predicate.Evaluate[Record[T]](filter.Predicate, *msg.After, filter.Params)
-			}
-
-			if validCondition {
-				f(msg)
-			}
-
-			// Wait for new changes to be available
-			a.cond.L.Lock()
-			for prev.Next() == nil && !a.closed {
-				a.cond.Wait()
-			}
-
-			// If the stream is closed, and there are no more messages, return
-			// this guarantees that multiple can consume the log, even if it's closed
-			if prev.Next() == nil && a.closed {
-				a.cond.L.Unlock()
-				return nil
-			}
-
-			prev = prev.Next()
-			a.cond.L.Unlock()
+		if err := ctx.Err(); err != nil {
+			return err
 		}
+
+		msg := prev.Value.(Change[T])
+
+		validCondition := true
+		if filter != nil && msg.After != nil {
+			validCondition = predicate.EvaluateSchema(filter.Predicate, schema.FromGo[Record[T]](*msg.After), filter.Params)
+		}
+
+		if validCondition {
+			f(msg)
+		}
+
+		// Wait for new changes to be available
+		a.cond.L.Lock()
+		for prev.Next() == nil && !a.closed && ctx.Err() == nil {
+			a.cond.Wait()
+		}
+
+		if err := ctx.Err(); err != nil {
+			a.cond.L.Unlock()
+			return err
+		}
+
+		// If the stream is closed, and there are no more messages, return
+		// this guarantees that multiple can consume the log, even if it's closed
+		if prev.Next() == nil && a.closed {
+			a.cond.L.Unlock()
+			return nil
+		}
+
+		prev = prev.Next()
+		a.cond.L.Unlock()
 	}
 }
