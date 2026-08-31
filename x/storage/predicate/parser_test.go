@@ -40,6 +40,71 @@ func TestParseFieldsWithKeywordPrefix(t *testing.T) {
 	}
 }
 
+func TestParseStringLiterals(t *testing.T) {
+	useCases := []struct {
+		value  string
+		data   schema.Schema
+		result bool
+	}{
+		{
+			value:  `ID = ""`,
+			data:   schema.MkMap(schema.MkField("ID", schema.MkString(""))),
+			result: true,
+		},
+		{
+			value:  `Name = "say \"hi\""`,
+			data:   schema.MkMap(schema.MkField("Name", schema.MkString(`say "hi"`))),
+			result: true,
+		},
+		{
+			value:  `Path = "a\\b"`,
+			data:   schema.MkMap(schema.MkField("Path", schema.MkString(`a\b`))),
+			result: true,
+		},
+	}
+	for _, uc := range useCases {
+		t.Run(uc.value, func(t *testing.T) {
+			p, err := Parse(uc.value)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if result := EvaluateSchema(p, uc.data, nil); result != uc.result {
+				t.Fatalf("expected %v, got %v", uc.result, result)
+			}
+		})
+	}
+}
+
+func TestParseLowercaseKeywords(t *testing.T) {
+	data := schema.MkMap(
+		schema.MkField("ID", schema.MkInt(1)),
+		schema.MkField("Age", schema.MkInt(2)),
+	)
+
+	useCases := []struct {
+		value  string
+		result bool
+	}{
+		{value: `ID = 1 and Age = 2`, result: true},
+		{value: `ID = 9 or Age = 2`, result: true},
+		{value: `not ID = 9`, result: true},
+		{value: `not (ID = 1 and Age = 2)`, result: false},
+	}
+	for _, uc := range useCases {
+		t.Run(uc.value, func(t *testing.T) {
+			p, err := Parse(uc.value)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if result := EvaluateSchema(p, data, nil); result != uc.result {
+				t.Fatalf("expected %v, got %v", uc.result, result)
+			}
+		})
+	}
+}
+
 func TestParseParentheses(t *testing.T) {
 	data := schema.MkMap(
 		schema.MkField("ID", schema.MkString("123")),
