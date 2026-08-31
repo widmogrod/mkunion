@@ -87,6 +87,15 @@ func FromPrimitiveGo(x any) Schema {
 		}
 
 		return &result
+
+	// json.Unmarshal into any produces map[string]any, not map[any]any
+	case map[string]any:
+		result := Map{}
+		for key, value := range y {
+			result[key] = FromPrimitiveGo(value)
+		}
+
+		return &result
 	}
 
 	if x == nil {

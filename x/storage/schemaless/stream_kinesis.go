@@ -15,7 +15,15 @@ import (
 	"time"
 )
 
-func NewKinesisStream(k *kinesis.Client, streamName string) *KinesisStream {
+// KinesisClient is the part of *kinesis.Client the stream uses; tests
+// substitute it to run without AWS.
+type KinesisClient interface {
+	DescribeStream(ctx context.Context, params *kinesis.DescribeStreamInput, optFns ...func(*kinesis.Options)) (*kinesis.DescribeStreamOutput, error)
+	GetShardIterator(ctx context.Context, params *kinesis.GetShardIteratorInput, optFns ...func(*kinesis.Options)) (*kinesis.GetShardIteratorOutput, error)
+	GetRecords(ctx context.Context, params *kinesis.GetRecordsInput, optFns ...func(*kinesis.Options)) (*kinesis.GetRecordsOutput, error)
+}
+
+func NewKinesisStream(k KinesisClient, streamName string) *KinesisStream {
 	ctx := context.Background()
 	stream, err := k.DescribeStream(ctx, &kinesis.DescribeStreamInput{
 		StreamName: aws.String(streamName),
@@ -26,16 +34,20 @@ func NewKinesisStream(k *kinesis.Client, streamName string) *KinesisStream {
 	}
 
 	return &KinesisStream{
-		kinesis:    k,
-		stream:     stream,
-		streamName: streamName,
+		kinesis:         k,
+		stream:          stream,
+		streamName:      streamName,
+		throttleBackoff: 5 * time.Second,
 	}
 }
 
 type KinesisStream struct {
-	kinesis    *kinesis.Client
+	kinesis    KinesisClient
 	stream     *kinesis.DescribeStreamOutput
 	streamName string
+
+	// pause after a ProvisionedThroughputExceededException before retrying
+	throttleBackoff time.Duration
 
 	lock        sync.RWMutex
 	subscribers []func(Change[schema.Schema])
@@ -98,7 +110,7 @@ func (s *KinesisStream) processShard(ctx context.Context, shardIterator *string,
 			var ptee *types.ProvisionedThroughputExceededException
 			if ok := errors.As(err, &ptee); ok {
 				//log.Warnln("kinesis.GetRecords: SLEEP(B) ProvisionedThroughputExceededException:", err)
-				time.Sleep(5 * time.Second)
+				time.Sleep(s.throttleBackoff)
 				continue
 			}
 

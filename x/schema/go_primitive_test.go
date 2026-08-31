@@ -36,6 +36,11 @@ func TestFromPrimitiveGoValues(t *testing.T) {
 			map[any]any{"a": 1},
 			MkMap(MkField("a", MkInt(1))),
 		},
+		// json.Unmarshal into any produces this shape; it used to panic
+		"map of string to any": {
+			map[string]any{"a": 1},
+			MkMap(MkField("a", MkInt(1))),
+		},
 		"schema value passes through": {
 			MkString("already-schema"), MkString("already-schema"),
 		},
