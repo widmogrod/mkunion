@@ -321,10 +321,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return r.%s(*x)\n", g.methodNameWithPrefix(y.Type, marshalJSONMethodPrefix)))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: alias wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods, err := g.GenerateMarshalJSONMethods(y.Type)
 			if err != nil {
@@ -354,10 +351,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 				aliasTypeName,
 			))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: alias wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods, err := g.GenerateMarshalJSONMethods(y.Type)
 			if err != nil {
@@ -401,10 +395,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: list wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods, err := g.GenerateMarshalJSONMethods(y.Element)
 			if err != nil {
@@ -452,10 +443,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: map wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			keyMethods, err := g.GenerateMarshalJSONMethods(y.Key)
 			if err != nil {
@@ -527,10 +515,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSONMethods(x shape.Shape) (string, err
 			body.WriteString(fmt.Sprintf("buf.WriteByte('}')\n"))
 			body.WriteString(fmt.Sprintf("return buf.Bytes(), nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateMarshalJSONMethods: struct wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods := ""
 			for _, field := range emitted {
@@ -633,10 +618,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return &result, nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: alias wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods, err := g.GenerateUnmarshalJSONMethods(y.Type)
 			if err != nil {
@@ -669,10 +651,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			body.WriteString(fmt.Sprintf("result = %s(intermidiary)\n", typeName))
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: alias wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods, err := g.GenerateUnmarshalJSONMethods(y.Type)
 			if err != nil {
@@ -731,10 +710,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: list wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods, err := g.GenerateUnmarshalJSONMethods(y.Element)
 			if err != nil {
@@ -782,10 +758,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: map wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			keyMethods, err := g.GenerateUnmarshalJSONMethods(y.Key)
 			if err != nil {
@@ -834,10 +807,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 
 			body.WriteString(fmt.Sprintf("return result, nil\n"))
 
-			result, err := methodWrap(body)
-			if err != nil {
-				return "", fmt.Errorf("generators.SerdeJSONTagged.GenerateUnmarshalJSONMethods: struct wrapping; %w", err)
-			}
+			result, _ := methodWrap(body)
 
 			methods := ""
 			for _, field := range y.Fields {
