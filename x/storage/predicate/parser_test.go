@@ -41,11 +41,11 @@ func TestParseFieldsWithKeywordPrefix(t *testing.T) {
 }
 
 func TestParseParentheses(t *testing.T) {
-	data := schema.FromGo(map[string]any{
-		"ID":      "123",
-		"Age":     20,
-		"Visible": true,
-	})
+	data := schema.MkMap(
+		schema.MkField("ID", schema.MkString("123")),
+		schema.MkField("Age", schema.MkInt(20)),
+		schema.MkField("Visible", schema.MkBool(true)),
+	)
 
 	useCases := []struct {
 		value  string

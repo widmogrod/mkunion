@@ -23,96 +23,54 @@ func Evaluate[A any](predicate Predicate, data A, bind ParamBinds) bool {
 	return EvaluateShape(predicate, s, sdata, bind)
 }
 
+// lookupLocation resolves a location within the evaluated data.
+// It abstracts the difference between shape-aware and plain schema lookup.
+type lookupLocation func(location string) (schema.Schema, bool)
+
 func EvaluateShape(predicate Predicate, s shape.Shape, data schema.Schema, bind ParamBinds) bool {
-	return MatchPredicateR1(
-		predicate,
-		func(x *And) bool {
-			for _, p := range x.L {
-				if !EvaluateShape(p, s, data, bind) {
-					return false
-				}
-			}
-
-			return true
-		},
-		func(x *Or) bool {
-			for _, p := range x.L {
-				if EvaluateShape(p, s, data, bind) {
-					return true
-				}
-			}
-			return false
-		},
-		func(x *Not) bool {
-			return !EvaluateShape(x.P, s, data, bind)
-		},
-		func(x *Compare) bool {
-			value, found := GetValue(x.BindValue, bind, data)
-			if !found {
-				return false
-			}
-
-			loc := x.Location
-			_ = loc
-
-			// Field value that is not set and equality is not about None is always false.
-			fieldValue, _, found := schema.GetShapeLocation(s, data, x.Location)
-			if !found {
-				return false
-			}
-
-			cmp := schema.Compare(fieldValue, value)
-			switch x.Operation {
-			case "=", "==":
-				return cmp == 0
-			case "<":
-				return cmp < 0
-			case ">":
-				return cmp > 0
-			case "<=":
-				return cmp <= 0
-			case ">=":
-				return cmp >= 0
-			case "<>", "!=":
-				return cmp != 0
-			default:
-				return false
-			}
-		},
-	)
+	return evaluate(predicate, bind, func(location string) (schema.Schema, bool) {
+		value, _, found := schema.GetShapeLocation(s, data, location)
+		return value, found
+	})
 }
 
 func EvaluateSchema(predicate Predicate, data schema.Schema, bind ParamBinds) bool {
+	return evaluate(predicate, bind, func(location string) (schema.Schema, bool) {
+		return schema.GetSchema(data, location)
+	})
+}
+
+func evaluate(predicate Predicate, bind ParamBinds, lookup lookupLocation) bool {
 	return MatchPredicateR1(
 		predicate,
 		func(x *And) bool {
 			for _, p := range x.L {
-				if !EvaluateSchema(p, data, bind) {
+				if !evaluate(p, bind, lookup) {
 					return false
 				}
 			}
-			return true
 
+			return true
 		},
 		func(x *Or) bool {
 			for _, p := range x.L {
-				if EvaluateSchema(p, data, bind) {
+				if evaluate(p, bind, lookup) {
 					return true
 				}
 			}
 			return false
 		},
 		func(x *Not) bool {
-			return !EvaluateSchema(x.P, data, bind)
+			return !evaluate(x.P, bind, lookup)
 		},
 		func(x *Compare) bool {
-			value, found := GetValue(x.BindValue, bind, data)
+			value, found := getValue(x.BindValue, bind, lookup)
 			if !found {
 				return false
 			}
 
 			// Field value that is not set and equality is not about None is always false.
-			fieldValue, found := schema.GetSchema(data, x.Location)
+			fieldValue, found := lookup(x.Location)
 			if !found {
 				return false
 			}
@@ -139,6 +97,12 @@ func EvaluateSchema(predicate Predicate, data schema.Schema, bind ParamBinds) bo
 }
 
 func GetValue(x Bindable, params ParamBinds, data schema.Schema) (schema.Schema, bool) {
+	return getValue(x, params, func(location string) (schema.Schema, bool) {
+		return schema.GetSchema(data, location)
+	})
+}
+
+func getValue(x Bindable, params ParamBinds, lookup lookupLocation) (schema.Schema, bool) {
 	return MatchBindableR2(
 		x,
 		func(x *BindValue) (schema.Schema, bool) {
@@ -149,7 +113,7 @@ func GetValue(x Bindable, params ParamBinds, data schema.Schema) (schema.Schema,
 			return x.Value, true
 		},
 		func(x *Locatable) (schema.Schema, bool) {
-			return schema.GetSchema(data, x.Location)
+			return lookup(x.Location)
 		},
 	)
 }

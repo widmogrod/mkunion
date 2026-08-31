@@ -1,6 +1,8 @@
 package predicate
 
 import (
+	"fmt"
+
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/widmogrod/mkunion/x/schema"
@@ -10,8 +12,9 @@ import (
 var (
 	predicateLexer = lexer.MustSimple([]lexer.SimpleRule{
 		{"Whitespace", `\s+`},
-		{"Keyword", `AND|OR|NOT`},
+		{"Keyword", `\b(AND|OR|NOT)\b`},
 		{"Operator", `[\<\>\!\=]+`},
+		{"Paren", `[()]`},
 		{"Bind", `:[a-zA-Z][a-zA-Z0-9]*`},
 		{"Location", `[a-zA-Z][a-zA-Z0-9\$\.\[\]'"\*]*`},
 		{"Number", `[-+]?[0-9]*\.?[0-9]+`},
@@ -90,7 +93,18 @@ func (v Value) ToBindable() Bindable {
 	return nil
 }
 
+var validOperators = map[string]struct{}{
+	"=": {}, "==": {},
+	"<>": {}, "!=": {},
+	"<": {}, "<=": {},
+	">": {}, ">=": {},
+}
+
 func (a Comparable) ToPredicate() (Predicate, error) {
+	if _, ok := validOperators[a.Operator]; !ok {
+		return nil, fmt.Errorf(`predicate: unknown operator %q in "%s %s ..."`, a.Operator, a.Location, a.Operator)
+	}
+
 	return &Compare{
 		Location:  a.Location,
 		Operation: a.Operator,
@@ -135,6 +149,7 @@ func (c *OrCondition) ToPredicate() (Predicate, error) {
 type Condition struct {
 	Operand *Comparable `  @@`
 	Not     *Condition  `| "NOT" @@`
+	Group   *Expression `| "(" @@ ")"`
 }
 
 func (c *Condition) ToPredicate() (Predicate, error) {
@@ -144,6 +159,10 @@ func (c *Condition) ToPredicate() (Predicate, error) {
 			return nil, err
 		}
 		return &Not{p}, nil
+	}
+
+	if c.Group != nil {
+		return c.Group.ToPredicate()
 	}
 
 	return c.Operand.ToPredicate()
