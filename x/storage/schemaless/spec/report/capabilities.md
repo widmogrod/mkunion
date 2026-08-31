@@ -31,6 +31,8 @@ downgrade, ❌ failing when the report was generated.
 | repository | overwrites keep the version increasing | ✅ | ✅ | ⛔ `MonotonicOverwriteVersion` |
 | repository | deleted record is gone | ✅ | ✅ | ✅ |
 | repository | where predicate filters records | ✅ | ✅ | ✅ |
+| repository | batch result maps key records by ID and type | ✅ | ✅ | ✅ |
+| repository | where predicate accepts literal values | ✅ | ✅ | ✅ |
 | repository | empty where query matches all records | ✅ | ✅ | ✅ |
 | repository | OR predicate matches either branch | ✅ | ✅ | ✅ |
 | repository | NOT over OR excludes both branches | ✅ | ✅ | ✅ |
@@ -38,6 +40,7 @@ downgrade, ❌ failing when the report was generated.
 | repository | record type separates records | ✅ | ✅ | ✅ |
 | repository | forward pagination visits every record exactly once | ✅ | ✅ | ✅ |
 | repository | sorting orders records by a data field | ✅ | ⛔ `SortByDataField` | ✅ |
+| repository | sorting orders records by a numeric data field | ✅ | ⛔ `SortByDataField` | ✅ |
 | repository | sorted pagination keeps order across pages | ✅ | ⛔ `SortByDataField` | ✅ |
 | repository | prev cursor pages backward | ✅ | ⛔ `BackwardPagination` | ⛔ `BackwardPagination` |
 | repository | batch with a conflict writes nothing | ✅ | ✅ | ⛔ `AtomicBatch` |

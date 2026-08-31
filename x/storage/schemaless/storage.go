@@ -105,10 +105,17 @@ type Storage[T any] interface {
 	GetAs(id string, x *T) error
 }
 
+// RecordKey is the canonical map key for a record in UpdateRecords
+// commands and UpdateRecordsResult maps: ID + ":" + Type.
+// Every backend keys its result maps with it.
+func RecordKey[T any](x Record[T]) string {
+	return x.ID + ":" + x.Type
+}
+
 func Save[T any](xs ...Record[T]) UpdateRecords[Record[T]] {
 	m := make(map[string]Record[T])
 	for _, x := range xs {
-		m[x.ID+":"+x.Type] = x
+		m[RecordKey(x)] = x
 	}
 
 	return UpdateRecords[Record[T]]{
@@ -119,7 +126,7 @@ func Save[T any](xs ...Record[T]) UpdateRecords[Record[T]] {
 func Delete[T any](xs ...Record[T]) UpdateRecords[Record[T]] {
 	m := make(map[string]Record[T])
 	for _, x := range xs {
-		m[x.ID+":"+x.Type] = x
+		m[RecordKey(x)] = x
 	}
 
 	return UpdateRecords[Record[T]]{

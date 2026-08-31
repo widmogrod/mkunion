@@ -35,7 +35,7 @@ func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], err
 	s.mux.RLock()
 	defer s.mux.RUnlock()
 
-	record, ok := s.store[recordID+recordType]
+	record, ok := s.store[RecordKey(Record[A]{ID: recordID, Type: recordType})]
 	if !ok {
 		return Record[A]{}, ErrNotFound
 	}
@@ -120,7 +120,7 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*Upda
 }
 
 func (s *InMemoryRepository[A]) toKey(record Record[A]) string {
-	return record.ID + record.Type
+	return RecordKey(record)
 }
 
 func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {

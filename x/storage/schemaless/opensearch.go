@@ -8,6 +8,7 @@ import (
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/schema"
+	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"io"
@@ -15,9 +16,14 @@ import (
 )
 
 func NewOpenSearchRepository[A any](client *opensearch.Client, index string) *OpenSearchRepository[A] {
+	// the shape (when registered) tells sorters which fields are numeric
+	// or boolean and so have no .keyword sub-field; nil falls back to
+	// keyword-based sorting
+	shapeDef, _ := shape.LookupShapeReflectAndIndex[Record[A]]()
 	return &OpenSearchRepository[A]{
 		client:    client,
 		indexName: index,
+		shapeDef:  shapeDef,
 	}
 }
 
@@ -42,6 +48,7 @@ var _ Repository[any] = (*OpenSearchRepository[any])(nil)
 type OpenSearchRepository[A any] struct {
 	client    *opensearch.Client
 	indexName string
+	shapeDef  shape.Shape
 }
 
 // openSearchVersionConflictMarker is embedded in the script exception message
@@ -122,14 +129,14 @@ func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]
 			return result, err
 		}
 		record.Version++
-		result.Saved[record.ID] = record
+		result.Saved[RecordKey(record)] = record
 	}
 
 	for _, record := range command.Deleting {
 		if err := os.deleteRecord(record); err != nil {
 			return result, err
 		}
-		result.Deleted[record.ID] = record
+		result.Deleted[RecordKey(record)] = record
 	}
 
 	return result, nil
@@ -233,13 +240,18 @@ type (
 	}
 	//go:tag serde:"json"
 	OpenSearchSearchResultHit[A any] struct {
-		Item A        `json:"_source"`
-		Sort []string `json:"sort"`
+		Item A `json:"_source"`
+		// sort values follow the sorted field's type (strings, numbers),
+		// so they must stay opaque; they are echoed back as search_after
+		Sort []any `json:"sort"`
 	}
 )
 
 func (os *OpenSearchRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {
-	filters, sorters := os.toFiltersAndSorters(query)
+	filters, sorters, err := os.toFiltersAndSorters(query)
+	if err != nil {
+		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: %w", err)
+	}
 
 	queryTemplate := map[string]any{}
 	if query.Limit > 0 {
@@ -275,7 +287,7 @@ func (os *OpenSearchRepository[A]) FindingRecords(query FindingRecords[Record[A]
 		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: query marshal error=%s. %w", err, ErrInternalError)
 	}
 
-	log.Infof("OpenSearchRepository FindingRecords %s", string(body))
+	log.Debugf("OpenSearchRepository FindingRecords %s", string(body))
 
 	response, err := os.client.Search(func(request *opensearchapi.SearchRequest) {
 		request.Index = []string{
@@ -302,7 +314,7 @@ func (os *OpenSearchRepository[A]) FindingRecords(query FindingRecords[Record[A]
 		return PageResult[Record[A]]{}, fmt.Errorf("OpenSearchRepository.FindingRecords: result unmarshal error=%s. %w", err, ErrInvalidType)
 	}
 
-	var lastSort []string
+	var lastSort []any
 	var items []Record[A]
 	for _, hit := range hits.Hits.Hits {
 		items = append(items, hit.Item)
@@ -340,13 +352,16 @@ func (os *OpenSearchRepository[A]) recordID(recordType, recordID string) string 
 	return fmt.Sprintf("%s-%s", recordType, recordID)
 }
 
-func (os *OpenSearchRepository[A]) toFiltersAndSorters(query FindingRecords[Record[A]]) (filters map[string]any, sorters []any) {
+func (os *OpenSearchRepository[A]) toFiltersAndSorters(query FindingRecords[Record[A]]) (filters map[string]any, sorters []any, err error) {
 	filters = map[string]any{}
-	if query.Where != nil {
-		filters = os.toFilters(
+	if query.Where != nil && !predicate.IsMatchAll(query.Where.Predicate) {
+		filters, err = os.toFilters(
 			predicate.Optimize(query.Where.Predicate),
 			query.Where.Params,
 		)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if query.RecordType != "" {
@@ -371,7 +386,7 @@ func (os *OpenSearchRepository[A]) toFiltersAndSorters(query FindingRecords[Reco
 
 	sorters = os.ToSorters(query.Sort)
 
-	return
+	return filters, sorters, nil
 }
 
 var mapOfOperationToOpenSearchQuery = map[string]string{
@@ -381,75 +396,105 @@ var mapOfOperationToOpenSearchQuery = map[string]string{
 	"<=": "lte",
 }
 
-func (os *OpenSearchRepository[A]) toFilters(p predicate.Predicate, params predicate.ParamBinds) map[string]any {
-	return predicate.MatchPredicateR1(
+func (os *OpenSearchRepository[A]) toFilters(p predicate.Predicate, params predicate.ParamBinds) (map[string]any, error) {
+	return predicate.MatchPredicateR2(
 		p,
-		func(x *predicate.And) map[string]any {
+		func(x *predicate.And) (map[string]any, error) {
 			var must []any
 			for _, pred := range x.L {
-				must = append(must, os.toFilters(pred, params))
+				filter, err := os.toFilters(pred, params)
+				if err != nil {
+					return nil, err
+				}
+				must = append(must, filter)
 			}
 			return map[string]any{
 				"bool": map[string]any{
 					"must": must,
 				},
-			}
+			}, nil
 		},
-		func(x *predicate.Or) map[string]any {
+		func(x *predicate.Or) (map[string]any, error) {
 			var should []any
 			for _, pred := range x.L {
-				should = append(should, os.toFilters(pred, params))
+				filter, err := os.toFilters(pred, params)
+				if err != nil {
+					return nil, err
+				}
+				should = append(should, filter)
 			}
 			return map[string]any{
 				"bool": map[string]any{
 					"should": should,
 				},
-			}
+			}, nil
 		},
-		func(x *predicate.Not) map[string]any {
+		func(x *predicate.Not) (map[string]any, error) {
+			filter, err := os.toFilters(x.P, params)
+			if err != nil {
+				return nil, err
+			}
 			return map[string]any{
 				"bool": map[string]any{
-					"must_not": os.toFilters(x.P, params),
+					"must_not": filter,
 				},
-			}
+			}, nil
 		},
-		func(x *predicate.Compare) map[string]any {
-			bindValue, ok := x.BindValue.(*predicate.BindValue)
-			if !ok {
-				panic(fmt.Errorf("store.OpenSearchRepository.toFilters: expected bind value, got %T", x.BindValue))
+		func(x *predicate.Compare) (map[string]any, error) {
+			value, err := os.resolveBindable(x.BindValue, params)
+			if err != nil {
+				return nil, err
 			}
 
-			bindName := bindValue.BindName
 			switch x.Operation {
-			case "=":
+			case "=", "==":
 				return map[string]any{
 					"term": map[string]any{
-						os.termFieldName(x.Location, params[bindName]): params[bindName],
+						os.termFieldName(x.Location, value): value,
 					},
-				}
+				}, nil
 
-			case "!=":
+			case "!=", "<>":
 				return map[string]any{
 					"bool": map[string]any{
 						"must_not": map[string]any{
 							"term": map[string]any{
-								os.termFieldName(x.Location, params[bindName]): params[bindName],
+								os.termFieldName(x.Location, value): value,
 							},
 						},
 					},
-				}
+				}, nil
 
 			case ">", ">=", "<", "<=":
 				return map[string]any{
 					"range": map[string]any{
 						os.attrName(x.Location): map[string]any{
-							mapOfOperationToOpenSearchQuery[x.Operation]: params[bindName],
+							mapOfOperationToOpenSearchQuery[x.Operation]: value,
 						},
 					},
-				}
+				}, nil
 			}
 
-			panic(fmt.Errorf("store.OpenSearchRepository.toFilters: unknown operation %s", x.Operation))
+			return nil, fmt.Errorf("store.OpenSearchRepository.toFilters: unknown operation %s", x.Operation)
+		},
+	)
+}
+
+func (os *OpenSearchRepository[A]) resolveBindable(x predicate.Bindable, params predicate.ParamBinds) (schema.Schema, error) {
+	return predicate.MatchBindableR2(
+		x,
+		func(x *predicate.BindValue) (schema.Schema, error) {
+			value, ok := params[x.BindName]
+			if !ok {
+				return nil, fmt.Errorf("store.OpenSearchRepository.toFilters: missing bind param %s", x.BindName)
+			}
+			return value, nil
+		},
+		func(x *predicate.Literal) (schema.Schema, error) {
+			return x.Value, nil
+		},
+		func(x *predicate.Locatable) (schema.Schema, error) {
+			return nil, fmt.Errorf("store.OpenSearchRepository.toFilters: field-to-field comparison is not supported: %s", x.Location)
 		},
 	)
 }
@@ -494,20 +539,80 @@ func (os *OpenSearchRepository[A]) attrName(location string) string {
 func (os *OpenSearchRepository[A]) ToSorters(sort []SortField) []any {
 	var sorters []any
 	for _, s := range sort {
+		order := "asc"
 		if s.Descending {
-			sorters = append(sorters, map[string]any{
-				fmt.Sprintf("%s.keyword", os.attrName(s.Field)): map[string]any{
-					"order": "desc",
-				},
-			})
-		} else {
-			sorters = append(sorters, map[string]any{
-				fmt.Sprintf("%s.keyword", os.attrName(s.Field)): map[string]any{
-					"order": "asc",
-				},
-			})
+			order = "desc"
 		}
+		sorters = append(sorters, map[string]any{
+			os.sortFieldName(s.Field): map[string]any{
+				"order": order,
+			},
+		})
 	}
 
 	return sorters
+}
+
+// sortFieldName picks the field a sorter targets. Text fields sort on
+// their exact .keyword sub-field; numeric and boolean fields have no
+// .keyword sub-field, so they sort on the field itself.
+func (os *OpenSearchRepository[A]) sortFieldName(location string) string {
+	if s, ok := shapeAtLocation(os.shapeDef, location); ok {
+		if prim, isPrim := s.(*shape.PrimitiveLike); isPrim {
+			switch prim.Kind.(type) {
+			case *shape.NumberLike, *shape.BooleanLike:
+				return os.attrName(location)
+			}
+		}
+	}
+	return fmt.Sprintf("%s.keyword", os.attrName(location))
+}
+
+// shapeAtLocation walks plain struct fields of s along a parsed location.
+// It reports false for anything it cannot resolve statically (nil shape,
+// list indices, union wildcards, unknown fields).
+func shapeAtLocation(s shape.Shape, location string) (shape.Shape, bool) {
+	if s == nil {
+		return nil, false
+	}
+
+	locs, err := schema.ParseLocation(location)
+	if err != nil {
+		return nil, false
+	}
+
+	for _, loc := range locs {
+		field, ok := loc.(*schema.LocationField)
+		if !ok {
+			return nil, false
+		}
+
+		structLike, ok := resolveShapeRef(s).(*shape.StructLike)
+		if !ok {
+			return nil, false
+		}
+
+		found := false
+		for _, f := range structLike.Fields {
+			if f.Name == field.Name {
+				s = f.Type
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, false
+		}
+	}
+
+	return resolveShapeRef(s), true
+}
+
+func resolveShapeRef(s shape.Shape) shape.Shape {
+	if ref, ok := s.(*shape.RefName); ok {
+		if resolved, found := shape.LookupShape(ref); found {
+			return shape.IndexWith(resolved, ref)
+		}
+	}
+	return s
 }

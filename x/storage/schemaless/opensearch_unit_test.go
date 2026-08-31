@@ -104,7 +104,7 @@ func TestOpenSearchRepository_UpdateRecords_GuardedSaveSendsScript(t *testing.T)
 
 	result, err := repo.UpdateRecords(Save(Record[ExampleRecord]{ID: "123", Type: "ExampleRecord", Version: 3}))
 	require.NoError(t, err)
-	assert.Equal(t, uint16(4), result.Saved["123"].Version)
+	assert.Equal(t, uint16(4), result.Saved["123:ExampleRecord"].Version)
 	assert.Contains(t, string(gotBody), `"scripted_upsert":true`, "missing records must be creatable in the same request")
 	assert.Contains(t, string(gotBody), `"expected":3`, "script must check the pre-increment version")
 	assert.Contains(t, string(gotBody), `"Version":4`, "written document must carry the incremented version")
@@ -124,7 +124,7 @@ func TestOpenSearchRepository_UpdateRecords_OverwritePolicySkipsVersionCheck(t *
 	result, err := repo.UpdateRecords(command)
 	require.NoError(t, err)
 	assert.Contains(t, gotPath, "/_doc/", "overwrite policy should be a plain index request, no script")
-	assert.Equal(t, uint16(4), result.Saved["123"].Version)
+	assert.Equal(t, uint16(4), result.Saved["123:ExampleRecord"].Version)
 }
 
 func TestOpenSearchRepository_UpdateRecords_PartialResultOnMidBatchFailure(t *testing.T) {

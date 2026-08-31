@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	log "github.com/sirupsen/logrus"
@@ -136,7 +135,7 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 			})
 		}
 
-		result.Saved[value.ID] = value
+		result.Saved[RecordKey(value)] = value
 	}
 
 	for _, id := range command.Deleting {
@@ -160,14 +159,13 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 	})
 
 	if err != nil {
-		respErr := &http.ResponseError{}
-		if errors.As(err, &respErr) {
-			conditional := &types.TransactionCanceledException{}
-			if errors.As(respErr.ResponseError.Err, &conditional) {
-				for _, reason := range conditional.CancellationReasons {
-					if *reason.Code == "ConditionalCheckFailed" {
-						return nil, fmt.Errorf("store.DynamoDBRepository.UpdateRecords: %w", ErrVersionConflict)
-					}
+		// errors.As traverses the whole smithy wrap chain, so no manual
+		// unwrapping of http.ResponseError is needed
+		conditional := &types.TransactionCanceledException{}
+		if errors.As(err, &conditional) {
+			for _, reason := range conditional.CancellationReasons {
+				if reason.Code != nil && *reason.Code == "ConditionalCheckFailed" {
+					return nil, fmt.Errorf("store.DynamoDBRepository.UpdateRecords: %w", ErrVersionConflict)
 				}
 			}
 		}
@@ -175,7 +173,7 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 	}
 
 	for _, value := range command.Deleting {
-		result.Deleted[value.ID] = value
+		result.Deleted[RecordKey(value)] = value
 	}
 
 	return result, nil
@@ -187,13 +185,13 @@ func (d *DynamoDBRepository[A]) buildScanInput(query FindingRecords[Record[A]]) 
 		return nil, err
 	}
 
-	log.Infof("\nfilterExpression: %#v \n", filterExpression)
+	log.Debugf("\nfilterExpression: %#v \n", filterExpression)
 	for k, v := range paramsExpression {
-		log.Infof("paramsExpression[%s]: %#v \n", k, v)
+		log.Debugf("paramsExpression[%s]: %#v \n", k, v)
 	}
 
 	for k, v := range expressionNames {
-		log.Infof("expressionNames[%s]: %#v \n", k, v)
+		log.Debugf("expressionNames[%s]: %#v \n", k, v)
 	}
 
 	scanInput := &dynamodb.ScanInput{

@@ -143,7 +143,7 @@ func OpenSearchSearchResultHitShape() shape.Shape {
 			{
 				Name: "Sort",
 				Type: &shape.ListLike{
-					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+					Element: &shape.Any{},
 				},
 				Tags: map[string]shape.Tag{
 					"json": {
