@@ -169,6 +169,13 @@ func collectStats(root, modulePath string, blocksByFile map[string][]cover.Profi
 			if rel != "." && (strings.HasPrefix(name, ".") || name == "testdata" || name == "node_modules") {
 				return filepath.SkipDir
 			}
+			// a nested module is outside this module's test run, so its
+			// coverage can never appear in the profile; it needs its own gate
+			if rel != "." {
+				if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+					return filepath.SkipDir
+				}
+			}
 			for _, s := range skip {
 				if rel == strings.TrimSuffix(s, "/") {
 					return filepath.SkipDir
