@@ -2,21 +2,23 @@ package main
 
 import (
 	"context"
-	"github.com/urfave/cli/v2"
-	"github.com/widmogrod/mkunion/x/generators"
-	"github.com/widmogrod/mkunion/x/shape"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"path"
 	"syscall"
+
+	"github.com/urfave/cli/v2"
+	"github.com/widmogrod/mkunion/cmd/internal/gen"
+	"github.com/widmogrod/mkunion/x/generators"
+	"github.com/widmogrod/mkunion/x/shape"
 )
 
 func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	var app *cli.App
-	app = &cli.App{
+	app := &cli.App{
 		Name:                   "mkfunc",
 		Description:            "mkfunc is a tool for generating function signatures",
 		EnableBashCompletion:   true,
@@ -29,11 +31,12 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			cwd, _ := syscall.Getwd()
-			sourceName := path.Base(os.Getenv("GOFILE"))
-			sourcePath := path.Join(cwd, sourceName)
+			sourcePaths := gen.SourcePathsOrGOFILE(nil)
+			if len(sourcePaths) == 0 {
+				return fmt.Errorf("mkfunc: no input file; run via //go:generate so GOFILE is set")
+			}
+			sourcePath := sourcePaths[0]
 
-			// file name without extension
 			inferred, err := shape.InferFromFile(sourcePath)
 			if err != nil {
 				return err
@@ -45,25 +48,13 @@ func main() {
 				MaxSize:     c.Int("max-size"),
 			}
 
-			generators := []struct {
-				gen  generators.Generator
-				name string
-			}{
-				{gen: &match, name: "match"},
-			}
-			for _, g := range generators {
-				b, err := g.gen.Generate()
-				if err != nil {
-					return err
-				}
-				err = os.WriteFile(path.Join(cwd,
-					"mkfunc_"+g.name+".go"), b, 0644)
-				if err != nil {
-					return err
-				}
+			b, err := match.Generate()
+			if err != nil {
+				return err
 			}
 
-			return nil
+			outPath := path.Join(path.Dir(sourcePath), "mkfunc_match.go")
+			return os.WriteFile(outPath, b, 0644)
 		},
 	}
 
