@@ -43,6 +43,27 @@ result, err := repo.FindingRecords(FindingRecords[Record[MyRecord]]{
 })
 ```
 
+## Change stream (append log)
+
+Repositories answer "what is the state now"; the append log answers "what
+just changed". Every save or delete appends an ordered `Change[T]` event
+(`Before`, `After`, `Deleted`, `Offset`) that subscribers consume:
+
+```go
+store := schemaless.NewInMemoryRepository[MyRecord]()
+
+err := store.AppendLog().Subscribe(ctx, 0, nil, func(change schemaless.Change[MyRecord]) {
+    // fromOffset: 0 = from the beginning, -1 = latest, >0 resumes from that Offset
+    // filter: a predicate delivers only matching changes; nil delivers everything
+})
+```
+
+Implementations: `schemaless.AppendLog` (in-memory, the full contract) and
+`typedful.TypedAppendLog` (typed wrapper; no `MergeAppend`). They run the same
+behavioural spec (`spec.RunAppendLogSpec`) as the repositories — see the
+*Append log capability matrix* below and `docs/packages/storage.md` for the
+full guide.
+
 ## Roadmap
 ### V0.1.0
 - [x] x/storage support DynamoDB, OpenSearch, and InMemory implementation
