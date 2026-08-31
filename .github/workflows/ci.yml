@@ -28,18 +28,6 @@ jobs:
       - run: pip install awscli-local
       - run: dev/bootstrap.sh -nologs
 
-      # bootstrap.sh writes AWS/localstack env vars into .envrc (for direnv);
-      # CI does not use direnv, so without this step tests that need
-      # AWS_ENDPOINT_URL (e.g. DynamoDB repository tests) silently skip
-      - name: Enable localstack-backed tests
-        run: |
-          {
-            echo "AWS_ACCESS_KEY_ID=123"
-            echo "AWS_SECRET_ACCESS_KEY=123"
-            echo "AWS_DEFAULT_REGION=us-east-1"
-            echo "AWS_ENDPOINT_URL=http://localhost:4566"
-          } >> "$GITHUB_ENV"
-
       # run tests
       - run: |
           set -e
