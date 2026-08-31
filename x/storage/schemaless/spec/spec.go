@@ -358,6 +358,20 @@ func RunRepositorySpec(t *testing.T, backend string, newRepo NewRepoFunc, caps C
 		assert.ElementsMatch(t, []string{"Alice", "Jane", "Zarlie"}, names(items))
 	})
 
+	r.run("empty where query matches all records", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, seedRecords(recordType)...)
+
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
+			RecordType: recordType,
+			Where:      predicate.MustWhere("", nil, nil),
+			Limit:      10,
+		})
+		assert.ElementsMatch(t, []string{"1", "2", "3", "4", "5"}, ids(items),
+			"an empty where query is a match-all filter, same as no filter")
+	})
+
 	r.run("OR predicate matches either branch", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
@@ -383,22 +397,16 @@ func RunRepositorySpec(t *testing.T, backend string, newRepo NewRepoFunc, caps C
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
 
-		// the string syntax has no parentheses, so NOT (a OR b) is built
-		// from predicate values directly
 		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
-			Where: &predicate.WherePredicates{
-				Predicate: &predicate.Not{
-					P: &predicate.Or{L: []predicate.Predicate{
-						&predicate.Compare{Location: "ID", Operation: "=", BindValue: &predicate.BindValue{BindName: ":a"}},
-						&predicate.Compare{Location: "ID", Operation: "=", BindValue: &predicate.BindValue{BindName: ":b"}},
-					}},
-				},
-				Params: predicate.ParamBinds{
+			Where: predicate.MustWhere(
+				"NOT (ID = :a OR ID = :b)",
+				predicate.ParamBinds{
 					":a": schema.MkString("1"),
 					":b": schema.MkString("2"),
 				},
-			},
+				nil,
+			),
 			Limit: 10,
 		})
 		assert.ElementsMatch(t, []string{"3", "4", "5"}, ids(items),
