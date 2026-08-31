@@ -320,7 +320,7 @@ func (d *DynamoDBRepository[A]) buildFilterExpression(query FindingRecords[Recor
 		binds[":Type"] = schema.MkString(query.RecordType)
 	}
 
-	if query.Where != nil {
+	if query.Where != nil && !predicate.IsMatchAll(query.Where.Predicate) {
 		if where == nil {
 			where = query.Where.Predicate
 			for k, v := range query.Where.Params {

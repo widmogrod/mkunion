@@ -81,6 +81,7 @@ downgrade, ❌ failing when the report was generated.
 | repository | overwrites keep the version increasing | ✅ | ✅ | ⛔ `MonotonicOverwriteVersion` |
 | repository | deleted record is gone | ✅ | ✅ | ✅ |
 | repository | where predicate filters records | ✅ | ✅ | ✅ |
+| repository | empty where query matches all records | ✅ | ✅ | ✅ |
 | repository | OR predicate matches either branch | ✅ | ✅ | ✅ |
 | repository | NOT over OR excludes both branches | ✅ | ✅ | ✅ |
 | repository | query without a record type is not an error | ✅ | ✅ | ✅ |
