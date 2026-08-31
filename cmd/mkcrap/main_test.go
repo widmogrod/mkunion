@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/tools/cover"
 )
 
@@ -71,6 +72,88 @@ func TestIsGenerated(t *testing.T) {
 		"// just a comment\npackage p\n", parser.ParseComments)
 	require.NoError(t, err)
 	assert.False(t, isGenerated(plain))
+}
+
+// tempModule lays out a minimal module: one covered simple function and
+// one complex, fully uncovered one.
+func tempModule(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	write := func(rel, content string) {
+		require.NoError(t, os.WriteFile(filepath.Join(root, rel), []byte(content), 0644))
+	}
+	write("go.mod", "module example.com/tmp\n")
+	write("lib.go", `package tmp
+
+func Simple() int {
+	return 1
+}
+
+func Complex(a, b, c, d, e bool) int {
+	if a && b {
+		return 1
+	}
+	if c || d {
+		return 2
+	}
+	if e {
+		return 3
+	}
+	return 0
+}
+`)
+	write("coverage.out", `mode: set
+example.com/tmp/lib.go:3.18,5.2 1 1
+`)
+	return root
+}
+
+func runApp(t *testing.T, args ...string) error {
+	t.Helper()
+	return newApp().Run(append([]string{"mkcrap"}, args...))
+}
+
+func TestRunCrap(t *testing.T) {
+	t.Run("fails with exit code 1 when a function is over the threshold", func(t *testing.T) {
+		t.Chdir(tempModule(t))
+		err := runApp(t)
+		require.Error(t, err)
+		exit, ok := err.(cli.ExitCoder)
+		require.True(t, ok, "failure must carry an exit code, got %T", err)
+		assert.Equal(t, 1, exit.ExitCode())
+	})
+
+	t.Run("passes when the threshold allows the worst offender", func(t *testing.T) {
+		t.Chdir(tempModule(t))
+		assert.NoError(t, runApp(t, "--threshold", "100"))
+	})
+
+	t.Run("top larger than the function count is clamped", func(t *testing.T) {
+		t.Chdir(tempModule(t))
+		assert.NoError(t, runApp(t, "--threshold", "100", "--top", "1000"))
+	})
+
+	t.Run("missing go.mod is rejected", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		err := runApp(t)
+		assert.ErrorContains(t, err, "module root")
+	})
+
+	t.Run("missing coverage profile is rejected with advice", func(t *testing.T) {
+		root := tempModule(t)
+		require.NoError(t, os.Remove(filepath.Join(root, "coverage.out")))
+		t.Chdir(root)
+		err := runApp(t)
+		assert.ErrorContains(t, err, "go test -coverprofile")
+	})
+
+	t.Run("unparsable source errors", func(t *testing.T) {
+		root := tempModule(t)
+		require.NoError(t, os.WriteFile(filepath.Join(root, "broken.go"), []byte("package tmp\nfunc {"), 0644))
+		t.Chdir(root)
+		err := runApp(t)
+		assert.ErrorContains(t, err, "parse")
+	})
 }
 
 func TestCollectStats(t *testing.T) {

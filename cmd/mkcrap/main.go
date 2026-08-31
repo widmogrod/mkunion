@@ -37,8 +37,23 @@ type funcStat struct {
 }
 
 func main() {
-	app := &cli.App{
-		Name:        "mkcrap",
+	app := newApp()
+
+	if err := app.Run(os.Args); err != nil {
+		if _, ok := err.(cli.ExitCoder); ok {
+			cli.HandleExitCoder(err)
+		}
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func newApp() *cli.App {
+	return &cli.App{
+		// main handles ExitCoder errors itself; without this override
+		// cli.App.Run would os.Exit and kill the test process
+		ExitErrHandler: func(c *cli.Context, err error) {},
+		Name:           "mkcrap",
 		Description: "mkcrap computes the CRAP metric (cyclomatic complexity vs test coverage) per function and fails when any function exceeds the threshold",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -66,77 +81,71 @@ func main() {
 				Usage: "path prefixes to skip (relative to module root), can be repeated",
 			},
 		},
-		Action: func(c *cli.Context) error {
-			root, err := os.Getwd()
-			if err != nil {
-				return err
-			}
+		Action: runCrap,
+	}
+}
 
-			modulePath, err := readModulePath(filepath.Join(root, "go.mod"))
-			if err != nil {
-				return fmt.Errorf("mkcrap must run from the module root: %w", err)
-			}
-
-			profiles, err := cover.ParseProfiles(c.String("profile"))
-			if err != nil {
-				return fmt.Errorf("cannot read coverage profile %q (run 'go test -coverprofile=%s ./...' first): %w",
-					c.String("profile"), c.String("profile"), err)
-			}
-
-			blocksByFile := map[string][]cover.ProfileBlock{}
-			for _, p := range profiles {
-				blocksByFile[p.FileName] = append(blocksByFile[p.FileName], p.Blocks...)
-			}
-
-			stats, err := collectStats(root, modulePath, blocksByFile, c.Bool("include-generated"), c.StringSlice("skip"))
-			if err != nil {
-				return err
-			}
-
-			sort.Slice(stats, func(i, j int) bool { return stats[i].Crap > stats[j].Crap })
-
-			threshold := c.Float64("threshold")
-
-			var failing []funcStat
-			for _, s := range stats {
-				if s.Crap > threshold {
-					failing = append(failing, s)
-				}
-			}
-
-			top := c.Int("top")
-			if top > len(stats) {
-				top = len(stats)
-			}
-			fmt.Printf("%-8s %-6s %-6s  %s\n", "CRAP", "CC", "COV%", "FUNCTION")
-			for _, s := range stats[:top] {
-				marker := " "
-				if s.Crap > threshold {
-					marker = "!"
-				}
-				fmt.Printf("%-8.1f %-6d %-6.1f %s%s (%s:%d)\n",
-					s.Crap, s.Complexity, s.Coverage*100, marker, s.Name, s.File, s.Line)
-			}
-
-			if len(failing) > 0 {
-				fmt.Printf("\nFAIL: %d function(s) exceed CRAP threshold %.1f:\n", len(failing), threshold)
-				for _, s := range failing {
-					fmt.Printf("  %.1f %s (%s:%d)\n", s.Crap, s.Name, s.File, s.Line)
-				}
-				return cli.Exit("add tests or reduce complexity (see list above)", 1)
-			}
-			fmt.Printf("\nOK: all %d functions are at or below CRAP threshold %.1f\n", len(stats), threshold)
-			return nil
-		},
+func runCrap(c *cli.Context) error {
+	root, err := os.Getwd()
+	if err != nil {
+		return err
 	}
 
-	if err := app.Run(os.Args); err != nil {
-		if _, ok := err.(cli.ExitCoder); ok {
-			cli.HandleExitCoder(err)
+	modulePath, err := readModulePath(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return fmt.Errorf("mkcrap must run from the module root: %w", err)
+	}
+
+	profiles, err := cover.ParseProfiles(c.String("profile"))
+	if err != nil {
+		return fmt.Errorf("cannot read coverage profile %q (run 'go test -coverprofile=%s ./...' first): %w",
+			c.String("profile"), c.String("profile"), err)
+	}
+
+	blocksByFile := map[string][]cover.ProfileBlock{}
+	for _, p := range profiles {
+		blocksByFile[p.FileName] = append(blocksByFile[p.FileName], p.Blocks...)
+	}
+
+	stats, err := collectStats(root, modulePath, blocksByFile, c.Bool("include-generated"), c.StringSlice("skip"))
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(stats, func(i, j int) bool { return stats[i].Crap > stats[j].Crap })
+
+	threshold := c.Float64("threshold")
+
+	var failing []funcStat
+	for _, s := range stats {
+		if s.Crap > threshold {
+			failing = append(failing, s)
 		}
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
 	}
+
+	top := c.Int("top")
+	if top > len(stats) {
+		top = len(stats)
+	}
+	fmt.Printf("%-8s %-6s %-6s  %s\n", "CRAP", "CC", "COV%", "FUNCTION")
+	for _, s := range stats[:top] {
+		marker := " "
+		if s.Crap > threshold {
+			marker = "!"
+		}
+		fmt.Printf("%-8.1f %-6d %-6.1f %s%s (%s:%d)\n",
+			s.Crap, s.Complexity, s.Coverage*100, marker, s.Name, s.File, s.Line)
+	}
+
+	if len(failing) > 0 {
+		fmt.Printf("\nFAIL: %d function(s) exceed CRAP threshold %.1f:\n", len(failing), threshold)
+		for _, s := range failing {
+			fmt.Printf("  %.1f %s (%s:%d)\n", s.Crap, s.Name, s.File, s.Line)
+		}
+		return cli.Exit("add tests or reduce complexity (see list above)", 1)
+	}
+	fmt.Printf("\nOK: all %d functions are at or below CRAP threshold %.1f\n", len(stats), threshold)
+	return nil
 }
 
 func readModulePath(gomod string) (string, error) {
