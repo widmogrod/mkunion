@@ -179,6 +179,11 @@ func collectStats(root, modulePath string, blocksByFile map[string][]cover.Profi
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
+		// generated files are also detected by their header below; the name
+		// check is a safety net and avoids parsing them at all
+		if !includeGenerated && strings.HasSuffix(path, "_gen.go") {
+			return nil
+		}
 
 		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 		if err != nil {
