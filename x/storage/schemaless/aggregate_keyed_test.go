@@ -7,9 +7,10 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
-func TestKeyedAggregateDeleteOnUnseenIndexDoesNotSeedIt(t *testing.T) {
+func newCountByNameAggregate(t *testing.T) *KeyedAggregate[ExampleRecord, ExampleRecord] {
+	t.Helper()
 	storage := NewInMemoryRepository[schema.Schema]()
-	agg := NewKeyedAggregate[ExampleRecord, ExampleRecord](
+	return NewKeyedAggregate[ExampleRecord, ExampleRecord](
 		"count-by-name",
 		[]string{"users"},
 		func(data ExampleRecord) (string, ExampleRecord) {
@@ -18,8 +19,15 @@ func TestKeyedAggregateDeleteOnUnseenIndexDoesNotSeedIt(t *testing.T) {
 		func(a, b ExampleRecord) (ExampleRecord, error) {
 			return ExampleRecord{Age: a.Age + b.Age}, nil
 		},
+		func(a, b ExampleRecord) (ExampleRecord, error) {
+			return ExampleRecord{Age: a.Age - b.Age}, nil
+		},
 		storage,
 	)
+}
+
+func TestKeyedAggregateDeleteOnUnseenIndexDoesNotSeedIt(t *testing.T) {
+	agg := newCountByNameAggregate(t)
 
 	// deleting a record whose index was never built and is not in storage
 	// must not create the index, and especially must not credit it with
@@ -32,6 +40,21 @@ func TestKeyedAggregateDeleteOnUnseenIndexDoesNotSeedIt(t *testing.T) {
 	indices := agg.GetVersionedIndices()
 	assert.Empty(t, indices,
 		"a delete of an untracked index must not seed that index")
+}
+
+func TestKeyedAggregateDeleteUncombines(t *testing.T) {
+	agg := newCountByNameAggregate(t)
+
+	first := Record[ExampleRecord]{ID: "1", Type: "users", Data: ExampleRecord{Name: "alice"}}
+	second := Record[ExampleRecord]{ID: "2", Type: "users", Data: ExampleRecord{Name: "alice"}}
+
+	assert.NoError(t, agg.Append(first))
+	assert.NoError(t, agg.Append(second))
+	assert.Equal(t, 2, agg.GetIndexByKey("alice").Age)
+
+	assert.NoError(t, agg.Delete(second))
+	assert.Equal(t, 1, agg.GetIndexByKey("alice").Age,
+		"deleting a record must subtract its contribution from the index")
 }
 
 func TestInMemoryPaginationIsDeterministicWithoutSort(t *testing.T) {

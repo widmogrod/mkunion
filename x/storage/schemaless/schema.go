@@ -32,26 +32,15 @@ type InMemoryRepository[A any] struct {
 }
 
 func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], error) {
-	result, err := s.FindingRecords(FindingRecords[Record[A]]{
-		RecordType: recordType,
-		Where: predicate.MustWhere(
-			"ID = :id",
-			predicate.ParamBinds{
-				":id": schema.MkString(recordID),
-			},
-			nil,
-		),
-		Limit: 1,
-	})
-	if err != nil {
-		return Record[A]{}, err
-	}
+	s.mux.RLock()
+	defer s.mux.RUnlock()
 
-	if len(result.Items) == 0 {
+	record, ok := s.store[recordID+recordType]
+	if !ok {
 		return Record[A]{}, ErrNotFound
 	}
 
-	return result.Items[0], nil
+	return record, nil
 }
 
 func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*UpdateRecordsResult[Record[A]], error) {
@@ -162,9 +151,10 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 		records = newRecords
 	}
 
-	if len(query.Sort) > 0 {
-		records = sortRecords(records, query.Sort)
-	}
+	// always sort: without an explicit Sort, records come from map
+	// iteration in random order, and the ID-based cursor pagination
+	// below needs a stable order to not lose or duplicate records
+	records = sortRecords(records, query.Sort)
 
 	// Use limit to reduce number of records
 	var next, prev *FindingRecords[Record[A]]
@@ -288,7 +278,8 @@ func sortRecords[A any](records []Record[A], sortFields []SortField) []Record[A]
 				return cmp < 0
 			}
 		}
-		return false
+		// stable tiebreaker so pagination cursors are deterministic
+		return records[i].ID < records[j].ID
 	})
 	return records
 }
