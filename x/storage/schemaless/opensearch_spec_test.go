@@ -59,7 +59,7 @@ func TestOpenSearchRepositorySpec(t *testing.T) {
 	_, err := warmup.UpdateRecords(command)
 	require.NoError(t, err, "while creating the shared test index")
 
-	spec.RunRepositorySpec(t,
+	spec.RunRepositorySpec(t, spec.BackendOpenSearch,
 		func(t *testing.T) schemaless.Repository[schemaless.ExampleRecord] {
 			// the suite namespaces record types, so one shared index is fine
 			return schemaless.NewOpenSearchRepository[schemaless.ExampleRecord](client, indexName)
@@ -84,7 +84,7 @@ func TestOpenSearchComplexQuerySpec(t *testing.T) {
 	_, err := warmup.UpdateRecords(command)
 	require.NoError(t, err, "while creating the shared vehicle index")
 
-	spec.RunComplexQuerySpec(t,
+	spec.RunComplexQuerySpec(t, spec.BackendOpenSearch,
 		func(t *testing.T) schemaless.Repository[specdata.Vehicle] {
 			return schemaless.NewOpenSearchRepository[specdata.Vehicle](client, indexName)
 		},

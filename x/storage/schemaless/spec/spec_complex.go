@@ -72,9 +72,12 @@ func vehicleIDs(items []schemaless.Record[specdata.Vehicle]) []string {
 
 // RunComplexQuerySpec runs the specification for records whose payload nests
 // a union, using union-path locations and composed AND/OR/NOT predicates.
-// Like RunRepositorySpec, downgraded behaviours are reported as skipped.
-func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabilities) {
-	t.Run("union variants survive a round trip", func(t *testing.T) {
+// Like RunRepositorySpec, downgraded behaviours are reported as skipped and
+// the run contributes to the backend's capability report.
+func RunComplexQuerySpec(t *testing.T, backend string, newRepo NewComplexRepoFunc, caps Capabilities) {
+	r := newRunner(t, backend, suiteComplex, caps)
+
+	r.run("union variants survive a round trip", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		seeded := seedVehicles(recordType)
@@ -87,7 +90,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		}
 	})
 
-	t.Run("filter on a field inside a union variant", func(t *testing.T) {
+	r.run("filter on a field inside a union variant", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
@@ -104,7 +107,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		assert.ElementsMatch(t, []string{"hauler"}, vehicleIDs(items))
 	})
 
-	t.Run("OR matches across union variants", func(t *testing.T) {
+	r.run("OR matches across union variants", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
@@ -124,7 +127,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		assert.ElementsMatch(t, []string{"beetle", "model3"}, vehicleIDs(items))
 	})
 
-	t.Run("NOT excludes a union variant match, records without the field stay", func(t *testing.T) {
+	r.run("NOT excludes a union variant match, records without the field stay", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
@@ -142,7 +145,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 			"petrol vehicles have no Electric branch, so NOT must keep them")
 	})
 
-	t.Run("AND combines a plain field with a union field", func(t *testing.T) {
+	r.run("AND combines a plain field with a union field", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
@@ -162,7 +165,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		assert.ElementsMatch(t, []string{"model3"}, vehicleIDs(items))
 	})
 
-	t.Run("numeric equality filter", func(t *testing.T) {
+	r.run("numeric equality filter", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
@@ -179,7 +182,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		assert.ElementsMatch(t, []string{"beetle", "model3"}, vehicleIDs(items))
 	})
 
-	t.Run("string equality filter", func(t *testing.T) {
+	r.run("string equality filter", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
@@ -196,7 +199,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		assert.ElementsMatch(t, []string{"hauler"}, vehicleIDs(items))
 	})
 
-	t.Run("filter on a nonexistent field returns no records and no error", func(t *testing.T) {
+	r.run("filter on a nonexistent field returns no records and no error", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
@@ -213,7 +216,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		assert.Empty(t, items, "an unknown field matches nothing, it is not an error")
 	})
 
-	t.Run("update of a union variant is queryable afterwards", func(t *testing.T) {
+	r.run("update of a union variant is queryable afterwards", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)

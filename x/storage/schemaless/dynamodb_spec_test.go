@@ -48,7 +48,7 @@ func TestDynamoDBRepositorySpec(t *testing.T) {
 	const tableName = "spec-test-repo-record"
 	require.NoError(t, recreateDynamoDBTable(client, tableName), "while setting up dynamodb table")
 
-	spec.RunRepositorySpec(t,
+	spec.RunRepositorySpec(t, spec.BackendDynamoDB,
 		func(t *testing.T) schemaless.Repository[schemaless.ExampleRecord] {
 			// the suite namespaces record types, so one shared table is fine
 			return schemaless.NewDynamoDBRepository[schemaless.ExampleRecord](client, tableName)
@@ -64,7 +64,7 @@ func TestDynamoDBComplexQuerySpec(t *testing.T) {
 	const tableName = "spec-test-vehicle-record"
 	require.NoError(t, recreateDynamoDBTable(client, tableName), "while setting up dynamodb table")
 
-	spec.RunComplexQuerySpec(t,
+	spec.RunComplexQuerySpec(t, spec.BackendDynamoDB,
 		func(t *testing.T) schemaless.Repository[specdata.Vehicle] {
 			return schemaless.NewDynamoDBRepository[specdata.Vehicle](client, tableName)
 		},

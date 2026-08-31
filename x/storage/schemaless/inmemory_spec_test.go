@@ -11,7 +11,7 @@ import (
 // TestInMemoryRepositorySpec: the in-memory repository defines the full
 // contract, so it runs with FullCapabilities and skips nothing.
 func TestInMemoryRepositorySpec(t *testing.T) {
-	spec.RunRepositorySpec(t,
+	spec.RunRepositorySpec(t, spec.BackendInMemory,
 		func(t *testing.T) schemaless.Repository[schemaless.ExampleRecord] {
 			return schemaless.NewInMemoryRepository[schemaless.ExampleRecord]()
 		},
@@ -22,7 +22,7 @@ func TestInMemoryRepositorySpec(t *testing.T) {
 // TestInMemoryComplexQuerySpec: nested-union payloads and composed
 // predicates, full contract.
 func TestInMemoryComplexQuerySpec(t *testing.T) {
-	spec.RunComplexQuerySpec(t,
+	spec.RunComplexQuerySpec(t, spec.BackendInMemory,
 		func(t *testing.T) schemaless.Repository[specdata.Vehicle] {
 			return schemaless.NewInMemoryRepository[specdata.Vehicle]()
 		},

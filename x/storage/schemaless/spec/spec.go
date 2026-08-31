@@ -5,7 +5,7 @@
 // The in-memory repository defines the full contract: FullCapabilities().
 // A backend that cannot provide a behaviour declares the downgrade explicitly:
 //
-//	spec.RunRepositorySpec(t, newRepo,
+//	spec.RunRepositorySpec(t, spec.BackendDynamoDB, newRepo,
 //		spec.FullCapabilities().
 //			WithoutSortByDataField().
 //			WithoutBackwardPagination(),
@@ -13,6 +13,11 @@
 //
 // Downgraded behaviours show up as skipped subtests, so the capability matrix
 // stays visible in test output instead of silently shrinking the contract.
+//
+// Each run also records its outcomes in report/<backend>.json; after a green
+// run the reports are rendered into report/capabilities.md and stamped into
+// x/storage/README.md (see GenerateDocs), so docs always state what every
+// backend supports.
 package spec
 
 import (
@@ -78,13 +83,6 @@ func (c Capabilities) WithoutAtomicBatch() Capabilities {
 func (c Capabilities) WithoutMonotonicOverwriteVersion() Capabilities {
 	c.MonotonicOverwriteVersion = false
 	return c
-}
-
-func (c Capabilities) skipUnless(t *testing.T, enabled bool, capability string) {
-	t.Helper()
-	if !enabled {
-		t.Skipf("capability downgrade: this storage does not support %s", capability)
-	}
 }
 
 // NewRepoFunc returns a repository backed by a store that contains no
@@ -160,15 +158,19 @@ func sortByName(descending bool) []schemaless.SortField {
 }
 
 // RunRepositorySpec runs the behavioural specification against a repository.
-// Behaviours excluded by caps are reported as skipped subtests.
-func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
-	t.Run("get of a missing record returns ErrNotFound", func(t *testing.T) {
+// Behaviours excluded by caps are reported as skipped subtests. backend is
+// one of the Backend* constants; it names the capability report the run
+// writes to the report/ directory.
+func RunRepositorySpec(t *testing.T, backend string, newRepo NewRepoFunc, caps Capabilities) {
+	r := newRunner(t, backend, suiteRepository, caps)
+
+	r.run("get of a missing record returns ErrNotFound", func(t *testing.T) {
 		repo := newRepo(t)
 		_, err := repo.Get("does-not-exist", uniqueRecordType())
 		assert.ErrorIs(t, err, schemaless.ErrNotFound)
 	})
 
-	t.Run("get with the wrong record type returns ErrNotFound", func(t *testing.T) {
+	r.run("get with the wrong record type returns ErrNotFound", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
@@ -180,7 +182,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 			"a record is addressed by ID and type together")
 	})
 
-	t.Run("delete of a missing record is not an error", func(t *testing.T) {
+	r.run("delete of a missing record is not an error", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 
@@ -190,13 +192,13 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.NoError(t, err, "deleting what is already gone is a no-op")
 	})
 
-	t.Run("empty update command returns ErrEmptyCommand", func(t *testing.T) {
+	r.run("empty update command returns ErrEmptyCommand", func(t *testing.T) {
 		repo := newRepo(t)
 		_, err := repo.UpdateRecords(schemaless.UpdateRecords[schemaless.Record[schemaless.ExampleRecord]]{})
 		assert.ErrorIs(t, err, schemaless.ErrEmptyCommand)
 	})
 
-	t.Run("saved record can be read back with its data", func(t *testing.T) {
+	r.run("saved record can be read back with its data", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
@@ -211,7 +213,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.GreaterOrEqual(t, got.Version, uint16(1), "a stored record has a version")
 	})
 
-	t.Run("update with the current version succeeds and bumps the version", func(t *testing.T) {
+	r.run("update with the current version succeeds and bumps the version", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
@@ -230,7 +232,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.Greater(t, got.Version, current.Version, "version must increase on update")
 	})
 
-	t.Run("write with a stale version fails with ErrVersionConflict", func(t *testing.T) {
+	r.run("write with a stale version fails with ErrVersionConflict", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
@@ -253,7 +255,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.Equal(t, 39, got.Data.Age, "a stale write must not change the record")
 	})
 
-	t.Run("PolicyOverwriteServerChanges wins over a stale version", func(t *testing.T) {
+	r.run("PolicyOverwriteServerChanges wins over a stale version", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
@@ -278,47 +280,45 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.Equal(t, 100, got.Data.Age)
 	})
 
-	t.Run("overwrites keep the version increasing", func(t *testing.T) {
-		caps.skipUnless(t, caps.MonotonicOverwriteVersion,
-			"monotonic versions under overwrites (MonotonicOverwriteVersion)")
+	r.runGated(caps.MonotonicOverwriteVersion, "MonotonicOverwriteVersion",
+		"overwrites keep the version increasing", func(t *testing.T) {
+			repo := newRepo(t)
+			recordType := uniqueRecordType()
+			mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+				ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
+			})
 
-		repo := newRepo(t)
-		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
-			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
+			stale, err := repo.Get("1", recordType)
+			require.NoError(t, err)
+
+			// a concurrent writer moves the server ahead; `stale` stays behind
+			mustSave(t, repo, stale)
+			server, err := repo.Get("1", recordType)
+			require.NoError(t, err)
+
+			overwrite := func(age int) schemaless.Record[schemaless.ExampleRecord] {
+				record := stale
+				record.Data.Age = age
+				command := schemaless.Save(record)
+				command.UpdatingPolicy = schemaless.PolicyOverwriteServerChanges
+				_, err := repo.UpdateRecords(command)
+				require.NoError(t, err)
+				got, err := repo.Get("1", recordType)
+				require.NoError(t, err)
+				return got
+			}
+
+			first := overwrite(50)
+			assert.Equal(t, server.Version+1, first.Version,
+				"an overwrite bumps the server version by one, however stale the writer")
+
+			second := overwrite(60)
+			assert.Equal(t, server.Version+2, second.Version,
+				"repeated stale overwrites keep the version growing")
+			assert.Equal(t, 60, second.Data.Age)
 		})
 
-		stale, err := repo.Get("1", recordType)
-		require.NoError(t, err)
-
-		// a concurrent writer moves the server ahead; `stale` stays behind
-		mustSave(t, repo, stale)
-		server, err := repo.Get("1", recordType)
-		require.NoError(t, err)
-
-		overwrite := func(age int) schemaless.Record[schemaless.ExampleRecord] {
-			record := stale
-			record.Data.Age = age
-			command := schemaless.Save(record)
-			command.UpdatingPolicy = schemaless.PolicyOverwriteServerChanges
-			_, err := repo.UpdateRecords(command)
-			require.NoError(t, err)
-			got, err := repo.Get("1", recordType)
-			require.NoError(t, err)
-			return got
-		}
-
-		first := overwrite(50)
-		assert.Equal(t, server.Version+1, first.Version,
-			"an overwrite bumps the server version by one, however stale the writer")
-
-		second := overwrite(60)
-		assert.Equal(t, server.Version+2, second.Version,
-			"repeated stale overwrites keep the version growing")
-		assert.Equal(t, 60, second.Data.Age)
-	})
-
-	t.Run("deleted record is gone", func(t *testing.T) {
+	r.run("deleted record is gone", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
@@ -336,7 +336,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.ErrorIs(t, err, schemaless.ErrNotFound)
 	})
 
-	t.Run("where predicate filters records", func(t *testing.T) {
+	r.run("where predicate filters records", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
@@ -358,7 +358,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.ElementsMatch(t, []string{"Alice", "Jane", "Zarlie"}, names(items))
 	})
 
-	t.Run("OR predicate matches either branch", func(t *testing.T) {
+	r.run("OR predicate matches either branch", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
@@ -378,7 +378,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.ElementsMatch(t, []string{"John", "Bob"}, names(items))
 	})
 
-	t.Run("NOT over OR excludes both branches", func(t *testing.T) {
+	r.run("NOT over OR excludes both branches", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
@@ -405,7 +405,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 			"NOT (a OR b) must exclude records matching either branch")
 	})
 
-	t.Run("query without a record type is not an error", func(t *testing.T) {
+	r.run("query without a record type is not an error", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
@@ -424,7 +424,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.Len(t, seen, 5, "an unfiltered query must include records of every type")
 	})
 
-	t.Run("record type separates records", func(t *testing.T) {
+	r.run("record type separates records", func(t *testing.T) {
 		repo := newRepo(t)
 		recordTypeA := uniqueRecordType()
 		recordTypeB := uniqueRecordType()
@@ -443,7 +443,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.ElementsMatch(t, []string{"Alice", "Bob"}, names(items))
 	})
 
-	t.Run("forward pagination visits every record exactly once", func(t *testing.T) {
+	r.run("forward pagination visits every record exactly once", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
@@ -466,99 +466,95 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		}
 	})
 
-	t.Run("sorting orders records by a data field", func(t *testing.T) {
-		caps.skipUnless(t, caps.SortByDataField, "sorting by data fields (SortByDataField)")
+	r.runGated(caps.SortByDataField, "SortByDataField",
+		"sorting orders records by a data field", func(t *testing.T) {
+			repo := newRepo(t)
+			recordType := uniqueRecordType()
+			mustSave(t, repo, seedRecords(recordType)...)
 
-		repo := newRepo(t)
-		recordType := uniqueRecordType()
-		mustSave(t, repo, seedRecords(recordType)...)
+			ascending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
+				RecordType: recordType,
+				Sort:       sortByName(false),
+				Limit:      10,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, []string{"Alice", "Bob", "Jane", "John", "Zarlie"}, names(ascending.Items))
 
-		ascending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
-			RecordType: recordType,
-			Sort:       sortByName(false),
-			Limit:      10,
-		})
-		require.NoError(t, err)
-		assert.Equal(t, []string{"Alice", "Bob", "Jane", "John", "Zarlie"}, names(ascending.Items))
-
-		descending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
-			RecordType: recordType,
-			Sort:       sortByName(true),
-			Limit:      10,
-		})
-		require.NoError(t, err)
-		assert.Equal(t, []string{"Zarlie", "John", "Jane", "Bob", "Alice"}, names(descending.Items))
-	})
-
-	t.Run("sorted pagination keeps order across pages", func(t *testing.T) {
-		caps.skipUnless(t, caps.SortByDataField, "sorting by data fields (SortByDataField)")
-
-		repo := newRepo(t)
-		recordType := uniqueRecordType()
-		mustSave(t, repo, seedRecords(recordType)...)
-
-		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
-			RecordType: recordType,
-			Sort:       sortByName(false),
-			Limit:      2,
-		})
-		assert.Equal(t, []string{"Alice", "Bob", "Jane", "John", "Zarlie"}, names(items))
-	})
-
-	t.Run("prev cursor pages backward", func(t *testing.T) {
-		caps.skipUnless(t, caps.BackwardPagination, "backward pagination (BackwardPagination)")
-
-		repo := newRepo(t)
-		recordType := uniqueRecordType()
-		mustSave(t, repo, seedRecords(recordType)...)
-
-		firstPage, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
-			RecordType: recordType,
-			Sort:       sortByName(false),
-			Limit:      2,
-		})
-		require.NoError(t, err)
-		require.Equal(t, []string{"Alice", "Bob"}, names(firstPage.Items))
-		require.True(t, firstPage.HasNext())
-
-		secondPage, err := repo.FindingRecords(*firstPage.Next)
-		require.NoError(t, err)
-		require.Equal(t, []string{"Jane", "John"}, names(secondPage.Items))
-		require.True(t, secondPage.HasPrev(), "a non-first page must link backward")
-
-		backToFirst, err := repo.FindingRecords(*secondPage.Prev)
-		require.NoError(t, err)
-		assert.Equal(t, []string{"Alice", "Bob"}, names(backToFirst.Items))
-	})
-
-	t.Run("batch with a conflict writes nothing", func(t *testing.T) {
-		caps.skipUnless(t, caps.AtomicBatch, "all-or-nothing batches (AtomicBatch)")
-
-		repo := newRepo(t)
-		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
-			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
+			descending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
+				RecordType: recordType,
+				Sort:       sortByName(true),
+				Limit:      10,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, []string{"Zarlie", "John", "Jane", "Bob", "Alice"}, names(descending.Items))
 		})
 
-		current, err := repo.Get("1", recordType)
-		require.NoError(t, err)
+	r.runGated(caps.SortByDataField, "SortByDataField",
+		"sorted pagination keeps order across pages", func(t *testing.T) {
+			repo := newRepo(t)
+			recordType := uniqueRecordType()
+			mustSave(t, repo, seedRecords(recordType)...)
 
-		// move the server ahead so `current` is stale
-		mustSave(t, repo, current)
+			items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
+				RecordType: recordType,
+				Sort:       sortByName(false),
+				Limit:      2,
+			})
+			assert.Equal(t, []string{"Alice", "Bob", "Jane", "John", "Zarlie"}, names(items))
+		})
 
-		stale := current
-		stale.Data.Age = 100
-		fresh := schemaless.Record[schemaless.ExampleRecord]{ID: "2", Type: recordType, Data: schemaless.ExampleRecord{Name: "Bob", Age: 40}}
+	r.runGated(caps.BackwardPagination, "BackwardPagination",
+		"prev cursor pages backward", func(t *testing.T) {
+			repo := newRepo(t)
+			recordType := uniqueRecordType()
+			mustSave(t, repo, seedRecords(recordType)...)
 
-		_, err = repo.UpdateRecords(schemaless.Save(stale, fresh))
-		assert.ErrorIs(t, err, schemaless.ErrVersionConflict)
+			firstPage, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
+				RecordType: recordType,
+				Sort:       sortByName(false),
+				Limit:      2,
+			})
+			require.NoError(t, err)
+			require.Equal(t, []string{"Alice", "Bob"}, names(firstPage.Items))
+			require.True(t, firstPage.HasNext())
 
-		_, err = repo.Get("2", recordType)
-		assert.ErrorIs(t, err, schemaless.ErrNotFound,
-			"the conflict-free record must not be written when the batch fails")
+			secondPage, err := repo.FindingRecords(*firstPage.Next)
+			require.NoError(t, err)
+			require.Equal(t, []string{"Jane", "John"}, names(secondPage.Items))
+			require.True(t, secondPage.HasPrev(), "a non-first page must link backward")
 
-		got, err := repo.Get("1", recordType)
-		require.NoError(t, err)
-		assert.Equal(t, 39, got.Data.Age, "the stale record must keep its server state")
-	})
+			backToFirst, err := repo.FindingRecords(*secondPage.Prev)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"Alice", "Bob"}, names(backToFirst.Items))
+		})
+
+	r.runGated(caps.AtomicBatch, "AtomicBatch",
+		"batch with a conflict writes nothing", func(t *testing.T) {
+			repo := newRepo(t)
+			recordType := uniqueRecordType()
+			mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+				ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
+			})
+
+			current, err := repo.Get("1", recordType)
+			require.NoError(t, err)
+
+			// move the server ahead so `current` is stale
+			mustSave(t, repo, current)
+
+			stale := current
+			stale.Data.Age = 100
+			fresh := schemaless.Record[schemaless.ExampleRecord]{ID: "2", Type: recordType, Data: schemaless.ExampleRecord{Name: "Bob", Age: 40}}
+
+			_, err = repo.UpdateRecords(schemaless.Save(stale, fresh))
+			assert.ErrorIs(t, err, schemaless.ErrVersionConflict)
+
+			_, err = repo.Get("2", recordType)
+			assert.ErrorIs(t, err, schemaless.ErrNotFound,
+				"the conflict-free record must not be written when the batch fails")
+
+			got, err := repo.Get("1", recordType)
+			require.NoError(t, err)
+			assert.Equal(t, 39, got.Data.Age, "the stale record must keep its server state")
+		})
 }
