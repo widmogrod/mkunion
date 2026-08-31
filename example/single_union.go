@@ -1,6 +1,6 @@
 package example
 
-//go:generate go run ../cmd/mkunion/main.go -name=Single
+//go:generate go tool mkunion -name=Single
 type (
 	One struct{}
 )

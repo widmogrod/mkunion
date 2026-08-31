@@ -83,7 +83,7 @@ This approach scales well because of the separation of state from IO and busines
 --8<-- "example/state/machine.go:dependency"
 ```
 
-Running `mkunion watch -g ./...` creates `machine_mock.go` with a `DependencyMock` type. This mock can then be used in tests:
+Running `go tool mkunion watch -g ./...` creates `machine_mock.go` with a `DependencyMock` type. This mock can then be used in tests:
 
 ```go title="example/state/machine_test.go"
 --8<-- "example/state/machine_test.go:moq-init"

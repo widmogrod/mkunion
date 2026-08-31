@@ -1,13 +1,14 @@
-package shape
+package shapeopenai
 
 import (
 	"fmt"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
 	log "github.com/sirupsen/logrus"
+	"github.com/widmogrod/mkunion/x/shape"
 )
 
-func ToOpenAIFunctionDefinition(name, desc string, in Shape) *openai.FunctionDefinition {
+func ToOpenAIFunctionDefinition(name, desc string, in shape.Shape) *openai.FunctionDefinition {
 	return &openai.FunctionDefinition{
 		Name:        name,
 		Description: desc,
@@ -15,67 +16,67 @@ func ToOpenAIFunctionDefinition(name, desc string, in Shape) *openai.FunctionDef
 	}
 }
 
-func toFunctionParameters(in Shape) *jsonschema.Definition {
-	return MatchShapeR1(
+func toFunctionParameters(in shape.Shape) *jsonschema.Definition {
+	return shape.MatchShapeR1(
 		in,
-		func(x *Any) *jsonschema.Definition {
+		func(x *shape.Any) *jsonschema.Definition {
 			//TODO: this should be list of all possible types [object, string, number, boolean, null]
-			log.Errorf("Any is not supported yet: %+v", x)
+			log.Errorf("shape.Any is not supported yet: %+v", x)
 			//panic("not implemented")
 			return &jsonschema.Definition{
 				Type: jsonschema.Null,
 			}
 		},
-		func(x *RefName) *jsonschema.Definition {
+		func(x *shape.RefName) *jsonschema.Definition {
 			// TODO: this should be list of all possible types [object, string, number, boolean, null]
-			//log.Errorf("RefName is not supported yet: %+v", x)
+			//log.Errorf("shape.RefName is not supported yet: %+v", x)
 			//panic("not implemented")
 			return &jsonschema.Definition{
 				Type: jsonschema.Null,
 			}
 		},
-		func(x *PointerLike) *jsonschema.Definition {
+		func(x *shape.PointerLike) *jsonschema.Definition {
 			return toFunctionParameters(x.Type)
 		},
-		func(x *AliasLike) *jsonschema.Definition {
+		func(x *shape.AliasLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
 				Type: jsonschema.String,
 			}
 		},
-		func(x *PrimitiveLike) *jsonschema.Definition {
-			return MatchPrimitiveKindR1(
+		func(x *shape.PrimitiveLike) *jsonschema.Definition {
+			return shape.MatchPrimitiveKindR1(
 				x.Kind,
-				func(x *BooleanLike) *jsonschema.Definition {
+				func(x *shape.BooleanLike) *jsonschema.Definition {
 					return &jsonschema.Definition{
 						Type: jsonschema.Boolean,
 					}
 				},
-				func(x *StringLike) *jsonschema.Definition {
+				func(x *shape.StringLike) *jsonschema.Definition {
 					return &jsonschema.Definition{
 						Type: jsonschema.String,
 					}
 				},
-				func(x *NumberLike) *jsonschema.Definition {
+				func(x *shape.NumberLike) *jsonschema.Definition {
 					return &jsonschema.Definition{
 						Type: jsonschema.Number,
 					}
 				},
 			)
 		},
-		func(x *ListLike) *jsonschema.Definition {
+		func(x *shape.ListLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
 				Type:  jsonschema.Array,
 				Items: toFunctionParameters(x.Element),
 			}
 		},
-		func(x *MapLike) *jsonschema.Definition {
+		func(x *shape.MapLike) *jsonschema.Definition {
 			return &jsonschema.Definition{
 				Type: jsonschema.Object,
 				// TODO: this should be list of all possible types [object, string, number, boolean, null]
 				//AdditionalProperties: toFunctionParameters(x.Val),
 			}
 		},
-		func(x *StructLike) *jsonschema.Definition {
+		func(x *shape.StructLike) *jsonschema.Definition {
 			properties := map[string]jsonschema.Definition{}
 			for _, field := range x.Fields {
 				def := toOpenAIFieldName(field.Guard, toFunctionParameters(field.Type))
@@ -99,7 +100,7 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 				Required:   requireFields(x.Fields),
 			}
 		},
-		func(x *UnionLike) *jsonschema.Definition {
+		func(x *shape.UnionLike) *jsonschema.Definition {
 			properties := map[string]jsonschema.Definition{}
 			for _, variant := range x.Variant {
 				def := toFunctionParameters(variant)
@@ -116,82 +117,82 @@ func toFunctionParameters(in Shape) *jsonschema.Definition {
 	)
 }
 
-func toVariantName(x Shape) string {
-	return MatchShapeR1(
+func toVariantName(x shape.Shape) string {
+	return shape.MatchShapeR1(
 		x,
-		func(a *Any) string {
+		func(a *shape.Any) string {
 			return "any"
 			//panic("not implemented")
 		},
-		func(x *RefName) string {
+		func(x *shape.RefName) string {
 			//panic("not implemented")
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
-		func(x *PointerLike) string {
+		func(x *shape.PointerLike) string {
 			return toVariantName(x.Type)
 		},
-		func(x *AliasLike) string {
+		func(x *shape.AliasLike) string {
 			panic("not implemented")
 		},
-		func(x *PrimitiveLike) string {
-			return MatchPrimitiveKindR1(
+		func(x *shape.PrimitiveLike) string {
+			return shape.MatchPrimitiveKindR1(
 				x.Kind,
-				func(x *BooleanLike) string {
+				func(x *shape.BooleanLike) string {
 					return "boolean"
 				},
-				func(x *StringLike) string {
+				func(x *shape.StringLike) string {
 					return "string"
 				},
-				func(x *NumberLike) string {
+				func(x *shape.NumberLike) string {
 					return "number"
 				},
 			)
 		},
-		func(x *ListLike) string {
+		func(x *shape.ListLike) string {
 			return "list"
 			//panic("not implemented")
 
 		},
-		func(x *MapLike) string {
+		func(x *shape.MapLike) string {
 			return "map"
 			//panic("not implemented")
 
 		},
-		func(x *StructLike) string {
+		func(x *shape.StructLike) string {
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
-		func(x *UnionLike) string {
+		func(x *shape.UnionLike) string {
 			return fmt.Sprintf("%s.%s", x.PkgName, x.Name)
 		},
 	)
 
 }
 
-func requireFields(fields []*FieldLike) []string {
+func requireFields(fields []*shape.FieldLike) []string {
 	var result []string
 	for _, field := range fields {
-		if _, ok := field.Guard.(*Required); ok {
+		if _, ok := field.Guard.(*shape.Required); ok {
 			result = append(result, field.Name)
 		}
 	}
 	return result
 }
 
-func toOpenAIFieldName(guard Guard, field *jsonschema.Definition) *jsonschema.Definition {
+func toOpenAIFieldName(guard shape.Guard, field *jsonschema.Definition) *jsonschema.Definition {
 	if guard == nil {
 		return field
 	}
 
-	return MatchGuardR1(
+	return shape.MatchGuardR1(
 		guard,
-		func(y *Enum) *jsonschema.Definition {
+		func(y *shape.Enum) *jsonschema.Definition {
 			field.Enum = y.Val
 			return field
 		},
-		func(y *Required) *jsonschema.Definition {
+		func(y *shape.Required) *jsonschema.Definition {
 			return field
 		},
-		func(y *AndGuard) *jsonschema.Definition {
+		func(y *shape.AndGuard) *jsonschema.Definition {
 			for _, guard := range y.L {
 				field = toOpenAIFieldName(guard, field)
 			}

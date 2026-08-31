@@ -18,15 +18,12 @@ jobs:
           go-version: ^1.25.1
         id: go
 
-      - run: cd cmd/mkunion; go get -v -t -d ./...
-      - run: cd cmd/mkunion; go build -o mkunion
-
-      - run: go install github.com/matryer/moq@latest
-
       - run: go get -v -t -d ./...
 
+      # mkunion and moq are `tool` dependencies in go.mod, so there is
+      # nothing to install here.
       # generate code with mkunion
-      - run: ./cmd/mkunion/mkunion watch -g ./...
+      - run: go tool mkunion watch -g ./...
       # generate code with go generate
       - run: go generate ./...
 

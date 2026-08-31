@@ -38,7 +38,7 @@ var (
 
 // --8<-- [start:dependency]
 
-//go:generate moq -with-resets -stub -out machine_mock.go . Dependency
+//go:generate go tool moq -with-resets -stub -out machine_mock.go . Dependency
 type Dependency interface {
 	TimeNow() *time.Time
 	WarehouseRemoveStock(ctx context.Context, quantity Quantity) error

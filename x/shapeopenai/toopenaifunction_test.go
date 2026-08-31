@@ -1,8 +1,9 @@
-package shape
+package shapeopenai
 
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"github.com/widmogrod/mkunion/x/shape"
 	"testing"
 )
 
@@ -12,7 +13,7 @@ type weatherInput struct {
 }
 
 func TestToOpenAIFunctionDefinition(t *testing.T) {
-	in := FromGo(weatherInput{})
+	in := shape.FromGo(weatherInput{})
 	def := ToOpenAIFunctionDefinition("get_weather", "Determine weather in my location", in)
 	defJSON, err := json.Marshal(def)
 	assert.NoError(t, err)

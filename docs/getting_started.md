@@ -1,10 +1,24 @@
 # Getting started
 
 ### Install mkunion
-Run in your terminal
+
+Add mkunion as a tool dependency of your module (needs Go 1.24 or newer):
 ```bash
-go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
+go get -tool github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
 ```
+
+This writes a `tool` line into your `go.mod`, so the version is pinned together
+with the rest of your dependencies. Everyone on your team and your CI then run
+the same mkunion, and generated files stay stable. You run it with `go tool mkunion`.
+No `go install`, no `PATH` changes.
+
+??? note "Using an older Go toolchain"
+
+    On Go older than 1.24, install the binary instead and drop the `go tool` prefix
+    from every command below:
+    ```bash
+    go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
+    ```
 
 ### Define your first union type
 Create your first union. In our simple example, we will represent different geometric shapes.
@@ -55,7 +69,7 @@ To make it more readable, as a convention, I decided to use the `type (...)` dec
 
 Run in your terminal to generate union types for your code and watch for changes:
 ```
-mkunion watch ./...
+go tool mkunion watch ./...
 ```
 
 This command will:
@@ -66,12 +80,12 @@ This command will:
 
 To generate unions without watching for changes (one-time generation):
 ```
-mkunion watch -g ./...
+go tool mkunion watch -g ./...
 ```
 
 Alternatively, you can run the `mkunion` command directly on specific files:
 ```
-mkunion -i example/shape.go
+go tool mkunion -i example/shape.go
 ```
 
 
@@ -80,12 +94,21 @@ As of the latest version, `mkunion watch` automatically runs `go generate ./...`
 
 If you need to skip the automatic `go generate` step (for example, if you want to run it manually with specific flags), use the `--dont-run-go-generate` flag:
 ```
-mkunion watch --dont-run-go-generate ./...
+go tool mkunion watch --dont-run-go-generate ./...
 # or use the short form
-mkunion watch -G ./...
+go tool mkunion watch -G ./...
 ```
 
 This automatic execution works well with extensions like [moq](https://github.com/matryer/moq) that depend on union types being defined first.
+Add such generators as tool dependencies too, and reference them from `go:generate`:
+```bash
+go get -tool github.com/matryer/moq
+```
+```go
+//go:generate go tool moq -with-resets -stub -out machine_mock.go . Dependency
+```
+Because `go tool` resolves the binary from `go.mod`, the directive works without
+anything on your `PATH`.
 
 ### Match over union type
 When you run the `mkunion` command, it will generate a file alongside your original file with the `union_gen.go` suffix (example [shape_union_gen.go](https://github.com/widmogrod/mkunion/tree/main/example/shape_union_gen.go)).

@@ -326,7 +326,7 @@ var result Result[string] = &Ok[string]{Value: "hello"}
 Generate TypeScript types for end-to-end type safety:
 
 ```bash
-mkunion shape-export --language typescript --output-dir ./ts
+go tool mkunion shape-export --language typescript --output-dir ./ts
 ```
 
 Creates matching TypeScript discriminated unions that work seamlessly with your Go API.
