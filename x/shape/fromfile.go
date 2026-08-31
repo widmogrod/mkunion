@@ -22,7 +22,7 @@ import (
 // isCurrentlyInferring reports if a file is being parsed higher up the stack,
 // to prevent infinite recursion via dot-import resolution.
 func isCurrentlyInferring(filename string) bool {
-	return DefaultIndex.inferring[filename]
+	return DefaultIndex.isInferring(filename)
 }
 
 // InferFromFile parses one Go file through the DefaultIndex,
@@ -51,6 +51,7 @@ func parseFile(filename string) (*InferredInfo, error) {
 	}
 
 	ast.Walk(result, f)
+	result.injectUnionNameTags()
 	return result, nil
 }
 
@@ -72,6 +73,7 @@ func InferFromFileWithContentBody(x string, pkgImportName string) (*InferredInfo
 	}
 
 	ast.Walk(result, f)
+	result.injectUnionNameTags()
 
 	return result, nil
 }
@@ -299,14 +301,25 @@ func (f *InferredInfo) RetrieveUnion(name string) *UnionLike {
 	}
 }
 
-// collectVariants collects and prepares union variants.
+// injectUnionNameTags stamps every union variant with the base union name
+// (without type params). It runs once, right after the AST walk, while the
+// InferredInfo is still owned by a single goroutine. After that, shapes are
+// shared through the Index and must not be mutated.
+func (f *InferredInfo) injectUnionNameTags() {
+	for unionName, variantNames := range f.possibleVariantTypes {
+		for _, variantName := range variantNames {
+			if variant, ok := f.shapes[variantName]; ok && variant != nil {
+				injectTag(variant, TagUnionName, unionName)
+			}
+		}
+	}
+}
+
+// collectVariants collects union variants.
 func (f *InferredInfo) collectVariants(unionName string) []Shape {
 	var variants []Shape
 	for _, variantName := range f.possibleVariantTypes[unionName] {
-		variant := f.shapes[variantName]
-		// Always inject the base union name (without type params) into variants
-		injectTag(variant, TagUnionName, unionName)
-		variants = append(variants, variant)
+		variants = append(variants, f.shapes[variantName])
 	}
 	return variants
 }
