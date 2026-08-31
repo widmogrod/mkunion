@@ -20,6 +20,12 @@ func IsPrimitive(x any) bool {
 }
 
 func FromPrimitiveGo(x any) Schema {
+	// IsPrimitive counts pointers as primitive, so FromGo routes them
+	// here; nil pointers become None, non-nil ones convert to the value
+	if s, ok := fromPrimitiveGoPtr(x); ok {
+		return s
+	}
+
 	switch y := x.(type) {
 	case bool:
 		return MkBool(y)
@@ -92,6 +98,50 @@ func FromPrimitiveGo(x any) Schema {
 	}
 
 	panic(fmt.Errorf("schema.FromPrimitiveGo: unknown type %T", x))
+}
+
+func fromPrimitiveGoPtr(x any) (Schema, bool) {
+	switch y := x.(type) {
+	case *bool:
+		return ptrSchema(y, func(v bool) Schema { return MkBool(v) })
+	case *int:
+		return ptrSchema(y, func(v int) Schema { return MkInt(int64(v)) })
+	case *int8:
+		return ptrSchema(y, func(v int8) Schema { return MkInt(int64(v)) })
+	case *int16:
+		return ptrSchema(y, func(v int16) Schema { return MkInt(int64(v)) })
+	case *int32:
+		return ptrSchema(y, func(v int32) Schema { return MkInt(int64(v)) })
+	case *int64:
+		return ptrSchema(y, func(v int64) Schema { return MkInt(v) })
+	case *uint:
+		return ptrSchema(y, func(v uint) Schema { return MkUint(uint64(v)) })
+	case *uint8:
+		return ptrSchema(y, func(v uint8) Schema { return MkUint(uint64(v)) })
+	case *uint16:
+		return ptrSchema(y, func(v uint16) Schema { return MkUint(uint64(v)) })
+	case *uint32:
+		return ptrSchema(y, func(v uint32) Schema { return MkUint(uint64(v)) })
+	case *uint64:
+		return ptrSchema(y, func(v uint64) Schema { return MkUint(v) })
+	case *float32:
+		return ptrSchema(y, func(v float32) Schema { return MkFloat(float64(v)) })
+	case *float64:
+		return ptrSchema(y, func(v float64) Schema { return MkFloat(v) })
+	case *string:
+		return ptrSchema(y, func(v string) Schema { return MkString(v) })
+	case *[]byte:
+		return ptrSchema(y, func(v []byte) Schema { return MkBinary(v) })
+	}
+
+	return nil, false
+}
+
+func ptrSchema[T any](y *T, mk func(T) Schema) (Schema, bool) {
+	if y == nil {
+		return MkNone(), true
+	}
+	return mk(*y), true
 }
 
 func ToGoPrimitive(x Schema) (any, error) {
