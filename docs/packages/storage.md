@@ -9,6 +9,24 @@ loading, and querying Go values — including union types — without writing
 serialization code or SQL. You pick a backend by picking a constructor;
 everything else stays the same.
 
+## Installation
+
+The package ships with the mkunion module:
+
+```bash
+go get github.com/widmogrod/mkunion
+```
+
+Import what you need:
+
+```go
+import (
+    "github.com/widmogrod/mkunion/x/storage/schemaless"           // repositories
+    "github.com/widmogrod/mkunion/x/storage/predicate"            // typed query predicates
+    "github.com/widmogrod/mkunion/x/storage/schemaless/typedful"  // type-safe wrapper
+)
+```
+
 ## Storage adapters
 
 ### In-memory
