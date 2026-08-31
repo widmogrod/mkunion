@@ -12,6 +12,7 @@ import (
 	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/format"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -1185,7 +1186,7 @@ func findGeneratedFiles(dir string) ([]string, error) {
 		// Only look at .go files
 		if !d.IsDir() && filepath.Ext(path) == ".go" {
 			// Check if it's a generated file
-			if isGeneratedFile(path) {
+			if isGeneratedFile(path) && hasGeneratedHeader(path) {
 				generatedFiles = append(generatedFiles, path)
 			}
 		}
@@ -1220,4 +1221,23 @@ func isGeneratedFile(path string) bool {
 	}
 
 	return false
+}
+
+// hasGeneratedHeader confirms the file starts with the mkunion generated-code
+// header, so clean never removes a hand-written file that happens to match a
+// generated file name.
+func hasGeneratedHeader(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	buf := make([]byte, len(generators.Header))
+	n, err := io.ReadFull(f, buf)
+	if err != nil {
+		return false
+	}
+
+	return string(buf[:n]) == generators.Header
 }
