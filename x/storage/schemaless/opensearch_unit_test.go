@@ -1,6 +1,7 @@
 package schemaless
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -64,15 +65,11 @@ func TestOpenSearchRepository_UpdateRecords_EmptyCommand(t *testing.T) {
 }
 
 func TestOpenSearchRepository_UpdateRecords_StaleVersionConflict(t *testing.T) {
-	var indexed bool
+	// a failed script version check surfaces as HTTP 400 carrying the marker
 	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"found":true,"_seq_no":7,"_primary_term":1,"_source":{"ID":"123","Type":"ExampleRecord","Data":{"Name":"Alice","Age":30},"Version":5}}`))
-			return
-		}
-		indexed = true
-		w.WriteHeader(http.StatusOK)
+		assert.Contains(t, r.URL.Path, "/_update/", "guarded save should use the scripted _update API")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":{"type":"illegal_argument_exception","reason":"mkunion_version_conflict: stored=5 expected=3"}}`))
 	})
 
 	_, err := repo.UpdateRecords(Save(Record[ExampleRecord]{
@@ -81,19 +78,10 @@ func TestOpenSearchRepository_UpdateRecords_StaleVersionConflict(t *testing.T) {
 		Version: 3, // server has version 5
 	}))
 	assert.ErrorIs(t, err, ErrVersionConflict)
-	assert.False(t, indexed, "stale record should not be written")
 }
 
 func TestOpenSearchRepository_UpdateRecords_ConcurrentWriteConflict(t *testing.T) {
-	var gotIfSeqNo, gotIfPrimaryTerm string
 	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"found":true,"_seq_no":7,"_primary_term":1,"_source":{"ID":"123","Type":"ExampleRecord","Data":{"Name":"Alice","Age":30},"Version":3}}`))
-			return
-		}
-		gotIfSeqNo = r.URL.Query().Get("if_seq_no")
-		gotIfPrimaryTerm = r.URL.Query().Get("if_primary_term")
 		w.WriteHeader(http.StatusConflict)
 		_, _ = w.Write([]byte(`{"error":{"type":"version_conflict_engine_exception"}}`))
 	})
@@ -104,38 +92,28 @@ func TestOpenSearchRepository_UpdateRecords_ConcurrentWriteConflict(t *testing.T
 		Version: 3,
 	}))
 	assert.ErrorIs(t, err, ErrVersionConflict)
-	assert.Equal(t, "7", gotIfSeqNo, "write should be compare-and-swap on seq_no")
-	assert.Equal(t, "1", gotIfPrimaryTerm)
 }
 
-func TestOpenSearchRepository_UpdateRecords_CreatesMissingRecord(t *testing.T) {
-	var gotOpType string
+func TestOpenSearchRepository_UpdateRecords_GuardedSaveSendsScript(t *testing.T) {
+	var gotBody []byte
 	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte(`{"found":false}`))
-			return
-		}
-		gotOpType = r.URL.Query().Get("op_type")
-		w.WriteHeader(http.StatusCreated)
+		gotBody, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"result":"created"}`))
 	})
 
-	result, err := repo.UpdateRecords(Save(Record[ExampleRecord]{ID: "123", Type: "ExampleRecord"}))
+	result, err := repo.UpdateRecords(Save(Record[ExampleRecord]{ID: "123", Type: "ExampleRecord", Version: 3}))
 	require.NoError(t, err)
-	assert.Equal(t, "create", gotOpType, "missing record should be written as creation")
-	assert.Equal(t, uint16(1), result.Saved["123"].Version)
+	assert.Equal(t, uint16(4), result.Saved["123"].Version)
+	assert.Contains(t, string(gotBody), `"scripted_upsert":true`, "missing records must be creatable in the same request")
+	assert.Contains(t, string(gotBody), `"expected":3`, "script must check the pre-increment version")
+	assert.Contains(t, string(gotBody), `"Version":4`, "written document must carry the incremented version")
 }
 
 func TestOpenSearchRepository_UpdateRecords_OverwritePolicySkipsVersionCheck(t *testing.T) {
-	var gotRead bool
-	var gotIfSeqNo string
+	var gotPath string
 	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			gotRead = true
-			return
-		}
-		gotIfSeqNo = r.URL.Query().Get("if_seq_no")
+		gotPath = r.URL.Path
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"result":"updated"}`))
 	})
@@ -145,9 +123,31 @@ func TestOpenSearchRepository_UpdateRecords_OverwritePolicySkipsVersionCheck(t *
 
 	result, err := repo.UpdateRecords(command)
 	require.NoError(t, err)
-	assert.False(t, gotRead, "overwrite policy should not read current version")
-	assert.Empty(t, gotIfSeqNo, "overwrite policy should not use compare-and-swap")
+	assert.Contains(t, gotPath, "/_doc/", "overwrite policy should be a plain index request, no script")
 	assert.Equal(t, uint16(4), result.Saved["123"].Version)
+}
+
+func TestOpenSearchRepository_UpdateRecords_PartialResultOnMidBatchFailure(t *testing.T) {
+	// one save succeeds, then the delete fails: the error must come back
+	// together with a result naming what was durably written
+	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"error":"boom"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"result":"created"}`))
+	})
+
+	command := Save(Record[ExampleRecord]{ID: "a", Type: "ExampleRecord"})
+	command.Deleting = Delete(Record[ExampleRecord]{ID: "b", Type: "ExampleRecord"}).Deleting
+
+	result, err := repo.UpdateRecords(command)
+	assert.ErrorIs(t, err, ErrInternalError)
+	require.NotNil(t, result, "partial result must accompany the error")
+	assert.Len(t, result.Saved, 1, "the save before the failure was durably written")
+	assert.Len(t, result.Deleted, 0, "the failed delete must not be reported")
 }
 
 func TestOpenSearchRepository_UpdateRecords_ServerError(t *testing.T) {

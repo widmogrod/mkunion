@@ -72,8 +72,17 @@ To run this test, please set OPENSEARCH_ADDRESS to the address of your OpenSearc
 			}
 		}
 
-		result, err := repo.Get(result.Items[0].ID, result.Items[0].Type)
+		alice, err := repo.Get(result.Items[0].ID, result.Items[0].Type)
 		assert.NoError(t, err)
-		assert.Equal(t, "Alice", result.Data.Name)
+		assert.Equal(t, "Alice", alice.Data.Name)
+
+		// optimistic locking against a real server
+		stale := alice
+		stale.Version = alice.Version - 1
+		_, err = repo.UpdateRecords(Save(stale))
+		assert.ErrorIs(t, err, ErrVersionConflict, "stale save must be rejected")
+
+		_, err = repo.UpdateRecords(Save(alice))
+		assert.NoError(t, err, "save with matching version must succeed")
 	}
 }

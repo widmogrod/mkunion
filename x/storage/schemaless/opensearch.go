@@ -23,17 +23,46 @@ func NewOpenSearchRepository[A any](client *opensearch.Client, index string) *Op
 
 var _ Repository[any] = (*OpenSearchRepository[any])(nil)
 
+// OpenSearchRepository is intended as a projection / read-model store:
+// data is projected into it from an authoritative store (e.g. via streams),
+// so writes are expected to be re-playable.
+//
+// Atomicity contract: OpenSearch has no multi-document transactions, so
+// UpdateRecords is atomic PER RECORD, not per batch. When a record in the
+// middle of a batch fails, records processed before it stay written; the
+// returned UpdateRecordsResult lists them alongside the error. Transactional
+// backends (DynamoDB, in-memory) are all-or-nothing and return a nil result
+// on error.
+//
+// Optimistic locking (PolicyIfServerNotChanged) is enforced server-side in a
+// single request: a Painless scripted upsert compares the stored Version with
+// the incoming one atomically on the shard and rejects stale writes with
+// ErrVersionConflict. A document without a Version field is treated as absent,
+// mirroring DynamoDB's "Version = :v OR attribute_not_exists(Version)".
 type OpenSearchRepository[A any] struct {
 	client    *opensearch.Client
 	indexName string
 }
 
-// openSearchDocMeta carries the document source together with the
-// concurrency-control metadata needed for compare-and-swap writes.
+// openSearchVersionConflictMarker is embedded in the script exception message
+// so a version conflict can be told apart from other script failures, which
+// OpenSearch reports with the same HTTP 400 status.
+const openSearchVersionConflictMarker = "mkunion_version_conflict"
+
+// openSearchVersionCheckScript atomically enforces optimistic locking and
+// replaces the document content. It runs with params:
+//   - doc: the full new document (already carrying the incremented Version)
+//   - expected: the Version the caller last read
+const openSearchVersionCheckScript = `
+if (ctx._source.containsKey('Version') && ctx._source.Version != params.expected) {
+  throw new IllegalArgumentException('` + openSearchVersionConflictMarker + `: stored=' + ctx._source.Version + ' expected=' + params.expected);
+}
+ctx._source.clear();
+ctx._source.putAll(params.doc);
+`
+
 type openSearchDocMeta[A any] struct {
-	Item        A    `json:"_source"`
-	SeqNo       *int `json:"_seq_no"`
-	PrimaryTerm *int `json:"_primary_term"`
+	Item A `json:"_source"`
 }
 
 // getDocMeta returns nil (and no error) when the document does not exist.
@@ -81,99 +110,116 @@ func (os *OpenSearchRepository[A]) UpdateRecords(command UpdateRecords[Record[A]
 		return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: empty command. %w", ErrEmptyCommand)
 	}
 
-	for _, record := range command.Saving {
-		documentID := os.toDocumentID(record)
-
-		// Mimic the DynamoDB backend's optimistic locking condition
-		// "Version = :version OR attribute_not_exists(Version)":
-		// when the document exists its stored version must match the record's,
-		// and the write is a compare-and-swap on the document's sequence number;
-		// when it does not exist the write must be a creation.
-		var current *openSearchDocMeta[Record[A]]
-		if command.UpdatingPolicy == PolicyIfServerNotChanged {
-			var err error
-			current, err = os.getDocMeta(documentID)
-			if err != nil {
-				return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: %w", err)
-			}
-			if current != nil && current.Item.Version != record.Version {
-				return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: id=%s stored version %d != %d. %w",
-					record.ID, current.Item.Version, record.Version, ErrVersionConflict)
-			}
-		}
-
-		record.Version++
-		data, err := shared.JSONMarshal[Record[A]](record)
-		if err != nil {
-			return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: marshal error=%s. %w", err, ErrInternalError)
-		}
-		response, err := os.client.Index(os.indexName, bytes.NewReader(data), func(request *opensearchapi.IndexRequest) {
-			request.DocumentID = documentID
-			// make the write visible to searches immediately,
-			// matching the read-after-write behaviour of the other backends
-			request.Refresh = "true"
-			if command.UpdatingPolicy == PolicyIfServerNotChanged {
-				if current == nil {
-					request.OpType = "create"
-				} else {
-					request.IfSeqNo = current.SeqNo
-					request.IfPrimaryTerm = current.PrimaryTerm
-				}
-			}
-		})
-		if err != nil {
-			return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: index error=%s. %w", err, ErrInternalError)
-		}
-		err = func() error {
-			defer response.Body.Close()
-			if response.StatusCode == 409 {
-				return fmt.Errorf("OpenSearchRepository.UpdateRecords: id=%s. %w", record.ID, ErrVersionConflict)
-			}
-			if response.IsError() {
-				return fmt.Errorf("OpenSearchRepository.UpdateRecords: index response %s. %w", response.String(), ErrInternalError)
-			}
-			return nil
-		}()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for _, record := range command.Deleting {
-		response, err := os.client.Delete(os.indexName, os.toDocumentID(record), func(request *opensearchapi.DeleteRequest) {
-			request.Refresh = "true"
-		})
-		if err != nil {
-			return nil, fmt.Errorf("OpenSearchRepository.UpdateRecords: delete error=%s. %w", err, ErrInternalError)
-		}
-		err = func() error {
-			defer response.Body.Close()
-			// 404 means the record is already gone, which is the desired outcome
-			if response.IsError() && response.StatusCode != 404 {
-				return fmt.Errorf("OpenSearchRepository.UpdateRecords: delete response %s. %w", response.String(), ErrInternalError)
-			}
-			return nil
-		}()
-		if err != nil {
-			return nil, err
-		}
-	}
-
+	// result is filled incrementally: on a mid-batch failure it is returned
+	// alongside the error, listing the records that were durably written.
 	result := &UpdateRecordsResult[Record[A]]{
 		Saved:   make(map[string]Record[A]),
 		Deleted: make(map[string]Record[A]),
 	}
 
-	for _, value := range command.Saving {
-		value.Version++
-		result.Saved[value.ID] = value
+	for _, record := range command.Saving {
+		if err := os.saveRecord(command.UpdatingPolicy, record); err != nil {
+			return result, err
+		}
+		record.Version++
+		result.Saved[record.ID] = record
 	}
 
-	for _, value := range command.Deleting {
-		result.Deleted[value.ID] = value
+	for _, record := range command.Deleting {
+		if err := os.deleteRecord(record); err != nil {
+			return result, err
+		}
+		result.Deleted[record.ID] = record
 	}
 
 	return result, nil
+}
+
+func (os *OpenSearchRepository[A]) saveRecord(policy UpdatingPolicy, record Record[A]) error {
+	documentID := os.toDocumentID(record)
+	expectedVersion := record.Version
+	record.Version++
+
+	data, err := shared.JSONMarshal[Record[A]](record)
+	if err != nil {
+		return fmt.Errorf("OpenSearchRepository.saveRecord: marshal error=%s. %w", err, ErrInternalError)
+	}
+
+	if policy == PolicyOverwriteServerChanges {
+		response, err := os.client.Index(os.indexName, bytes.NewReader(data), func(request *opensearchapi.IndexRequest) {
+			request.DocumentID = documentID
+			// make the write visible to searches immediately,
+			// matching the read-after-write behaviour of the other backends
+			request.Refresh = "true"
+		})
+		if err != nil {
+			return fmt.Errorf("OpenSearchRepository.saveRecord: index error=%s. %w", err, ErrInternalError)
+		}
+		defer response.Body.Close()
+
+		if response.IsError() {
+			return fmt.Errorf("OpenSearchRepository.saveRecord: index response %s. %w", response.String(), ErrInternalError)
+		}
+		return nil
+	}
+
+	// PolicyIfServerNotChanged: one request, version check and write
+	// happen atomically on the shard inside the script
+	body, err := json.Marshal(map[string]any{
+		"scripted_upsert": true,
+		"upsert":          map[string]any{},
+		"script": map[string]any{
+			"lang":   "painless",
+			"source": openSearchVersionCheckScript,
+			"params": map[string]any{
+				"doc":      json.RawMessage(data),
+				"expected": int(expectedVersion),
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("OpenSearchRepository.saveRecord: script marshal error=%s. %w", err, ErrInternalError)
+	}
+
+	response, err := os.client.Update(os.indexName, documentID, bytes.NewReader(body), func(request *opensearchapi.UpdateRequest) {
+		request.Refresh = "true"
+		// the script re-checks Version on every attempt, so retrying the
+		// engine-level write race is safe
+		retries := 3
+		request.RetryOnConflict = &retries
+	})
+	if err != nil {
+		return fmt.Errorf("OpenSearchRepository.saveRecord: update error=%s. %w", err, ErrInternalError)
+	}
+	defer response.Body.Close()
+
+	if response.IsError() {
+		responseBody, _ := io.ReadAll(response.Body)
+		// a failed script version check surfaces as HTTP 400 with our marker;
+		// 409 is the engine's own concurrent-write conflict
+		if response.StatusCode == 409 || strings.Contains(string(responseBody), openSearchVersionConflictMarker) {
+			return fmt.Errorf("OpenSearchRepository.saveRecord: id=%s. %w", record.ID, ErrVersionConflict)
+		}
+		return fmt.Errorf("OpenSearchRepository.saveRecord: update status=%d body=%s. %w", response.StatusCode, string(responseBody), ErrInternalError)
+	}
+
+	return nil
+}
+
+func (os *OpenSearchRepository[A]) deleteRecord(record Record[A]) error {
+	response, err := os.client.Delete(os.indexName, os.toDocumentID(record), func(request *opensearchapi.DeleteRequest) {
+		request.Refresh = "true"
+	})
+	if err != nil {
+		return fmt.Errorf("OpenSearchRepository.deleteRecord: delete error=%s. %w", err, ErrInternalError)
+	}
+	defer response.Body.Close()
+
+	// 404 means the record is already gone, which is the desired outcome
+	if response.IsError() && response.StatusCode != 404 {
+		return fmt.Errorf("OpenSearchRepository.deleteRecord: delete response %s. %w", response.String(), ErrInternalError)
+	}
+	return nil
 }
 
 type (
