@@ -62,6 +62,16 @@ func TestFromPrimitiveGoValues(t *testing.T) {
 // they must convert (nil to None, non-nil to the pointed value), not panic.
 func TestFromPrimitiveGoPointers(t *testing.T) {
 	i := 42
+	i8 := int8(8)
+	i16 := int16(16)
+	i32 := int32(32)
+	i64 := int64(64)
+	u := uint(1)
+	u8 := uint8(8)
+	u16 := uint16(16)
+	u32 := uint32(32)
+	u64 := uint64(64)
+	f32 := float32(0.5)
 	f := 1.5
 	s := "x"
 	b := true
@@ -71,14 +81,24 @@ func TestFromPrimitiveGoPointers(t *testing.T) {
 		in   any
 		want Schema
 	}{
-		"pointer to int":    {&i, MkInt(42)},
-		"pointer to float":  {&f, MkFloat(1.5)},
-		"pointer to string": {&s, MkString("x")},
-		"pointer to bool":   {&b, MkBool(true)},
-		"pointer to bytes":  {&raw, MkBinary([]byte{1})},
-		"nil pointer":       {(*int)(nil), MkNone()},
-		"nil string ptr":    {(*string)(nil), MkNone()},
-		"nil bytes ptr":     {(*[]byte)(nil), MkNone()},
+		"pointer to int":     {&i, MkInt(42)},
+		"pointer to int8":    {&i8, MkInt(8)},
+		"pointer to int16":   {&i16, MkInt(16)},
+		"pointer to int32":   {&i32, MkInt(32)},
+		"pointer to int64":   {&i64, MkInt(64)},
+		"pointer to uint":    {&u, MkUint(1)},
+		"pointer to uint8":   {&u8, MkUint(8)},
+		"pointer to uint16":  {&u16, MkUint(16)},
+		"pointer to uint32":  {&u32, MkUint(32)},
+		"pointer to uint64":  {&u64, MkUint(64)},
+		"pointer to float32": {&f32, MkFloat(0.5)},
+		"pointer to float":   {&f, MkFloat(1.5)},
+		"pointer to string":  {&s, MkString("x")},
+		"pointer to bool":    {&b, MkBool(true)},
+		"pointer to bytes":   {&raw, MkBinary([]byte{1})},
+		"nil pointer":        {(*int)(nil), MkNone()},
+		"nil string ptr":     {(*string)(nil), MkNone()},
+		"nil bytes ptr":      {(*[]byte)(nil), MkNone()},
 	}
 	for name, uc := range useCases {
 		t.Run(name, func(t *testing.T) {
