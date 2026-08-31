@@ -122,62 +122,17 @@ describe('ScheduleHistoryDialog Integration Tests', () => {
       body: JSON.stringify({
         where: {
           Predicate: {
-            "$type": "predicate.Or",
-            "predicate.Or": {
-              L: [
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.Done"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": targetParentRunId }
-                      }
-                    }
-                  }
-                },
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.Scheduled"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": targetParentRunId }
-                      }
-                    }
-                  }
-                },
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.ScheduleStopped"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": targetParentRunId }
-                      }
-                    }
-                  }
-                },
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.Error"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": targetParentRunId }
-                      }
-                    }
-                  }
+            // Bare-field location expands over every state variant on the server
+            "$type": "predicate.Compare",
+            "predicate.Compare": {
+              Location: 'Data.BaseState.RunOption["workflow.ScheduleRun"].ParentRunID',
+              Operation: "==",
+              BindValue: {
+                "$type": "predicate.Literal",
+                "predicate.Literal": {
+                  Value: { "$type": "schema.String", "schema.String": targetParentRunId }
                 }
-              ]
+              }
             }
           }
         },

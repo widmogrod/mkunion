@@ -64,6 +64,33 @@ behavioural spec (`spec.RunAppendLogSpec`) as the repositories — see the
 *Append log capability matrix* below and `docs/packages/storage.md` for the
 full guide.
 
+## Plain-JSON storage with shape-aware queries (jsonful)
+
+The `schemaless/jsonful` repository stores records as plain mkunion JSON
+(encoded once, at write time) and resolves query locations against the type's
+shape. Locations mirror your Go types, union fields expand over variants, and
+a typo is an error instead of an empty result:
+
+```go
+repo, err := jsonful.NewInMemoryRepository[MyState]()
+
+result, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[MyState]]{
+    Where: predicate.MustWhere(
+        // bare field: expands over every union variant that has it
+        "Data.BaseState.RunID = :runID",
+        predicate.ParamBinds{":runID": schema.MkString("run-1")},
+        nil,
+    ),
+})
+
+// other supported locations:
+//   Data["workflow.Await"].CallbackID   - one variant only
+//   Data["$type"]                       - the union discriminator
+//   Data.Friends[*].Age                 - list wildcard
+```
+
+See `docs/examples/json_storage_queries.md` for the full guide.
+
 ## Roadmap
 ### V0.1.0
 - [x] x/storage support DynamoDB, OpenSearch, and InMemory implementation

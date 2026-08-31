@@ -14,6 +14,12 @@ MkUnion aims to support you in this task by providing you with the `x/storage/sc
 - providing you with a simple API to work with the database
 - and more
 
+!!! tip "Querying stored unions"
+    The `jsonful` repository stores records as plain mkunion JSON and lets you
+    query them with locations that mirror your Go types, like
+    `Data.BaseState.RunID` or `Data["workflow.Await"].CallbackID`.
+    See [Querying unions stored as JSON](json_storage_queries.md).
+
 Below is a test case that demonstrates a complete example of initializing a database,
 building a state using `NewMachine`, and saving and loading state from the database.
 

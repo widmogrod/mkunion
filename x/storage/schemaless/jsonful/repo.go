@@ -32,7 +32,7 @@ func NewInMemoryRepository[T any]() (*InMemoryRepository[T], error) {
 		return nil, fmt.Errorf("jsonful.NewInMemoryRepository: %w", shape.ErrShapeNotFound)
 	}
 
-	evaluator := predicate.NewJSONEvaluator(recordShape(dataShape))
+	evaluator := predicate.NewJSONEvaluator(RecordShape(dataShape))
 	return &InMemoryRepository[T]{
 		store:     make(map[string]entry[T]),
 		evaluator: evaluator,
@@ -312,9 +312,9 @@ func recordDocument[T any](record schemaless.Record[T]) (any, error) {
 	}, nil
 }
 
-// recordShape describes schemaless.Record[T] without needing the generic
+// RecordShape describes schemaless.Record[T] without needing the generic
 // instantiation in the type registry.
-func recordShape(dataShape shape.Shape) shape.Shape {
+func RecordShape(dataShape shape.Shape) shape.Shape {
 	return &shape.StructLike{
 		Name:          "Record",
 		PkgName:       "schemaless",

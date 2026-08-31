@@ -85,25 +85,20 @@ function buildInitialWhereClause(
   // Add workflow filters
   const workflowFilters = executionFilters.filter(f => f.stateType === 'workflow')
   if (workflowFilters.length > 0) {
-    const stateTypes = ['workflow.Done', 'workflow.Error', 'workflow.Await', 'workflow.Scheduled', 'workflow.ScheduleStopped', 'workflow.NextOperation']
-    
+    // Bare fields expand over every state variant on the server
     workflowFilters.forEach(filter => {
-      const stateTypePredicates = stateTypes.map(stateType => 
-        createOr([
-          createCompare(
-            `Data["${stateType}"]["BaseState"]["Flow"]["workflow.Flow"]["Name"]`,
-            '==',
-            { "$type": "schema.String", "schema.String": filter.label }
-          ),
-          createCompare(
-            `Data["${stateType}"]["BaseState"]["Flow"]["workflow.FlowRef"]["FlowID"]`,
-            '==',
-            { "$type": "schema.String", "schema.String": filter.label }
-          )
-        ])
-      )
-      
-      predicates.push(createOr(stateTypePredicates))
+      predicates.push(createOr([
+        createCompare(
+          'Data.BaseState.Flow.Name',
+          '==',
+          { "$type": "schema.String", "schema.String": filter.label }
+        ),
+        createCompare(
+          'Data.BaseState.Flow.FlowID',
+          '==',
+          { "$type": "schema.String", "schema.String": filter.label }
+        )
+      ]))
     })
   }
   
@@ -231,24 +226,19 @@ export function ExecutionsTableRefactored({
     // Handle workflow filters
     const workflowFilters = executionFilters.filter(f => f.stateType === 'workflow')
     workflowFilters.forEach(filter => {
-      const stateTypes = ['workflow.Done', 'workflow.Error', 'workflow.Await', 'workflow.Scheduled', 'workflow.ScheduleStopped', 'workflow.NextOperation']
-      
-      const stateTypePredicates = stateTypes.map(stateType => 
-        createOr([
-          createCompare(
-            `Data["${stateType}"]["BaseState"]["Flow"]["workflow.Flow"]["Name"]`,
-            '==',
-            { "$type": "schema.String", "schema.String": filter.label }
-          ),
-          createCompare(
-            `Data["${stateType}"]["BaseState"]["Flow"]["workflow.FlowRef"]["FlowID"]`,
-            '==',
-            { "$type": "schema.String", "schema.String": filter.label }
-          )
-        ])
-      )
-      
-      const workflowPredicate = createOr(stateTypePredicates)
+      // Bare fields expand over every state variant on the server
+      const workflowPredicate = createOr([
+        createCompare(
+          'Data.BaseState.Flow.Name',
+          '==',
+          { "$type": "schema.String", "schema.String": filter.label }
+        ),
+        createCompare(
+          'Data.BaseState.Flow.FlowID',
+          '==',
+          { "$type": "schema.String", "schema.String": filter.label }
+        )
+      ])
       
       if (!filter.isExclude) {
         predicates.push(workflowPredicate)
