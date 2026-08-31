@@ -71,6 +71,13 @@ func Handle(rq Request, response Response) { // Assuming Resopnse was a typo for
 }
 ```
 
+## Storage backends and what they support
+
+The `x/storage/schemaless` package ships three repository implementations:
+in-memory, DynamoDB, and OpenSearch. What each backend supports is
+documented in [x/storage — feature matrix](../packages/storage.md#feature-matrix),
+generated straight from the behavioural test suite.
+
 ## Error as state. Self-healing systems.
 In a request-response situation, handling errors is easy, but what if something goes wrong in some long-lived process?
 How should errors be handled in such a situation? Without making what we've learned about state machines useless or hard to use?

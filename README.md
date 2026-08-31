@@ -152,3 +152,4 @@ type (
 
 - Read [getting started](https://widmogrod.github.io/mkunion/getting_started/) to learn more.
 - Learn more about [value proposition](https://widmogrod.github.io/mkunion/value_proposition/).
+- Explore packages in the `x/` directory, like [x/storage adapters and their feature matrix](https://widmogrod.github.io/mkunion/packages/storage/).

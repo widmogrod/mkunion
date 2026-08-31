@@ -1,0 +1,190 @@
+{
+  "Backend": "opensearch",
+  "Capabilities": {
+    "SortByDataField": true,
+    "BackwardPagination": false,
+    "AtomicBatch": false,
+    "MonotonicOverwriteVersion": false
+  },
+  "Behaviours": [
+    {
+      "Suite": "repository",
+      "Order": 1,
+      "Name": "get of a missing record returns ErrNotFound",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 2,
+      "Name": "get with the wrong record type returns ErrNotFound",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 3,
+      "Name": "delete of a missing record is not an error",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 4,
+      "Name": "empty update command returns ErrEmptyCommand",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 5,
+      "Name": "saved record can be read back with its data",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 6,
+      "Name": "update with the current version succeeds and bumps the version",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 7,
+      "Name": "write with a stale version fails with ErrVersionConflict",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 8,
+      "Name": "PolicyOverwriteServerChanges wins over a stale version",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 9,
+      "Name": "overwrites keep the version increasing",
+      "Status": "downgraded",
+      "Capability": "MonotonicOverwriteVersion"
+    },
+    {
+      "Suite": "repository",
+      "Order": 10,
+      "Name": "deleted record is gone",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 11,
+      "Name": "where predicate filters records",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 12,
+      "Name": "OR predicate matches either branch",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 13,
+      "Name": "NOT over OR excludes both branches",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 14,
+      "Name": "query without a record type is not an error",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 15,
+      "Name": "record type separates records",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 16,
+      "Name": "forward pagination visits every record exactly once",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 17,
+      "Name": "sorting orders records by a data field",
+      "Status": "supported",
+      "Capability": "SortByDataField"
+    },
+    {
+      "Suite": "repository",
+      "Order": 18,
+      "Name": "sorted pagination keeps order across pages",
+      "Status": "supported",
+      "Capability": "SortByDataField"
+    },
+    {
+      "Suite": "repository",
+      "Order": 19,
+      "Name": "prev cursor pages backward",
+      "Status": "downgraded",
+      "Capability": "BackwardPagination"
+    },
+    {
+      "Suite": "repository",
+      "Order": 20,
+      "Name": "batch with a conflict writes nothing",
+      "Status": "downgraded",
+      "Capability": "AtomicBatch"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 1,
+      "Name": "union variants survive a round trip",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 2,
+      "Name": "filter on a field inside a union variant",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 3,
+      "Name": "OR matches across union variants",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 4,
+      "Name": "NOT excludes a union variant match, records without the field stay",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 5,
+      "Name": "AND combines a plain field with a union field",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 6,
+      "Name": "numeric equality filter",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 7,
+      "Name": "string equality filter",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 8,
+      "Name": "filter on a nonexistent field returns no records and no error",
+      "Status": "supported"
+    },
+    {
+      "Suite": "complex queries",
+      "Order": 9,
+      "Name": "update of a union variant is queryable afterwards",
+      "Status": "supported"
+    }
+  ]
+}

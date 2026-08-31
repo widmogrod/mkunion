@@ -350,17 +350,23 @@ func (os *OpenSearchRepository[A]) toFiltersAndSorters(query FindingRecords[Reco
 	}
 
 	if query.RecordType != "" {
-		if filters["bool"] == nil {
-			filters["bool"] = map[string]any{}
-		}
-		if filters["bool"].(map[string]any)["must"] == nil {
-			filters["bool"].(map[string]any)["must"] = []any{}
-		}
-		filters["bool"].(map[string]any)["must"] = append(filters["bool"].(map[string]any)["must"].([]any), map[string]any{
+		typeFilter := map[string]any{
 			"term": map[string]any{
 				"Type.keyword": query.RecordType,
 			},
-		})
+		}
+		if len(filters) == 0 {
+			filters = typeFilter
+		} else {
+			// keep the where-filters as one sibling clause of the type filter;
+			// injecting the type term into the where bool would silence any
+			// `should` clauses (a bool with a must treats should as optional)
+			filters = map[string]any{
+				"bool": map[string]any{
+					"must": []any{filters, typeFilter},
+				},
+			}
+		}
 	}
 
 	sorters = os.ToSorters(query.Sort)
@@ -418,7 +424,7 @@ func (os *OpenSearchRepository[A]) toFilters(p predicate.Predicate, params predi
 			case "=":
 				return map[string]any{
 					"term": map[string]any{
-						fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[bindName],
+						os.termFieldName(x.Location, params[bindName]): params[bindName],
 					},
 				}
 
@@ -427,7 +433,7 @@ func (os *OpenSearchRepository[A]) toFilters(p predicate.Predicate, params predi
 					"bool": map[string]any{
 						"must_not": map[string]any{
 							"term": map[string]any{
-								fmt.Sprintf("%s.keyword", os.attrName(x.Location)): params[bindName],
+								os.termFieldName(x.Location, params[bindName]): params[bindName],
 							},
 						},
 					},
@@ -446,6 +452,16 @@ func (os *OpenSearchRepository[A]) toFilters(p predicate.Predicate, params predi
 			panic(fmt.Errorf("store.OpenSearchRepository.toFilters: unknown operation %s", x.Operation))
 		},
 	)
+}
+
+// termFieldName picks the field a term (equality) query targets. Text fields
+// are matched on their exact .keyword sub-field; numeric and boolean fields
+// have no .keyword sub-field, so they are matched on the field itself.
+func (os *OpenSearchRepository[A]) termFieldName(location string, value schema.Schema) string {
+	if _, ok := value.(*schema.String); ok {
+		return fmt.Sprintf("%s.keyword", os.attrName(location))
+	}
+	return os.attrName(location)
 }
 
 func (os *OpenSearchRepository[A]) attrName(location string) string {
