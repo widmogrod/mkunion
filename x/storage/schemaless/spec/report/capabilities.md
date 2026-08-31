@@ -53,3 +53,33 @@ downgrade, ❌ failing when the report was generated.
 | complex queries | string equality filter | ✅ | ✅ | ✅ |
 | complex queries | filter on a nonexistent field returns no records and no error | ✅ | ✅ | ✅ |
 | complex queries | update of a union variant is queryable afterwards | ✅ | ✅ | ✅ |
+
+#### Append log capability matrix
+
+Every `AppendLoger` implementation passes the same behavioural spec
+(`spec.RunAppendLogSpec`), modulo the capabilities it explicitly downgrades.
+The in-memory append log defines the full contract.
+
+| Capability | In-Memory | Typedful |
+|---|:---:|:---:|
+| **Filtering** — `Subscribe` honours a where-predicate filter | ✅ | ✅ |
+| **OffsetResume** — `Subscribe` resumes from a given change offset | ✅ | ✅ |
+| **Replay** — A late subscriber receives every past change | ✅ | ✅ |
+| **MergeAppend** — `Append` merges another log's changes | ✅ | ⛔ |
+
+#### Verified behaviours
+
+Each row is a spec subtest; ✅ verified, ⛔ skipped by a declared capability
+downgrade, ❌ failing when the report was generated.
+
+| Suite | Behaviour | In-Memory | Typedful |
+|---|---|:---:|:---:|
+| append log | pushed changes reach a subscriber in order with increasing offsets | ✅ | ✅ |
+| append log | change and delete emit corresponding events | ✅ | ✅ |
+| append log | every subscriber receives every change | ✅ | ✅ |
+| append log | close unblocks a subscriber waiting on an empty log | ✅ | ✅ |
+| append log | context cancellation unblocks a waiting subscriber | ✅ | ✅ |
+| append log | a closed log replays every change to a late subscriber | ✅ | ✅ |
+| append log | subscription resumes from a given offset | ✅ | ✅ |
+| append log | filter delivers only matching changes | ✅ | ✅ |
+| append log | append merges another log's changes | ✅ | ⛔ `MergeAppend` |

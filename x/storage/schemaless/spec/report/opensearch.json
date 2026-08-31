@@ -1,10 +1,10 @@
 {
   "Backend": "opensearch",
   "Capabilities": {
-    "SortByDataField": true,
-    "BackwardPagination": false,
     "AtomicBatch": false,
-    "MonotonicOverwriteVersion": false
+    "BackwardPagination": false,
+    "MonotonicOverwriteVersion": false,
+    "SortByDataField": true
   },
   "Behaviours": [
     {

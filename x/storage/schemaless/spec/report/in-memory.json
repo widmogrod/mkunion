@@ -1,10 +1,10 @@
 {
   "Backend": "in-memory",
   "Capabilities": {
-    "SortByDataField": true,
-    "BackwardPagination": true,
     "AtomicBatch": true,
-    "MonotonicOverwriteVersion": true
+    "BackwardPagination": true,
+    "MonotonicOverwriteVersion": true,
+    "SortByDataField": true
   },
   "Behaviours": [
     {

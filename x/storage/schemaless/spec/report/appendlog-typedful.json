@@ -1,0 +1,69 @@
+{
+  "Backend": "appendlog-typedful",
+  "Capabilities": {
+    "Filtering": true,
+    "MergeAppend": false,
+    "OffsetResume": true,
+    "Replay": true
+  },
+  "Behaviours": [
+    {
+      "Suite": "append log",
+      "Order": 1,
+      "Name": "pushed changes reach a subscriber in order with increasing offsets",
+      "Status": "supported"
+    },
+    {
+      "Suite": "append log",
+      "Order": 2,
+      "Name": "change and delete emit corresponding events",
+      "Status": "supported"
+    },
+    {
+      "Suite": "append log",
+      "Order": 3,
+      "Name": "every subscriber receives every change",
+      "Status": "supported"
+    },
+    {
+      "Suite": "append log",
+      "Order": 4,
+      "Name": "close unblocks a subscriber waiting on an empty log",
+      "Status": "supported"
+    },
+    {
+      "Suite": "append log",
+      "Order": 5,
+      "Name": "context cancellation unblocks a waiting subscriber",
+      "Status": "supported"
+    },
+    {
+      "Suite": "append log",
+      "Order": 6,
+      "Name": "a closed log replays every change to a late subscriber",
+      "Status": "supported",
+      "Capability": "Replay"
+    },
+    {
+      "Suite": "append log",
+      "Order": 7,
+      "Name": "subscription resumes from a given offset",
+      "Status": "supported",
+      "Capability": "OffsetResume"
+    },
+    {
+      "Suite": "append log",
+      "Order": 8,
+      "Name": "filter delivers only matching changes",
+      "Status": "supported",
+      "Capability": "Filtering"
+    },
+    {
+      "Suite": "append log",
+      "Order": 9,
+      "Name": "append merges another log's changes",
+      "Status": "downgraded",
+      "Capability": "MergeAppend"
+    }
+  ]
+}

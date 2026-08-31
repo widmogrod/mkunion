@@ -1,10 +1,10 @@
 {
   "Backend": "dynamodb",
   "Capabilities": {
-    "SortByDataField": false,
-    "BackwardPagination": false,
     "AtomicBatch": true,
-    "MonotonicOverwriteVersion": true
+    "BackwardPagination": false,
+    "MonotonicOverwriteVersion": true,
+    "SortByDataField": false
   },
   "Behaviours": [
     {
