@@ -2,21 +2,18 @@
 package spec
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"github.com/widmogrod/mkunion/x/storage/schemaless/spec/specdata"
 	"testing"
 )
 
 func init() {
-	shared.TypeRegistryStore[dynamodb.Client]("github.com/aws/aws-sdk-go-v2/service/dynamodb.Client")
-	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[Data]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless/spec.Data]]")
-	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[Vehicle]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless/spec.Vehicle]]")
-	shared.TypeRegistryStore[schemaless.Record[Data]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless/spec.Data]")
-	shared.TypeRegistryStore[schemaless.Record[Vehicle]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless/spec.Vehicle]")
-	shared.TypeRegistryStore[schemaless.UpdateRecords[schemaless.Record[Data]]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless/spec.Data]]")
-	shared.TypeRegistryStore[Electric]("github.com/widmogrod/mkunion/x/storage/schemaless/spec.Electric")
-	shared.TypeRegistryStore[Petrol]("github.com/widmogrod/mkunion/x/storage/schemaless/spec.Petrol")
-	shared.TypeRegistryStore[Vehicle]("github.com/widmogrod/mkunion/x/storage/schemaless/spec.Vehicle")
+	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]]")
+	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless/spec/specdata.Vehicle]]")
+	shared.TypeRegistryStore[schemaless.Record[schemaless.ExampleRecord]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]")
+	shared.TypeRegistryStore[schemaless.Repository[schemaless.ExampleRecord]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]")
+	shared.TypeRegistryStore[schemaless.Repository[specdata.Vehicle]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/storage/schemaless/spec/specdata.Vehicle]")
+	shared.TypeRegistryStore[schemaless.UpdateRecords[schemaless.Record[schemaless.ExampleRecord]]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]]")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/widmogrod/mkunion/x/localstackutil"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/storage/schemaless/spec"
+	"github.com/widmogrod/mkunion/x/storage/schemaless/spec/specdata"
 )
 
 func dynamoDBClient(t *testing.T) *dynamodb.Client {
@@ -48,9 +49,9 @@ func TestDynamoDBRepositorySpec(t *testing.T) {
 	require.NoError(t, recreateDynamoDBTable(client, tableName), "while setting up dynamodb table")
 
 	spec.RunRepositorySpec(t,
-		func(t *testing.T) spec.Repo {
+		func(t *testing.T) schemaless.Repository[schemaless.ExampleRecord] {
 			// the suite namespaces record types, so one shared table is fine
-			return schemaless.NewDynamoDBRepository[spec.Data](client, tableName)
+			return schemaless.NewDynamoDBRepository[schemaless.ExampleRecord](client, tableName)
 		},
 		dynamoDBCapabilities(),
 	)
@@ -64,8 +65,8 @@ func TestDynamoDBComplexQuerySpec(t *testing.T) {
 	require.NoError(t, recreateDynamoDBTable(client, tableName), "while setting up dynamodb table")
 
 	spec.RunComplexQuerySpec(t,
-		func(t *testing.T) spec.ComplexRepo {
-			return schemaless.NewDynamoDBRepository[spec.Vehicle](client, tableName)
+		func(t *testing.T) schemaless.Repository[specdata.Vehicle] {
+			return schemaless.NewDynamoDBRepository[specdata.Vehicle](client, tableName)
 		},
 		dynamoDBCapabilities(),
 	)

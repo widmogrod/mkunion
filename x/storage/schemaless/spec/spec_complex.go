@@ -8,76 +8,48 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"github.com/widmogrod/mkunion/x/storage/schemaless/spec/specdata"
 )
 
-// Engine is a union stored inside the record payload, so the complex suite
-// exercises nested-union serialisation and union-path queries on every backend.
-//
-//go:tag mkunion:"Engine"
-type (
-	Petrol struct {
-		Brand     string
-		Cylinders int
-	}
-	Electric struct {
-		Brand string
-		KWh   float64
-	}
-)
+// NewComplexRepoFunc mirrors NewRepoFunc for the complex suite, which stores
+// records whose payload nests a union (specdata.Vehicle).
+type NewComplexRepoFunc func(t *testing.T) schemaless.Repository[specdata.Vehicle]
 
-// Vehicle is the "complex" record payload: plain fields, a nested union,
-// and a list.
-//
-//go:tag serde:"json"
-type Vehicle struct {
-	Name   string
-	Wheels int
-	Engine Engine
-	Tags   []string
-}
-
-type (
-	// ComplexRepo stores records whose payload nests a union.
-	ComplexRepo = schemaless.Repository[Vehicle]
-	// NewComplexRepoFunc mirrors NewRepoFunc for the complex suite.
-	NewComplexRepoFunc func(t *testing.T) ComplexRepo
-)
-
-func seedVehicles(recordType string) []schemaless.Record[Vehicle] {
-	return []schemaless.Record[Vehicle]{
-		{ID: "beetle", Type: recordType, Data: Vehicle{
+func seedVehicles(recordType string) []schemaless.Record[specdata.Vehicle] {
+	return []schemaless.Record[specdata.Vehicle]{
+		{ID: "beetle", Type: recordType, Data: specdata.Vehicle{
 			Name: "beetle", Wheels: 4,
-			Engine: &Petrol{Brand: "vw", Cylinders: 4},
+			Engine: &specdata.Petrol{Brand: "vw", Cylinders: 4},
 			Tags:   []string{"classic"},
 		}},
-		{ID: "model3", Type: recordType, Data: Vehicle{
+		{ID: "model3", Type: recordType, Data: specdata.Vehicle{
 			Name: "model3", Wheels: 4,
-			Engine: &Electric{Brand: "tesla", KWh: 75},
+			Engine: &specdata.Electric{Brand: "tesla", KWh: 75},
 			Tags:   []string{"ev", "fast"},
 		}},
-		{ID: "hauler", Type: recordType, Data: Vehicle{
+		{ID: "hauler", Type: recordType, Data: specdata.Vehicle{
 			Name: "hauler", Wheels: 6,
-			Engine: &Petrol{Brand: "volvo", Cylinders: 8},
+			Engine: &specdata.Petrol{Brand: "volvo", Cylinders: 8},
 			Tags:   []string{"work"},
 		}},
-		{ID: "cargo", Type: recordType, Data: Vehicle{
+		{ID: "cargo", Type: recordType, Data: specdata.Vehicle{
 			Name: "cargo", Wheels: 2,
-			Engine: &Electric{Brand: "bosch", KWh: 0.5},
+			Engine: &specdata.Electric{Brand: "bosch", KWh: 0.5},
 			Tags:   []string{"ev"},
 		}},
 	}
 }
 
-func mustSaveVehicles(t *testing.T, repo ComplexRepo, records ...schemaless.Record[Vehicle]) {
+func mustSaveVehicles(t *testing.T, repo schemaless.Repository[specdata.Vehicle], records ...schemaless.Record[specdata.Vehicle]) {
 	t.Helper()
 	result, err := repo.UpdateRecords(schemaless.Save(records...))
 	require.NoError(t, err, "seeding vehicle records must succeed")
 	require.Len(t, result.Saved, len(records))
 }
 
-func findAllVehicles(t *testing.T, repo ComplexRepo, query schemaless.FindingRecords[schemaless.Record[Vehicle]]) []schemaless.Record[Vehicle] {
+func findAllVehicles(t *testing.T, repo schemaless.Repository[specdata.Vehicle], query schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]) []schemaless.Record[specdata.Vehicle] {
 	t.Helper()
-	var items []schemaless.Record[Vehicle]
+	var items []schemaless.Record[specdata.Vehicle]
 	for i := 0; ; i++ {
 		require.Less(t, i, 100, "pagination must terminate")
 		page, err := repo.FindingRecords(query)
@@ -90,7 +62,7 @@ func findAllVehicles(t *testing.T, repo ComplexRepo, query schemaless.FindingRec
 	}
 }
 
-func vehicleIDs(items []schemaless.Record[Vehicle]) []string {
+func vehicleIDs(items []schemaless.Record[specdata.Vehicle]) []string {
 	result := make([]string, len(items))
 	for i, item := range items {
 		result[i] = item.ID
@@ -120,10 +92,10 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
-				`Data.Engine["spec.Petrol"].Cylinders >= :cylinders`,
+				`Data.Engine["specdata.Petrol"].Cylinders >= :cylinders`,
 				predicate.ParamBinds{":cylinders": schema.MkInt(8)},
 				nil,
 			),
@@ -137,10 +109,10 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
-				`Data.Engine["spec.Petrol"].Brand = :petrolBrand OR Data.Engine["spec.Electric"].Brand = :electricBrand`,
+				`Data.Engine["specdata.Petrol"].Brand = :petrolBrand OR Data.Engine["specdata.Electric"].Brand = :electricBrand`,
 				predicate.ParamBinds{
 					":petrolBrand":   schema.MkString("vw"),
 					":electricBrand": schema.MkString("tesla"),
@@ -157,10 +129,10 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
-				`NOT Data.Engine["spec.Electric"].Brand = :brand`,
+				`NOT Data.Engine["specdata.Electric"].Brand = :brand`,
 				predicate.ParamBinds{":brand": schema.MkString("tesla")},
 				nil,
 			),
@@ -175,10 +147,10 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
-				`Data.Wheels = :wheels AND Data.Engine["spec.Electric"].KWh > :kwh`,
+				`Data.Wheels = :wheels AND Data.Engine["specdata.Electric"].KWh > :kwh`,
 				predicate.ParamBinds{
 					":wheels": schema.MkInt(4),
 					":kwh":    schema.MkFloat(1),
@@ -195,7 +167,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
 				`Data.Wheels = :wheels`,
@@ -212,7 +184,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
 				`Data.Name = :name`,
@@ -229,7 +201,7 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		recordType := uniqueRecordType()
 		mustSaveVehicles(t, repo, seedVehicles(recordType)...)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
 				`Data.NoSuchField = :value`,
@@ -249,13 +221,13 @@ func RunComplexQuerySpec(t *testing.T, newRepo NewComplexRepoFunc, caps Capabili
 		// convert the beetle to an electric engine
 		beetle, err := repo.Get("beetle", recordType)
 		require.NoError(t, err)
-		beetle.Data.Engine = &Electric{Brand: "retrofit", KWh: 40}
+		beetle.Data.Engine = &specdata.Electric{Brand: "retrofit", KWh: 40}
 		mustSaveVehicles(t, repo, beetle)
 
-		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[Vehicle]]{
+		items := findAllVehicles(t, repo, schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
-				`Data.Engine["spec.Electric"].Brand = :brand`,
+				`Data.Engine["specdata.Electric"].Brand = :brand`,
 				predicate.ParamBinds{":brand": schema.MkString("retrofit")},
 				nil,
 			),

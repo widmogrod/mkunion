@@ -87,17 +87,15 @@ func (c Capabilities) skipUnless(t *testing.T, enabled bool, capability string) 
 	}
 }
 
-type (
-	// Data is the record payload the spec suite stores and queries.
-	Data = schemaless.ExampleRecord
-	// Repo is the repository type the spec suite exercises.
-	Repo = schemaless.Repository[Data]
-	// NewRepoFunc returns a repository backed by a store that contains no
-	// records for the record types the suite generates. Backends with shared
-	// state (a shared index or table) are fine: the suite namespaces every
-	// subtest with a unique record type.
-	NewRepoFunc func(t *testing.T) Repo
-)
+// NewRepoFunc returns a repository backed by a store that contains no
+// records for the record types the suite generates. Backends with shared
+// state (a shared index or table) are fine: the suite namespaces every
+// subtest with a unique record type.
+//
+// The signature names schemaless.ExampleRecord directly on purpose: a
+// spec-owned alias here would make the backend package's generated type
+// registry import this package back, creating an import cycle.
+type NewRepoFunc func(t *testing.T) schemaless.Repository[schemaless.ExampleRecord]
 
 var recordTypeCounter atomic.Uint64
 
@@ -106,17 +104,17 @@ func uniqueRecordType() string {
 	return fmt.Sprintf("spec-%d-%d", time.Now().UnixNano(), recordTypeCounter.Add(1))
 }
 
-func seedRecords(recordType string) []schemaless.Record[Data] {
-	return []schemaless.Record[Data]{
-		{ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39}},
-		{ID: "2", Type: recordType, Data: Data{Name: "Bob", Age: 40}},
-		{ID: "3", Type: recordType, Data: Data{Name: "Jane", Age: 30}},
-		{ID: "4", Type: recordType, Data: Data{Name: "John", Age: 20}},
-		{ID: "5", Type: recordType, Data: Data{Name: "Zarlie", Age: 39}},
+func seedRecords(recordType string) []schemaless.Record[schemaless.ExampleRecord] {
+	return []schemaless.Record[schemaless.ExampleRecord]{
+		{ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39}},
+		{ID: "2", Type: recordType, Data: schemaless.ExampleRecord{Name: "Bob", Age: 40}},
+		{ID: "3", Type: recordType, Data: schemaless.ExampleRecord{Name: "Jane", Age: 30}},
+		{ID: "4", Type: recordType, Data: schemaless.ExampleRecord{Name: "John", Age: 20}},
+		{ID: "5", Type: recordType, Data: schemaless.ExampleRecord{Name: "Zarlie", Age: 39}},
 	}
 }
 
-func mustSave(t *testing.T, repo Repo, records ...schemaless.Record[Data]) {
+func mustSave(t *testing.T, repo schemaless.Repository[schemaless.ExampleRecord], records ...schemaless.Record[schemaless.ExampleRecord]) {
 	t.Helper()
 	result, err := repo.UpdateRecords(schemaless.Save(records...))
 	require.NoError(t, err, "seeding records must succeed")
@@ -124,10 +122,10 @@ func mustSave(t *testing.T, repo Repo, records ...schemaless.Record[Data]) {
 }
 
 // findAllPages follows Next cursors and returns every item, and the pages.
-func findAllPages(t *testing.T, repo Repo, query schemaless.FindingRecords[schemaless.Record[Data]]) ([]schemaless.Record[Data], [][]schemaless.Record[Data]) {
+func findAllPages(t *testing.T, repo schemaless.Repository[schemaless.ExampleRecord], query schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]) ([]schemaless.Record[schemaless.ExampleRecord], [][]schemaless.Record[schemaless.ExampleRecord]) {
 	t.Helper()
-	var items []schemaless.Record[Data]
-	var pages [][]schemaless.Record[Data]
+	var items []schemaless.Record[schemaless.ExampleRecord]
+	var pages [][]schemaless.Record[schemaless.ExampleRecord]
 	for i := 0; ; i++ {
 		require.Less(t, i, 100, "pagination must terminate")
 		page, err := repo.FindingRecords(query)
@@ -141,7 +139,7 @@ func findAllPages(t *testing.T, repo Repo, query schemaless.FindingRecords[schem
 	}
 }
 
-func names(items []schemaless.Record[Data]) []string {
+func names(items []schemaless.Record[schemaless.ExampleRecord]) []string {
 	result := make([]string, len(items))
 	for i, item := range items {
 		result[i] = item.Data.Name
@@ -149,7 +147,7 @@ func names(items []schemaless.Record[Data]) []string {
 	return result
 }
 
-func ids(items []schemaless.Record[Data]) []string {
+func ids(items []schemaless.Record[schemaless.ExampleRecord]) []string {
 	result := make([]string, len(items))
 	for i, item := range items {
 		result[i] = item.ID
@@ -173,8 +171,8 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 	t.Run("get with the wrong record type returns ErrNotFound", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		_, err := repo.Get("1", uniqueRecordType())
@@ -186,7 +184,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
 
-		_, err := repo.UpdateRecords(schemaless.Delete(schemaless.Record[Data]{
+		_, err := repo.UpdateRecords(schemaless.Delete(schemaless.Record[schemaless.ExampleRecord]{
 			ID: "ghost", Type: recordType,
 		}))
 		assert.NoError(t, err, "deleting what is already gone is a no-op")
@@ -194,30 +192,30 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 
 	t.Run("empty update command returns ErrEmptyCommand", func(t *testing.T) {
 		repo := newRepo(t)
-		_, err := repo.UpdateRecords(schemaless.UpdateRecords[schemaless.Record[Data]]{})
+		_, err := repo.UpdateRecords(schemaless.UpdateRecords[schemaless.Record[schemaless.ExampleRecord]]{})
 		assert.ErrorIs(t, err, schemaless.ErrEmptyCommand)
 	})
 
 	t.Run("saved record can be read back with its data", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		got, err := repo.Get("1", recordType)
 		require.NoError(t, err)
 		assert.Equal(t, "1", got.ID)
 		assert.Equal(t, recordType, got.Type)
-		assert.Equal(t, Data{Name: "Alice", Age: 39}, got.Data)
+		assert.Equal(t, schemaless.ExampleRecord{Name: "Alice", Age: 39}, got.Data)
 		assert.GreaterOrEqual(t, got.Version, uint16(1), "a stored record has a version")
 	})
 
 	t.Run("update with the current version succeeds and bumps the version", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		current, err := repo.Get("1", recordType)
@@ -235,8 +233,8 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 	t.Run("write with a stale version fails with ErrVersionConflict", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		current, err := repo.Get("1", recordType)
@@ -258,8 +256,8 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 	t.Run("PolicyOverwriteServerChanges wins over a stale version", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		current, err := repo.Get("1", recordType)
@@ -286,8 +284,8 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		stale, err := repo.Get("1", recordType)
@@ -298,7 +296,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		server, err := repo.Get("1", recordType)
 		require.NoError(t, err)
 
-		overwrite := func(age int) schemaless.Record[Data] {
+		overwrite := func(age int) schemaless.Record[schemaless.ExampleRecord] {
 			record := stale
 			record.Data.Age = age
 			command := schemaless.Save(record)
@@ -323,8 +321,8 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 	t.Run("deleted record is gone", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		got, err := repo.Get("1", recordType)
@@ -345,7 +343,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 
 		// a page may hold fewer matches than the limit (DynamoDB filters after
 		// scanning a page), so follow Next cursors to collect every match
-		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
 				"Data.Age > :age AND Data.Age < :maxAge",
@@ -365,7 +363,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
 
-		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Where: predicate.MustWhere(
 				"Data.Name = :a OR Data.Age > :age",
@@ -387,7 +385,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 
 		// the string syntax has no parentheses, so NOT (a OR b) is built
 		// from predicate values directly
-		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Where: &predicate.WherePredicates{
 				Predicate: &predicate.Not{
@@ -414,7 +412,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 
 		// the backing store may be shared, so only a subset check is safe:
 		// every seeded record must come back among the results
-		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			Limit: 100,
 		})
 		seen := map[string]bool{}
@@ -433,12 +431,12 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		// distinct IDs across types: DynamoDB and OpenSearch key result.Saved
 		// by ID alone, so a shared ID would collide in the result map
 		mustSave(t, repo,
-			schemaless.Record[Data]{ID: "1", Type: recordTypeA, Data: Data{Name: "Alice", Age: 39}},
-			schemaless.Record[Data]{ID: "2", Type: recordTypeA, Data: Data{Name: "Bob", Age: 40}},
-			schemaless.Record[Data]{ID: "3", Type: recordTypeB, Data: Data{Name: "Jane", Age: 30}},
+			schemaless.Record[schemaless.ExampleRecord]{ID: "1", Type: recordTypeA, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39}},
+			schemaless.Record[schemaless.ExampleRecord]{ID: "2", Type: recordTypeA, Data: schemaless.ExampleRecord{Name: "Bob", Age: 40}},
+			schemaless.Record[schemaless.ExampleRecord]{ID: "3", Type: recordTypeB, Data: schemaless.ExampleRecord{Name: "Jane", Age: 30}},
 		)
 
-		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordTypeA,
 			Limit:      10,
 		})
@@ -450,7 +448,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
 
-		query := schemaless.FindingRecords[schemaless.Record[Data]]{
+		query := schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Limit:      2,
 		}
@@ -475,7 +473,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
 
-		ascending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[Data]]{
+		ascending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Sort:       sortByName(false),
 			Limit:      10,
@@ -483,7 +481,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		require.NoError(t, err)
 		assert.Equal(t, []string{"Alice", "Bob", "Jane", "John", "Zarlie"}, names(ascending.Items))
 
-		descending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[Data]]{
+		descending, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Sort:       sortByName(true),
 			Limit:      10,
@@ -499,7 +497,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
 
-		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Sort:       sortByName(false),
 			Limit:      2,
@@ -514,7 +512,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		recordType := uniqueRecordType()
 		mustSave(t, repo, seedRecords(recordType)...)
 
-		firstPage, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[Data]]{
+		firstPage, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]{
 			RecordType: recordType,
 			Sort:       sortByName(false),
 			Limit:      2,
@@ -538,8 +536,8 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
-		mustSave(t, repo, schemaless.Record[Data]{
-			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType, Data: schemaless.ExampleRecord{Name: "Alice", Age: 39},
 		})
 
 		current, err := repo.Get("1", recordType)
@@ -550,7 +548,7 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 
 		stale := current
 		stale.Data.Age = 100
-		fresh := schemaless.Record[Data]{ID: "2", Type: recordType, Data: Data{Name: "Bob", Age: 40}}
+		fresh := schemaless.Record[schemaless.ExampleRecord]{ID: "2", Type: recordType, Data: schemaless.ExampleRecord{Name: "Bob", Age: 40}}
 
 		_, err = repo.UpdateRecords(schemaless.Save(stale, fresh))
 		assert.ErrorIs(t, err, schemaless.ErrVersionConflict)

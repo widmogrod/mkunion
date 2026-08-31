@@ -7,8 +7,6 @@ import (
 
 func init() {
 	shape.Register(CapabilitiesShape())
-	shape.Register(DataShape())
-	shape.Register(RepoShape())
 }
 
 //shape:shape
@@ -33,43 +31,6 @@ func CapabilitiesShape() shape.Shape {
 			{
 				Name: "MonotonicOverwriteVersion",
 				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
-			},
-		},
-	}
-}
-
-//shape:shape
-func DataShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "Data",
-		PkgName:       "spec",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/spec",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "ExampleRecord",
-			PkgName:       "schemaless",
-			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		},
-	}
-}
-
-//shape:shape
-func RepoShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "Repo",
-		PkgName:       "spec",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/spec",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "Repository",
-			PkgName:       "schemaless",
-			PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-			Indexed: []shape.Shape{
-				&shape.RefName{
-					Name:          "Data",
-					PkgName:       "spec",
-					PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless/spec",
-				},
 			},
 		},
 	}
