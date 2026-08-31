@@ -25,6 +25,17 @@ func TestInMemoryRepositorySpec(t *testing.T) {
 	)
 }
 
+// TestInMemoryComplexQuerySpec: nested-union payloads and composed
+// predicates, full contract.
+func TestInMemoryComplexQuerySpec(t *testing.T) {
+	RunComplexQuerySpec(t,
+		func(t *testing.T) ComplexRepo {
+			return schemaless.NewInMemoryRepository[Vehicle]()
+		},
+		FullCapabilities(),
+	)
+}
+
 // TestOpenSearchRepositorySpec: OpenSearch downgrades two capabilities.
 //   - BackwardPagination: search_after cursors only move forward.
 //   - AtomicBatch: each record is written in its own request, so a failing
@@ -65,7 +76,43 @@ To run this test, please set OPENSEARCH_ADDRESS to the address of your OpenSearc
 		},
 		FullCapabilities().
 			WithoutBackwardPagination().
-			WithoutAtomicBatch(),
+			WithoutAtomicBatch().
+			WithoutMonotonicOverwriteVersion(),
+	)
+}
+
+func TestOpenSearchComplexQuerySpec(t *testing.T) {
+	address := os.Getenv("OPENSEARCH_ADDRESS")
+	if address == "" {
+		t.Skip("Skipping test because OPENSEARCH_ADDRESS is not set.")
+	}
+
+	client, err := opensearch.NewClient(opensearch.Config{
+		Addresses: []string{address},
+	})
+	require.NoError(t, err)
+
+	// a dedicated index: every payload type gets its own namespace, so an
+	// unfiltered query never decodes foreign payloads
+	const indexName = "spec-test-vehicles-index"
+
+	warmup := schemaless.NewOpenSearchRepository[Vehicle](client, indexName)
+	command := schemaless.Save(schemaless.Record[Vehicle]{
+		ID: "warmup", Type: "spec-warmup",
+		Data: Vehicle{Name: "warmup", Wheels: 1, Engine: &Petrol{Brand: "warmup", Cylinders: 1}},
+	})
+	command.UpdatingPolicy = schemaless.PolicyOverwriteServerChanges
+	_, err = warmup.UpdateRecords(command)
+	require.NoError(t, err, "while creating the shared vehicle index")
+
+	RunComplexQuerySpec(t,
+		func(t *testing.T) ComplexRepo {
+			return schemaless.NewOpenSearchRepository[Vehicle](client, indexName)
+		},
+		FullCapabilities().
+			WithoutBackwardPagination().
+			WithoutAtomicBatch().
+			WithoutMonotonicOverwriteVersion(),
 	)
 }
 
@@ -95,6 +142,31 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 		func(t *testing.T) Repo {
 			// the suite namespaces record types, so one shared table is fine
 			return schemaless.NewDynamoDBRepository[Data](client, tableName)
+		},
+		FullCapabilities().
+			WithoutSortByDataField().
+			WithoutBackwardPagination(),
+	)
+}
+
+func TestDynamoDBComplexQuerySpec(t *testing.T) {
+	address := os.Getenv("AWS_ENDPOINT_URL")
+	if address == "" {
+		t.Skip("Skipping test because AWS_ENDPOINT_URL that points to localstack is not set.")
+	}
+
+	awscfg, err := localstackutil.LoadLocalStackAwsConfig(context.Background())
+	require.NoError(t, err, "while loading localstack config")
+
+	client := dynamodb.NewFromConfig(awscfg)
+	// a dedicated table: every payload type gets its own namespace, so an
+	// unfiltered query never decodes foreign payloads
+	const tableName = "spec-test-vehicle-record"
+	require.NoError(t, recreateDynamoDBTable(client, tableName), "while setting up dynamodb table")
+
+	RunComplexQuerySpec(t,
+		func(t *testing.T) ComplexRepo {
+			return schemaless.NewDynamoDBRepository[Vehicle](client, tableName)
 		},
 		FullCapabilities().
 			WithoutSortByDataField().

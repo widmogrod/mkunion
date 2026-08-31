@@ -42,15 +42,21 @@ type Capabilities struct {
 	// AtomicBatch: UpdateRecords batches are all-or-nothing; on error nothing
 	// is written. OpenSearch is atomic per record only.
 	AtomicBatch bool
+	// MonotonicOverwriteVersion: PolicyOverwriteServerChanges bumps the
+	// version from the server's copy, so versions keep increasing no matter
+	// how stale the writer was. OpenSearch writes the stale writer's
+	// version+1 instead, so an overwrite can move the version backward.
+	MonotonicOverwriteVersion bool
 }
 
 // FullCapabilities is the complete Repository contract, as implemented by the
 // in-memory repository.
 func FullCapabilities() Capabilities {
 	return Capabilities{
-		SortByDataField:    true,
-		BackwardPagination: true,
-		AtomicBatch:        true,
+		SortByDataField:           true,
+		BackwardPagination:        true,
+		AtomicBatch:               true,
+		MonotonicOverwriteVersion: true,
 	}
 }
 
@@ -66,6 +72,11 @@ func (c Capabilities) WithoutBackwardPagination() Capabilities {
 
 func (c Capabilities) WithoutAtomicBatch() Capabilities {
 	c.AtomicBatch = false
+	return c
+}
+
+func (c Capabilities) WithoutMonotonicOverwriteVersion() Capabilities {
+	c.MonotonicOverwriteVersion = false
 	return c
 }
 
@@ -159,6 +170,28 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.ErrorIs(t, err, schemaless.ErrNotFound)
 	})
 
+	t.Run("get with the wrong record type returns ErrNotFound", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, schemaless.Record[Data]{
+			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		})
+
+		_, err := repo.Get("1", uniqueRecordType())
+		assert.ErrorIs(t, err, schemaless.ErrNotFound,
+			"a record is addressed by ID and type together")
+	})
+
+	t.Run("delete of a missing record is not an error", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+
+		_, err := repo.UpdateRecords(schemaless.Delete(schemaless.Record[Data]{
+			ID: "ghost", Type: recordType,
+		}))
+		assert.NoError(t, err, "deleting what is already gone is a no-op")
+	})
+
 	t.Run("empty update command returns ErrEmptyCommand", func(t *testing.T) {
 		repo := newRepo(t)
 		_, err := repo.UpdateRecords(schemaless.UpdateRecords[schemaless.Record[Data]]{})
@@ -247,6 +280,46 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 		assert.Equal(t, 100, got.Data.Age)
 	})
 
+	t.Run("overwrites keep the version increasing", func(t *testing.T) {
+		caps.skipUnless(t, caps.MonotonicOverwriteVersion,
+			"monotonic versions under overwrites (MonotonicOverwriteVersion)")
+
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, schemaless.Record[Data]{
+			ID: "1", Type: recordType, Data: Data{Name: "Alice", Age: 39},
+		})
+
+		stale, err := repo.Get("1", recordType)
+		require.NoError(t, err)
+
+		// a concurrent writer moves the server ahead; `stale` stays behind
+		mustSave(t, repo, stale)
+		server, err := repo.Get("1", recordType)
+		require.NoError(t, err)
+
+		overwrite := func(age int) schemaless.Record[Data] {
+			record := stale
+			record.Data.Age = age
+			command := schemaless.Save(record)
+			command.UpdatingPolicy = schemaless.PolicyOverwriteServerChanges
+			_, err := repo.UpdateRecords(command)
+			require.NoError(t, err)
+			got, err := repo.Get("1", recordType)
+			require.NoError(t, err)
+			return got
+		}
+
+		first := overwrite(50)
+		assert.Equal(t, server.Version+1, first.Version,
+			"an overwrite bumps the server version by one, however stale the writer")
+
+		second := overwrite(60)
+		assert.Equal(t, server.Version+2, second.Version,
+			"repeated stale overwrites keep the version growing")
+		assert.Equal(t, 60, second.Data.Age)
+	})
+
 	t.Run("deleted record is gone", func(t *testing.T) {
 		repo := newRepo(t)
 		recordType := uniqueRecordType()
@@ -285,6 +358,72 @@ func RunRepositorySpec(t *testing.T, newRepo NewRepoFunc, caps Capabilities) {
 			Limit: 10,
 		})
 		assert.ElementsMatch(t, []string{"Alice", "Jane", "Zarlie"}, names(items))
+	})
+
+	t.Run("OR predicate matches either branch", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, seedRecords(recordType)...)
+
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+			RecordType: recordType,
+			Where: predicate.MustWhere(
+				"Data.Name = :a OR Data.Age > :age",
+				predicate.ParamBinds{
+					":a":   schema.MkString("John"),
+					":age": schema.MkInt(39),
+				},
+				nil,
+			),
+			Limit: 10,
+		})
+		assert.ElementsMatch(t, []string{"John", "Bob"}, names(items))
+	})
+
+	t.Run("NOT over OR excludes both branches", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, seedRecords(recordType)...)
+
+		// the string syntax has no parentheses, so NOT (a OR b) is built
+		// from predicate values directly
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+			RecordType: recordType,
+			Where: &predicate.WherePredicates{
+				Predicate: &predicate.Not{
+					P: &predicate.Or{L: []predicate.Predicate{
+						&predicate.Compare{Location: "ID", Operation: "=", BindValue: &predicate.BindValue{BindName: ":a"}},
+						&predicate.Compare{Location: "ID", Operation: "=", BindValue: &predicate.BindValue{BindName: ":b"}},
+					}},
+				},
+				Params: predicate.ParamBinds{
+					":a": schema.MkString("1"),
+					":b": schema.MkString("2"),
+				},
+			},
+			Limit: 10,
+		})
+		assert.ElementsMatch(t, []string{"3", "4", "5"}, ids(items),
+			"NOT (a OR b) must exclude records matching either branch")
+	})
+
+	t.Run("query without a record type is not an error", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, seedRecords(recordType)...)
+
+		// the backing store may be shared, so only a subset check is safe:
+		// every seeded record must come back among the results
+		items, _ := findAllPages(t, repo, schemaless.FindingRecords[schemaless.Record[Data]]{
+			Limit: 100,
+		})
+		seen := map[string]bool{}
+		for _, item := range items {
+			if item.Type == recordType {
+				seen[item.ID] = true
+			}
+		}
+		assert.Len(t, seen, 5, "an unfiltered query must include records of every type")
 	})
 
 	t.Run("record type separates records", func(t *testing.T) {

@@ -30,6 +30,10 @@ func CapabilitiesShape() shape.Shape {
 				Name: "AtomicBatch",
 				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
 			},
+			{
+				Name: "MonotonicOverwriteVersion",
+				Type: &shape.PrimitiveLike{Kind: &shape.BooleanLike{}},
+			},
 		},
 	}
 }
