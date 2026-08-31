@@ -98,7 +98,6 @@ func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
 			records, err := q.find.FindingRecords(*after)
 			if err != nil {
 				panic(err)
-				return err
 			}
 
 			log.Infof("taskqueue: FindingRecords(): %d", len(records.Items))
@@ -111,7 +110,6 @@ func (q *TaskQueue[T]) RunSelector(ctx context.Context) error {
 				})
 				if err != nil {
 					panic(err)
-					return err
 				}
 			}
 
@@ -135,20 +133,17 @@ func (q *TaskQueue[T]) RunProcessor(ctx context.Context) error {
 		tasks, err := q.queue.Pop(ctx)
 		if err != nil {
 			panic(err)
-			return err
 		}
 
 		for _, task := range tasks {
 			err = q.proc.Process(task)
 			if err != nil {
 				panic(err)
-				return err
 			}
 		}
 		err = q.queue.Delete(ctx, tasks)
 		if err != nil {
 			panic(err)
-			return err
 		}
 	}
 }
