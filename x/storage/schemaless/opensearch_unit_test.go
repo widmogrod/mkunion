@@ -63,11 +63,37 @@ func TestOpenSearchRepository_UpdateRecords_EmptyCommand(t *testing.T) {
 	assert.ErrorIs(t, err, ErrEmptyCommand)
 }
 
-func TestOpenSearchRepository_UpdateRecords_VersionConflict(t *testing.T) {
-	var gotVersion, gotVersionType string
+func TestOpenSearchRepository_UpdateRecords_StaleVersionConflict(t *testing.T) {
+	var indexed bool
 	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
-		gotVersion = r.URL.Query().Get("version")
-		gotVersionType = r.URL.Query().Get("version_type")
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"found":true,"_seq_no":7,"_primary_term":1,"_source":{"ID":"123","Type":"ExampleRecord","Data":{"Name":"Alice","Age":30},"Version":5}}`))
+			return
+		}
+		indexed = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	_, err := repo.UpdateRecords(Save(Record[ExampleRecord]{
+		ID:      "123",
+		Type:    "ExampleRecord",
+		Version: 3, // server has version 5
+	}))
+	assert.ErrorIs(t, err, ErrVersionConflict)
+	assert.False(t, indexed, "stale record should not be written")
+}
+
+func TestOpenSearchRepository_UpdateRecords_ConcurrentWriteConflict(t *testing.T) {
+	var gotIfSeqNo, gotIfPrimaryTerm string
+	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"found":true,"_seq_no":7,"_primary_term":1,"_source":{"ID":"123","Type":"ExampleRecord","Data":{"Name":"Alice","Age":30},"Version":3}}`))
+			return
+		}
+		gotIfSeqNo = r.URL.Query().Get("if_seq_no")
+		gotIfPrimaryTerm = r.URL.Query().Get("if_primary_term")
 		w.WriteHeader(http.StatusConflict)
 		_, _ = w.Write([]byte(`{"error":{"type":"version_conflict_engine_exception"}}`))
 	})
@@ -78,14 +104,38 @@ func TestOpenSearchRepository_UpdateRecords_VersionConflict(t *testing.T) {
 		Version: 3,
 	}))
 	assert.ErrorIs(t, err, ErrVersionConflict)
-	assert.Equal(t, "4", gotVersion, "should send incremented version for optimistic locking")
-	assert.Equal(t, "external", gotVersionType)
+	assert.Equal(t, "7", gotIfSeqNo, "write should be compare-and-swap on seq_no")
+	assert.Equal(t, "1", gotIfPrimaryTerm)
+}
+
+func TestOpenSearchRepository_UpdateRecords_CreatesMissingRecord(t *testing.T) {
+	var gotOpType string
+	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"found":false}`))
+			return
+		}
+		gotOpType = r.URL.Query().Get("op_type")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"result":"created"}`))
+	})
+
+	result, err := repo.UpdateRecords(Save(Record[ExampleRecord]{ID: "123", Type: "ExampleRecord"}))
+	require.NoError(t, err)
+	assert.Equal(t, "create", gotOpType, "missing record should be written as creation")
+	assert.Equal(t, uint16(1), result.Saved["123"].Version)
 }
 
 func TestOpenSearchRepository_UpdateRecords_OverwritePolicySkipsVersionCheck(t *testing.T) {
-	var gotVersionType string
+	var gotRead bool
+	var gotIfSeqNo string
 	repo := newTestOpenSearchRepository(t, func(w http.ResponseWriter, r *http.Request) {
-		gotVersionType = r.URL.Query().Get("version_type")
+		if r.Method == http.MethodGet {
+			gotRead = true
+			return
+		}
+		gotIfSeqNo = r.URL.Query().Get("if_seq_no")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"result":"updated"}`))
 	})
@@ -95,7 +145,8 @@ func TestOpenSearchRepository_UpdateRecords_OverwritePolicySkipsVersionCheck(t *
 
 	result, err := repo.UpdateRecords(command)
 	require.NoError(t, err)
-	assert.Empty(t, gotVersionType, "overwrite policy should not use versioning")
+	assert.False(t, gotRead, "overwrite policy should not read current version")
+	assert.Empty(t, gotIfSeqNo, "overwrite policy should not use compare-and-swap")
 	assert.Equal(t, uint16(4), result.Saved["123"].Version)
 }
 
