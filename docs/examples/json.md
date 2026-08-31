@@ -81,6 +81,27 @@ There are a few things that you can notice in this example:
 - It's not shown in this example, but you can also reference types and union types from other packages, and serialization will work as expected.
 
 
+## Struct fields and `json` tags
+
+Generated serialization follows the same rules as the standard library `encoding/json`:
+
+```go
+type User struct {
+    ID        string  `json:"id"`             // renamed to "id"
+    Password  string  `json:"-"`              // never serialized
+    Nickname  string  `json:"nick,omitempty"` // dropped when empty
+    Age       int     `json:",omitempty"`     // keeps name "Age", dropped when 0
+    Referrer  *User   `json:"referrer"`       // nil is serialized as null
+}
+```
+
+- Fields appear in JSON in **declaration order**, exactly like `encoding/json`.
+- `json:"-"` skips the field on both marshal and unmarshal.
+- `omitempty` drops the field when the value is empty: `false`, `0`, `""`, a `nil` pointer, or an empty slice or map.
+- A `nil` pointer field without `omitempty` is serialized as `null`.
+
+This means you can move a struct between plain `encoding/json` and mkunion serde without changing the JSON on the wire.
+
 
 ## Next steps
 
