@@ -1,10 +1,10 @@
 {
   "Backend": "dynamodb",
   "Capabilities": {
-    "SortByDataField": false,
-    "BackwardPagination": false,
     "AtomicBatch": true,
-    "MonotonicOverwriteVersion": true
+    "BackwardPagination": false,
+    "MonotonicOverwriteVersion": true,
+    "SortByDataField": false
   },
   "Behaviours": [
     {
@@ -77,63 +77,82 @@
     {
       "Suite": "repository",
       "Order": 12,
-      "Name": "empty where query matches all records",
+      "Name": "batch result maps key records by ID and type",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 13,
-      "Name": "OR predicate matches either branch",
+      "Name": "where predicate accepts literal values",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 14,
-      "Name": "NOT over OR excludes both branches",
+      "Name": "empty where query matches all records",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 15,
-      "Name": "query without a record type is not an error",
+      "Name": "OR predicate matches either branch",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 16,
-      "Name": "record type separates records",
+      "Name": "NOT over OR excludes both branches",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 17,
-      "Name": "forward pagination visits every record exactly once",
+      "Name": "query without a record type is not an error",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 18,
+      "Name": "record type separates records",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 19,
+      "Name": "forward pagination visits every record exactly once",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 20,
       "Name": "sorting orders records by a data field",
       "Status": "downgraded",
       "Capability": "SortByDataField"
     },
     {
       "Suite": "repository",
-      "Order": 19,
+      "Order": 21,
+      "Name": "sorting orders records by a numeric data field",
+      "Status": "downgraded",
+      "Capability": "SortByDataField"
+    },
+    {
+      "Suite": "repository",
+      "Order": 22,
       "Name": "sorted pagination keeps order across pages",
       "Status": "downgraded",
       "Capability": "SortByDataField"
     },
     {
       "Suite": "repository",
-      "Order": 20,
+      "Order": 23,
       "Name": "prev cursor pages backward",
       "Status": "downgraded",
       "Capability": "BackwardPagination"
     },
     {
       "Suite": "repository",
-      "Order": 21,
+      "Order": 24,
       "Name": "batch with a conflict writes nothing",
       "Status": "supported",
       "Capability": "AtomicBatch"

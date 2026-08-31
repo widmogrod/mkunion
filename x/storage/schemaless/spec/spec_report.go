@@ -29,14 +29,32 @@ var backendDisplayName = map[string]string{
 	BackendOpenSearch: "OpenSearch",
 }
 
+// Canonical append-log implementation names; their reports live in
+// report/appendlog-<name>.json so they never collide with repository backends.
+const (
+	AppendLogInMemory = "in-memory"
+	AppendLogTypedful = "typedful"
+)
+
+var appendLogOrder = []string{AppendLogInMemory, AppendLogTypedful}
+
+var appendLogDisplayName = map[string]string{
+	AppendLogInMemory: "In-Memory",
+	AppendLogTypedful: "Typedful",
+}
+
+const appendLogReportPrefix = "appendlog-"
+
 const (
 	suiteRepository = "repository"
 	suiteComplex    = "complex queries"
+	suiteAppendLog  = "append log"
 )
 
 var suiteOrder = map[string]int{
 	suiteRepository: 1,
 	suiteComplex:    2,
+	suiteAppendLog:  3,
 }
 
 const (
@@ -50,6 +68,11 @@ var capabilityDescription = map[string]string{
 	"BackwardPagination":        "Page backward with `Before` cursors and `Prev` links",
 	"AtomicBatch":               "All-or-nothing `UpdateRecords` batches",
 	"MonotonicOverwriteVersion": "Versions keep increasing under `PolicyOverwriteServerChanges`",
+
+	"Filtering":    "`Subscribe` honours a where-predicate filter",
+	"OffsetResume": "`Subscribe` resumes from a given change offset",
+	"Replay":       "A late subscriber receives every past change",
+	"MergeAppend":  "`Append` merges another log's changes",
 }
 
 // BehaviourReport is one spec subtest's outcome on one backend.
@@ -62,10 +85,11 @@ type BehaviourReport struct {
 }
 
 // BackendReport is what a test run of one backend writes to
-// report/<backend>.json.
+// report/<backend>.json. Capabilities is a name→enabled map so repository
+// backends and append-log implementations can share the report machinery.
 type BackendReport struct {
 	Backend      string
-	Capabilities Capabilities
+	Capabilities map[string]bool
 	Behaviours   []BehaviourReport
 }
 
@@ -80,18 +104,28 @@ type runner struct {
 	t       *testing.T
 	backend string
 	suite   string
-	caps    Capabilities
 	order   int
 }
 
-func newRunner(t *testing.T, backend, suite string, caps Capabilities) *runner {
+// capsToMap flattens a capabilities struct (bool fields only) into the
+// name→enabled map stored in reports.
+func capsToMap(caps any) map[string]bool {
+	result := map[string]bool{}
+	v := reflect.ValueOf(caps)
+	for i := 0; i < v.NumField(); i++ {
+		result[v.Type().Field(i).Name] = v.Field(i).Bool()
+	}
+	return result
+}
+
+func newRunner(t *testing.T, backend, suite string, caps any) *runner {
 	collector.Lock()
 	report, ok := collector.reports[backend]
 	if !ok {
 		report = &BackendReport{Backend: backend}
 		collector.reports[backend] = report
 	}
-	report.Capabilities = caps
+	report.Capabilities = capsToMap(caps)
 	collector.Unlock()
 
 	t.Cleanup(func() {
@@ -100,7 +134,7 @@ func newRunner(t *testing.T, backend, suite string, caps Capabilities) *runner {
 		}
 	})
 
-	return &runner{t: t, backend: backend, suite: suite, caps: caps}
+	return &runner{t: t, backend: backend, suite: suite}
 }
 
 func (r *runner) record(entry BehaviourReport) {
@@ -230,19 +264,15 @@ func sortBehaviours(behaviours []BehaviourReport) {
 	})
 }
 
-// capabilityNames lists Capabilities fields in declaration order, so the
-// generated matrix follows the struct.
-func capabilityNames() []string {
+// capabilityNames lists a capabilities struct's fields in declaration order,
+// so the generated matrix follows the struct.
+func capabilityNames(capsType any) []string {
 	var names []string
-	tp := reflect.TypeOf(Capabilities{})
+	tp := reflect.TypeOf(capsType)
 	for i := 0; i < tp.NumField(); i++ {
 		names = append(names, tp.Field(i).Name)
 	}
 	return names
-}
-
-func capabilityEnabled(caps Capabilities, name string) bool {
-	return reflect.ValueOf(caps).FieldByName(name).Bool()
 }
 
 // GenerateDocs renders report/*.json into report/capabilities.md and stamps
@@ -251,22 +281,67 @@ func capabilityEnabled(caps Capabilities, name string) bool {
 // package); with no new reports it reproduces the committed files bit for
 // bit, so it is safe to run anywhere.
 func GenerateDocs() error {
-	var reports []*BackendReport
-	for _, backend := range backendOrder {
-		report, err := readBackendReport(reportPath(backend))
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
+	readReports := func(keys []string, prefix string) ([]*BackendReport, error) {
+		var reports []*BackendReport
+		for _, backend := range keys {
+			report, err := readBackendReport(reportPath(prefix + backend))
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return nil, err
 			}
-			return err
+			reports = append(reports, report)
 		}
-		reports = append(reports, report)
+		return reports, nil
 	}
-	if len(reports) == 0 {
+
+	repoReports, err := readReports(backendOrder, "")
+	if err != nil {
+		return err
+	}
+	appendLogReports, err := readReports(appendLogOrder, appendLogReportPrefix)
+	if err != nil {
+		return err
+	}
+	if len(repoReports) == 0 && len(appendLogReports) == 0 {
 		return nil
 	}
 
-	content := renderMarkdown(reports)
+	b := &strings.Builder{}
+	fmt.Fprintf(b, "<!-- Code generated by the x/storage/schemaless/spec test suite. DO NOT EDIT. -->\n")
+
+	if len(repoReports) > 0 {
+		renderSection(b, sectionSpec{
+			title:           "Repository capability matrix",
+			behavioursTitle: "Repository verified behaviours",
+			prose: "Every `Repository` backend passes the same behavioural spec\n" +
+				"(`spec.RunRepositorySpec`), modulo the capabilities it explicitly\n" +
+				"downgrades. The in-memory repository defines the full contract.",
+			capabilities: capabilityNames(Capabilities{}),
+			displayName: func(backend string) string {
+				return backendDisplayName[backend]
+			},
+			reports: repoReports,
+		})
+	}
+
+	if len(appendLogReports) > 0 {
+		renderSection(b, sectionSpec{
+			title:           "Append log capability matrix",
+			behavioursTitle: "Append log verified behaviours",
+			prose: "Every `AppendLoger` implementation passes the same behavioural spec\n" +
+				"(`spec.RunAppendLogSpec`), modulo the capabilities it explicitly downgrades.\n" +
+				"The in-memory append log defines the full contract.",
+			capabilities: capabilityNames(AppendLogCapabilities{}),
+			displayName: func(backend string) string {
+				return appendLogDisplayName[strings.TrimPrefix(backend, appendLogReportPrefix)]
+			},
+			reports: appendLogReports,
+		})
+	}
+
+	content := b.String()
 
 	markdownPath := filepath.Join(reportDir(), "capabilities.md")
 	if err := os.WriteFile(markdownPath, []byte(content), 0o644); err != nil {
@@ -277,31 +352,38 @@ func GenerateDocs() error {
 	return stampBetweenMarkers(readmePath, content)
 }
 
-func renderMarkdown(reports []*BackendReport) string {
-	b := &strings.Builder{}
-	fmt.Fprintf(b, "<!-- Code generated by the x/storage/schemaless/spec test suite. DO NOT EDIT. -->\n")
-	fmt.Fprintf(b, "\n#### Capability matrix\n\n")
-	fmt.Fprintf(b, "Every backend passes the same behavioural spec (`x/storage/schemaless/spec`),\n")
-	fmt.Fprintf(b, "modulo the capabilities it explicitly downgrades. The in-memory repository\n")
-	fmt.Fprintf(b, "defines the full contract.\n\n")
+type sectionSpec struct {
+	title           string
+	behavioursTitle string
+	prose           string
+	capabilities    []string
+	displayName     func(backend string) string
+	reports         []*BackendReport
+}
+
+func renderSection(b *strings.Builder, section sectionSpec) {
+	reports := section.reports
+
+	fmt.Fprintf(b, "\n#### %s\n\n", section.title)
+	fmt.Fprintf(b, "%s\n\n", section.prose)
 
 	fmt.Fprintf(b, "| Capability |")
 	for _, report := range reports {
-		fmt.Fprintf(b, " %s |", backendDisplayName[report.Backend])
+		fmt.Fprintf(b, " %s |", section.displayName(report.Backend))
 	}
 	fmt.Fprintf(b, "\n|---|")
 	for range reports {
 		fmt.Fprintf(b, ":---:|")
 	}
 	fmt.Fprintf(b, "\n")
-	for _, name := range capabilityNames() {
+	for _, name := range section.capabilities {
 		description := capabilityDescription[name]
 		if description == "" {
 			description = name
 		}
 		fmt.Fprintf(b, "| **%s** — %s |", name, description)
 		for _, report := range reports {
-			if capabilityEnabled(report.Capabilities, name) {
+			if report.Capabilities[name] {
 				fmt.Fprintf(b, " ✅ |")
 			} else {
 				fmt.Fprintf(b, " ⛔ |")
@@ -310,13 +392,13 @@ func renderMarkdown(reports []*BackendReport) string {
 		fmt.Fprintf(b, "\n")
 	}
 
-	fmt.Fprintf(b, "\n#### Verified behaviours\n\n")
+	fmt.Fprintf(b, "\n#### %s\n\n", section.behavioursTitle)
 	fmt.Fprintf(b, "Each row is a spec subtest; ✅ verified, ⛔ skipped by a declared capability\n")
 	fmt.Fprintf(b, "downgrade, ❌ failing when the report was generated.\n\n")
 
 	fmt.Fprintf(b, "| Suite | Behaviour |")
 	for _, report := range reports {
-		fmt.Fprintf(b, " %s |", backendDisplayName[report.Backend])
+		fmt.Fprintf(b, " %s |", section.displayName(report.Backend))
 	}
 	fmt.Fprintf(b, "\n|---|---|")
 	for range reports {
@@ -361,8 +443,6 @@ func renderMarkdown(reports []*BackendReport) string {
 		}
 		fmt.Fprintf(b, "\n")
 	}
-
-	return b.String()
 }
 
 const (

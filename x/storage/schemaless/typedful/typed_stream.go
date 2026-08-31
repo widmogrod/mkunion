@@ -32,35 +32,59 @@ type TypedAppendLog[T any] struct {
 }
 
 func (t *TypedAppendLog[T]) Close() {
-	//TODO implement me
-	panic("implement me")
+	t.log.Close()
 }
 
 func (t *TypedAppendLog[T]) Change(from, to *schemaless.Record[T]) error {
-	//TODO implement me
-	panic("implement me")
+	return t.log.Change(toSchemaRecordPtr(from), toSchemaRecordPtr(to))
 }
 
 func (t *TypedAppendLog[T]) Delete(data schemaless.Record[T]) error {
-	//TODO implement me
-	panic("implement me")
+	return t.log.Delete(toSchemaRecord(data))
 }
 
 func (t *TypedAppendLog[T]) Push(x schemaless.Change[T]) {
-	//TODO implement me
-	panic("implement me")
+	t.log.Push(schemaless.Change[schema.Schema]{
+		Before:  toSchemaRecordPtr(x.Before),
+		After:   toSchemaRecordPtr(x.After),
+		Deleted: x.Deleted,
+		Offset:  x.Offset,
+	})
 }
 
+// Append merges a typed concrete log, but the backing log is
+// schema-typed; converting between the two concrete list types is not
+// supported. Use Change/Delete/Push instead.
 func (t *TypedAppendLog[T]) Append(b *schemaless.AppendLog[T]) {
-	//TODO implement me
-	panic("implement me")
+	panic("typedful.TypedAppendLog.Append: not supported; use Change/Delete/Push")
+}
+
+func toSchemaRecord[T any](r schemaless.Record[T]) schemaless.Record[schema.Schema] {
+	return schemaless.Record[schema.Schema]{
+		ID:      r.ID,
+		Type:    r.Type,
+		Data:    schema.FromGo(r.Data),
+		Version: r.Version,
+	}
+}
+
+func toSchemaRecordPtr[T any](r *schemaless.Record[T]) *schemaless.Record[schema.Schema] {
+	if r == nil {
+		return nil
+	}
+	result := toSchemaRecord(*r)
+	return &result
 }
 
 func (t *TypedAppendLog[T]) Subscribe(ctx context.Context, fromOffset int, filter *predicate.WherePredicates, f func(schemaless.Change[T])) error {
-	filterw := &predicate.WherePredicates{
-		Predicate: WrapPredicate(filter.Predicate, t.loc),
-		Params:    filter.Params,
-		Shape:     t.loc.ShapeDef(),
+	// nil filter means "every change"
+	var filterw *predicate.WherePredicates
+	if filter != nil {
+		filterw = &predicate.WherePredicates{
+			Predicate: WrapPredicate(filter.Predicate, t.loc),
+			Params:    filter.Params,
+			Shape:     t.loc.ShapeDef(),
+		}
 	}
 
 	return t.log.Subscribe(ctx, fromOffset, filterw, func(change schemaless.Change[schema.Schema]) {

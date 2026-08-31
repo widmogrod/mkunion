@@ -59,6 +59,66 @@ repo := schemaless.NewOpenSearchRepository[MyRecord](client, indexName)
 
 Writes use `Refresh=true`, so reads observe writes immediately.
 
+## Change streams — the append log
+
+A repository answers "what is the state now". The append log answers "what
+just changed": it is an ordered stream of `Change[T]` events that subscribers
+consume, one per save or delete.
+
+```go
+type Change[T any] struct {
+    Before  *Record[T] // state before the change (nil on first insert)
+    After   *Record[T] // state after the change (nil on delete)
+    Deleted bool       // true when the record was deleted
+    Offset  int        // position in the log, increases with every change
+}
+```
+
+The in-memory repository feeds its log automatically — every `UpdateRecords`
+appends the resulting changes:
+
+```go
+repo := schemaless.NewInMemoryRepository[MyRecord]()
+log := repo.AppendLog()
+
+err := log.Subscribe(ctx, 0, nil, func(change schemaless.Change[MyRecord]) {
+    // react to the change
+})
+```
+
+`Subscribe` blocks and delivers changes until the log ends:
+
+* `fromOffset` — `0` starts at the beginning, `-1` at the latest change, and
+  any other value resumes from the change with that `Offset` (as delivered in
+  an earlier subscription).
+* `filter` — a `predicate.WherePredicates` that delivers only matching
+  changes; `nil` delivers everything.
+* Return value — `nil` after `Close()` once all changes are delivered, the
+  context's error when the context is cancelled.
+
+A log can also be written to directly, without a repository, via `Push`,
+`Change`, and `Delete`.
+
+### Append log implementations
+
+| Implementation | What it is |
+|---|---|
+| `schemaless.AppendLog[T]` | In-memory log; defines the **full contract** |
+| `typedful.TypedAppendLog[T]` | Typed wrapper over an `AppendLoger[schema.Schema]`; translates records and filter predicates both ways. `Append` (merging another log) is not supported and is declared as the `MergeAppend` downgrade |
+| `schemaless.KinesisStream` | **Not** an `AppendLoger` yet: it has a different `Subscribe` signature and no write side; it only reads DynamoDB change events from a Kinesis stream. Making it conform is an open follow-up |
+
+Like the repositories, every implementation runs the same behavioural
+specification, with explicit downgrades:
+
+```go
+spec.RunAppendLogSpec(t, spec.AppendLogTypedful, newLog,
+    spec.FullAppendLogCapabilities().
+        WithoutMergeAppend(),
+)
+```
+
+The results render as the *Append log capability matrix* below.
+
 ## Feature matrix
 
 Every adapter is verified against the same behavioural specification
@@ -125,10 +185,12 @@ indexes. It would have to be an opt-in constructor, never a start-up guess.
 
 ## Adding a new adapter
 
-1. Implement `schemaless.Repository[T]`.
-2. Wire it into the spec suite next to your adapter
-   (see `x/storage/schemaless/inmemory_spec_test.go` for the pattern),
-   declaring any capability downgrades explicitly.
+1. Implement `schemaless.Repository[T]` — or `schemaless.AppendLoger[T]`
+   for a change stream.
+2. Wire it into the spec suite next to your adapter, declaring any
+   capability downgrades explicitly
+   (see `x/storage/schemaless/inmemory_spec_test.go` for a repository,
+   `x/storage/schemaless/appendlog_spec_test.go` for an append log).
 3. Run `go test ./x/storage/schemaless/`. On a green run the feature matrix
    above and `x/storage/README.md` regenerate themselves — commit them with
    your change.

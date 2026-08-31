@@ -106,7 +106,7 @@ func (r *OpenSearchSearchResultHit[A]) _marshalJSONOpenSearchSearchResultHitLb_A
 	buf.WriteString("\"_source\":")
 	buf.Write(fieldItem)
 	var fieldSort []byte
-	fieldSort, err = r._marshalJSONSlicestring(x.Sort)
+	fieldSort, err = r._marshalJSONSliceany(x.Sort)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONOpenSearchSearchResultHitLb_A_bL: field name Sort; %w", err)
 	}
@@ -128,25 +128,25 @@ func (r *OpenSearchSearchResultHit[A]) _marshalJSONA(x A) ([]byte, error) {
 	}
 	return result, nil
 }
-func (r *OpenSearchSearchResultHit[A]) _marshalJSONSlicestring(x []string) ([]byte, error) {
+func (r *OpenSearchSearchResultHit[A]) _marshalJSONSliceany(x []any) ([]byte, error) {
 	partial := make([]json.RawMessage, len(x))
 	for i, v := range x {
-		item, err := r._marshalJSONstring(v)
+		item, err := r._marshalJSONany(v)
 		if err != nil {
-			return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONSlicestring: at index %d; %w", i, err)
+			return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONSliceany: at index %d; %w", i, err)
 		}
 		partial[i] = item
 	}
 	result, err := json.Marshal(partial)
 	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONSlicestring:; %w", err)
+		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONSliceany:; %w", err)
 	}
 	return result, nil
 }
-func (r *OpenSearchSearchResultHit[A]) _marshalJSONstring(x string) ([]byte, error) {
+func (r *OpenSearchSearchResultHit[A]) _marshalJSONany(x any) ([]byte, error) {
 	result, err := json.Marshal(x)
 	if err != nil {
-		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONstring:; %w", err)
+		return nil, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._marshalJSONany:; %w", err)
 	}
 	return result, nil
 }
@@ -172,7 +172,7 @@ func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONOpenSearchSearchResultHitLb
 		}
 	}
 	if fieldSort, ok := partial["sort"]; ok {
-		result.Sort, err = r._unmarshalJSONSlicestring(fieldSort)
+		result.Sort, err = r._unmarshalJSONSliceany(fieldSort)
 		if err != nil {
 			return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONOpenSearchSearchResultHitLb_A_bL: field Sort; %w", err)
 		}
@@ -186,27 +186,27 @@ func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONA(data []byte) (A, error) {
 	}
 	return result, nil
 }
-func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONSlicestring(data []byte) ([]string, error) {
-	result := make([]string, 0)
+func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONSliceany(data []byte) ([]any, error) {
+	result := make([]any, 0)
 	var partial []json.RawMessage
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
-		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONSlicestring: native list unwrap; %w", err)
+		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONSliceany: native list unwrap; %w", err)
 	}
 	for i, v := range partial {
-		item, err := r._unmarshalJSONstring(v)
+		item, err := r._unmarshalJSONany(v)
 		if err != nil {
-			return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONSlicestring: at index %d; %w", i, err)
+			return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONSliceany: at index %d; %w", i, err)
 		}
 		result = append(result, item)
 	}
 	return result, nil
 }
-func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONstring(data []byte) (string, error) {
-	var result string
+func (r *OpenSearchSearchResultHit[A]) _unmarshalJSONany(data []byte) (any, error) {
+	var result any
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONstring: native primitive unwrap; %w", err)
+		return result, fmt.Errorf("schemaless: OpenSearchSearchResultHit[A]._unmarshalJSONany: native any unwrap; %w", err)
 	}
 	return result, nil
 }

@@ -9,11 +9,13 @@ import (
 )
 
 func init() {
+	shared.TypeRegistryStore[any]("any")
 	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[schemaless.ExampleRecord]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]]")
 	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[specdata.Vehicle]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless/spec/specdata.Vehicle]]")
 	shared.TypeRegistryStore[schemaless.Record[schemaless.ExampleRecord]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]")
 	shared.TypeRegistryStore[schemaless.Repository[schemaless.ExampleRecord]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]")
 	shared.TypeRegistryStore[schemaless.Repository[specdata.Vehicle]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/storage/schemaless/spec/specdata.Vehicle]")
 	shared.TypeRegistryStore[schemaless.UpdateRecords[schemaless.Record[schemaless.ExampleRecord]]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/storage/schemaless.ExampleRecord]]")
+	shared.TypeRegistryStore[BackendReport]("github.com/widmogrod/mkunion/x/storage/schemaless/spec.BackendReport")
 	shared.TypeRegistryStore[testing.T]("testing.T")
 }

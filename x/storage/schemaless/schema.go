@@ -31,6 +31,8 @@ type InMemoryRepository[A any] struct {
 	shapeDef  shape.Shape
 }
 
+// Get goes through FindingRecords on purpose: the repository keeps one
+// well-tested read path, so every Get also exercises the query machinery.
 func (s *InMemoryRepository[A]) Get(recordID, recordType string) (Record[A], error) {
 	result, err := s.FindingRecords(FindingRecords[Record[A]]{
 		RecordType: recordType,
@@ -131,7 +133,7 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*Upda
 }
 
 func (s *InMemoryRepository[A]) toKey(record Record[A]) string {
-	return record.ID + record.Type
+	return RecordKey(record)
 }
 
 func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) (PageResult[Record[A]], error) {
@@ -162,9 +164,10 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 		records = newRecords
 	}
 
-	if len(query.Sort) > 0 {
-		records = sortRecords(records, query.Sort)
-	}
+	// always sort: without an explicit Sort, records come from map
+	// iteration in random order, and the ID-based cursor pagination
+	// below needs a stable order to not lose or duplicate records
+	records = sortRecords(records, query.Sort)
 
 	// Use limit to reduce number of records
 	var next, prev *FindingRecords[Record[A]]
@@ -288,7 +291,8 @@ func sortRecords[A any](records []Record[A], sortFields []SortField) []Record[A]
 				return cmp < 0
 			}
 		}
-		return false
+		// stable tiebreaker so pagination cursors are deterministic
+		return records[i].ID < records[j].ID
 	})
 	return records
 }

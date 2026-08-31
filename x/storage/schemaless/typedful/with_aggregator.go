@@ -216,7 +216,7 @@ func (repo *TypedRepoWithAggregator[T, C]) FindingRecords(query schemaless.Findi
 // How it's implemented?
 //  1. Create index from snapshot of all records. Because it's snapshot, changes are not applied.
 //  2. In parallel process stream of changes from give point of time.
-//  3. KayedAggregate must be idempotent, so same won't be indexed twice.
+//  3. KeyedAggregate must be idempotent, so same won't be indexed twice.
 //  4. When aggregator detects same record with new Version, it retracts old Version and accumulates new Version.
 //  5. When it's done, it's ready to be used
 //  6. When indices are set up as synchronous, then every change is indexed immediately.

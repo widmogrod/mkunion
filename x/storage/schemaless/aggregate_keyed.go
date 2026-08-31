@@ -11,22 +11,24 @@ func NewKeyedAggregate[T, R any](
 	supportedRecordTypes []string,
 	groupByFunc func(data T) (string, R),
 	combineByFunc func(a, b R) (R, error),
+	unCombineByFunc func(a, b R) (R, error),
 	storage Repository[schema.Schema],
-) *KayedAggregate[T, R] {
-	return &KayedAggregate[T, R]{
+) *KeyedAggregate[T, R] {
+	return &KeyedAggregate[T, R]{
 		aggregateRecordTypeName: recordTypeName,
 		supportedRecordTypes:    supportedRecordTypes,
 
-		dataByKey:    make(map[string]Record[R]),
-		groupByKey:   groupByFunc,
-		combineByKey: combineByFunc,
-		storage:      storage,
+		dataByKey:      make(map[string]Record[R]),
+		groupByKey:     groupByFunc,
+		combineByKey:   combineByFunc,
+		unCombineByKey: unCombineByFunc,
+		storage:        storage,
 	}
 }
 
-var _ Aggregator[any, any] = (*KayedAggregate[any, any])(nil)
+var _ Aggregator[any, any] = (*KeyedAggregate[any, any])(nil)
 
-type KayedAggregate[T, R any] struct {
+type KeyedAggregate[T, R any] struct {
 	supportedRecordTypes    []string
 	aggregateRecordTypeName string
 
@@ -39,7 +41,7 @@ type KayedAggregate[T, R any] struct {
 	storage Repository[schema.Schema]
 }
 
-func (t *KayedAggregate[T, R]) Append(data Record[T]) error {
+func (t *KeyedAggregate[T, R]) Append(data Record[T]) error {
 	if !t.supportedType(data.Type) {
 		return nil
 	}
@@ -76,10 +78,14 @@ func (t *KayedAggregate[T, R]) Append(data Record[T]) error {
 	return nil
 }
 
-func (t *KayedAggregate[T, R]) Delete(data Record[T]) error {
+func (t *KeyedAggregate[T, R]) Delete(data Record[T]) error {
 	// is supported type?
 	if !t.supportedType(data.Type) {
 		return nil
+	}
+
+	if t.unCombineByKey == nil {
+		return fmt.Errorf("store.KeyedAggregate.Delete: unCombineByFunc not provided")
 	}
 
 	index, result := t.groupByKey(data.Data)
@@ -90,12 +96,8 @@ func (t *KayedAggregate[T, R]) Delete(data Record[T]) error {
 				return err
 			}
 
-			t.dataByKey[index] = Record[R]{
-				ID:      index,
-				Type:    t.aggregateRecordTypeName,
-				Data:    result,
-				Version: 0,
-			}
+			// the index does not exist anywhere,
+			// so there is nothing to un-combine from
 			return nil
 		}
 
@@ -114,7 +116,7 @@ func (t *KayedAggregate[T, R]) Delete(data Record[T]) error {
 	return nil
 }
 
-func (t *KayedAggregate[T, R]) GetVersionedIndices() map[string]Record[schema.Schema] {
+func (t *KeyedAggregate[T, R]) GetVersionedIndices() map[string]Record[schema.Schema] {
 	var result = make(map[string]Record[schema.Schema])
 	for k, v := range t.dataByKey {
 		schemed := schema.FromGo(v.Data)
@@ -129,11 +131,11 @@ func (t *KayedAggregate[T, R]) GetVersionedIndices() map[string]Record[schema.Sc
 	return result
 }
 
-func (t *KayedAggregate[T, R]) GetIndexByKey(key string) R {
+func (t *KeyedAggregate[T, R]) GetIndexByKey(key string) R {
 	return t.dataByKey[key].Data
 }
 
-func (t *KayedAggregate[T, R]) loadIndex(index string) (Record[R], error) {
+func (t *KeyedAggregate[T, R]) loadIndex(index string) (Record[R], error) {
 	var r Record[R]
 	// load index state from storage
 	// if index is found, then concat with unversionedData
@@ -151,7 +153,7 @@ func (t *KayedAggregate[T, R]) loadIndex(index string) (Record[R], error) {
 	return indexValue, nil
 }
 
-func (t *KayedAggregate[T, R]) supportedType(recordType string) bool {
+func (t *KeyedAggregate[T, R]) supportedType(recordType string) bool {
 	for _, v := range t.supportedRecordTypes {
 		if v == recordType {
 			return true

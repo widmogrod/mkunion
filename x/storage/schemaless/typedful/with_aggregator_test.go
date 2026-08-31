@@ -24,6 +24,11 @@ func TestNewRepositoryInMemory(t *testing.T) {
 					Count: a.Count + b.Count,
 				}, nil
 			},
+			func(a, b UsersCountByAge) (UsersCountByAge, error) {
+				return UsersCountByAge{
+					Count: a.Count - b.Count,
+				}, nil
+			},
 			storage,
 		)
 	}
