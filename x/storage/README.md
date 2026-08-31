@@ -27,16 +27,17 @@ assert.NoError(t, err)
 
 result, err := repo.FindingRecords(FindingRecords[Record[MyRecord]]{
     Where: predicate.MustWhere(
-        "Data.#.Age > :age",
+        "Data.Age > :age",
         predicate.ParamBinds{
             ":age": schema.MkInt(20),
         },
+        nil,
     ),
     // Sort works on In-Memory and OpenSearch.
     // DynamoDB ignores it - see "Sorting by a data field" below.
     Sort: []SortField{
         {
-            Field:      "Data.#.Name",
+            Field:      "Data.Name",
             Descending: false,
         },
     },
