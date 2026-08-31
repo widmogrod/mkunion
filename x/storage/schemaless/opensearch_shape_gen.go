@@ -10,7 +10,6 @@ func init() {
 	shape.Register(OpenSearchSearchResultHitShape())
 	shape.Register(OpenSearchSearchResultHitsShape())
 	shape.Register(OpenSearchSearchResultShape())
-	shape.Register(openSearchDocMetaShape())
 }
 
 //shape:shape
@@ -155,36 +154,6 @@ func OpenSearchSearchResultHitShape() shape.Shape {
 		Tags: map[string]shape.Tag{
 			"serde": {
 				Value: "json",
-			},
-		},
-	}
-}
-
-//shape:shape
-func openSearchDocMetaShape() shape.Shape {
-	return &shape.StructLike{
-		Name:          "openSearchDocMeta",
-		PkgName:       "schemaless",
-		PkgImportName: "github.com/widmogrod/mkunion/x/storage/schemaless",
-		TypeParams: []shape.TypeParam{
-			shape.TypeParam{
-				Name: "A",
-				Type: &shape.Any{},
-			},
-		},
-		Fields: []*shape.FieldLike{
-			{
-				Name: "Item",
-				Type: &shape.RefName{
-					Name:          "A",
-					PkgName:       "",
-					PkgImportName: "",
-				},
-				Tags: map[string]shape.Tag{
-					"json": {
-						Value: "_source",
-					},
-				},
 			},
 		},
 	}
