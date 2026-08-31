@@ -32,6 +32,8 @@ result, err := repo.FindingRecords(FindingRecords[Record[MyRecord]]{
             ":age": schema.MkInt(20),
         },
     ),
+    // Sort works on In-Memory and OpenSearch.
+    // DynamoDB ignores it - see "Sorting by a data field" below.
     Sort: []SortField{
         {
             Field:      "Data.#.Name",
@@ -100,3 +102,53 @@ downgrade, ❌ failing when the report was generated.
 | complex queries | filter on a nonexistent field returns no records and no error | ✅ | ✅ | ✅ |
 | complex queries | update of a union variant is queryable afterwards | ✅ | ✅ | ✅ |
 <!-- END mkunion:storage-capabilities -->
+
+### Sorting by a data field
+
+`SortByDataField` is the one capability that splits the backends, so it decides
+which backend a sorted query belongs on.
+
+| Backend | `Sort` on `Data.#.Name` |
+|---|---|
+| In-Memory | works |
+| OpenSearch | works |
+| DynamoDB | **ignored** - the query returns matching records in an arbitrary order |
+
+**If you need sorted queries, use OpenSearch.** In-Memory is the reference
+implementation for tests; OpenSearch is the production backend that sorts.
+
+#### Why DynamoDB cannot do it
+
+DynamoDB only ever returns records in the order of a *key*, and this table's
+key is `ID` + `Type`. Three facts follow:
+
+1. `DynamoDBRepository.FindingRecords` issues a `Scan`
+   (`x/storage/schemaless/dynamodb.go`). A `Scan` has no ordering option at
+   all, and DynamoDB promises nothing about the order it returns.
+2. Even the stronger `Query` operation can only order by the table's range
+   key, ascending or descending - not by an arbitrary attribute.
+3. An index key must be a flat, top-level attribute. `Data.#.Name` is nested
+   inside `Data`, so no index can point at it as things stand.
+
+The `Sort` value is therefore accepted and carried across pages, but never
+applied. The DynamoDB spec wiring declares this with
+`spec.FullCapabilities().WithoutSortByDataField()`, which is why the matrix
+above marks those rows with a skip rather than a pass.
+
+#### What it would take to support it
+
+Not a config flag. A DynamoDB backend that really sorts by `Data.Name` needs
+all three of:
+
+1. every write copies `Data.Name` into a new flat top-level attribute;
+2. a global secondary index keyed on that attribute (hash `Type`, range the new
+   attribute) - which also means existing records must be rewritten before they
+   reappear in sorted results;
+3. the repository discovering that index at start-up (`DescribeTable`) so it
+   can accept `Sort` for the indexed fields and reject the rest with a clear
+   error.
+
+Creating that index automatically is deliberately out of scope: it costs money,
+needs wider IAM permissions, backfills slowly on a large table, and DynamoDB
+caps a table at 20 indexes. If this is ever built it should be an opt-in
+constructor, never a start-up guess.
