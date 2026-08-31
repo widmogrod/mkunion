@@ -68,7 +68,7 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 	t.Run("PolicyOverwriteServerChanges lets a stale write win", func(t *testing.T) {
 		overwrite := stale
 		overwrite.Data.Name = "overwrite"
-		result, err := repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
+		_, err := repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
 			UpdatingPolicy: PolicyOverwriteServerChanges,
 			Saving: map[string]Record[ExampleRecord]{
 				overwrite.ID: overwrite,
@@ -79,7 +79,23 @@ To run this test, please set AWS_ENDPOINT_URL to the address of your localstack,
 		stored, err := repo.Get(overwrite.ID, overwrite.Type)
 		require.NoError(t, err, "while reading record back")
 		assert.Equal(t, "overwrite", stored.Data.Name, "stale write should overwrite server state")
+		// the server increments Version itself, so the number keeps growing
+		// no matter how stale the writer's copy was
 		assert.Equal(t, serverVersion+1, stored.Version, "version should keep increasing monotonically")
-		assert.Equal(t, stored.Version, result.Saved[overwrite.ID].Version, "result should report the version that was written")
+
+		// a second stale overwrite must bump the version again
+		overwrite.Data.Name = "overwrite-again"
+		_, err = repo.UpdateRecords(UpdateRecords[Record[ExampleRecord]]{
+			UpdatingPolicy: PolicyOverwriteServerChanges,
+			Saving: map[string]Record[ExampleRecord]{
+				overwrite.ID: overwrite,
+			},
+		})
+		require.NoError(t, err, "second overwrite must not fail")
+
+		stored, err = repo.Get(overwrite.ID, overwrite.Type)
+		require.NoError(t, err, "while reading record back")
+		assert.Equal(t, "overwrite-again", stored.Data.Name)
+		assert.Equal(t, serverVersion+2, stored.Version, "each overwrite bumps the server-side version by exactly one")
 	})
 }

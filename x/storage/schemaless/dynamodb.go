@@ -72,6 +72,11 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 		return nil, fmt.Errorf("DynamoDBRepository.UpdateRecords: empty command %w", ErrEmptyCommand)
 	}
 
+	result := &UpdateRecordsResult[Record[A]]{
+		Saved:   make(map[string]Record[A]),
+		Deleted: make(map[string]Record[A]),
+	}
+
 	var transact []types.TransactWriteItem
 	for _, value := range command.Saving {
 		originalVersion := value.Version
@@ -87,18 +92,51 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 			return nil, fmt.Errorf("DynamoDBRepository.UpdateRecords: expected map as item. %w", ErrInternalError)
 		}
 
-		transact = append(transact, types.TransactWriteItem{
-			Put: &types.Put{
-				TableName:           aws.String(d.tableName),
-				Item:                final.Value,
-				ConditionExpression: aws.String("Version = :version OR attribute_not_exists(Version)"),
-				ExpressionAttributeValues: map[string]types.AttributeValue{
-					":version": &types.AttributeValueMemberN{
-						Value: fmt.Sprintf("%d", originalVersion),
+		if command.UpdatingPolicy == PolicyOverwriteServerChanges {
+			// delegate the version bump to DynamoDB: the overwrite always wins
+			// and the server increments Version atomically, so concurrent
+			// overwrites can never produce the same version number.
+			// Note: the version reported in result.Saved is the client-side
+			// guess; the server's version is authoritative and can be higher.
+			transact = append(transact, types.TransactWriteItem{
+				Update: &types.Update{
+					TableName: aws.String(d.tableName),
+					Key: map[string]types.AttributeValue{
+						"ID": &types.AttributeValueMemberS{
+							Value: value.ID,
+						},
+						"Type": &types.AttributeValueMemberS{
+							Value: value.Type,
+						},
+					},
+					UpdateExpression: aws.String("SET #data = :data, #version = if_not_exists(#version, :zero) + :one"),
+					ExpressionAttributeNames: map[string]string{
+						"#data":    "Data",
+						"#version": "Version",
+					},
+					ExpressionAttributeValues: map[string]types.AttributeValue{
+						":data": final.Value["Data"],
+						":zero": &types.AttributeValueMemberN{Value: "0"},
+						":one":  &types.AttributeValueMemberN{Value: "1"},
 					},
 				},
-			},
-		})
+			})
+		} else {
+			transact = append(transact, types.TransactWriteItem{
+				Put: &types.Put{
+					TableName:           aws.String(d.tableName),
+					Item:                final.Value,
+					ConditionExpression: aws.String("Version = :version OR attribute_not_exists(Version)"),
+					ExpressionAttributeValues: map[string]types.AttributeValue{
+						":version": &types.AttributeValueMemberN{
+							Value: fmt.Sprintf("%d", originalVersion),
+						},
+					},
+				},
+			})
+		}
+
+		result.Saved[value.ID] = value
 	}
 
 	for _, id := range command.Deleting {
@@ -134,18 +172,6 @@ func (d *DynamoDBRepository[A]) UpdateRecords(command UpdateRecords[Record[A]]) 
 			}
 		}
 		return nil, err
-	}
-
-	//TODO: SavingPolicy check
-
-	result := &UpdateRecordsResult[Record[A]]{
-		Saved:   make(map[string]Record[A]),
-		Deleted: make(map[string]Record[A]),
-	}
-
-	for _, value := range command.Saving {
-		value.Version++
-		result.Saved[value.ID] = value
 	}
 
 	for _, value := range command.Deleting {
