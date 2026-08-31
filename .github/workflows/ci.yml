@@ -44,6 +44,10 @@ jobs:
       - run: |
           go test -race -coverprofile=coverage.out -covermode=atomic ./... || true
 
+      # CRAP gate: fail when a function is both complex and untested,
+      # unless it is a pre-existing offender accepted in .crap-baseline.json
+      - run: go tool mkcrap --profile coverage.out
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5.5.2
         with:

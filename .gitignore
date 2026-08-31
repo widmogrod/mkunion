@@ -1,6 +1,11 @@
 # Build artifacts
 cmd/mkunion/mkunion
 cmd/mkfunc/mkfunc
+cmd/mkcrap/mkcrap
+/mkcrap
+
+# Coverage
+coverage.out
 
 # IDE files
 .idea/
