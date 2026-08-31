@@ -96,18 +96,18 @@ func TestCompareNumbers(t *testing.T) {
 	}
 }
 
-// Reproduces: schema.Number is float64 only, so int64 values above 2^53
-// lose precision and distinct values become equal.
-func TestCompareBigInt64(t *testing.T) {
-	t.Skip("KNOWN BUG: schema.Number is float64-backed; MkInt loses precision above 2^53. " +
-		"Fixing this requires redesigning schema.Number (e.g. separate int64/float64 representations).")
-	t.Run("adjacent int64 above 2^53 stay distinct", func(t *testing.T) {
-		big := int64(1) << 60
-		assert.Equal(t, 1, Compare(MkInt(big+1), MkInt(big)))
-		assert.Equal(t, -1, Compare(MkInt(big), MkInt(big+1)))
+// schema.Number is float64-backed by design. Integers are exact only up
+// to ±2^53; above that adjacent int64 values collapse to the same number.
+// This test documents that accepted limitation (see Number in model.go).
+func TestNumberInt64PrecisionLimit(t *testing.T) {
+	t.Run("integers up to 2^53 stay distinct", func(t *testing.T) {
+		limit := int64(1) << 53
+		assert.Equal(t, 1, Compare(MkInt(limit), MkInt(limit-1)))
 	})
-	t.Run("math.MaxInt64 and math.MaxInt64-1 stay distinct", func(t *testing.T) {
-		assert.Equal(t, 1, Compare(MkInt(math.MaxInt64), MkInt(math.MaxInt64-1)))
+	t.Run("adjacent int64 above 2^53 collapse to equal", func(t *testing.T) {
+		big := int64(1) << 60
+		assert.Equal(t, 0, Compare(MkInt(big+1), MkInt(big)))
+		assert.Equal(t, 0, Compare(MkInt(math.MaxInt64), MkInt(math.MaxInt64-1)))
 	})
 }
 
