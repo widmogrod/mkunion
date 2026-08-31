@@ -146,12 +146,6 @@ func TestEvaluate(t *testing.T) {
 			bind:   defBind,
 			result: true,
 		},
-		//{
-		//	value:  "Tree[*].Left[*].Left[*].Value[*] = Tree[*].Right[*].Value[*]",
-		//	data:   defValue,
-		//	bind:   defBind,
-		//	result: true,
-		//},
 	}
 	for _, uc := range useCases {
 		t.Run(uc.value, func(t *testing.T) {
@@ -180,5 +174,38 @@ func TestEvaluate(t *testing.T) {
 				t.Fatalf("expected %v value, got %v value", uc.result, result)
 			}
 		})
+	}
+}
+
+// Field-to-field comparison (Locatable on the right-hand side) must use the
+// same shape-aware lookup as the left-hand side when a shape is available.
+func TestEvaluateLocatableUsesShapeAwareLookup(t *testing.T) {
+	data := testutil.SampleStruct{
+		ID: "123",
+		Tree: &testutil.Branch{
+			Name: "root",
+			Left: &testutil.Branch{
+				Name: "cool-branch",
+				Left: &testutil.Leaf{
+					Value: schema.MkInt(123),
+				},
+				Right: &testutil.Leaf{
+					Value: schema.MkBool(true),
+				},
+			},
+			Right: &testutil.Leaf{
+				Value: schema.MkInt(123),
+			},
+		},
+	}
+
+	p, err := Parse(`Tree[*].Left[*].Left[*].Value[*] = Tree[*].Right[*].Value[*]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Both locations hold schema.MkInt(123), so this must be true.
+	if !Evaluate(p, data, nil) {
+		t.Fatal("expected shape-aware field-to-field comparison to be true")
 	}
 }

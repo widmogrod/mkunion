@@ -77,57 +77,63 @@
     {
       "Suite": "repository",
       "Order": 12,
-      "Name": "OR predicate matches either branch",
+      "Name": "empty where query matches all records",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 13,
-      "Name": "NOT over OR excludes both branches",
+      "Name": "OR predicate matches either branch",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 14,
-      "Name": "query without a record type is not an error",
+      "Name": "NOT over OR excludes both branches",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 15,
-      "Name": "record type separates records",
+      "Name": "query without a record type is not an error",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 16,
-      "Name": "forward pagination visits every record exactly once",
+      "Name": "record type separates records",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 17,
+      "Name": "forward pagination visits every record exactly once",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 18,
       "Name": "sorting orders records by a data field",
       "Status": "downgraded",
       "Capability": "SortByDataField"
     },
     {
       "Suite": "repository",
-      "Order": 18,
+      "Order": 19,
       "Name": "sorted pagination keeps order across pages",
       "Status": "downgraded",
       "Capability": "SortByDataField"
     },
     {
       "Suite": "repository",
-      "Order": 19,
+      "Order": 20,
       "Name": "prev cursor pages backward",
       "Status": "downgraded",
       "Capability": "BackwardPagination"
     },
     {
       "Suite": "repository",
-      "Order": 20,
+      "Order": 21,
       "Name": "batch with a conflict writes nothing",
       "Status": "supported",
       "Capability": "AtomicBatch"

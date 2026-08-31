@@ -29,6 +29,14 @@ type (
 	Locatable struct{ Location string }
 )
 
+// IsMatchAll reports whether p matches every record: an And with no
+// sub-predicates, as returned by Where(""). Backends that translate
+// predicates into native filters can skip such a predicate entirely.
+func IsMatchAll(p Predicate) bool {
+	x, ok := p.(*And)
+	return ok && len(x.L) == 0
+}
+
 type BindName = string
 
 //go:tag serde:"json"
