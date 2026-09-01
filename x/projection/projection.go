@@ -7,6 +7,7 @@ import (
 	"github.com/widmogrod/mkunion/x/stream"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -102,9 +103,28 @@ func NewPushAndPullInMemoryContext[A, B any](state *PullPushContextState, stream
 var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 
 type PushAndPullInMemoryContext[A, B any] struct {
-	state    *PullPushContextState
-	stream   stream.Stream[schema.Schema]
-	simulate *SimulateProblem
+	// mu guards state against concurrent snapshots (CurrentState)
+	// taken while the worker goroutine acks offsets and watermarks.
+	mu          sync.Mutex
+	state       *PullPushContextState
+	stream      stream.Stream[schema.Schema]
+	simulate    *SimulateProblem
+	snapshotNow func() error
+}
+
+// OnSnapshot registers a synchronous snapshot saver. DoWindow calls it
+// through SnapshotNow before destructively flushing windows, so the
+// persisted offset can never lag behind a flush that already deleted
+// the windows holding the dedup offsets.
+func (c *PushAndPullInMemoryContext[A, B]) OnSnapshot(fn func() error) {
+	c.snapshotNow = fn
+}
+
+func (c *PushAndPullInMemoryContext[A, B]) SnapshotNow() error {
+	if c.snapshotNow == nil {
+		return nil
+	}
+	return c.snapshotNow()
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) PullIn() (*stream.Item[Data[A]], error) {
@@ -132,7 +152,9 @@ func (c *PushAndPullInMemoryContext[A, B]) AckOffset(offset *stream.Offset) erro
 		return fmt.Errorf("projection.PushAndPullInMemoryContext: AckOffset:  %w", ErrStateAckNilOffset)
 	}
 
+	c.mu.Lock()
 	c.state.Offset = offset
+	c.mu.Unlock()
 	return nil
 }
 
@@ -155,14 +177,21 @@ func (c *PushAndPullInMemoryContext[A, B]) AckWatermark(watermark *stream.EventT
 	if watermark == nil {
 		return fmt.Errorf("projection.PushAndPullInMemoryContext: AckWatermark: %w", ErrStateAckNilWatermark)
 	}
+	c.mu.Lock()
 	c.state.Watermark = watermark
+	c.mu.Unlock()
 	return nil
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) CurrentState() SnapshotState {
-	return c.state
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	snapshot := *c.state
+	return &snapshot
 }
 func (c *PushAndPullInMemoryContext[A, B]) LastWatermark() EventTime {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.state.Watermark == nil {
 		return 0
 	}

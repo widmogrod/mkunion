@@ -6,6 +6,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
+	"sync"
 	"time"
 )
 
@@ -33,6 +34,9 @@ type RecoveryOptions[A SnapshotState] struct {
 	store               schemaless.Repository[A]
 	maxRecoveryAttempts uint8
 	autoSnapshot        bool
+	// mu serializes SnapshotFrom so the periodic snapshot goroutine cannot
+	// overwrite a fresher snapshot taken by the DoWindow flush barrier
+	mu sync.Mutex
 }
 
 func (options *RecoveryOptions[A]) WithAutoSnapshot(x bool) *RecoveryOptions[A] {
@@ -49,6 +53,9 @@ func (options *RecoveryOptions[A]) SnapshotFrom(x SnapshotContext) error {
 	if x == nil {
 		return fmt.Errorf("projection.RecoveryOptions: SnapshotFrom: nil context")
 	}
+
+	options.mu.Lock()
+	defer options.mu.Unlock()
 
 	y, ok := any(x.CurrentState()).(A)
 	if !ok {
@@ -109,7 +116,7 @@ func (options *RecoveryOptions[A]) LatestSnapshot() (A, error) {
 		record.Data,
 		func(x *PullPushContextState) {
 			if x.Offset != nil {
-				log.Debugf("projection.RecoveryOptions: load offset: %s", *x.Offset)
+				log.Debugf("projection.RecoveryOptions: load offset: %s, watermark: %v", *x.Offset, x.Watermark)
 			}
 		},
 		func(x *JoinContextState) {
@@ -146,19 +153,29 @@ func Recovery[T SnapshotState, A, B any](
 				return fmt.Errorf("projection.Recovery: load last state in store; %w", err)
 			}
 
-			context, err := buildCtx(any(state).(T))
+			workCtx, err := buildCtx(any(state).(T))
 			if err != nil {
 				return fmt.Errorf("projection.Recovery: build context; %w", err)
 			}
+			workCtx.OnSnapshot(func() error {
+				return recovery.SnapshotFrom(workCtx)
+			})
 
+			// The snapshot goroutine must not outlive this attempt: a leaked
+			// goroutine would keep snapshotting a stale context while the next
+			// attempt mutates the same underlying state.
+			attemptCtx, attemptCancel := context.WithCancel(ctx)
+			var snapshotDone chan struct{}
 			if recovery.autoSnapshot {
+				snapshotDone = make(chan struct{})
 				go func() {
+					defer close(snapshotDone)
 					for {
 						select {
-						case <-ctx.Done():
+						case <-attemptCtx.Done():
 							return
 						case <-time.After(100 * time.Millisecond):
-							err := recovery.SnapshotFrom(context)
+							err := recovery.SnapshotFrom(workCtx)
 							if err != nil {
 								log.Errorf("projection.Recovery: save last state in store; %s", err)
 								cancel()
@@ -169,7 +186,11 @@ func Recovery[T SnapshotState, A, B any](
 				}()
 			}
 
-			err = f(context)
+			err = f(workCtx)
+			attemptCancel()
+			if snapshotDone != nil {
+				<-snapshotDone
+			}
 			if err == nil {
 				return nil
 			}
