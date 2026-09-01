@@ -3,7 +3,7 @@ import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
 import { cn } from "./lib/utils";
 import * as openai from './workflow/github_com_sashabaranov_go-openai'
-import { ChatCMD, ChatResult } from "./workflow/github_com_widmogrod_mkunion_exammple_my-app";
+import { ChatCMD, ChatResult } from "./workflow/github_com_widmogrod_mkunion_example_my-app";
 import { assertNever } from "./utils/type-helpers";
 
 type Message = {

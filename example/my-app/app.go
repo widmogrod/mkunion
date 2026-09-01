@@ -18,26 +18,30 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
-	"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"
+	"github.com/widmogrod/mkunion/x/storage/schemaless/jsonful"
 	"github.com/widmogrod/mkunion/x/taskqueue"
 	"github.com/widmogrod/mkunion/x/workflow"
 )
 
-// app wires the demo server: an in-memory store, typed repositories,
-// workflow dependencies, and the OpenAI client used by /message.
+// app wires the demo server: plain-JSON repositories with shape-aware
+// queries, workflow dependencies, and the OpenAI client used by /message.
 type app struct {
 	oaic       *openai.Client
-	store      *schemaless.InMemoryRepository[schema.Schema]
-	statesRepo *typedful.TypedRepoWithAggregator[workflow.State, any]
-	flowsRepo  *typedful.TypedRepoWithAggregator[workflow.Flow, any]
+	statesRepo *jsonful.InMemoryRepository[workflow.State]
+	flowsRepo  *jsonful.InMemoryRepository[workflow.Flow]
 	di         *workflow.DI
 	srv        *Service[workflow.Dependency, workflow.Command, workflow.State]
 }
 
 func newApp(oaic *openai.Client) *app {
-	store := schemaless.NewInMemoryRepository[schema.Schema]()
-	statesRepo := typedful.NewTypedRepository[workflow.State](store)
-	flowsRepo := typedful.NewTypedRepository[workflow.Flow](store)
+	statesRepo, err := jsonful.NewInMemoryRepository[workflow.State]()
+	if err != nil {
+		log.Fatalf("failed to create states repository: %v", err)
+	}
+	flowsRepo, err := jsonful.NewInMemoryRepository[workflow.Flow]()
+	if err != nil {
+		log.Fatalf("failed to create flows repository: %v", err)
+	}
 
 	di := &workflow.DI{
 		FindWorkflowF: func(flowID string) (*workflow.Flow, error) {
@@ -77,7 +81,6 @@ func newApp(oaic *openai.Client) *app {
 
 	return &app{
 		oaic:       oaic,
-		store:      store,
 		statesRepo: statesRepo,
 		flowsRepo:  flowsRepo,
 		di:         di,
@@ -519,21 +522,21 @@ func (a *app) startBackgroundTasks(ctx context.Context) {
 
 	procScheduled, descScheduled := backgroundScheduled(a.di, a.statesRepo)
 	queue := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
-	stream := typedful.NewTypedAppendLog[workflow.State](a.store.AppendLog())
+	stream := a.statesRepo.AppendLog()
 	taskScheduled := taskqueue.NewTaskQueue[workflow.State](descScheduled, queue, a.statesRepo, stream, procScheduled)
 	runOrPanic(taskScheduled.RunSelector)
 	runOrPanic(taskScheduled.RunProcessor)
 
 	procRetry, descRetry := backgroundRetry(a.di, a.statesRepo)
 	queueRetry := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
-	streamRetry := typedful.NewTypedAppendLog[workflow.State](a.store.AppendLog())
+	streamRetry := a.statesRepo.AppendLog()
 	taskRetry := taskqueue.NewTaskQueue[workflow.State](descRetry, queueRetry, a.statesRepo, streamRetry, procRetry)
 	runOrPanic(taskRetry.RunCDC)
 	runOrPanic(taskRetry.RunProcessor)
 
 	procTimeout, descTimeout := backgroundTimeout(a.di, a.statesRepo)
 	queueTimeout := taskqueue.NewInMemoryQueue[schemaless.Record[workflow.State]]()
-	streamTimeout := typedful.NewTypedAppendLog[workflow.State](a.store.AppendLog())
+	streamTimeout := a.statesRepo.AppendLog()
 	taskTimeout := taskqueue.NewTaskQueue[workflow.State](descTimeout, queueTimeout, a.statesRepo, streamTimeout, procTimeout)
 	runOrPanic(taskTimeout.RunSelector)
 	runOrPanic(taskTimeout.RunProcessor)

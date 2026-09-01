@@ -81,80 +81,19 @@ export function ScheduleHistoryDialog({ isOpen, onClose, schedule }: ScheduleHis
       const response = await listStates({
         where: {
           Predicate: {
-            "$type": "predicate.Or",
-            "predicate.Or": {
-              L: [
-                // workflow.Done states with matching ParentRunID
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.Done"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": schedule.parentRunId }
-                      }
-                    }
-                  }
-                },
-                // workflow.Scheduled states with matching ParentRunID
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.Scheduled"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": schedule.parentRunId }
-                      }
-                    }
-                  }
-                },
-                // workflow.ScheduleStopped states with matching ParentRunID
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.ScheduleStopped"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": schedule.parentRunId }
-                      }
-                    }
-                  }
-                },
-                // workflow.Error states with matching ParentRunID  
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.Error"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": schedule.parentRunId }
-                      }
-                    }
-                  }
-                },
-                // workflow.Await states with matching ParentRunID
-                {
-                  "$type": "predicate.Compare",
-                  "predicate.Compare": {
-                    Location: 'Data["workflow.Await"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-                    Operation: "==",
-                    BindValue: {
-                      "$type": "predicate.Literal",
-                      "predicate.Literal": {
-                        Value: { "$type": "schema.String", "schema.String": schedule.parentRunId }
-                      }
-                    }
-                  }
+            // The bare-field location expands over every state variant on
+            // the server, so a single Compare covers Done/Error/Await/
+            // Scheduled/ScheduleStopped/NextOperation
+            "$type": "predicate.Compare",
+            "predicate.Compare": {
+              Location: 'Data.BaseState.RunOption["workflow.ScheduleRun"].ParentRunID',
+              Operation: "==",
+              BindValue: {
+                "$type": "predicate.Literal",
+                "predicate.Literal": {
+                  Value: { "$type": "schema.String", "schema.String": schedule.parentRunId }
                 }
-              ]
+              }
             }
           }
         },

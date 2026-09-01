@@ -4,7 +4,7 @@ import * as schemaless from '../workflow/github_com_widmogrod_mkunion_x_storage_
 import * as predicate from '../workflow/github_com_widmogrod_mkunion_x_storage_predicate'
 import * as schema from '../workflow/github_com_widmogrod_mkunion_x_schema'
 import * as openai from '../workflow/github_com_sashabaranov_go-openai'
-import * as app from '../workflow/github_com_widmogrod_mkunion_exammple_my-app'
+import * as app from '../workflow/github_com_widmogrod_mkunion_example_my-app'
 
 // Use environment variable with fallback to localhost for development
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080'

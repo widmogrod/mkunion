@@ -108,23 +108,19 @@ export function ExecutionsTableSimple({ refreshTrigger, loadStates }: Executions
       const isExcluded = filters.workflow.startsWith('!')
       const workflowName = filters.workflow.replace(/^!/, '')
       
-      const stateTypes = Object.keys(STATE_TYPE_CONFIG)
-      const stateTypePredicates = stateTypes.map(stateType => 
-        createOr([
-          createCompare(
-            `Data["${stateType}"]["BaseState"]["Flow"]["workflow.Flow"]["Name"]`,
-            '==',
-            { "$type": "schema.String", "schema.String": workflowName }
-          ),
-          createCompare(
-            `Data["${stateType}"]["BaseState"]["Flow"]["workflow.FlowRef"]["FlowID"]`,
-            '==',
-            { "$type": "schema.String", "schema.String": workflowName }
-          )
-        ])
-      )
-      
-      const workflowPredicate = createOr(stateTypePredicates)
+      // Bare fields expand over every state variant on the server
+      const workflowPredicate = createOr([
+        createCompare(
+          'Data.BaseState.Flow.Name',
+          '==',
+          { "$type": "schema.String", "schema.String": workflowName }
+        ),
+        createCompare(
+          'Data.BaseState.Flow.FlowID',
+          '==',
+          { "$type": "schema.String", "schema.String": workflowName }
+        )
+      ])
       predicates.push(isExcluded ? createNot(workflowPredicate) : workflowPredicate)
     }
     

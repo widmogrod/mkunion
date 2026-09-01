@@ -27,16 +27,17 @@ assert.NoError(t, err)
 
 result, err := repo.FindingRecords(FindingRecords[Record[MyRecord]]{
     Where: predicate.MustWhere(
-        "Data.#.Age > :age",
+        "Data.Age > :age",
         predicate.ParamBinds{
             ":age": schema.MkInt(20),
         },
+        nil,
     ),
     // Sort works on In-Memory and OpenSearch.
     // DynamoDB ignores it - see "Sorting by a data field" below.
     Sort: []SortField{
         {
-            Field:      "Data.#.Name",
+            Field:      "Data.Name",
             Descending: false,
         },
     },
@@ -63,6 +64,33 @@ Implementations: `schemaless.AppendLog` (in-memory, the full contract) and
 behavioural spec (`spec.RunAppendLogSpec`) as the repositories — see the
 *Append log capability matrix* below and `docs/packages/storage.md` for the
 full guide.
+
+## Plain-JSON storage with shape-aware queries (jsonful)
+
+The `schemaless/jsonful` repository stores records as plain mkunion JSON
+(encoded once, at write time) and resolves query locations against the type's
+shape. Locations mirror your Go types, union fields expand over variants, and
+a typo is an error instead of an empty result:
+
+```go
+repo, err := jsonful.NewInMemoryRepository[MyState]()
+
+result, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[MyState]]{
+    Where: predicate.MustWhere(
+        // bare field: expands over every union variant that has it
+        "Data.BaseState.RunID = :runID",
+        predicate.ParamBinds{":runID": schema.MkString("run-1")},
+        nil,
+    ),
+})
+
+// other supported locations:
+//   Data["workflow.Await"].CallbackID   - one variant only
+//   Data["$type"]                       - the union discriminator
+//   Data.Friends[*].Age                 - list wildcard
+```
+
+See `docs/examples/json_storage_queries.md` for the full guide.
 
 ## Roadmap
 ### V0.1.0
@@ -163,7 +191,7 @@ downgrade, ❌ failing when the report was generated.
 `SortByDataField` is the one capability that splits the backends, so it decides
 which backend a sorted query belongs on.
 
-| Backend | `Sort` on `Data.#.Name` |
+| Backend | `Sort` on `Data.Name` |
 |---|---|
 | In-Memory | works |
 | OpenSearch | works |
@@ -182,7 +210,7 @@ key is `ID` + `Type`. Three facts follow:
    all, and DynamoDB promises nothing about the order it returns.
 2. Even the stronger `Query` operation can only order by the table's range
    key, ascending or descending - not by an arbitrary attribute.
-3. An index key must be a flat, top-level attribute. `Data.#.Name` is nested
+3. An index key must be a flat, top-level attribute. `Data.Name` is nested
    inside `Data`, so no index can point at it as things stand.
 
 The `Sort` value is therefore accepted and carried across pages, but never

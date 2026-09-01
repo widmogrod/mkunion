@@ -2,6 +2,7 @@
 package main
 
 import (
+	"github.com/labstack/echo/v4"
 	"github.com/sashabaranov/go-openai"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/shared"
@@ -13,8 +14,8 @@ import (
 )
 
 func init() {
-	shared.TypeRegistryStore[echo.Echo](".Echo")
 	shared.TypeRegistryStore[any]("any")
+	shared.TypeRegistryStore[echo.Echo]("github.com/labstack/echo/v4.Echo")
 	shared.TypeRegistryStore[openai.Client]("github.com/sashabaranov/go-openai.Client")
 	shared.TypeRegistryStore[ChatResponses]("github.com/widmogrod/mkunion/example/my-app.ChatResponses")
 	shared.TypeRegistryStore[SystemResponse]("github.com/widmogrod/mkunion/example/my-app.SystemResponse")
@@ -30,6 +31,7 @@ func init() {
 	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/example/my-app.State]")
 	shared.TypeRegistryStore[schemaless.Record[workflow.Flow]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.Flow]")
 	shared.TypeRegistryStore[schemaless.Record[workflow.State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.State]")
+	shared.TypeRegistryStore[schemaless.Repository[workflow.State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/workflow.State]")
 	shared.TypeRegistryStore[schemaless.UpdateRecords[schemaless.Record[workflow.Flow]]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.Flow]]")
 	shared.TypeRegistryStore[schemaless.UpdateRecords[schemaless.Record[workflow.State]]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.State]]")
 	shared.TypeRegistryStore[typedful.TypedRepoWithAggregator[workflow.State, any]]("github.com/widmogrod/mkunion/x/storage/schemaless/typedful.TypedRepoWithAggregator[github.com/widmogrod/mkunion/x/workflow.State,any]")

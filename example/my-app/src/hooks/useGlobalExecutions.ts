@@ -50,65 +50,21 @@ export function useGlobalExecutions({ dateRange, schedules }: UseGlobalExecution
       // Use the cached flow map
       const flowMap = flowNameCacheRef.current
       
-      // Build predicate for all schedules and state types
-      const schedulePredicates = schedules.flatMap(parentRunId => [
-        // Done states
-        {
-          "$type": "predicate.Compare" as const,
-          "predicate.Compare": {
-            Location: 'Data["workflow.Done"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-            Operation: "==",
-            BindValue: {
-              "$type": "predicate.Literal" as const,
-              "predicate.Literal": {
-                Value: { "$type": "schema.String" as const, "schema.String": parentRunId }
-              }
-            }
-          }
-        },
-        // Error states
-        {
-          "$type": "predicate.Compare" as const,
-          "predicate.Compare": {
-            Location: 'Data["workflow.Error"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-            Operation: "==",
-            BindValue: {
-              "$type": "predicate.Literal" as const,
-              "predicate.Literal": {
-                Value: { "$type": "schema.String" as const, "schema.String": parentRunId }
-              }
-            }
-          }
-        },
-        // Await states (running)
-        {
-          "$type": "predicate.Compare" as const,
-          "predicate.Compare": {
-            Location: 'Data["workflow.Await"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-            Operation: "==",
-            BindValue: {
-              "$type": "predicate.Literal" as const,
-              "predicate.Literal": {
-                Value: { "$type": "schema.String" as const, "schema.String": parentRunId }
-              }
-            }
-          }
-        },
-        // Scheduled states
-        {
-          "$type": "predicate.Compare" as const,
-          "predicate.Compare": {
-            Location: 'Data["workflow.Scheduled"]["BaseState"]["RunOption"]["workflow.ScheduleRun"]["ParentRunID"]',
-            Operation: "==",
-            BindValue: {
-              "$type": "predicate.Literal" as const,
-              "predicate.Literal": {
-                Value: { "$type": "schema.String" as const, "schema.String": parentRunId }
-              }
+      // Build predicate for all schedules; the bare-field location expands
+      // over every state variant on the server, so one Compare per schedule
+      const schedulePredicates = schedules.map(parentRunId => ({
+        "$type": "predicate.Compare" as const,
+        "predicate.Compare": {
+          Location: 'Data.BaseState.RunOption["workflow.ScheduleRun"].ParentRunID',
+          Operation: "==",
+          BindValue: {
+            "$type": "predicate.Literal" as const,
+            "predicate.Literal": {
+              Value: { "$type": "schema.String" as const, "schema.String": parentRunId }
             }
           }
         }
-      ])
+      }))
       
       const response = await listStates({
         where: {

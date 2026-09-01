@@ -48,6 +48,16 @@ jobs:
       # No exceptions.
       - run: go tool mkcrap --profile coverage.out
 
+      # example/my-app is its own Go module, so the root ./... does not
+      # test it. Regenerate from inside the module first: the root-level
+      # `mkunion watch -g ./...` above rewrites this module's
+      # types_reg_gen.go with unresolvable cross-module imports.
+      - name: Test example/my-app module
+        working-directory: example/my-app
+        run: |
+          go tool mkunion watch -g -G ./...
+          go test ./...
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7.0.0
         with:

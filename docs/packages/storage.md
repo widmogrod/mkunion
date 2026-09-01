@@ -143,7 +143,7 @@ written by hand, so they cannot drift from what the code actually does.
 `SortByDataField` is the one capability that splits the backends, so it decides
 which backend a sorted query belongs on.
 
-| Backend | `Sort` on `Data.#.Name` |
+| Backend | `Sort` on `Data.Name` |
 |---|---|
 | In-Memory | works |
 | OpenSearch | works |
@@ -162,7 +162,7 @@ DynamoDB only returns records in the order of a *key*, and this table's key is
   order of returned records is not defined.
 * Even a `Query` can only order by the table's range key, ascending or
   descending, never by an arbitrary attribute.
-* An index key must be a flat, top-level attribute, and `Data.#.Name` is nested
+* An index key must be a flat, top-level attribute, and `Data.Name` is nested
   inside `Data`.
 
 The `Sort` value is accepted and carried across pages, but never applied. The
