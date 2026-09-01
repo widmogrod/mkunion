@@ -16,6 +16,7 @@ func typeOf(x any) reflect.Type {
 	return reflect.TypeOf(x)
 }
 
+//go:tag shape:"-"
 type plainStruct struct {
 	Name string
 	Age  int
@@ -23,8 +24,10 @@ type plainStruct struct {
 
 // registeredUnion mimics what mkunion generates: an interface type whose
 // serde is registered under its full type name.
+//go:tag shape:"-"
 type registeredUnion interface{ isRegistered() }
 
+//go:tag shape:"-"
 type variantA struct{ Value string }
 
 func (variantA) isRegistered() {}

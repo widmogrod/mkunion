@@ -1243,6 +1243,14 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 				return nil
 			}
 
+			// the index feeds the package's type registry, which is
+			// production code; test-only generic instantiations must not
+			// leak into it (they can even force import cycles, e.g. an
+			// x/schema test using x/storage/schemaless types)
+			if strings.HasSuffix(path, "_test.go") {
+				return nil
+			}
+
 			f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 			if err != nil {
 				return fmt.Errorf("could not parse file %s; %w", path, err)

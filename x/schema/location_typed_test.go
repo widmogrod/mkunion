@@ -15,6 +15,12 @@ import (
 	"github.com/widmogrod/mkunion/x/workflow"
 )
 
+// notRegistered must never gain a generated shape - the constructor
+// tests rely on it being unknown to the registry.
+//
+//go:tag shape:"-"
+type notRegistered struct{ A int }
+
 func recordOfSchemaShape(t *testing.T) shape.Shape {
 	t.Helper()
 	encodedAs, found := shape.LookupShapeReflectAndIndex[schemaless.Record[schema.Schema]]()
@@ -213,7 +219,6 @@ func TestWrapLocationEncodedAsMismatches(t *testing.T) {
 
 func TestTypedLocationConstructors(t *testing.T) {
 	t.Run("unregistered type errors", func(t *testing.T) {
-		type notRegistered struct{ A int }
 		_, err := schema.NewTypedLocation[notRegistered]()
 		assert.ErrorIs(t, err, shape.ErrShapeNotFound)
 
