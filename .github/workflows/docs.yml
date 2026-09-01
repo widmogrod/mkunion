@@ -15,7 +15,7 @@ jobs:
       # generate the code, so docs have all files necessary to link to
       - uses: actions/setup-go@v7
         with:
-          go-version: ^1.25.1
+          go-version: "1.27"
         id: go
 
       - run: go get -v -t -d ./...
