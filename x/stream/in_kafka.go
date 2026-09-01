@@ -13,6 +13,21 @@ func init() {
 	RegisterOffsetCompare("k", KafkaOffsetCompare)
 }
 
+// kafkaConsumer is the part of *kafka.Consumer that KafkaStream uses;
+// tests substitute it to exercise Pull without a broker.
+type kafkaConsumer interface {
+	Subscribe(topic string, rebalanceCb kafka.RebalanceCb) error
+	Poll(timeoutMs int) kafka.Event
+	Assign(partitions []kafka.TopicPartition) error
+	Unassign() error
+	Close() error
+}
+
+// kafkaProducer is the part of *kafka.Producer that KafkaStream uses.
+type kafkaProducer interface {
+	Produce(msg *kafka.Message, deliveryChan chan kafka.Event) error
+}
+
 func NewKafkaStream[A any](
 	consumerConfig kafka.ConfigMap,
 	producerConfig kafka.ConfigMap,
@@ -24,15 +39,23 @@ func NewKafkaStream[A any](
 		consumer:       &sync.Map{},
 		systemTime:     systemTime,
 		pullTimeoutMs:  100,
+		newConsumer: func(conf *kafka.ConfigMap) (kafkaConsumer, error) {
+			return kafka.NewConsumer(conf)
+		},
+		newProducer: func(conf *kafka.ConfigMap) (kafkaProducer, error) {
+			return kafka.NewProducer(conf)
+		},
 	}
 }
 
 type KafkaStream[A any] struct {
 	consumerConfig kafka.ConfigMap
 	consumer       *sync.Map
+	newConsumer    func(conf *kafka.ConfigMap) (kafkaConsumer, error)
 
 	producerConfig kafka.ConfigMap
-	producer       *kafka.Producer
+	producer       kafkaProducer
+	newProducer    func(conf *kafka.ConfigMap) (kafkaProducer, error)
 	systemTime     func() EventTime
 	pullTimeoutMs  int
 }
@@ -56,7 +79,7 @@ func (k *KafkaStream[A]) Push(x *Item[A]) error {
 	}
 
 	if k.producer == nil {
-		p, err := kafka.NewProducer(&k.producerConfig)
+		p, err := k.newProducer(&k.producerConfig)
 		if err != nil {
 			return fmt.Errorf("stream.KafkaStream.Push: on producer initiation; %w", err)
 		}
@@ -95,147 +118,115 @@ func (k *KafkaStream[A]) Push(x *Item[A]) error {
 func (k *KafkaStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 	return MatchPullCMDR2(
 		fromOffset,
-		func(x *FromBeginning) (*Item[A], error) {
-			if x.Topic == "" {
-				return nil, ErrEmptyTopic
-			}
-
-			conf := k.consumerConfig
-			consumer, err := kafka.NewConsumer(&conf)
-			if err != nil {
-				return nil, fmt.Errorf("stream.KafkaStream.Pull: on consumer initiation; %w", err)
-			}
-			defer consumer.Close()
-
-			err = consumer.Subscribe(x.Topic, nil)
-			if err != nil {
-				return nil, fmt.Errorf("stream.KafkaStream.Pull: subscribe %w", err)
-			}
-
-			for {
-				event := consumer.Poll(k.pullTimeoutMs)
-				if event == nil {
-					continue
-				}
-
-				switch e := event.(type) {
-				case *kafka.Message:
-					data, err := shared.JSONUnmarshal[A](e.Value)
-					if err != nil {
-						return nil, fmt.Errorf("stream.KafkaStream.Pull(FromBeginning): unmarshal %w", err)
-					}
-
-					result := &Item[A]{
-						Topic:     *e.TopicPartition.Topic,
-						Key:       string(e.Key),
-						Data:      data,
-						EventTime: MkEventTimeFromInt(e.Timestamp.UnixNano()),
-						Offset:    mkOffsetFromKafkaTopicPartition(e.TopicPartition.Partition, e.TopicPartition.Offset),
-					}
-
-					return result, nil
-
-				case kafka.Error:
-					log.Errorf("stream.KafkaStream.Pull(FromBeginning): %v", e)
-
-				default:
-					fmt.Printf("Ignored: %v\n", e)
-				}
-			}
-		},
-		func(x *FromOffset) (*Item[A], error) {
-			if x.Topic == "" {
-				return nil, ErrEmptyTopic
-			}
-
-			log.Infof("stream.KafkaStream.Pull(FromOffset): %v", x)
-			consumer, err := k.consumerForTopicAndPartition(x.Topic, x.Offset)
-			if err != nil {
-				return nil, err
-			}
-
-			if err != nil {
-				return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): %w", err)
-			}
-
-			for {
-				event := consumer.Poll(k.pullTimeoutMs)
-				if event == nil {
-					log.Printf("stream.KafkaStream.Pull(FromOffset): no event")
-
-					continue
-				}
-				switch e := event.(type) {
-				case *kafka.Message:
-					data, err := shared.JSONUnmarshal[A](e.Value)
-					if err != nil {
-						return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): unmarshal %w", err)
-					}
-
-					result := &Item[A]{
-						Topic:     *e.TopicPartition.Topic,
-						Key:       string(e.Key),
-						Data:      data,
-						EventTime: MkEventTimeFromInt(e.Timestamp.UnixNano()),
-						Offset:    mkOffsetFromKafkaTopicPartition(e.TopicPartition.Partition, e.TopicPartition.Offset),
-					}
-
-					return result, nil
-
-				case kafka.AssignedPartitions:
-					// Handle new assignments
-					fmt.Println("AssignedPartitions:", e.Partitions)
-					// Here, implement your custom logic for partition assignment.
-					// For this example, we will just use the assigned partitions as is.
-					err := consumer.Assign(e.Partitions)
-					if err != nil {
-						return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): assign %w", err)
-					}
-
-				case kafka.RevokedPartitions:
-					// Handle partition revocation
-					fmt.Println("RevokedPartitions:", e.Partitions)
-					err := consumer.Unassign()
-					if err != nil {
-						return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): unassign %w", err)
-					}
-
-				case kafka.Error:
-					// Errors should generally be considered
-					// informational, the client will try to
-					// automatically recover.
-					// But in this example we choose to terminate
-					// the application if all brokers are down.
-					log.Errorf("stream.KafkaStream.Pull(FromOffset): %v", e)
-					//return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): %w", e)
-				}
-			}
-		},
+		k.pullFromBeginning,
+		k.pullFromOffset,
 	)
 }
 
-func (k *KafkaStream[A]) consumerForTopic(topic Topic) (*kafka.Consumer, error) {
-	key := fmt.Sprintf("t:%s", topic)
-	value, ok := k.consumer.Load(key)
-	if ok {
-		return value.(*kafka.Consumer), nil
+func (k *KafkaStream[A]) pullFromBeginning(x *FromBeginning) (*Item[A], error) {
+	if x.Topic == "" {
+		return nil, ErrEmptyTopic
 	}
 
-	consumer, err := kafka.NewConsumer(&k.consumerConfig)
+	conf := k.consumerConfig
+	consumer, err := k.newConsumer(&conf)
 	if err != nil {
 		return nil, fmt.Errorf("stream.KafkaStream.Pull: on consumer initiation; %w", err)
 	}
+	defer consumer.Close()
 
-	err = consumer.Subscribe(topic, nil)
+	err = consumer.Subscribe(x.Topic, nil)
 	if err != nil {
 		return nil, fmt.Errorf("stream.KafkaStream.Pull: subscribe %w", err)
 	}
 
-	k.consumer.Store(key, consumer)
-	return consumer, nil
+	for {
+		event := consumer.Poll(k.pullTimeoutMs)
+		if event == nil {
+			continue
+		}
+
+		switch e := event.(type) {
+		case *kafka.Message:
+			return k.itemFromMessage(e, "stream.KafkaStream.Pull(FromBeginning)")
+
+		case kafka.Error:
+			log.Errorf("stream.KafkaStream.Pull(FromBeginning): %v", e)
+
+		default:
+			fmt.Printf("Ignored: %v\n", e)
+		}
+	}
 }
 
-func (k *KafkaStream[A]) consumerForTopicAndPartition(topic Topic, offset *Offset) (*kafka.Consumer, error) {
+func (k *KafkaStream[A]) pullFromOffset(x *FromOffset) (*Item[A], error) {
+	if x.Topic == "" {
+		return nil, ErrEmptyTopic
+	}
+
+	log.Infof("stream.KafkaStream.Pull(FromOffset): %v", x)
+	consumer, err := k.consumerForTopicAndPartition(x.Topic, x.Offset)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		event := consumer.Poll(k.pullTimeoutMs)
+		if event == nil {
+			log.Printf("stream.KafkaStream.Pull(FromOffset): no event")
+
+			continue
+		}
+		switch e := event.(type) {
+		case *kafka.Message:
+			return k.itemFromMessage(e, "stream.KafkaStream.Pull(FromOffset)")
+
+		case kafka.AssignedPartitions:
+			// Handle new assignments
+			fmt.Println("AssignedPartitions:", e.Partitions)
+			// Here, implement your custom logic for partition assignment.
+			// For this example, we will just use the assigned partitions as is.
+			err := consumer.Assign(e.Partitions)
+			if err != nil {
+				return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): assign %w", err)
+			}
+
+		case kafka.RevokedPartitions:
+			// Handle partition revocation
+			fmt.Println("RevokedPartitions:", e.Partitions)
+			err := consumer.Unassign()
+			if err != nil {
+				return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): unassign %w", err)
+			}
+
+		case kafka.Error:
+			// Errors should generally be considered
+			// informational, the client will try to
+			// automatically recover.
+			// But in this example we choose to terminate
+			// the application if all brokers are down.
+			log.Errorf("stream.KafkaStream.Pull(FromOffset): %v", e)
+			//return nil, fmt.Errorf("stream.KafkaStream.Pull(FromOffset): %w", e)
+		}
+	}
+}
+
+func (k *KafkaStream[A]) itemFromMessage(e *kafka.Message, context string) (*Item[A], error) {
+	data, err := shared.JSONUnmarshal[A](e.Value)
+	if err != nil {
+		return nil, fmt.Errorf("%s: unmarshal %w", context, err)
+	}
+
+	return &Item[A]{
+		Topic:     *e.TopicPartition.Topic,
+		Key:       string(e.Key),
+		Data:      data,
+		EventTime: MkEventTimeFromInt(e.Timestamp.UnixNano()),
+		Offset:    mkOffsetFromKafkaTopicPartition(e.TopicPartition.Partition, e.TopicPartition.Offset),
+	}, nil
+}
+
+func (k *KafkaStream[A]) consumerForTopicAndPartition(topic Topic, offset *Offset) (kafkaConsumer, error) {
 	kpartition, koffset, err := parseOffsetToKafka(offset)
 	if err != nil {
 		return nil, fmt.Errorf("stream.KafkaStream.consumerForTopicAndPartition: parse offset %w", err)
@@ -244,10 +235,10 @@ func (k *KafkaStream[A]) consumerForTopicAndPartition(topic Topic, offset *Offse
 	key := fmt.Sprintf("tp:%s:%d", topic, kpartition)
 	value, ok := k.consumer.Load(key)
 	if ok {
-		return value.(*kafka.Consumer), nil
+		return value.(kafkaConsumer), nil
 	}
 
-	consumer, err := kafka.NewConsumer(&k.consumerConfig)
+	consumer, err := k.newConsumer(&k.consumerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("stream.KafkaStream.consumerForTopicAndPartition: on consumer initiation (%s); %w", key, err)
 	}

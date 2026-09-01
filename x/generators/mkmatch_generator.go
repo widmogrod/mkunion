@@ -47,133 +47,142 @@ func (g *MkMatchGenerator) Generate() ([]byte, error) {
 	}
 
 	for _, spec := range g.MatchSpecs {
-		// Function R0
-		sb.WriteString("func ")
-		sb.WriteString(spec.Name)
-		sb.WriteString("R0[")
-
-		for k, t := range spec.Inputs {
-			if k != 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString(fmt.Sprintf("T%d %s", k, t))
-		}
-		sb.WriteString("](\n")
-
-		for k := range spec.Inputs {
-			sb.WriteString(fmt.Sprintf("\tt%d T%d,\n", k, k))
-		}
-
-		for k, args := range spec.Cases {
-			sb.WriteString(fmt.Sprintf("\tf%d func(", k))
-			for i, arg := range args {
-				if i != 0 {
-					sb.WriteString(", ")
-				}
-				sb.WriteString(fmt.Sprintf("x%d %s", i, arg))
-			}
-			sb.WriteString("),\n")
-		}
-
-		sb.WriteString(") {\n")
-
-		for k, args := range spec.Cases {
-			for i, arg := range args {
-				sb.WriteString(fmt.Sprintf("\tc%dt%d, c%dt%dok := any(t%d).(%s)\n", k, i, k, i, i, arg))
-			}
-			sb.WriteString("\tif ")
-			for i, _ := range args {
-				if i != 0 {
-					sb.WriteString(" && ")
-				}
-				sb.WriteString(fmt.Sprintf("c%dt%dok", k, i))
-			}
-			sb.WriteString(" {\n\t\tf")
-			sb.WriteString(fmt.Sprintf("%d(", k))
-			for i := range args {
-				if i != 0 {
-					sb.WriteString(", ")
-				}
-				sb.WriteString(fmt.Sprintf("c%dt%d", k, i))
-			}
-			sb.WriteString(")\n\t\treturn\n\t}\n")
-		}
-		sb.WriteString(fmt.Sprintf("\tpanic(\"%sR0 is not exhaustive\")\n}\n\n", spec.Name))
+		g.writeMatchR0(&sb, spec)
 
 		// Functions R1, R2, R3
 		for returnTypes := 1; returnTypes <= 3; returnTypes++ {
-			sb.WriteString(fmt.Sprintf("func %sR%d[", spec.Name, returnTypes))
-
-			for k, t := range spec.Inputs {
-				if k != 0 {
-					sb.WriteString(", ")
-				}
-				sb.WriteString(fmt.Sprintf("T%d %s", k, t))
-			}
-
-			for o := 1; o <= returnTypes; o++ {
-				sb.WriteString(fmt.Sprintf(", TOut%d any", o))
-			}
-
-			sb.WriteString("](\n")
-
-			for k := range spec.Inputs {
-				sb.WriteString(fmt.Sprintf("\tt%d T%d,\n", k, k))
-			}
-
-			for k, args := range spec.Cases {
-				sb.WriteString(fmt.Sprintf("\tf%d func(", k))
-				for i, arg := range args {
-					if i != 0 {
-						sb.WriteString(", ")
-					}
-					sb.WriteString(fmt.Sprintf("x%d %s", i, arg))
-				}
-				sb.WriteString(") (")
-				for o := 1; o <= returnTypes; o++ {
-					if o != 1 {
-						sb.WriteString(", ")
-					}
-					sb.WriteString(fmt.Sprintf("TOut%d", o))
-				}
-				sb.WriteString("),\n")
-			}
-
-			sb.WriteString(") (")
-
-			for o := 1; o <= returnTypes; o++ {
-				if o != 1 {
-					sb.WriteString(", ")
-				}
-				sb.WriteString(fmt.Sprintf("TOut%d", o))
-			}
-
-			sb.WriteString(") {\n")
-
-			for k, args := range spec.Cases {
-				for i, arg := range args {
-					sb.WriteString(fmt.Sprintf("\tc%dt%d, c%dt%dok := any(t%d).(%s)\n", k, i, k, i, i, arg))
-				}
-				sb.WriteString("\tif ")
-				for i, _ := range args {
-					if i != 0 {
-						sb.WriteString(" && ")
-					}
-					sb.WriteString(fmt.Sprintf("c%dt%dok", k, i))
-				}
-				sb.WriteString(" {\n\t\treturn f")
-				sb.WriteString(fmt.Sprintf("%d(", k))
-				for i := range args {
-					if i != 0 {
-						sb.WriteString(", ")
-					}
-					sb.WriteString(fmt.Sprintf("c%dt%d", k, i))
-				}
-				sb.WriteString(")\n\t}\n")
-			}
-			sb.WriteString(fmt.Sprintf("\tpanic(\"%sR%d is not exhaustive\")\n}\n\n", spec.Name, returnTypes))
+			g.writeMatchRn(&sb, spec, returnTypes)
 		}
 	}
 
 	return []byte(sb.String()), nil
+}
+
+// writeMatchR0 renders the no-return-value match function.
+func (g *MkMatchGenerator) writeMatchR0(sb *strings.Builder, spec *MatchSpec) {
+	sb.WriteString("func ")
+	sb.WriteString(spec.Name)
+	sb.WriteString("R0[")
+
+	for k, t := range spec.Inputs {
+		if k != 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fmt.Sprintf("T%d %s", k, t))
+	}
+	sb.WriteString("](\n")
+
+	for k := range spec.Inputs {
+		sb.WriteString(fmt.Sprintf("\tt%d T%d,\n", k, k))
+	}
+
+	for k, args := range spec.Cases {
+		sb.WriteString(fmt.Sprintf("\tf%d func(", k))
+		for i, arg := range args {
+			if i != 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("x%d %s", i, arg))
+		}
+		sb.WriteString("),\n")
+	}
+
+	sb.WriteString(") {\n")
+
+	for k, args := range spec.Cases {
+		for i, arg := range args {
+			sb.WriteString(fmt.Sprintf("\tc%dt%d, c%dt%dok := any(t%d).(%s)\n", k, i, k, i, i, arg))
+		}
+		sb.WriteString("\tif ")
+		for i, _ := range args {
+			if i != 0 {
+				sb.WriteString(" && ")
+			}
+			sb.WriteString(fmt.Sprintf("c%dt%dok", k, i))
+		}
+		sb.WriteString(" {\n\t\tf")
+		sb.WriteString(fmt.Sprintf("%d(", k))
+		for i := range args {
+			if i != 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("c%dt%d", k, i))
+		}
+		sb.WriteString(")\n\t\treturn\n\t}\n")
+	}
+	sb.WriteString(fmt.Sprintf("\tpanic(\"%sR0 is not exhaustive\")\n}\n\n", spec.Name))
+}
+
+// writeMatchRn renders a match function with returnTypes return values.
+func (g *MkMatchGenerator) writeMatchRn(sb *strings.Builder, spec *MatchSpec, returnTypes int) {
+	sb.WriteString(fmt.Sprintf("func %sR%d[", spec.Name, returnTypes))
+
+	for k, t := range spec.Inputs {
+		if k != 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fmt.Sprintf("T%d %s", k, t))
+	}
+
+	for o := 1; o <= returnTypes; o++ {
+		sb.WriteString(fmt.Sprintf(", TOut%d any", o))
+	}
+
+	sb.WriteString("](\n")
+
+	for k := range spec.Inputs {
+		sb.WriteString(fmt.Sprintf("\tt%d T%d,\n", k, k))
+	}
+
+	for k, args := range spec.Cases {
+		sb.WriteString(fmt.Sprintf("\tf%d func(", k))
+		for i, arg := range args {
+			if i != 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("x%d %s", i, arg))
+		}
+		sb.WriteString(") (")
+		for o := 1; o <= returnTypes; o++ {
+			if o != 1 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("TOut%d", o))
+		}
+		sb.WriteString("),\n")
+	}
+
+	sb.WriteString(") (")
+
+	for o := 1; o <= returnTypes; o++ {
+		if o != 1 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fmt.Sprintf("TOut%d", o))
+	}
+
+	sb.WriteString(") {\n")
+
+	for k, args := range spec.Cases {
+		for i, arg := range args {
+			sb.WriteString(fmt.Sprintf("\tc%dt%d, c%dt%dok := any(t%d).(%s)\n", k, i, k, i, i, arg))
+		}
+		sb.WriteString("\tif ")
+		for i, _ := range args {
+			if i != 0 {
+				sb.WriteString(" && ")
+			}
+			sb.WriteString(fmt.Sprintf("c%dt%dok", k, i))
+		}
+		sb.WriteString(" {\n\t\treturn f")
+		sb.WriteString(fmt.Sprintf("%d(", k))
+		for i := range args {
+			if i != 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("c%dt%d", k, i))
+		}
+		sb.WriteString(")\n\t}\n")
+	}
+	sb.WriteString(fmt.Sprintf("\tpanic(\"%sR%d is not exhaustive\")\n}\n\n", spec.Name, returnTypes))
 }

@@ -200,138 +200,146 @@ func (location *TypedLocation) wrapLocationShapeAware(loc []Location, s shape.Sh
 	return MatchLocationR1(
 		loc[0],
 		func(x *LocationField) []Location {
-			return shape.MatchShapeR1(
-				s,
-				func(y *shape.Any) []Location {
-					return location.wrapCond([]Location{x}, wrap, y)
-				},
-				func(y *shape.RefName) []Location {
-					s, ok := shape.LookupShape(y)
-					if !ok {
-						panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s; %w", y.Name, shape.ErrShapeNotFound))
-					}
-
-					s = shape.IndexWith(s, y)
-
-					return location.wrapLocationShapeAware(loc, s, wrap)
-				},
-				func(y *shape.PointerLike) []Location {
-					panic("not implemented")
-				},
-				func(y *shape.AliasLike) []Location {
-					panic("not implemented")
-				},
-				func(y *shape.PrimitiveLike) []Location {
-					panic("not implemented")
-					//return shape.MatchPrimitiveKindR1(
-					//	y.Kind,
-					//	func(z *shape.BooleanLike) []Location {
-					//		return append([]Location{
-					//			&LocationField{Name: "schema.Boolean"},
-					//		})
-					//	},
-					//	func(z *shape.StringLike) []Location {
-					//		return append([]Location{
-					//			&LocationField{Name: "schema.String"},
-					//		})
-					//	},
-					//	func(z *shape.NumberLike) []Location {
-					//		return append([]Location{
-					//			&LocationField{Name: "schema.Number"},
-					//		})
-					//	},
-					//)
-				},
-				func(y *shape.ListLike) []Location {
-					panic("not implemented")
-				},
-				func(y *shape.MapLike) []Location {
-					return append(
-						location.wrapCond([]Location{x}, wrap, y.Val),
-						location.wrapLocationShapeAware(loc[1:], y.Val, wrap)...,
-					)
-				},
-				func(y *shape.StructLike) []Location {
-					for _, field := range y.Fields {
-						if field.Name == x.Name {
-							result := location.wrapLocationShapeAware(loc[1:], field.Type, wrap)
-							return append(
-								location.wrapCond([]Location{x}, wrap, field.Type),
-								result...,
-							)
-						}
-					}
-
-					panic(fmt.Errorf("wrapLocationShapeAware: field %s not found in struct %s", x.Name, y.Name))
-				},
-				func(y *shape.UnionLike) []Location {
-					if IsShapeASchema(y) {
-						panic("not implemented")
-					}
-					if x.Name == "$type" {
-						return location.wrapCond([]Location{x}, wrap, &shape.PrimitiveLike{
-							Kind: &shape.StringLike{},
-						})
-					}
-
-					for _, variant := range y.Variant {
-						if shape.ToGoTypeName(variant) == x.Name {
-							result := location.wrapLocationShapeAware(loc[1:], variant, wrap)
-							return append(
-								location.wrapCond([]Location{x}, wrap, variant),
-								result...,
-							)
-						}
-					}
-
-					panic("not implemented")
-				},
-			)
+			return location.wrapFieldShapeAware(x, loc, s, wrap)
 		},
 		func(x *LocationIndex) []Location {
-			return shape.MatchShapeR1(
-				s,
-				func(y *shape.Any) []Location {
-					panic("not implemented")
-				},
-				func(y *shape.RefName) []Location {
-					s, ok := shape.LookupShape(y)
-					if !ok {
-						panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s; %w", y.Name, shape.ErrShapeNotFound))
-					}
-
-					s = shape.IndexWith(s, y)
-
-					return location.wrapLocationShapeAware(loc, s, wrap)
-				},
-				func(y *shape.PointerLike) []Location {
-					return location.wrapLocationShapeAware(loc, y.Type, wrap)
-				},
-				func(y *shape.AliasLike) []Location {
-					panic("not implemented")
-				},
-				func(y *shape.PrimitiveLike) []Location {
-					panic("not implemented")
-				},
-				func(y *shape.ListLike) []Location {
-					return append(
-						location.wrapCond([]Location{x}, wrap, y.Element),
-						location.wrapLocationShapeAware(loc[1:], y.Element, wrap)...,
-					)
-				},
-				func(y *shape.MapLike) []Location {
-					panic("not implemented")
-				},
-				func(y *shape.StructLike) []Location {
-					panic("wrapLocationShapeAware: index not supported in struct")
-				},
-				func(y *shape.UnionLike) []Location {
-					panic("wrapLocationShapeAware: index not supported in union")
-				},
-			)
+			return location.wrapIndexShapeAware(x, loc, s, wrap)
 		},
 		func(x *LocationAnything) []Location {
 			panic("not implemented")
+		},
+	)
+}
+
+func (location *TypedLocation) wrapFieldShapeAware(x *LocationField, loc []Location, s shape.Shape, wrap bool) []Location {
+	return shape.MatchShapeR1(
+		s,
+		func(y *shape.Any) []Location {
+			return location.wrapCond([]Location{x}, wrap, y)
+		},
+		func(y *shape.RefName) []Location {
+			s, ok := shape.LookupShape(y)
+			if !ok {
+				panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s; %w", y.Name, shape.ErrShapeNotFound))
+			}
+
+			s = shape.IndexWith(s, y)
+
+			return location.wrapLocationShapeAware(loc, s, wrap)
+		},
+		func(y *shape.PointerLike) []Location {
+			panic("not implemented")
+		},
+		func(y *shape.AliasLike) []Location {
+			panic("not implemented")
+		},
+		func(y *shape.PrimitiveLike) []Location {
+			panic("not implemented")
+			//return shape.MatchPrimitiveKindR1(
+			//	y.Kind,
+			//	func(z *shape.BooleanLike) []Location {
+			//		return append([]Location{
+			//			&LocationField{Name: "schema.Boolean"},
+			//		})
+			//	},
+			//	func(z *shape.StringLike) []Location {
+			//		return append([]Location{
+			//			&LocationField{Name: "schema.String"},
+			//		})
+			//	},
+			//	func(z *shape.NumberLike) []Location {
+			//		return append([]Location{
+			//			&LocationField{Name: "schema.Number"},
+			//		})
+			//	},
+			//)
+		},
+		func(y *shape.ListLike) []Location {
+			panic("not implemented")
+		},
+		func(y *shape.MapLike) []Location {
+			return append(
+				location.wrapCond([]Location{x}, wrap, y.Val),
+				location.wrapLocationShapeAware(loc[1:], y.Val, wrap)...,
+			)
+		},
+		func(y *shape.StructLike) []Location {
+			for _, field := range y.Fields {
+				if field.Name == x.Name {
+					result := location.wrapLocationShapeAware(loc[1:], field.Type, wrap)
+					return append(
+						location.wrapCond([]Location{x}, wrap, field.Type),
+						result...,
+					)
+				}
+			}
+
+			panic(fmt.Errorf("wrapLocationShapeAware: field %s not found in struct %s", x.Name, y.Name))
+		},
+		func(y *shape.UnionLike) []Location {
+			if IsShapeASchema(y) {
+				panic("not implemented")
+			}
+			if x.Name == "$type" {
+				return location.wrapCond([]Location{x}, wrap, &shape.PrimitiveLike{
+					Kind: &shape.StringLike{},
+				})
+			}
+
+			for _, variant := range y.Variant {
+				if shape.ToGoTypeName(variant) == x.Name {
+					result := location.wrapLocationShapeAware(loc[1:], variant, wrap)
+					return append(
+						location.wrapCond([]Location{x}, wrap, variant),
+						result...,
+					)
+				}
+			}
+
+			panic("not implemented")
+		},
+	)
+}
+
+func (location *TypedLocation) wrapIndexShapeAware(x *LocationIndex, loc []Location, s shape.Shape, wrap bool) []Location {
+	return shape.MatchShapeR1(
+		s,
+		func(y *shape.Any) []Location {
+			panic("not implemented")
+		},
+		func(y *shape.RefName) []Location {
+			s, ok := shape.LookupShape(y)
+			if !ok {
+				panic(fmt.Errorf("wrapLocationShapeAware: shape.RefName not found %s; %w", y.Name, shape.ErrShapeNotFound))
+			}
+
+			s = shape.IndexWith(s, y)
+
+			return location.wrapLocationShapeAware(loc, s, wrap)
+		},
+		func(y *shape.PointerLike) []Location {
+			return location.wrapLocationShapeAware(loc, y.Type, wrap)
+		},
+		func(y *shape.AliasLike) []Location {
+			panic("not implemented")
+		},
+		func(y *shape.PrimitiveLike) []Location {
+			panic("not implemented")
+		},
+		func(y *shape.ListLike) []Location {
+			return append(
+				location.wrapCond([]Location{x}, wrap, y.Element),
+				location.wrapLocationShapeAware(loc[1:], y.Element, wrap)...,
+			)
+		},
+		func(y *shape.MapLike) []Location {
+			panic("not implemented")
+		},
+		func(y *shape.StructLike) []Location {
+			panic("wrapLocationShapeAware: index not supported in struct")
+		},
+		func(y *shape.UnionLike) []Location {
+			panic("wrapLocationShapeAware: index not supported in union")
 		},
 	)
 }

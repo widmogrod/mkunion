@@ -6,7 +6,6 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
-	"testing"
 )
 
 func init() {
@@ -22,5 +21,4 @@ func init() {
 	shared.TypeRegistryStore[machine.Machine[Dependencies, Command, State]]("github.com/widmogrod/mkunion/x/machine.Machine[github.com/widmogrod/mkunion/example/state_machine.Dependencies,github.com/widmogrod/mkunion/example/state_machine.Command,github.com/widmogrod/mkunion/example/state_machine.State]")
 	shared.TypeRegistryStore[schemaless.Record[State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/example/state_machine.State]")
 	shared.TypeRegistryStore[schemaless.Repository[schema.Schema]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/schema.Schema]")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

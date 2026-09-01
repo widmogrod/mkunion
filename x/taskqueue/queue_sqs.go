@@ -10,7 +10,15 @@ import (
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 )
 
-func NewSQSQueue(c *sqs.Client, queueURL string) *SQSQueue[schemaless.Record[schema.Schema]] {
+// SQSClient is the part of *sqs.Client the queue uses; tests substitute
+// it to run without AWS.
+type SQSClient interface {
+	SendMessage(ctx context.Context, params *sqs.SendMessageInput, optFns ...func(*sqs.Options)) (*sqs.SendMessageOutput, error)
+	ReceiveMessage(ctx context.Context, params *sqs.ReceiveMessageInput, optFns ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error)
+	DeleteMessageBatch(ctx context.Context, params *sqs.DeleteMessageBatchInput, optFns ...func(*sqs.Options)) (*sqs.DeleteMessageBatchOutput, error)
+}
+
+func NewSQSQueue(c SQSClient, queueURL string) *SQSQueue[schemaless.Record[schema.Schema]] {
 	return &SQSQueue[schemaless.Record[schema.Schema]]{
 		client:   c,
 		queueURL: queueURL,
@@ -19,7 +27,7 @@ func NewSQSQueue(c *sqs.Client, queueURL string) *SQSQueue[schemaless.Record[sch
 
 // SQSQueue is a queue that uses AWS SQS as a backend.
 type SQSQueue[T any] struct {
-	client   *sqs.Client
+	client   SQSClient
 	queueURL string
 }
 

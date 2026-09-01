@@ -60,6 +60,31 @@ go test -short -v ./...
 # Some tests require AWS services (localstack), Kafka, or OpenSearch to be running
 ```
 
+### Full QA (run before finishing any piece of work)
+```bash
+# Codegen + short tests with coverage + CRAP gate
+dev/qa.sh
+
+# Same, but full test suite (requires dev/bootstrap.sh services)
+QA_FULL=1 dev/qa.sh
+```
+
+### CRAP metric gate
+The CRAP metric (Change Risk Anti-Patterns) scores every function:
+`CRAP = CC^2 * (1 - coverage)^3 + CC`, where CC is cyclomatic complexity.
+A complex function with no tests scores high; adding tests or splitting
+the function lowers the score. The gate fails above threshold 30.
+
+There are no exceptions and no baseline: every function over the
+threshold fails the gate. Do not raise the threshold to get past it —
+add tests or reduce complexity instead.
+
+```bash
+# Run standalone (needs a coverage profile first)
+go test -short -coverprofile=coverage.out ./...
+go tool mkcrap
+```
+
 ### Development Setup
 ```bash
 # Bootstrap development environment (sets up Docker services)

@@ -14,7 +14,15 @@ import (
 	"strings"
 )
 
-func NewDynamoDBRepository[A any](client *dynamodb.Client, tableName string) *DynamoDBRepository[A] {
+// DynamoDBClient is the part of *dynamodb.Client the repository uses;
+// tests substitute it to run without AWS.
+type DynamoDBClient interface {
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+	TransactWriteItems(ctx context.Context, params *dynamodb.TransactWriteItemsInput, optFns ...func(*dynamodb.Options)) (*dynamodb.TransactWriteItemsOutput, error)
+	Scan(ctx context.Context, params *dynamodb.ScanInput, optFns ...func(*dynamodb.Options)) (*dynamodb.ScanOutput, error)
+}
+
+func NewDynamoDBRepository[A any](client DynamoDBClient, tableName string) *DynamoDBRepository[A] {
 	return &DynamoDBRepository[A]{
 		client:    client,
 		tableName: tableName,
@@ -24,7 +32,7 @@ func NewDynamoDBRepository[A any](client *dynamodb.Client, tableName string) *Dy
 var _ Repository[any] = (*DynamoDBRepository[any])(nil)
 
 type DynamoDBRepository[A any] struct {
-	client    *dynamodb.Client
+	client    DynamoDBClient
 	tableName string
 }
 

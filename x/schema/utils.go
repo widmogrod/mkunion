@@ -10,6 +10,14 @@ import (
 	"strings"
 )
 
+// primitive is the set of Go types a Schema value can be converted to with As.
+type primitive interface {
+	int | int8 | int16 | int32 | int64 |
+		uint | uint8 | uint16 | uint32 | uint64 |
+		float32 | float64 |
+		bool | string | []byte
+}
+
 func As[A int | int8 | int16 | int32 | int64 |
 	uint | uint8 | uint16 | uint32 | uint64 |
 	float32 | float64 |
@@ -39,85 +47,10 @@ func As[A int | int8 | int16 | int32 | int64 |
 			return def, false
 		},
 		func(x *Number) (A, bool) {
-			switch any(def).(type) {
-			case float32:
-				return any(float32(*x)).(A), true
-			case float64:
-				return any(float64(*x)).(A), true
-			case int:
-				return any(int(*x)).(A), true
-			case int8:
-				return any(int8(*x)).(A), true
-			case int16:
-				return any(int16(*x)).(A), true
-			case int32:
-				return any(int32(*x)).(A), true
-			case int64:
-				return any(int64(*x)).(A), true
-			case uint:
-				return any(uint(*x)).(A), true
-			case uint8:
-				return any(uint8(*x)).(A), true
-			case uint16:
-				return any(uint16(*x)).(A), true
-			case uint32:
-				return any(uint32(*x)).(A), true
-			case uint64:
-				return any(uint64(*x)).(A), true
-			}
-			return def, false
+			return asFromNumber[A](x)
 		},
 		func(x *String) (A, bool) {
-			switch any(def).(type) {
-			case string:
-				return any(string(*x)).(A), true
-			case []byte:
-				return any([]byte((*x))).(A), true
-			case float64:
-				v, err := strconv.ParseFloat(string(*x), 64)
-				if err != nil {
-					return def, false
-				}
-				return any(v).(A), true
-			case float32:
-				v, err := strconv.ParseFloat(string(*x), 32)
-				if err != nil {
-					return def, false
-				}
-				return any(float32(v)).(A), true
-			case int:
-				v, err := strconv.Atoi(string(*x))
-				if err != nil {
-					return def, false
-				}
-				return any(v).(A), true
-			case int8:
-				v, err := strconv.ParseInt(string(*x), 10, 8)
-				if err != nil {
-					return def, false
-				}
-				return any(int8(v)).(A), true
-			case int16:
-				v, err := strconv.ParseInt(string(*x), 10, 16)
-				if err != nil {
-					return def, false
-				}
-				return any(int16(v)).(A), true
-			case int32:
-				v, err := strconv.ParseInt(string(*x), 10, 32)
-				if err != nil {
-					return def, false
-				}
-				return any(int32(v)).(A), true
-			case int64:
-				v, err := strconv.ParseInt(string(*x), 10, 64)
-				if err != nil {
-					return def, false
-				}
-				return any(v).(A), true
-			}
-
-			return def, false
+			return asFromString[A](x)
 		},
 		func(x *Binary) (A, bool) {
 			switch any(def).(type) {
@@ -135,6 +68,94 @@ func As[A int | int8 | int16 | int32 | int64 |
 		func(x *Map) (A, bool) {
 			return def, false
 		})
+}
+
+// asFromNumber converts with plain Go conversions; values outside the
+// target range wrap or saturate the way Go conversions do.
+func asFromNumber[A primitive](x *Number) (A, bool) {
+	var def A
+	switch any(def).(type) {
+	case float32:
+		return any(float32(*x)).(A), true
+	case float64:
+		return any(float64(*x)).(A), true
+	case int:
+		return any(int(*x)).(A), true
+	case int8:
+		return any(int8(*x)).(A), true
+	case int16:
+		return any(int16(*x)).(A), true
+	case int32:
+		return any(int32(*x)).(A), true
+	case int64:
+		return any(int64(*x)).(A), true
+	case uint:
+		return any(uint(*x)).(A), true
+	case uint8:
+		return any(uint8(*x)).(A), true
+	case uint16:
+		return any(uint16(*x)).(A), true
+	case uint32:
+		return any(uint32(*x)).(A), true
+	case uint64:
+		return any(uint64(*x)).(A), true
+	}
+	return def, false
+}
+
+// asFromString parses numeric targets; unsigned targets have no parse path.
+func asFromString[A primitive](x *String) (A, bool) {
+	var def A
+	switch any(def).(type) {
+	case string:
+		return any(string(*x)).(A), true
+	case []byte:
+		return any([]byte(*x)).(A), true
+	case float64:
+		v, err := strconv.ParseFloat(string(*x), 64)
+		if err != nil {
+			return def, false
+		}
+		return any(v).(A), true
+	case float32:
+		v, err := strconv.ParseFloat(string(*x), 32)
+		if err != nil {
+			return def, false
+		}
+		return any(float32(v)).(A), true
+	case int:
+		v, err := strconv.Atoi(string(*x))
+		if err != nil {
+			return def, false
+		}
+		return any(v).(A), true
+	case int8:
+		v, err := strconv.ParseInt(string(*x), 10, 8)
+		if err != nil {
+			return def, false
+		}
+		return any(int8(v)).(A), true
+	case int16:
+		v, err := strconv.ParseInt(string(*x), 10, 16)
+		if err != nil {
+			return def, false
+		}
+		return any(int16(v)).(A), true
+	case int32:
+		v, err := strconv.ParseInt(string(*x), 10, 32)
+		if err != nil {
+			return def, false
+		}
+		return any(int32(v)).(A), true
+	case int64:
+		v, err := strconv.ParseInt(string(*x), 10, 64)
+		if err != nil {
+			return def, false
+		}
+		return any(v).(A), true
+	}
+
+	return def, false
 }
 
 func AsDefault[A int | int8 | int16 | int32 | int64 |
@@ -276,302 +297,13 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 		res := MatchLocationR1(
 			location,
 			func(x *LocationField) *locres {
-				switch y := s.(type) {
-				case *shape.StructLike:
-					mapData, ok := data.(*Map)
-					if !ok {
-						return nil
-					}
-
-					for _, field := range y.Fields {
-						if field.Name == x.Name {
-							fieldValue, ok := (*mapData)[x.Name]
-							if !ok {
-								return nil
-							}
-
-							return &locres{
-								data:  fieldValue,
-								loc:   locations,
-								shape: field.Type,
-							}
-						}
-					}
-				case *shape.AliasLike:
-					res, sch, found := GetShapeSchemaLocation(y.Type, data, append([]Location{x}, locations...), found)
-					if found {
-						return &locres{
-							data:  res,
-							shape: sch,
-						}
-					}
-
-					return nil
-
-				case *shape.MapLike:
-					mapData, ok := data.(*Map)
-					if !ok {
-						return nil
-					}
-
-					value, ok := (*mapData)[x.Name]
-					if !ok {
-						return nil
-					}
-
-					return &locres{
-						data:  value,
-						loc:   locations,
-						shape: y.Val,
-					}
-
-				case *shape.UnionLike:
-					mapData, ok := data.(*Map)
-					if !ok {
-						return nil
-					}
-
-					value, ok := (*mapData)[x.Name]
-					if !ok {
-						return nil
-					}
-
-					if x.Name == "$type" {
-						return &locres{
-							data: value,
-							loc:  locations,
-							shape: &shape.PrimitiveLike{
-								Kind: &shape.StringLike{},
-							},
-						}
-					}
-
-					for _, variant := range y.Variant {
-						fieldName := shape.ToGoTypeName(variant)
-						if x.Name != fieldName {
-							continue
-						}
-
-						fieldValue, ok := (*mapData)[fieldName]
-						if !ok {
-							continue
-						}
-
-						res, sch, found := GetShapeSchemaLocation(variant, fieldValue, locations, found)
-						if found {
-							return &locres{
-								data:  res,
-								shape: sch,
-							}
-						}
-					}
-
-					return nil
-
-				case *shape.RefName:
-					ss, found := shape.LookupShape(y)
-					if !found {
-						return nil
-					}
-
-					ss = shape.IndexWith(ss, y)
-
-					res, sch, found := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...), found)
-					if found {
-						return &locres{
-							data:  res,
-							shape: sch,
-						}
-					}
-
-				case *shape.PrimitiveLike:
-					switch y.Kind.(type) {
-					case *shape.NumberLike:
-						numData, ok := data.(*Number)
-						if !ok {
-							return nil
-						}
-
-						return &locres{
-							data:  numData,
-							loc:   locations,
-							shape: s,
-						}
-
-					case *shape.StringLike:
-						strData, ok := data.(*String)
-						if !ok {
-							return nil
-						}
-
-						return &locres{
-							data:  strData,
-							loc:   locations,
-							shape: s,
-						}
-					}
-
-				case *shape.PointerLike:
-					return &locres{
-						data:  data,
-						loc:   append([]Location{x}, locations...),
-						shape: y.Type,
-					}
-
-				default:
-					panic(fmt.Errorf("schema.GetShapeSchemaLocation: unknown field access %s with shape %#v", x.Name, s))
-				}
-
-				return nil
+				return getLocationField(s, data, x, locations, found)
 			},
 			func(x *LocationIndex) *locres {
-				switch y := s.(type) {
-				case *shape.ListLike:
-					listData, ok := data.(*List)
-					if ok && len(*listData) > x.Index {
-						return &locres{
-							data:  (*listData)[x.Index],
-							loc:   locations,
-							shape: y.Element,
-						}
-					}
-				}
-
-				return nil
+				return getLocationIndex(s, data, x, locations)
 			},
 			func(x *LocationAnything) *locres {
-				switch y := s.(type) {
-				case *shape.PrimitiveLike:
-					switch y.Kind.(type) {
-					case *shape.StringLike:
-						strData, ok := data.(*String)
-						if !ok {
-							return nil
-						}
-
-						return &locres{
-							data:  strData,
-							shape: s,
-							loc:   locations,
-						}
-
-					case *shape.NumberLike:
-						numData, ok := data.(*Number)
-						if !ok {
-							return nil
-						}
-
-						return &locres{
-							data:  numData,
-							shape: s,
-							loc:   locations,
-						}
-					}
-
-				case *shape.MapLike:
-					mapData, ok := data.(*Map)
-					if !ok {
-						return nil
-					}
-
-					for _, value := range *mapData {
-						res, sch, found := GetShapeSchemaLocation(y.Val, value, locations, found)
-						if found {
-							return &locres{
-								data: res,
-								//loc:   locations,
-								shape: sch,
-							}
-						}
-					}
-
-					return nil
-
-				case *shape.UnionLike:
-					mapData, ok := data.(*Map)
-					if !ok {
-						return nil
-					}
-
-					for _, variant := range y.Variant {
-						fieldName := shape.ToGoTypeName(variant)
-						fieldValue, ok := (*mapData)[fieldName]
-						if !ok {
-							continue
-						}
-
-						res, sch, found := GetShapeSchemaLocation(variant, fieldValue, locations, found)
-						if found {
-							return &locres{
-								data: res,
-								//loc:   locations,
-								shape: sch,
-							}
-						}
-					}
-
-				case *shape.ListLike:
-					listData, ok := data.(*List)
-					if !ok {
-						return nil
-					}
-
-					for _, item := range *listData {
-						res, sch, found := GetShapeSchemaLocation(y.Element, item, locations, found)
-						if found {
-							return &locres{
-								data: res,
-								//loc:   locations,
-								shape: sch,
-							}
-						}
-					}
-
-				case *shape.RefName:
-					ss, found := shape.LookupShape(y)
-					if !found {
-						return nil
-					}
-
-					ss = shape.IndexWith(ss, y)
-
-					res, sch, found := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...), found)
-					if found {
-						return &locres{
-							data: res,
-							//loc:   locations,
-							shape: sch,
-						}
-					}
-
-				case *shape.AliasLike:
-					res, sch, found := GetShapeSchemaLocation(y.Type, data, locations, found)
-					if found {
-						return &locres{
-							data: res,
-							//loc:   locations,
-							shape: sch,
-						}
-					}
-
-					return nil
-
-				case *shape.StructLike:
-					for _, field := range y.Fields {
-						res, sch, found := GetShapeSchemaLocation(field.Type, data, locations, found)
-						if found {
-							return &locres{
-								data: res,
-								//loc:   locations,
-								shape: sch,
-							}
-						}
-					}
-
-					return nil
-				}
-
-				panic(fmt.Errorf("schema.GetShapeSchemaLocation: unknown anything access %#v with shape %#v", x, s))
+				return getLocationAnything(s, data, x, locations, found)
 			},
 		)
 
@@ -584,6 +316,320 @@ func GetShapeSchemaLocation(s shape.Shape, data Schema, locations []Location, fo
 		locations = res.loc
 		found = true
 	}
+}
+
+// getLocationField resolves one named-field access step (".Name" or
+// `["Name"]`) against the current shape and data.
+func getLocationField(s shape.Shape, data Schema, x *LocationField, locations []Location, found bool) *locres {
+	switch y := s.(type) {
+	case *shape.StructLike:
+		mapData, ok := data.(*Map)
+		if !ok {
+			return nil
+		}
+
+		for _, field := range y.Fields {
+			if field.Name == x.Name {
+				fieldValue, ok := (*mapData)[x.Name]
+				if !ok {
+					return nil
+				}
+
+				return &locres{
+					data:  fieldValue,
+					loc:   locations,
+					shape: field.Type,
+				}
+			}
+		}
+	case *shape.AliasLike:
+		res, sch, found := GetShapeSchemaLocation(y.Type, data, append([]Location{x}, locations...), found)
+		if found {
+			return &locres{
+				data:  res,
+				shape: sch,
+			}
+		}
+
+		return nil
+
+	case *shape.MapLike:
+		mapData, ok := data.(*Map)
+		if !ok {
+			return nil
+		}
+
+		value, ok := (*mapData)[x.Name]
+		if !ok {
+			return nil
+		}
+
+		return &locres{
+			data:  value,
+			loc:   locations,
+			shape: y.Val,
+		}
+
+	case *shape.UnionLike:
+		mapData, ok := data.(*Map)
+		if !ok {
+			return nil
+		}
+
+		value, ok := (*mapData)[x.Name]
+		if !ok {
+			return nil
+		}
+
+		if x.Name == "$type" {
+			return &locres{
+				data: value,
+				loc:  locations,
+				shape: &shape.PrimitiveLike{
+					Kind: &shape.StringLike{},
+				},
+			}
+		}
+
+		for _, variant := range y.Variant {
+			fieldName := shape.ToGoTypeName(variant)
+			if x.Name != fieldName {
+				continue
+			}
+
+			fieldValue, ok := (*mapData)[fieldName]
+			if !ok {
+				continue
+			}
+
+			res, sch, found := GetShapeSchemaLocation(variant, fieldValue, locations, found)
+			if found {
+				return &locres{
+					data:  res,
+					shape: sch,
+				}
+			}
+		}
+
+		return nil
+
+	case *shape.RefName:
+		ss, found := shape.LookupShape(y)
+		if !found {
+			return nil
+		}
+
+		ss = shape.IndexWith(ss, y)
+
+		res, sch, found := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...), found)
+		if found {
+			return &locres{
+				data:  res,
+				shape: sch,
+			}
+		}
+
+	case *shape.PrimitiveLike:
+		switch y.Kind.(type) {
+		case *shape.NumberLike:
+			numData, ok := data.(*Number)
+			if !ok {
+				return nil
+			}
+
+			return &locres{
+				data:  numData,
+				loc:   locations,
+				shape: s,
+			}
+
+		case *shape.StringLike:
+			strData, ok := data.(*String)
+			if !ok {
+				return nil
+			}
+
+			return &locres{
+				data:  strData,
+				loc:   locations,
+				shape: s,
+			}
+		}
+
+	case *shape.PointerLike:
+		return &locres{
+			data:  data,
+			loc:   append([]Location{x}, locations...),
+			shape: y.Type,
+		}
+
+	}
+
+	// field access on any other shape (list, function, ...) resolves
+	// nothing; [*] searches walk every field, so this must not panic
+	return nil
+}
+
+// getLocationIndex resolves one "[i]" access step; only lists are indexable.
+func getLocationIndex(s shape.Shape, data Schema, x *LocationIndex, locations []Location) *locres {
+	switch y := s.(type) {
+	case *shape.ListLike:
+		listData, ok := data.(*List)
+		if ok && len(*listData) > x.Index {
+			return &locres{
+				data:  (*listData)[x.Index],
+				loc:   locations,
+				shape: y.Element,
+			}
+		}
+	}
+
+	return nil
+}
+
+// getLocationAnything resolves one "[*]" step: a terminal [*] matches the
+// value in place, otherwise it searches every element, field, map value,
+// or union variant for the first match of the remaining path.
+func getLocationAnything(s shape.Shape, data Schema, x *LocationAnything, locations []Location, found bool) *locres {
+	switch y := s.(type) {
+	case *shape.PrimitiveLike:
+		switch y.Kind.(type) {
+		case *shape.StringLike:
+			strData, ok := data.(*String)
+			if !ok {
+				return nil
+			}
+
+			return &locres{
+				data:  strData,
+				shape: s,
+				loc:   locations,
+			}
+
+		case *shape.NumberLike:
+			numData, ok := data.(*Number)
+			if !ok {
+				return nil
+			}
+
+			return &locres{
+				data:  numData,
+				shape: s,
+				loc:   locations,
+			}
+		}
+
+	case *shape.MapLike:
+		mapData, ok := data.(*Map)
+		if !ok {
+			return nil
+		}
+
+		for _, value := range *mapData {
+			res, sch, found := GetShapeSchemaLocation(y.Val, value, locations, found)
+			if found {
+				return &locres{
+					data: res,
+					//loc:   locations,
+					shape: sch,
+				}
+			}
+		}
+
+		return nil
+
+	case *shape.UnionLike:
+		mapData, ok := data.(*Map)
+		if !ok {
+			return nil
+		}
+
+		for _, variant := range y.Variant {
+			fieldName := shape.ToGoTypeName(variant)
+			fieldValue, ok := (*mapData)[fieldName]
+			if !ok {
+				continue
+			}
+
+			res, sch, found := GetShapeSchemaLocation(variant, fieldValue, locations, found)
+			if found {
+				return &locres{
+					data: res,
+					//loc:   locations,
+					shape: sch,
+				}
+			}
+		}
+
+		return nil
+
+	case *shape.ListLike:
+		listData, ok := data.(*List)
+		if !ok {
+			return nil
+		}
+
+		for _, item := range *listData {
+			res, sch, found := GetShapeSchemaLocation(y.Element, item, locations, found)
+			if found {
+				return &locres{
+					data: res,
+					//loc:   locations,
+					shape: sch,
+				}
+			}
+		}
+
+		return nil
+
+	case *shape.RefName:
+		ss, found := shape.LookupShape(y)
+		if !found {
+			return nil
+		}
+
+		ss = shape.IndexWith(ss, y)
+
+		res, sch, found := GetShapeSchemaLocation(ss, data, append([]Location{x}, locations...), found)
+		if found {
+			return &locres{
+				data: res,
+				//loc:   locations,
+				shape: sch,
+			}
+		}
+
+		return nil
+
+	case *shape.AliasLike:
+		res, sch, found := GetShapeSchemaLocation(y.Type, data, locations, found)
+		if found {
+			return &locres{
+				data: res,
+				//loc:   locations,
+				shape: sch,
+			}
+		}
+
+		return nil
+
+	case *shape.StructLike:
+		for _, field := range y.Fields {
+			res, sch, found := GetShapeSchemaLocation(field.Type, data, locations, found)
+			if found {
+				return &locres{
+					data: res,
+					//loc:   locations,
+					shape: sch,
+				}
+			}
+		}
+
+		return nil
+	}
+
+	// [*] on any other shape (pointer, function, ...) resolves nothing
+	return nil
 }
 
 func Reduce[A any](data Schema, init A, fn func(Schema, A) A) A {

@@ -7,7 +7,6 @@ import (
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/stream"
-	"testing"
 )
 
 func init() {
@@ -30,6 +29,7 @@ func init() {
 	shared.TypeRegistryStore[PushAndPullInMemoryContext[any, int]]("github.com/widmogrod/mkunion/x/projection.PushAndPullInMemoryContext[any,int]")
 	shared.TypeRegistryStore[PushAndPullInMemoryContext[float64, float64]]("github.com/widmogrod/mkunion/x/projection.PushAndPullInMemoryContext[float64,float64]")
 	shared.TypeRegistryStore[PushAndPullInMemoryContext[int, float64]]("github.com/widmogrod/mkunion/x/projection.PushAndPullInMemoryContext[int,float64]")
+	shared.TypeRegistryStore[PushAndPullInMemoryContext[int, string]]("github.com/widmogrod/mkunion/x/projection.PushAndPullInMemoryContext[int,string]")
 	shared.TypeRegistryStore[PushAndPull[int, int]]("github.com/widmogrod/mkunion/x/projection.PushAndPull[int,int]")
 	shared.TypeRegistryStore[Record[any]]("github.com/widmogrod/mkunion/x/projection.Record[any]")
 	shared.TypeRegistryStore[Record[float64]]("github.com/widmogrod/mkunion/x/projection.Record[float64]")
@@ -49,12 +49,17 @@ func init() {
 	shared.TypeRegistryStore[Watermark[int]]("github.com/widmogrod/mkunion/x/projection.Watermark[int]")
 	shared.TypeRegistryStore[Watermark[string]]("github.com/widmogrod/mkunion/x/projection.Watermark[string]")
 	shared.TypeRegistryStore[Window]("github.com/widmogrod/mkunion/x/projection.Window")
+	shared.TypeRegistryStore[WindowInMemoryStore[string]]("github.com/widmogrod/mkunion/x/projection.WindowInMemoryStore[string]")
 	shared.TypeRegistryStore[predicate.WherePredicates]("github.com/widmogrod/mkunion/x/storage/predicate.WherePredicates")
+	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[*WindowRecord[string]]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[*github.com/widmogrod/mkunion/x/projection.WindowRecord[string]]]")
 	shared.TypeRegistryStore[schemaless.FindingRecords[schemaless.Record[SnapshotState]]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/projection.SnapshotState]]")
+	shared.TypeRegistryStore[schemaless.PageResult[schemaless.Record[*WindowRecord[string]]]]("github.com/widmogrod/mkunion/x/storage/schemaless.PageResult[github.com/widmogrod/mkunion/x/storage/schemaless.Record[*github.com/widmogrod/mkunion/x/projection.WindowRecord[string]]]")
+	shared.TypeRegistryStore[schemaless.Record[*WindowRecord[string]]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[*github.com/widmogrod/mkunion/x/projection.WindowRecord[string]]")
 	shared.TypeRegistryStore[schemaless.Repository[SnapshotState]]("github.com/widmogrod/mkunion/x/storage/schemaless.Repository[github.com/widmogrod/mkunion/x/projection.SnapshotState]")
+	shared.TypeRegistryStore[schemaless.UpdateRecordsResult[schemaless.Record[*WindowRecord[string]]]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecordsResult[github.com/widmogrod/mkunion/x/storage/schemaless.Record[*github.com/widmogrod/mkunion/x/projection.WindowRecord[string]]]")
+	shared.TypeRegistryStore[schemaless.UpdateRecords[schemaless.Record[*WindowRecord[string]]]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecords[github.com/widmogrod/mkunion/x/storage/schemaless.Record[*github.com/widmogrod/mkunion/x/projection.WindowRecord[string]]]")
 	shared.TypeRegistryStore[stream.EventTime]("github.com/widmogrod/mkunion/x/stream.EventTime")
 	shared.TypeRegistryStore[stream.Item[schema.Schema]]("github.com/widmogrod/mkunion/x/stream.Item[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[stream.Offset]("github.com/widmogrod/mkunion/x/stream.Offset")
 	shared.TypeRegistryStore[stream.Stream[schema.Schema]]("github.com/widmogrod/mkunion/x/stream.Stream[github.com/widmogrod/mkunion/x/schema.Schema]")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

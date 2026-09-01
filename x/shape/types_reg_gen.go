@@ -5,7 +5,6 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
 	"strings"
-	"testing"
 )
 
 func init() {
@@ -45,13 +44,19 @@ func init() {
 	shared.TypeRegistryStore[UInt64]("github.com/widmogrod/mkunion/x/shape.UInt64")
 	shared.TypeRegistryStore[UInt8]("github.com/widmogrod/mkunion/x/shape.UInt8")
 	shared.TypeRegistryStore[UnionLike]("github.com/widmogrod/mkunion/x/shape.UnionLike")
+	shared.TypeRegistryStore[ast.CallExpr]("go/ast.CallExpr")
 	shared.TypeRegistryStore[ast.CommentGroup]("go/ast.CommentGroup")
+	shared.TypeRegistryStore[ast.CompositeLit]("go/ast.CompositeLit")
 	shared.TypeRegistryStore[ast.FieldList]("go/ast.FieldList")
+	shared.TypeRegistryStore[ast.File]("go/ast.File")
+	shared.TypeRegistryStore[ast.FuncDecl]("go/ast.FuncDecl")
+	shared.TypeRegistryStore[ast.FuncType]("go/ast.FuncType")
+	shared.TypeRegistryStore[ast.GenDecl]("go/ast.GenDecl")
 	shared.TypeRegistryStore[ast.SelectorExpr]("go/ast.SelectorExpr")
+	shared.TypeRegistryStore[ast.StructType]("go/ast.StructType")
 	shared.TypeRegistryStore[ast.TypeSpec]("go/ast.TypeSpec")
+	shared.TypeRegistryStore[ast.ValueSpec]("go/ast.ValueSpec")
 	shared.TypeRegistryStore[int]("int")
 	shared.TypeRegistryStore[string]("string")
 	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
-	shared.TypeRegistryStore[testing.B]("testing.B")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

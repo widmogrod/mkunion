@@ -21,7 +21,16 @@ func main() {
 	log.SetOutput(os.Stderr)
 	log.SetLevel(log.ErrorLevel)
 
-	app := &cli.App{
+	app := newApp(ctx)
+
+	err := app.RunContext(ctx, os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func newApp(ctx context.Context) *cli.App {
+	return &cli.App{
 		Name:                   shared.Program,
 		Usage:                  "Strongly typed union types in Go",
 		Description:            "Generates union types, shapes, JSON serde and pattern matching from //go:tag mkunion:\"...\" declarations.\nRun without a command to generate code for specific files (used in //go:generate directives),\nor use 'watch' to generate for whole packages.",
@@ -114,11 +123,6 @@ func main() {
 				Action: cleanAction,
 			},
 		},
-	}
-
-	err := app.RunContext(ctx, os.Args)
-	if err != nil {
-		log.Fatal(err)
 	}
 }
 

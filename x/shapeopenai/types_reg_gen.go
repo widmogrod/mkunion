@@ -6,7 +6,6 @@ import (
 	"github.com/sashabaranov/go-openai/jsonschema"
 	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
-	"testing"
 )
 
 func init() {
@@ -27,5 +26,4 @@ func init() {
 	shared.TypeRegistryStore[shape.StringLike]("github.com/widmogrod/mkunion/x/shape.StringLike")
 	shared.TypeRegistryStore[shape.StructLike]("github.com/widmogrod/mkunion/x/shape.StructLike")
 	shared.TypeRegistryStore[shape.UnionLike]("github.com/widmogrod/mkunion/x/shape.UnionLike")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

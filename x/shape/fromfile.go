@@ -525,365 +525,389 @@ func removeTypeParams(name string) string {
 }
 
 func (f *InferredInfo) Visit(n ast.Node) ast.Visitor {
-	opt := f.optionAST()
 	switch t := n.(type) {
 	case *ast.GenDecl:
-		if t.Tok != token.TYPE {
+		return f.visitGenDecl(t)
+	case *ast.File:
+		f.visitFile(t)
+	case *ast.TypeSpec:
+		return f.visitTypeSpec(t)
+	case *ast.StructType:
+		return f.visitStructType(t)
+	}
+
+	return f
+}
+
+// visitGenDecl registers union declarations and per-variant tags.
+func (f *InferredInfo) visitGenDecl(t *ast.GenDecl) ast.Visitor {
+	if t.Tok != token.TYPE {
+		return f
+	}
+
+	// detect declaration of union type
+	// either as comment
+	// //go:generate mkunion -name=Example
+	// //go:tag mkunion:"Example"
+	tags := ExtractDocumentTags(t.Doc)
+
+	for tname, tvalue := range tags {
+		f.taggedNodes[tname] = append(f.taggedNodes[tname], &NodeAndTag{
+			Name: tname,
+			Node: t,
+			Tag:  tvalue,
+		})
+	}
+
+	// detect single declaration of type with a comment block
+	// // some comment
+	// type A struct {}
+	if t.Lparen == 0 && t.Rparen == 0 && len(t.Specs) == 1 {
+		switch s := t.Specs[0].(type) {
+		case *ast.TypeSpec:
+			// extract individual tags for each of variant
+			f.possibleTaggedTypes[s.Name.Name] = tags
 			return f
 		}
+	}
 
-		// detect declaration of union type
-		// either as comment
-		// //go:generate mkunion -name=Example
-		// //go:tag mkunion:"Example"
-		tags := ExtractDocumentTags(t.Doc)
+	// when there are more than one spec block,
+	// it means that we are dealing with union (by convention)
 
-		for tname, tvalue := range tags {
-			f.taggedNodes[tname] = append(f.taggedNodes[tname], &NodeAndTag{
-				Name: tname,
-				Node: t,
-				Tag:  tvalue,
-			})
+	// register tags for specific type inside block:
+	// type (
+	//   ...
+	// )
+	for _, spec := range t.Specs {
+		switch s := spec.(type) {
+		case *ast.TypeSpec:
+			// extract individual tags for each of variant
+			f.possibleTaggedTypes[s.Name.Name] = ExtractDocumentTags(s.Doc)
 		}
+	}
 
-		// detect single declaration of type with a comment block
-		// // some comment
-		// type A struct {}
-		if t.Lparen == 0 && t.Rparen == 0 && len(t.Specs) == 1 {
-			switch s := t.Specs[0].(type) {
-			case *ast.TypeSpec:
-				// extract individual tags for each of variant
-				f.possibleTaggedTypes[s.Name.Name] = tags
-				return f
-			}
+	unionName := ""
+	if unionTag, ok := tags["mkunion"]; ok {
+		unionName = removeTypeParams(unionTag.Value)
+	} else {
+		comment := shared.Comment(t.Doc)
+		names := matchGoGenerateExtractUnionName.FindStringSubmatch(comment)
+		if len(names) < 2 {
+			return f
 		}
+		unionName = names[1]
+	}
 
-		// when there are more than one spec block,
-		// it means that we are dealing with union (by convention)
+	// It's impossible to have type Option interface{} and type Option[A] interface{} in same package
+	// Register union tags under the base name (without type params)
+	f.possibleTaggedTypes[unionName] = tags
 
-		// register tags for specific type inside block:
-		// type (
-		//   ...
-		// )
-		for _, spec := range t.Specs {
-			switch s := spec.(type) {
-			case *ast.TypeSpec:
-				// extract individual tags for each of variant
-				f.possibleTaggedTypes[s.Name.Name] = ExtractDocumentTags(s.Doc)
-			}
+	// start capturing possible variants
+	if _, ok := f.possibleVariantTypes[unionName]; !ok {
+		f.possibleVariantTypes[unionName] = make([]string, 0)
+	}
+
+	for _, spec := range t.Specs {
+		switch s := spec.(type) {
+		case *ast.TypeSpec:
+			// register possible variant for union
+			// NOTE: this is only convention that unions must be declared as type group specification:
+			// type (
+			// 	Variant2 struct {}
+			//	Variant2 int
+			//)
+			f.possibleVariantTypes[unionName] = append(f.possibleVariantTypes[unionName], s.Name.Name)
 		}
+	}
 
-		unionName := ""
-		if unionTag, ok := tags["mkunion"]; ok {
-			unionName = removeTypeParams(unionTag.Value)
-		} else {
-			comment := shared.Comment(t.Doc)
-			names := matchGoGenerateExtractUnionName.FindStringSubmatch(comment)
-			if len(names) < 2 {
-				return f
-			}
-			unionName = names[1]
-		}
+	return f
 
-		// It's impossible to have type Option interface{} and type Option[A] interface{} in same package
-		// Register union tags under the base name (without type params)
-		f.possibleTaggedTypes[unionName] = tags
+	return f
+}
 
-		// start capturing possible variants
-		if _, ok := f.possibleVariantTypes[unionName]; !ok {
-			f.possibleVariantTypes[unionName] = make([]string, 0)
-		}
+// visitFile records the package name and its import aliases.
+func (f *InferredInfo) visitFile(t *ast.File) {
+	if t.Name != nil {
+		f.pkgName = t.Name.String()
+	}
 
-		for _, spec := range t.Specs {
-			switch s := spec.(type) {
-			case *ast.TypeSpec:
-				// register possible variant for union
-				// NOTE: this is only convention that unions must be declared as type group specification:
-				// type (
-				// 	Variant2 struct {}
-				//	Variant2 int
-				//)
-				f.possibleVariantTypes[unionName] = append(f.possibleVariantTypes[unionName], s.Name.Name)
-			}
-		}
-
-		return f
-
-	case *ast.File:
-		if t.Name != nil {
-			f.pkgName = t.Name.String()
-		}
-
-		f.packageNameToPackageImport = map[string]string{
-			f.pkgName: f.pkgImportName,
-		}
-		for _, imp := range t.Imports {
-			pkgImportName := strings.Trim(imp.Path.Value, "\"")
-			if imp.Name != nil {
-				if imp.Name.String() == "." {
-					// This is a dot import
-					f.dotImports = append(f.dotImports, pkgImportName)
-					log.Debugf("InferredInfo: Registered dot import %s", pkgImportName)
-				} else {
-					f.packageNameToPackageImport[imp.Name.String()] = pkgImportName
-				}
+	f.packageNameToPackageImport = map[string]string{
+		f.pkgName: f.pkgImportName,
+	}
+	for _, imp := range t.Imports {
+		pkgImportName := strings.Trim(imp.Path.Value, "\"")
+		if imp.Name != nil {
+			if imp.Name.String() == "." {
+				// This is a dot import
+				f.dotImports = append(f.dotImports, pkgImportName)
+				log.Debugf("InferredInfo: Registered dot import %s", pkgImportName)
 			} else {
-				defaultPkgName := path.Base(pkgImportName)
-				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
-				f.packageNameToPackageImport[pkgName] = pkgImportName
+				f.packageNameToPackageImport[imp.Name.String()] = pkgImportName
+			}
+		} else {
+			defaultPkgName := path.Base(pkgImportName)
+			pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
+			f.packageNameToPackageImport[pkgName] = pkgImportName
+		}
+	}
+
+}
+
+// visitTypeSpec infers shapes of named types and aliases.
+func (f *InferredInfo) visitTypeSpec(t *ast.TypeSpec) ast.Visitor {
+	opt := f.optionAST()
+	f.currentType = t.Name.Name
+
+	// Detect named literal types like:
+	// type A string
+	// type B int
+	// type C bool
+	switch next := t.Type.(type) {
+	case *ast.Ident:
+		switch next.Name {
+		case "string":
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.pkgName,
+				PkgImportName: f.pkgImportName,
+				IsAlias:       IsASTAlias(t),
+				Type:          &PrimitiveLike{Kind: &StringLike{}},
+				Tags:          f.possibleTaggedTypes[f.currentType],
+			}
+
+		case "int", "int8", "int16", "int32", "int64",
+			"uint", "uint8", "uint16", "uint32", "uint64",
+			"float64", "float32", "byte", "rune":
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.pkgName,
+				PkgImportName: f.pkgImportName,
+				IsAlias:       IsASTAlias(t),
+				Type: &PrimitiveLike{
+					Kind: &NumberLike{
+						Kind: TypeStringToNumberKindMap[next.Name],
+					},
+				},
+				Tags: f.possibleTaggedTypes[f.currentType],
+			}
+
+		case "bool":
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.pkgName,
+				PkgImportName: f.pkgImportName,
+				IsAlias:       IsASTAlias(t),
+				Type:          &PrimitiveLike{Kind: &BooleanLike{}},
+				Tags:          f.possibleTaggedTypes[f.currentType],
+			}
+
+		default:
+			// alias type from the same package
+			// example
+			//  type A ListOf
+			f.shapes[f.currentType] = &AliasLike{
+				Name:          f.currentType,
+				PkgName:       f.pkgName,
+				PkgImportName: f.pkgImportName,
+				TypeParams:    f.extractTypeParams(t.TypeParams),
+				IsAlias:       IsASTAlias(t),
+				Type: &RefName{
+					Name:          next.Name,
+					PkgName:       f.pkgName,
+					PkgImportName: f.pkgImportName,
+				},
+				Tags: f.possibleTaggedTypes[f.currentType],
 			}
 		}
 
-	case *ast.TypeSpec:
-		f.currentType = t.Name.Name
+	case *ast.SelectorExpr:
+		// alias type from other packages
+		// example:
+		//  type A time.Time
+		f.shapes[f.currentType] = &AliasLike{
+			Name:          f.currentType,
+			PkgName:       f.pkgName,
+			PkgImportName: f.pkgImportName,
+			TypeParams:    f.extractTypeParams(t.TypeParams),
+			IsAlias:       IsASTAlias(t),
+			Type:          f.selectExrToShape(next),
+			Tags:          f.possibleTaggedTypes[f.currentType],
+		}
 
-		// Detect named literal types like:
-		// type A string
-		// type B int
-		// type C bool
-		switch next := t.Type.(type) {
-		case *ast.Ident:
-			switch next.Name {
-			case "string":
-				f.shapes[f.currentType] = &AliasLike{
-					Name:          f.currentType,
-					PkgName:       f.pkgName,
-					PkgImportName: f.pkgImportName,
-					IsAlias:       IsASTAlias(t),
-					Type:          &PrimitiveLike{Kind: &StringLike{}},
-					Tags:          f.possibleTaggedTypes[f.currentType],
-				}
+	case *ast.IndexExpr:
+		// alias of type that has one type params initialized
+		// example:
+		//  type A ListOf[any]
+		//  type B ListOf[ListOf[any]]
+		f.shapes[f.currentType] = &AliasLike{
+			Name:          f.currentType,
+			PkgName:       f.pkgName,
+			PkgImportName: f.pkgImportName,
+			TypeParams:    f.extractTypeParams(t.TypeParams),
+			IsAlias:       IsASTAlias(t),
+			Type:          FromAST(next, opt...),
+			Tags:          f.possibleTaggedTypes[f.currentType],
+		}
 
-			case "int", "int8", "int16", "int32", "int64",
-				"uint", "uint8", "uint16", "uint32", "uint64",
-				"float64", "float32", "byte", "rune":
-				f.shapes[f.currentType] = &AliasLike{
-					Name:          f.currentType,
-					PkgName:       f.pkgName,
-					PkgImportName: f.pkgImportName,
-					IsAlias:       IsASTAlias(t),
-					Type: &PrimitiveLike{
-						Kind: &NumberLike{
-							Kind: TypeStringToNumberKindMap[next.Name],
-						},
-					},
-					Tags: f.possibleTaggedTypes[f.currentType],
-				}
+	case *ast.IndexListExpr:
+		// alias of type that has two type params initialized
+		// example:
+		//  type A ListOf2[string, int]
+		//  type B ListOf2[ListOf2[string, int], ListOf2[string, int]]
+		f.shapes[f.currentType] = &AliasLike{
+			Name:          f.currentType,
+			PkgName:       f.pkgName,
+			PkgImportName: f.pkgImportName,
+			TypeParams:    f.extractTypeParams(t.TypeParams),
+			IsAlias:       IsASTAlias(t),
+			Type:          FromAST(next, opt...),
+			Tags:          f.possibleTaggedTypes[f.currentType],
+		}
 
-			case "bool":
-				f.shapes[f.currentType] = &AliasLike{
-					Name:          f.currentType,
-					PkgName:       f.pkgName,
-					PkgImportName: f.pkgImportName,
-					IsAlias:       IsASTAlias(t),
-					Type:          &PrimitiveLike{Kind: &BooleanLike{}},
-					Tags:          f.possibleTaggedTypes[f.currentType],
-				}
+	case *ast.MapType:
+		// example:
+		//  type A map[string]string
+		//  type B map[string]ListOf2[string, int]
+		f.shapes[f.currentType] = &AliasLike{
+			Name:          f.currentType,
+			PkgName:       f.pkgName,
+			PkgImportName: f.pkgImportName,
+			TypeParams:    f.extractTypeParams(t.TypeParams),
+			IsAlias:       IsASTAlias(t),
+			Type: &MapLike{
+				Key: FromAST(next.Key, opt...),
+				Val: FromAST(next.Value, opt...),
+				//KeyIsPointer: IsStarExpr(next.Key),
+				//ValIsPointer: IsStarExpr(next.Term),
+			},
+			Tags: f.possibleTaggedTypes[f.currentType],
+		}
 
-			default:
-				// alias type from the same package
-				// example
-				//  type A ListOf
-				f.shapes[f.currentType] = &AliasLike{
-					Name:          f.currentType,
-					PkgName:       f.pkgName,
-					PkgImportName: f.pkgImportName,
-					TypeParams:    f.extractTypeParams(t.TypeParams),
-					IsAlias:       IsASTAlias(t),
-					Type: &RefName{
-						Name:          next.Name,
-						PkgName:       f.pkgName,
-						PkgImportName: f.pkgImportName,
-					},
-					Tags: f.possibleTaggedTypes[f.currentType],
-				}
-			}
-
-		case *ast.SelectorExpr:
-			// alias type from other packages
-			// example:
-			//  type A time.Time
-			f.shapes[f.currentType] = &AliasLike{
-				Name:          f.currentType,
-				PkgName:       f.pkgName,
-				PkgImportName: f.pkgImportName,
-				TypeParams:    f.extractTypeParams(t.TypeParams),
-				IsAlias:       IsASTAlias(t),
-				Type:          f.selectExrToShape(next),
-				Tags:          f.possibleTaggedTypes[f.currentType],
-			}
-
-		case *ast.IndexExpr:
-			// alias of type that has one type params initialized
-			// example:
-			//  type A ListOf[any]
-			//  type B ListOf[ListOf[any]]
-			f.shapes[f.currentType] = &AliasLike{
-				Name:          f.currentType,
-				PkgName:       f.pkgName,
-				PkgImportName: f.pkgImportName,
-				TypeParams:    f.extractTypeParams(t.TypeParams),
-				IsAlias:       IsASTAlias(t),
-				Type:          FromAST(next, opt...),
-				Tags:          f.possibleTaggedTypes[f.currentType],
-			}
-
-		case *ast.IndexListExpr:
-			// alias of type that has two type params initialized
-			// example:
-			//  type A ListOf2[string, int]
-			//  type B ListOf2[ListOf2[string, int], ListOf2[string, int]]
-			f.shapes[f.currentType] = &AliasLike{
-				Name:          f.currentType,
-				PkgName:       f.pkgName,
-				PkgImportName: f.pkgImportName,
-				TypeParams:    f.extractTypeParams(t.TypeParams),
-				IsAlias:       IsASTAlias(t),
-				Type:          FromAST(next, opt...),
-				Tags:          f.possibleTaggedTypes[f.currentType],
-			}
-
-		case *ast.MapType:
-			// example:
-			//  type A map[string]string
-			//  type B map[string]ListOf2[string, int]
-			f.shapes[f.currentType] = &AliasLike{
-				Name:          f.currentType,
-				PkgName:       f.pkgName,
-				PkgImportName: f.pkgImportName,
-				TypeParams:    f.extractTypeParams(t.TypeParams),
-				IsAlias:       IsASTAlias(t),
-				Type: &MapLike{
-					Key: FromAST(next.Key, opt...),
-					Val: FromAST(next.Value, opt...),
-					//KeyIsPointer: IsStarExpr(next.Key),
-					//ValIsPointer: IsStarExpr(next.Term),
-				},
-				Tags: f.possibleTaggedTypes[f.currentType],
-			}
-
-		case *ast.ArrayType:
-			f.shapes[f.currentType] = &AliasLike{
-				Name:          f.currentType,
-				PkgName:       f.pkgName,
-				PkgImportName: f.pkgImportName,
-				TypeParams:    f.extractTypeParams(t.TypeParams),
-				IsAlias:       IsASTAlias(t),
-				Type: &ListLike{
-					Element: FromAST(next.Elt, opt...),
-					//ElementIsPointer: IsStarExpr(next.Elt),
-					ArrayLen: tryGetArrayLen(next.Len),
-				},
-				Tags: f.possibleTaggedTypes[f.currentType],
-			}
-
-		case *ast.StructType:
-			f.shapes[f.currentType] = &StructLike{
-				Name:          f.currentType,
-				PkgName:       f.pkgName,
-				PkgImportName: f.pkgImportName,
-				TypeParams:    f.extractTypeParams(t.TypeParams),
-				Tags:          f.possibleTaggedTypes[f.currentType],
-			}
-
-		case *ast.StarExpr:
-			// example:
-			//  type A *string
-			//  type B = *int
-			f.shapes[f.currentType] = &AliasLike{
-				Name:          f.currentType,
-				PkgName:       f.pkgName,
-				PkgImportName: f.pkgImportName,
-				TypeParams:    f.extractTypeParams(t.TypeParams),
-				IsAlias:       IsASTAlias(t),
-				Type: &PointerLike{
-					Type: FromAST(next.X, opt...),
-				},
-			}
+	case *ast.ArrayType:
+		f.shapes[f.currentType] = &AliasLike{
+			Name:          f.currentType,
+			PkgName:       f.pkgName,
+			PkgImportName: f.pkgImportName,
+			TypeParams:    f.extractTypeParams(t.TypeParams),
+			IsAlias:       IsASTAlias(t),
+			Type: &ListLike{
+				Element: FromAST(next.Elt, opt...),
+				//ElementIsPointer: IsStarExpr(next.Elt),
+				ArrayLen: tryGetArrayLen(next.Len),
+			},
+			Tags: f.possibleTaggedTypes[f.currentType],
 		}
 
 	case *ast.StructType:
-		if !t.Struct.IsValid() {
-			break
+		f.shapes[f.currentType] = &StructLike{
+			Name:          f.currentType,
+			PkgName:       f.pkgName,
+			PkgImportName: f.pkgImportName,
+			TypeParams:    f.extractTypeParams(t.TypeParams),
+			Tags:          f.possibleTaggedTypes[f.currentType],
 		}
 
-		structShape, ok := f.shapes[f.currentType].(*StructLike)
-		if !ok {
-			log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
-			return f
+	case *ast.StarExpr:
+		// example:
+		//  type A *string
+		//  type B = *int
+		f.shapes[f.currentType] = &AliasLike{
+			Name:          f.currentType,
+			PkgName:       f.pkgName,
+			PkgImportName: f.pkgImportName,
+			TypeParams:    f.extractTypeParams(t.TypeParams),
+			IsAlias:       IsASTAlias(t),
+			Type: &PointerLike{
+				Type: FromAST(next.X, opt...),
+			},
 		}
-
-		for _, field := range t.Fields.List {
-			// this happens when field is embedded in struct
-			// something like `type A struct { B }`
-			if len(field.Names) == 0 {
-				switch typ := field.Type.(type) {
-				case *ast.Ident:
-					structShape.Fields = append(structShape.Fields, &FieldLike{
-						Name: typ.Name,
-						Type: FromAST(typ, opt...),
-					})
-					break
-				default:
-					log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
-					continue
-				}
-			}
-
-			for _, fieldName := range field.Names {
-				if !fieldName.IsExported() {
-					continue
-				}
-
-				var typ Shape
-				switch ttt := field.Type.(type) {
-				// selectors in struct, means that we are using type from other package
-				case *ast.SelectorExpr:
-					typ = f.selectExrToShape(ttt)
-				// this is reference to other struct in the same package or other package
-				case *ast.StarExpr:
-					if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
-						typ = f.selectExrToShape(selector)
-						typ = &PointerLike{
-							Type: typ,
-						}
-					} else {
-						typ = FromAST(ttt, opt...)
-					}
-
-				case *ast.IndexExpr, *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
-					typ = FromAST(ttt, opt...)
-
-				default:
-					log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-					typ = &Any{}
-				}
-
-				typ = CleanTypeThatAreOvershadowByTypeParam(typ, structShape.TypeParams)
-
-				tag := ""
-				if field.Tag != nil {
-					tag = field.Tag.Value
-				}
-
-				tags := ExtractTags(tag)
-				desc := TagsToDesc(tags)
-				guard := TagsToGuard(tags)
-
-				structShape.Fields = append(structShape.Fields, &FieldLike{
-					Name:  fieldName.Name,
-					Type:  typ,
-					Desc:  desc,
-					Guard: guard,
-					Tags:  tags,
-				})
-			}
-		}
-
-		f.shapes[f.currentType] = structShape
-		log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
 	}
 
+	return f
+}
+
+// visitStructType infers struct fields of the current type.
+func (f *InferredInfo) visitStructType(t *ast.StructType) ast.Visitor {
+	opt := f.optionAST()
+	if !t.Struct.IsValid() {
+		return f
+	}
+
+	structShape, ok := f.shapes[f.currentType].(*StructLike)
+	if !ok {
+		log.Warnf("shape.InferFromFile: could not cast %s to StructLike", f.currentType)
+		return f
+	}
+
+	for _, field := range t.Fields.List {
+		// this happens when field is embedded in struct
+		// something like `type A struct { B }`
+		if len(field.Names) == 0 {
+			switch typ := field.Type.(type) {
+			case *ast.Ident:
+				structShape.Fields = append(structShape.Fields, &FieldLike{
+					Name: typ.Name,
+					Type: FromAST(typ, opt...),
+				})
+				break
+			default:
+				log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
+				continue
+			}
+		}
+
+		for _, fieldName := range field.Names {
+			if !fieldName.IsExported() {
+				continue
+			}
+
+			var typ Shape
+			switch ttt := field.Type.(type) {
+			// selectors in struct, means that we are using type from other package
+			case *ast.SelectorExpr:
+				typ = f.selectExrToShape(ttt)
+			// this is reference to other struct in the same package or other package
+			case *ast.StarExpr:
+				if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
+					typ = f.selectExrToShape(selector)
+					typ = &PointerLike{
+						Type: typ,
+					}
+				} else {
+					typ = FromAST(ttt, opt...)
+				}
+
+			case *ast.IndexExpr, *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
+				typ = FromAST(ttt, opt...)
+
+			default:
+				log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
+				typ = &Any{}
+			}
+
+			typ = CleanTypeThatAreOvershadowByTypeParam(typ, structShape.TypeParams)
+
+			tag := ""
+			if field.Tag != nil {
+				tag = field.Tag.Value
+			}
+
+			tags := ExtractTags(tag)
+			desc := TagsToDesc(tags)
+			guard := TagsToGuard(tags)
+
+			structShape.Fields = append(structShape.Fields, &FieldLike{
+				Name:  fieldName.Name,
+				Type:  typ,
+				Desc:  desc,
+				Guard: guard,
+				Tags:  tags,
+			})
+		}
+	}
+
+	f.shapes[f.currentType] = structShape
+	log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
 	return f
 }
 
@@ -1219,6 +1243,14 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 				return nil
 			}
 
+			// the index feeds the package's type registry, which is
+			// production code; test-only generic instantiations must not
+			// leak into it (they can even force import cycles, e.g. an
+			// x/schema test using x/storage/schemaless types)
+			if strings.HasSuffix(path, "_test.go") {
+				return nil
+			}
+
 			f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 			if err != nil {
 				return fmt.Errorf("could not parse file %s; %w", path, err)
@@ -1351,184 +1383,216 @@ func (walker *IndexedTypeWalker) ExpandedShapes() map[string]Shape {
 func (walker *IndexedTypeWalker) Visit(n ast.Node) ast.Visitor {
 	switch t := n.(type) {
 	case *ast.File:
-		if t.Name != nil {
-			walker.pkgName = t.Name.String()
-		}
-
-		walker.packageNameToPackageImport[walker.pkgName] = walker.pkgImportName
-		walker.packageTags = MergeTagsInto(walker.packageTags, ExtractDocumentTags(t.Doc))
-
-		for _, imp := range t.Imports {
-			pkgImportName := strings.Trim(imp.Path.Value, "\"")
-			if imp.Name != nil {
-				if imp.Name.String() == "." {
-					// This is a dot import
-					walker.dotImports = append(walker.dotImports, pkgImportName)
-					log.Debugf("IndexedTypeWalker: Registered dot import %s", pkgImportName)
-				} else {
-					walker.packageNameToPackageImport[imp.Name.String()] = pkgImportName
-				}
-			} else {
-				defaultPkgName := path.Base(pkgImportName)
-				pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
-				walker.packageNameToPackageImport[pkgName] = pkgImportName
-			}
-		}
-
+		return walker.visitFile(t)
 	case *ast.TypeSpec:
-		walker.knownTypeNamesInPackage[t.Name.Name] = struct{}{}
-
-		prev := walker.filterGenericTypes
-		walker.filterGenericTypes = walker.typeParamNames(t.TypeParams)
-
-		// for named types try to register them as indexed types
-		// if they are indexed types
-		if t.TypeParams != nil {
-			for _, param := range t.TypeParams.List {
-				walker.registerIndexedShape(param.Type)
-			}
-		}
-
-		// for the actual details of the type
-		ast.Walk(walker, t.Type)
-
-		walker.filterGenericTypes = prev
-		return nil
-
+		return walker.visitTypeSpec(t)
 	case *ast.ValueSpec:
-		if t.Type != nil {
-			walker.registerIndexedShape(t.Type)
-		}
-
-		if t.Values != nil {
-			for _, value := range t.Values {
-				walker.registerIndexedShape(value)
-			}
-		}
-
-		for _, val := range t.Values {
-			ast.Walk(walker, val)
-		}
-
-		return nil
-
+		return walker.visitValueSpec(t)
 	case *ast.CompositeLit:
-		walker.registerIndexedShape(t.Type)
-
+		return walker.visitCompositeLit(t)
 	case *ast.FuncDecl:
-		fun := t.Type
+		return walker.visitFuncDecl(t)
+	case *ast.FuncType:
+		return walker.visitFuncType(t)
+	case *ast.CallExpr:
+		return walker.visitCallExpr(t)
+	}
 
-		prev := walker.filterGenericTypes
-		if t.Recv != nil {
-			walker.filterGenericTypes = walker.guessParamNamesReceiver(t.Recv)
-			for _, param := range t.Recv.List {
-				walker.registerIndexedShape(param.Type)
+	return walker
+}
+
+// visitFile records the package name, tags, and import aliases.
+func (walker *IndexedTypeWalker) visitFile(t *ast.File) ast.Visitor {
+	if t.Name != nil {
+		walker.pkgName = t.Name.String()
+	}
+
+	walker.packageNameToPackageImport[walker.pkgName] = walker.pkgImportName
+	walker.packageTags = MergeTagsInto(walker.packageTags, ExtractDocumentTags(t.Doc))
+
+	for _, imp := range t.Imports {
+		pkgImportName := strings.Trim(imp.Path.Value, "\"")
+		if imp.Name != nil {
+			if imp.Name.String() == "." {
+				// This is a dot import
+				walker.dotImports = append(walker.dotImports, pkgImportName)
+				log.Debugf("IndexedTypeWalker: Registered dot import %s", pkgImportName)
+			} else {
+				walker.packageNameToPackageImport[imp.Name.String()] = pkgImportName
 			}
 		} else {
-			walker.filterGenericTypes = walker.typeParamNames(fun.TypeParams)
-		}
-
-		if fun.TypeParams != nil {
-			for _, param := range fun.TypeParams.List {
-				walker.registerIndexedShape(param.Type)
-			}
-		}
-
-		// walk function type params (type params of the function)
-		if fun.Params != nil {
-			for _, param := range fun.Params.List {
-				walker.registerIndexedShape(param.Type)
-			}
-		}
-
-		// walk function results (return params of the function)
-		if fun.Results != nil {
-			for _, result := range fun.Results.List {
-				walker.registerIndexedShape(result.Type)
-			}
-		}
-
-		// walk function body
-		ast.Walk(walker, t.Body)
-
-		walker.filterGenericTypes = prev
-		return nil
-
-	case *ast.FuncType:
-		// for list of params
-		// for list of results
-		// attempt to find indexed types
-		// and register them as indexed types
-
-		if t.Params != nil {
-			for _, param := range t.Params.List {
-				walker.registerIndexedShape(param.Type)
-			}
-		}
-
-		if t.Results != nil {
-			for _, result := range t.Results.List {
-				walker.registerIndexedShape(result.Type)
-			}
-		}
-
-		return nil
-
-	case *ast.CallExpr:
-		switch fun := t.Fun.(type) {
-		case *ast.IndexExpr:
-			// this is a function call with type params
-			// in such situations we're interested in indexed values, not function name
-			// example:
-			//  shared.JSONMarshal[ListOf[int]](...)
-			switch fun.Index.(type) {
-			case *ast.IndexExpr, *ast.IndexListExpr:
-				walker.registerIndexedShape(fun.Index)
-			}
-
-			// func arguments can have indexed type, so iterate them
-			for _, arg := range t.Args {
-				// function argument could be other function, so let's walk it
-				ast.Walk(walker, arg)
-			}
-
-			// we're done here, dont traverse deeper
-			return nil
-
-		case *ast.IndexListExpr:
-			// this is a function call with type params
-			// in such situations we're interested in indexed values, not function name
-			// example:
-			//  shared.JSONMarshal[ListOf2[int,any]](...)
-			for _, arg := range fun.Indices {
-				switch arg := arg.(type) {
-				case *ast.IndexExpr, *ast.IndexListExpr:
-					walker.registerIndexedShape(arg)
-				}
-			}
-
-			// func arguments can have indexed type, so iterate them
-			for _, arg := range t.Args {
-				// function argument could be other function, so let's walk it
-				ast.Walk(walker, arg)
-			}
-
-			// we're done here, dont traverse deeper
-			return nil
-
-		default:
-			// func arguments can have indexed type, so iterate them
-			for _, arg := range t.Args {
-				// function argument could be other function, so let's walk it
-				ast.Walk(walker, arg)
-			}
-
-			// we're done here, dont traverse deeper
-			return nil
+			defaultPkgName := path.Base(pkgImportName)
+			pkgName := tryToFindPkgName(pkgImportName, defaultPkgName)
+			walker.packageNameToPackageImport[pkgName] = pkgImportName
 		}
 	}
 
 	return walker
+}
+
+// visitTypeSpec tracks known type names and indexes generic instantiations.
+func (walker *IndexedTypeWalker) visitTypeSpec(t *ast.TypeSpec) ast.Visitor {
+	walker.knownTypeNamesInPackage[t.Name.Name] = struct{}{}
+
+	prev := walker.filterGenericTypes
+	walker.filterGenericTypes = walker.typeParamNames(t.TypeParams)
+
+	// for named types try to register them as indexed types
+	// if they are indexed types
+	if t.TypeParams != nil {
+		for _, param := range t.TypeParams.List {
+			walker.registerIndexedShape(param.Type)
+		}
+	}
+
+	// for the actual details of the type
+	ast.Walk(walker, t.Type)
+
+	walker.filterGenericTypes = prev
+	return nil
+
+}
+
+func (walker *IndexedTypeWalker) visitValueSpec(t *ast.ValueSpec) ast.Visitor {
+	if t.Type != nil {
+		walker.registerIndexedShape(t.Type)
+	}
+
+	if t.Values != nil {
+		for _, value := range t.Values {
+			walker.registerIndexedShape(value)
+		}
+	}
+
+	for _, val := range t.Values {
+		ast.Walk(walker, val)
+	}
+
+	return nil
+
+}
+
+func (walker *IndexedTypeWalker) visitCompositeLit(t *ast.CompositeLit) ast.Visitor {
+	walker.registerIndexedShape(t.Type)
+
+	return walker
+}
+
+func (walker *IndexedTypeWalker) visitFuncDecl(t *ast.FuncDecl) ast.Visitor {
+	fun := t.Type
+
+	prev := walker.filterGenericTypes
+	if t.Recv != nil {
+		walker.filterGenericTypes = walker.guessParamNamesReceiver(t.Recv)
+		for _, param := range t.Recv.List {
+			walker.registerIndexedShape(param.Type)
+		}
+	} else {
+		walker.filterGenericTypes = walker.typeParamNames(fun.TypeParams)
+	}
+
+	if fun.TypeParams != nil {
+		for _, param := range fun.TypeParams.List {
+			walker.registerIndexedShape(param.Type)
+		}
+	}
+
+	// walk function type params (type params of the function)
+	if fun.Params != nil {
+		for _, param := range fun.Params.List {
+			walker.registerIndexedShape(param.Type)
+		}
+	}
+
+	// walk function results (return params of the function)
+	if fun.Results != nil {
+		for _, result := range fun.Results.List {
+			walker.registerIndexedShape(result.Type)
+		}
+	}
+
+	// walk function body
+	ast.Walk(walker, t.Body)
+
+	walker.filterGenericTypes = prev
+	return nil
+
+}
+
+func (walker *IndexedTypeWalker) visitFuncType(t *ast.FuncType) ast.Visitor {
+	// for list of params
+	// for list of results
+	// attempt to find indexed types
+	// and register them as indexed types
+
+	if t.Params != nil {
+		for _, param := range t.Params.List {
+			walker.registerIndexedShape(param.Type)
+		}
+	}
+
+	if t.Results != nil {
+		for _, result := range t.Results.List {
+			walker.registerIndexedShape(result.Type)
+		}
+	}
+
+	return nil
+
+}
+
+func (walker *IndexedTypeWalker) visitCallExpr(t *ast.CallExpr) ast.Visitor {
+	switch fun := t.Fun.(type) {
+	case *ast.IndexExpr:
+		// this is a function call with type params
+		// in such situations we're interested in indexed values, not function name
+		// example:
+		//  shared.JSONMarshal[ListOf[int]](...)
+		switch fun.Index.(type) {
+		case *ast.IndexExpr, *ast.IndexListExpr:
+			walker.registerIndexedShape(fun.Index)
+		}
+
+		// func arguments can have indexed type, so iterate them
+		for _, arg := range t.Args {
+			// function argument could be other function, so let's walk it
+			ast.Walk(walker, arg)
+		}
+
+		// we're done here, dont traverse deeper
+		return nil
+
+	case *ast.IndexListExpr:
+		// this is a function call with type params
+		// in such situations we're interested in indexed values, not function name
+		// example:
+		//  shared.JSONMarshal[ListOf2[int,any]](...)
+		for _, arg := range fun.Indices {
+			switch arg := arg.(type) {
+			case *ast.IndexExpr, *ast.IndexListExpr:
+				walker.registerIndexedShape(arg)
+			}
+		}
+
+		// func arguments can have indexed type, so iterate them
+		for _, arg := range t.Args {
+			// function argument could be other function, so let's walk it
+			ast.Walk(walker, arg)
+		}
+
+		// we're done here, dont traverse deeper
+		return nil
+
+	default:
+		// func arguments can have indexed type, so iterate them
+		for _, arg := range t.Args {
+			// function argument could be other function, so let's walk it
+			ast.Walk(walker, arg)
+		}
+
+		// we're done here, dont traverse deeper
+		return nil
+	}
 }
 
 func (walker *IndexedTypeWalker) typeParamNames(x ast.Node) []string {
