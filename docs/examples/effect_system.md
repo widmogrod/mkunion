@@ -124,30 +124,23 @@ typed answers.
 
 ### What Go 1.27 generic methods give us
 
-Go 1.27 lets a method declare its own type parameters. The package
-`example/effect/_go127` uses them. The directory name starts with an underscore,
-so `go test ./...` and `mkunion watch ./...` skip it, and the module stays on its
-current Go version. Run it explicitly:
+Go 1.27 lets a method declare its own type parameters. The module is on Go 1.27,
+and `example/effect/eff_go127.go` uses them.
 
-```bash
-GOTOOLCHAIN=go1.27.0 go test ./example/effect/_go127/
-```
-
-Why the underscore and not only a `//go:build go1.27` tag? mkunion parses source
-with the `go/parser` of the Go version it was built with. A 1.26 parser rejects a
+One thing to know when a project moves to generic methods: mkunion parses source
+with the `go/parser` of the Go version it runs under. A 1.26 parser rejects a
 generic method with "method must have no type parameters" and the whole
-`mkunion watch ./...` run fails. Keeping the file in a directory the tool skips
-avoids that until the module moves to Go 1.27. (mkunion now skips underscore
-directories in `./...` patterns, the same rule the go tool uses.)
+`mkunion watch ./...` run fails. With `go 1.27` in `go.mod`, the go command picks
+a 1.27 toolchain for `go tool mkunion` as well, so this just works.
 
 Generic methods help in two places:
 
-```go title="example/effect/_go127/effect127.go"
---8<-- "example/effect/_go127/effect127.go:program-127"
+```go title="example/effect/eff_go127.go"
+--8<-- "example/effect/eff_go127.go:program-127"
 ```
 
-```go title="example/effect/_go127/effect127.go"
---8<-- "example/effect/_go127/effect127.go:direct-127"
+```go title="example/effect/eff_go127.go"
+--8<-- "example/effect/eff_go127.go:direct-127"
 ```
 
 Two limits stay:

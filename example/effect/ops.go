@@ -84,7 +84,7 @@ func answer[R any](_ EffectOf[R], r R, err error) (any, error) {
 
 // PerformDirect performs one operation right now, outside of any program.
 // This is "direct style": plain Go code, no continuations, but also no
-// program value to inspect or replay. See Direct in _go127/effect127.go for the
+// program value to inspect or replay. See Direct in eff_go127.go for the
 // method form that Go 1.27 generic methods allow.
 func PerformDirect[R any](ctx context.Context, h Handler[Effect], op EffectOf[R]) (R, error) {
 	return Run(ctx, h, Perform(op))

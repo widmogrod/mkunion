@@ -2,7 +2,7 @@
 
 ### Install mkunion
 
-Add mkunion as a tool dependency of your module (needs Go 1.24 or newer):
+Add mkunion as a tool dependency of your module (needs Go 1.27 or newer):
 ```bash
 go get -tool github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
 ```
@@ -14,7 +14,7 @@ No `go install`, no `PATH` changes.
 
 ??? note "Using an older Go toolchain"
 
-    On Go older than 1.24, install the binary instead and drop the `go tool` prefix
+    On Go older than 1.27, install the binary instead and drop the `go tool` prefix
     from every command below:
     ```bash
     go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1

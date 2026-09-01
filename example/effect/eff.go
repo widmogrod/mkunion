@@ -79,7 +79,7 @@ func PerformAs[Op, R any](op Op) Eff[Op, R] {
 // --8<-- [start:then]
 
 // Then sequences two programs: run e, feed its value to k, run what k returns.
-// On Go 1.27 the same operation is available as a method, see Program.Then in _go127/effect127.go.
+// On Go 1.27 the same operation is available as a method, see Program.Then in eff_go127.go.
 func Then[Op, A, B any](e Eff[Op, A], k func(A) Eff[Op, B]) Eff[Op, B] {
 	return MatchEffR1(e,
 		func(x *Pure[Op, A]) Eff[Op, B] { return k(x.Value) },

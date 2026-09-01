@@ -25,9 +25,6 @@ jobs:
       - run: pip install awscli-local
       - run: dev/bootstrap.sh -nologs
 
-      # Go 1.27-only example: an underscore directory, skipped by ./..., run explicitly
-      - run: go test -v ./example/effect/_go127/
-
       # run tests
       - run: |
           set -e
