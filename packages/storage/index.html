@@ -1,0 +1,1951 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../../examples/union_phanthom_types/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>x/storage - mkunion - strongly typed union types in Golang</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#xstorage-schemaless-storage-with-typed-queries" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mkunion - strongly typed union types in Golang" class="md-header__button md-logo" aria-label="mkunion - strongly typed union types in Golang" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mkunion - strongly typed union types in Golang
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              x/storage
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/widmogrod/mkunion" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mkunion - strongly typed union types in Golang" class="md-nav__button md-logo" aria-label="mkunion - strongly typed union types in Golang" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    mkunion - strongly typed union types in Golang
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/widmogrod/mkunion" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../value_proposition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Value Proposition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing and development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/custom_pattern_matching/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Pattern Matching
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/generic_union/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Union and generic types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/json/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marshaling union as JSON
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/state_machine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Machines and unions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/state_machine_best_practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Machine Best Practices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/state_storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Persisting union in database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/type_script/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End types between Go and TypeScript
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/union_composability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Composability and Type Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/union_phanthom_types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phantom Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    x/storage
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    x/storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage adapters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage adapters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamodb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DynamoDB
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opensearch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenSearch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-streams-the-append-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change streams — the append log
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Change streams — the append log">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#append-log-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Append log implementations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature matrix
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature matrix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repository-capability-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository capability matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repository-verified-behaviours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository verified behaviours
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#append-log-capability-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Append log capability matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#append-log-verified-behaviours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Append log verified behaviours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sorting-by-a-data-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sorting by a data field
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sorting by a data field">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-dynamodb-cannot-do-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why DynamoDB cannot do it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-supporting-it-would-take" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What supporting it would take
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new adapter
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage adapters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage adapters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamodb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DynamoDB
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opensearch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenSearch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-streams-the-append-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change streams — the append log
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Change streams — the append log">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#append-log-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Append log implementations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature matrix
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature matrix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repository-capability-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository capability matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repository-verified-behaviours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository verified behaviours
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#append-log-capability-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Append log capability matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#append-log-verified-behaviours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Append log verified behaviours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sorting-by-a-data-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sorting by a data field
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sorting by a data field">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-dynamodb-cannot-do-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why DynamoDB cannot do it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-supporting-it-would-take" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What supporting it would take
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new adapter
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/widmogrod/mkunion/edit/main/docs/packages/storage.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="xstorage-schemaless-storage-with-typed-queries"><code>x/storage</code> — schemaless storage with typed queries</h1>
+<p>The <code>x/storage/schemaless</code> package gives you one repository API for saving,
+loading, and querying Go values — including union types — without writing
+serialization code or SQL. You pick a backend by picking a constructor;
+everything else stays the same.</p>
+<h2 id="installation">Installation</h2>
+<p>The package ships with the mkunion module:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>go<span class="w"> </span>get<span class="w"> </span>github.com/widmogrod/mkunion
+</span></code></pre></div>
+<p>Import what you need:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="s">"github.com/widmogrod/mkunion/x/storage/schemaless"</span><span class="w">           </span><span class="c1">// repositories</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="s">"github.com/widmogrod/mkunion/x/storage/predicate"</span><span class="w">            </span><span class="c1">// typed query predicates</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="s">"github.com/widmogrod/mkunion/x/storage/schemaless/typedful"</span><span class="w">  </span><span class="c1">// type-safe wrapper</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="storage-adapters">Storage adapters</h2>
+<h3 id="in-memory">In-memory</h3>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">repo</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">schemaless</span><span class="p">.</span><span class="nx">NewInMemoryRepository</span><span class="p">[</span><span class="nx">MyRecord</span><span class="p">]()</span>
+</span></code></pre></div>
+<p>Best for tests and local development. It also defines the <strong>full contract</strong>:
+every behaviour in the feature matrix below is supported.</p>
+<h3 id="dynamodb">DynamoDB</h3>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">client</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">dynamodb</span><span class="p">.</span><span class="nx">NewFromConfig</span><span class="p">(</span><span class="nx">cfg</span><span class="p">)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nx">repo</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">schemaless</span><span class="p">.</span><span class="nx">NewDynamoDBRepository</span><span class="p">[</span><span class="nx">MyRecord</span><span class="p">](</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">tableName</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The table needs a string hash key <code>ID</code> and a string range key <code>Type</code>.</p>
+<p>DynamoDB ignores <code>Sort</code>. Queries against this backend return matching records
+in an arbitrary order - see <a href="#sorting-by-a-data-field">Sorting by a data field</a>.</p>
+<h3 id="opensearch">OpenSearch</h3>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">opensearch</span><span class="p">.</span><span class="nx">NewClient</span><span class="p">(</span><span class="nx">opensearch</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Addresses</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="nx">address</span><span class="p">}})</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">repo</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">schemaless</span><span class="p">.</span><span class="nx">NewOpenSearchRepository</span><span class="p">[</span><span class="nx">MyRecord</span><span class="p">](</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">indexName</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Writes use <code>Refresh=true</code>, so reads observe writes immediately.</p>
+<h2 id="change-streams-the-append-log">Change streams — the append log</h2>
+<p>A repository answers "what is the state now". The append log answers "what
+just changed": it is an ordered stream of <code>Change[T]</code> events that subscribers
+consume, one per save or delete.</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Change</span><span class="p">[</span><span class="nx">T</span><span class="w"> </span><span class="kt">any</span><span class="p">]</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">Before</span><span class="w">  </span><span class="o">*</span><span class="nx">Record</span><span class="p">[</span><span class="nx">T</span><span class="p">]</span><span class="w"> </span><span class="c1">// state before the change (nil on first insert)</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">After</span><span class="w">   </span><span class="o">*</span><span class="nx">Record</span><span class="p">[</span><span class="nx">T</span><span class="p">]</span><span class="w"> </span><span class="c1">// state after the change (nil on delete)</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">Deleted</span><span class="w"> </span><span class="kt">bool</span><span class="w">       </span><span class="c1">// true when the record was deleted</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">Offset</span><span class="w">  </span><span class="kt">int</span><span class="w">        </span><span class="c1">// position in the log, increases with every change</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>The in-memory repository feeds its log automatically — every <code>UpdateRecords</code>
+appends the resulting changes:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">repo</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">schemaless</span><span class="p">.</span><span class="nx">NewInMemoryRepository</span><span class="p">[</span><span class="nx">MyRecord</span><span class="p">]()</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">log</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">repo</span><span class="p">.</span><span class="nx">AppendLog</span><span class="p">()</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">log</span><span class="p">.</span><span class="nx">Subscribe</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">change</span><span class="w"> </span><span class="nx">schemaless</span><span class="p">.</span><span class="nx">Change</span><span class="p">[</span><span class="nx">MyRecord</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="c1">// react to the change</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">})</span>
+</span></code></pre></div>
+<p><code>Subscribe</code> blocks and delivers changes until the log ends:</p>
+<ul>
+<li><code>fromOffset</code> — <code>0</code> starts at the beginning, <code>-1</code> at the latest change, and
+  any other value resumes from the change with that <code>Offset</code> (as delivered in
+  an earlier subscription).</li>
+<li><code>filter</code> — a <code>predicate.WherePredicates</code> that delivers only matching
+  changes; <code>nil</code> delivers everything.</li>
+<li>Return value — <code>nil</code> after <code>Close()</code> once all changes are delivered, the
+  context's error when the context is cancelled.</li>
+</ul>
+<p>A log can also be written to directly, without a repository, via <code>Push</code>,
+<code>Change</code>, and <code>Delete</code>.</p>
+<h3 id="append-log-implementations">Append log implementations</h3>
+<table>
+<thead>
+<tr>
+<th>Implementation</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schemaless.AppendLog[T]</code></td>
+<td>In-memory log; defines the <strong>full contract</strong></td>
+</tr>
+<tr>
+<td><code>typedful.TypedAppendLog[T]</code></td>
+<td>Typed wrapper over an <code>AppendLoger[schema.Schema]</code>; translates records and filter predicates both ways. <code>Append</code> (merging another log) is not supported and is declared as the <code>MergeAppend</code> downgrade</td>
+</tr>
+<tr>
+<td><code>schemaless.KinesisStream</code></td>
+<td><strong>Not</strong> an <code>AppendLoger</code> yet: it has a different <code>Subscribe</code> signature and no write side; it only reads DynamoDB change events from a Kinesis stream. Making it conform is an open follow-up</td>
+</tr>
+</tbody>
+</table>
+<p>Like the repositories, every implementation runs the same behavioural
+specification, with explicit downgrades:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">spec</span><span class="p">.</span><span class="nx">RunAppendLogSpec</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="nx">spec</span><span class="p">.</span><span class="nx">AppendLogTypedful</span><span class="p">,</span><span class="w"> </span><span class="nx">newLog</span><span class="p">,</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">spec</span><span class="p">.</span><span class="nx">FullAppendLogCapabilities</span><span class="p">().</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="nx">WithoutMergeAppend</span><span class="p">(),</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>The results render as the <em>Append log capability matrix</em> below.</p>
+<h2 id="feature-matrix">Feature matrix</h2>
+<p>Every adapter is verified against the same behavioural specification
+(<code>x/storage/schemaless/spec</code>). An adapter that cannot provide a behaviour
+declares the downgrade explicitly in its test wiring, for example:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">spec</span><span class="p">.</span><span class="nx">RunRepositorySpec</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span><span class="w"> </span><span class="nx">spec</span><span class="p">.</span><span class="nx">BackendDynamoDB</span><span class="p">,</span><span class="w"> </span><span class="nx">newRepo</span><span class="p">,</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">spec</span><span class="p">.</span><span class="nx">FullCapabilities</span><span class="p">().</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="nx">WithoutSortByDataField</span><span class="p">().</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">        </span><span class="nx">WithoutBackwardPagination</span><span class="p">(),</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>The tables below are generated by running that test suite — they are not
+written by hand, so they cannot drift from what the code actually does.</p>
+<!-- Code generated by the x/storage/schemaless/spec test suite. DO NOT EDIT. -->
+
+<h4 id="repository-capability-matrix">Repository capability matrix</h4>
+<p>Every <code>Repository</code> backend passes the same behavioural spec
+(<code>spec.RunRepositorySpec</code>), modulo the capabilities it explicitly
+downgrades. The in-memory repository defines the full contract.</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th style="text-align: center;">In-Memory</th>
+<th style="text-align: center;">DynamoDB</th>
+<th style="text-align: center;">OpenSearch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SortByDataField</strong> — Sort results by any record field (e.g. <code>Data.Name</code>)</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>BackwardPagination</strong> — Page backward with <code>Before</code> cursors and <code>Prev</code> links</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔</td>
+<td style="text-align: center;">⛔</td>
+</tr>
+<tr>
+<td><strong>AtomicBatch</strong> — All-or-nothing <code>UpdateRecords</code> batches</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔</td>
+</tr>
+<tr>
+<td><strong>MonotonicOverwriteVersion</strong> — Versions keep increasing under <code>PolicyOverwriteServerChanges</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔</td>
+</tr>
+</tbody>
+</table>
+<h4 id="repository-verified-behaviours">Repository verified behaviours</h4>
+<p>Each row is a spec subtest; ✅ verified, ⛔ skipped by a declared capability
+downgrade, ❌ failing when the report was generated.</p>
+<table>
+<thead>
+<tr>
+<th>Suite</th>
+<th>Behaviour</th>
+<th style="text-align: center;">In-Memory</th>
+<th style="text-align: center;">DynamoDB</th>
+<th style="text-align: center;">OpenSearch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>repository</td>
+<td>get of a missing record returns ErrNotFound</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>get with the wrong record type returns ErrNotFound</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>delete of a missing record is not an error</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>empty update command returns ErrEmptyCommand</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>saved record can be read back with its data</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>update with the current version succeeds and bumps the version</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>write with a stale version fails with ErrVersionConflict</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>PolicyOverwriteServerChanges wins over a stale version</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>overwrites keep the version increasing</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔ <code>MonotonicOverwriteVersion</code></td>
+</tr>
+<tr>
+<td>repository</td>
+<td>deleted record is gone</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>where predicate filters records</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>batch result maps key records by ID and type</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>where predicate accepts literal values</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>empty where query matches all records</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>OR predicate matches either branch</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>NOT over OR excludes both branches</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>query without a record type is not an error</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>record type separates records</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>forward pagination visits every record exactly once</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>sorting orders records by a data field</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔ <code>SortByDataField</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>sorting orders records by a numeric data field</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔ <code>SortByDataField</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>sorted pagination keeps order across pages</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔ <code>SortByDataField</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>prev cursor pages backward</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔ <code>BackwardPagination</code></td>
+<td style="text-align: center;">⛔ <code>BackwardPagination</code></td>
+</tr>
+<tr>
+<td>repository</td>
+<td>batch with a conflict writes nothing</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔ <code>AtomicBatch</code></td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>union variants survive a round trip</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>filter on a field inside a union variant</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>OR matches across union variants</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>NOT excludes a union variant match, records without the field stay</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>AND combines a plain field with a union field</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>numeric equality filter</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>string equality filter</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>filter on a nonexistent field returns no records and no error</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>complex queries</td>
+<td>update of a union variant is queryable afterwards</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+</tbody>
+</table>
+<h4 id="append-log-capability-matrix">Append log capability matrix</h4>
+<p>Every <code>AppendLoger</code> implementation passes the same behavioural spec
+(<code>spec.RunAppendLogSpec</code>), modulo the capabilities it explicitly downgrades.
+The in-memory append log defines the full contract.</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th style="text-align: center;">In-Memory</th>
+<th style="text-align: center;">Typedful</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Filtering</strong> — <code>Subscribe</code> honours a where-predicate filter</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>OffsetResume</strong> — <code>Subscribe</code> resumes from a given change offset</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>Replay</strong> — A late subscriber receives every past change</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>MergeAppend</strong> — <code>Append</code> merges another log's changes</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔</td>
+</tr>
+</tbody>
+</table>
+<h4 id="append-log-verified-behaviours">Append log verified behaviours</h4>
+<p>Each row is a spec subtest; ✅ verified, ⛔ skipped by a declared capability
+downgrade, ❌ failing when the report was generated.</p>
+<table>
+<thead>
+<tr>
+<th>Suite</th>
+<th>Behaviour</th>
+<th style="text-align: center;">In-Memory</th>
+<th style="text-align: center;">Typedful</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>append log</td>
+<td>pushed changes reach a subscriber in order with increasing offsets</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>change and delete emit corresponding events</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>every subscriber receives every change</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>close unblocks a subscriber waiting on an empty log</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>context cancellation unblocks a waiting subscriber</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>a closed log replays every change to a late subscriber</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>subscription resumes from a given offset</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>filter delivers only matching changes</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>append log</td>
+<td>append merges another log's changes</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">⛔ <code>MergeAppend</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="sorting-by-a-data-field">Sorting by a data field</h2>
+<p><code>SortByDataField</code> is the one capability that splits the backends, so it decides
+which backend a sorted query belongs on.</p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th><code>Sort</code> on <code>Data.#.Name</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>In-Memory</td>
+<td>works</td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>works</td>
+</tr>
+<tr>
+<td>DynamoDB</td>
+<td><strong>ignored</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>If you need sorted queries, use OpenSearch.</strong> In-Memory is the reference
+implementation used by the spec suite; OpenSearch is the production backend
+that sorts.</p>
+<h3 id="why-dynamodb-cannot-do-it">Why DynamoDB cannot do it</h3>
+<p>DynamoDB only returns records in the order of a <em>key</em>, and this table's key is
+<code>ID</code> + <code>Type</code>.</p>
+<ul>
+<li><code>FindingRecords</code> issues a <code>Scan</code>, and <code>Scan</code> has no ordering option - the
+  order of returned records is not defined.</li>
+<li>Even a <code>Query</code> can only order by the table's range key, ascending or
+  descending, never by an arbitrary attribute.</li>
+<li>An index key must be a flat, top-level attribute, and <code>Data.#.Name</code> is nested
+  inside <code>Data</code>.</li>
+</ul>
+<p>The <code>Sort</code> value is accepted and carried across pages, but never applied. The
+adapter declares this honestly with <code>WithoutSortByDataField()</code>, so the matrix
+above shows a skip instead of a pass.</p>
+<h3 id="what-supporting-it-would-take">What supporting it would take</h3>
+<p>Not a configuration flag - a write-path change:</p>
+<ol>
+<li>every write copies <code>Data.Name</code> into a flat top-level attribute;</li>
+<li>a global secondary index keyed on it (hash <code>Type</code>, range the new attribute),
+   with existing records rewritten so they reappear in sorted results;</li>
+<li>index discovery at start-up (<code>DescribeTable</code>), so <code>Sort</code> is accepted for
+   indexed fields and rejected with a clear error for the rest.</li>
+</ol>
+<p>Creating that index automatically is out of scope on purpose: it costs money,
+needs wider IAM permissions, backfills slowly, and DynamoDB caps a table at 20
+indexes. It would have to be an opt-in constructor, never a start-up guess.</p>
+<h2 id="adding-a-new-adapter">Adding a new adapter</h2>
+<ol>
+<li>Implement <code>schemaless.Repository[T]</code> — or <code>schemaless.AppendLoger[T]</code>
+   for a change stream.</li>
+<li>Wire it into the spec suite next to your adapter, declaring any
+   capability downgrades explicitly
+   (see <code>x/storage/schemaless/inmemory_spec_test.go</code> for a repository,
+   <code>x/storage/schemaless/appendlog_spec_test.go</code> for an append log).</li>
+<li>Run <code>go test ./x/storage/schemaless/</code>. On a green run the feature matrix
+   above and <code>x/storage/README.md</code> regenerate themselves — commit them with
+   your change.</li>
+</ol>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "navigation.expand", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
