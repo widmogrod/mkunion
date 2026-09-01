@@ -175,7 +175,7 @@ func collectStats(root, modulePath string, blocksByFile map[string][]cover.Profi
 		rel, _ := filepath.Rel(root, path)
 		if d.IsDir() {
 			name := d.Name()
-			if rel != "." && (strings.HasPrefix(name, ".") || name == "testdata" || name == "node_modules") {
+			if rel != "." && (strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") || name == "testdata" || name == "node_modules") {
 				return filepath.SkipDir
 			}
 			// a nested module is outside this module's test run, so its

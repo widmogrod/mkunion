@@ -14,8 +14,10 @@ func TestExpandPathArgs(t *testing.T) {
 	tempDir := t.TempDir()
 	subDir := filepath.Join(tempDir, "sub")
 	hiddenDir := filepath.Join(tempDir, ".hidden")
+	underscoreDir := filepath.Join(tempDir, "_ignored")
 	require.NoError(t, os.MkdirAll(subDir, 0755))
 	require.NoError(t, os.MkdirAll(hiddenDir, 0755))
+	require.NoError(t, os.MkdirAll(underscoreDir, 0755))
 
 	t.Run("explicit_path_is_kept_as_is", func(t *testing.T) {
 		paths, err := ExpandPathArgs([]string{tempDir})
@@ -23,11 +25,17 @@ func TestExpandPathArgs(t *testing.T) {
 		assert.Equal(t, []string{tempDir}, paths)
 	})
 
-	t.Run("recursive_pattern_walks_subdirectories_and_skips_hidden", func(t *testing.T) {
+	t.Run("recursive_pattern_walks_subdirectories_and_skips_hidden_and_underscore", func(t *testing.T) {
 		paths, err := ExpandPathArgs([]string{filepath.Join(tempDir, "...")})
 		require.NoError(t, err)
 		sort.Strings(paths)
 		assert.Equal(t, []string{tempDir, subDir}, paths)
+	})
+
+	t.Run("recursive_pattern_rooted_in_underscore_dir_still_walks_it", func(t *testing.T) {
+		paths, err := ExpandPathArgs([]string{filepath.Join(underscoreDir, "...")})
+		require.NoError(t, err)
+		assert.Equal(t, []string{underscoreDir}, paths)
 	})
 
 	t.Run("duplicate_arguments_are_deduplicated", func(t *testing.T) {
