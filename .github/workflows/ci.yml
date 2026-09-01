@@ -7,13 +7,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: ^1.25.1
         id: go
 
       - name: Set up Docker Compose
-        uses: docker/setup-compose-action@v1
+        uses: docker/setup-compose-action@v2
 
       - run: go get -v -t -d ./...
 
@@ -49,7 +49,7 @@ jobs:
       - run: go tool mkcrap --profile coverage.out
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5.5.2
+        uses: codecov/codecov-action@v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: widmogrod/mkunion
