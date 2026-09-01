@@ -200,6 +200,42 @@ func TestInMemoryRepository_Versioning(t *testing.T) {
 	})
 }
 
+func TestInMemoryRepository_BeforeCursor(t *testing.T) {
+	repo := newRepo(t)
+
+	query := schemaless.FindingRecords[schemaless.Record[testutil.SampleStruct]]{
+		RecordType: "sample",
+		Sort:       []schemaless.SortField{{Field: "Data.Age", Descending: false}},
+		Limit:      2,
+	}
+
+	page1, err := repo.FindingRecords(query)
+	require.NoError(t, err)
+	require.Len(t, page1.Items, 2)
+
+	page2, err := repo.FindingRecords(*page1.Next)
+	require.NoError(t, err)
+	require.Len(t, page2.Items, 2)
+	require.NotNil(t, page2.Prev)
+
+	// paging backward from page2 gives page1 again
+	back, err := repo.FindingRecords(*page2.Prev)
+	require.NoError(t, err)
+	require.Len(t, back.Items, 2)
+	assert.Equal(t, page1.Items[0].ID, back.Items[0].ID)
+	assert.Equal(t, page1.Items[1].ID, back.Items[1].ID)
+}
+
+func TestInMemoryRepository_BadSortFieldErrors(t *testing.T) {
+	repo := newRepo(t)
+
+	_, err := repo.FindingRecords(schemaless.FindingRecords[schemaless.Record[testutil.SampleStruct]]{
+		RecordType: "sample",
+		Sort:       []schemaless.SortField{{Field: "Data.Agee"}},
+	})
+	assert.Error(t, err)
+}
+
 func TestInMemoryRepository_Delete(t *testing.T) {
 	repo := newRepo(t)
 
