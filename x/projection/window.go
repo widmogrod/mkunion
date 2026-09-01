@@ -177,6 +177,7 @@ func DoWindow[A, B any](
 	td TriggerDescription,
 	init B,
 	merge func(x A, agg B) (B, error),
+	snap Snapshotter,
 ) error {
 	// recovery from failure:
 	// to avoid any double processing of data process should work only on data from last snapshot
@@ -302,7 +303,7 @@ func DoWindow[A, B any](
 					return fmt.Errorf("projection.DoWindow: ack offset: %w", err)
 				}
 
-				err = snapshotNow(ctx)
+				err = snap.Snapshot(ctx.CurrentState())
 				if err != nil {
 					return fmt.Errorf("projection.DoWindow: snapshot before flush: %w", err)
 				}
@@ -340,21 +341,12 @@ func DoWindow[A, B any](
 
 		ackedRecords++
 		if ackedRecords%snapshotEveryNRecords == 0 {
-			err = snapshotNow(ctx)
+			err = snap.Snapshot(ctx.CurrentState())
 			if err != nil {
 				return fmt.Errorf("projection.DoWindow: snapshot progress: %w", err)
 			}
 		}
 	}
-}
-
-// snapshotNow persists the context state synchronously when the context
-// supports it (Recovery arms it via OnSnapshot); otherwise it is a no-op.
-func snapshotNow[A, B any](ctx PushAndPull[A, B]) error {
-	if s, ok := ctx.(interface{ SnapshotNow() error }); ok {
-		return s.SnapshotNow()
-	}
-	return nil
 }
 
 func NewWindowInMemoryStore[A any](recordType string) *WindowInMemoryStore[A] {

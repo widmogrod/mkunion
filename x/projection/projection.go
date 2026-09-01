@@ -87,6 +87,10 @@ type (
 		PushOut(Data[B]) error
 		AckWatermark(watermark *stream.EventTime) error
 		LastWatermark() EventTime
+
+		// CurrentState exposes the position (offsets, watermark) so callers
+		// can hand it to a Snapshotter at the moments they choose
+		CurrentState() SnapshotState
 	}
 	SnapshotContext interface {
 		CurrentState() SnapshotState
@@ -105,26 +109,10 @@ var _ PushAndPull[int, int] = (*PushAndPullInMemoryContext[int, int])(nil)
 type PushAndPullInMemoryContext[A, B any] struct {
 	// mu guards state against concurrent snapshots (CurrentState)
 	// taken while the worker goroutine acks offsets and watermarks.
-	mu          sync.Mutex
-	state       *PullPushContextState
-	stream      stream.Stream[schema.Schema]
-	simulate    *SimulateProblem
-	snapshotNow func() error
-}
-
-// OnSnapshot registers a synchronous snapshot saver. DoWindow calls it
-// through SnapshotNow before destructively flushing windows, so the
-// persisted offset can never lag behind a flush that already deleted
-// the windows holding the dedup offsets.
-func (c *PushAndPullInMemoryContext[A, B]) OnSnapshot(fn func() error) {
-	c.snapshotNow = fn
-}
-
-func (c *PushAndPullInMemoryContext[A, B]) SnapshotNow() error {
-	if c.snapshotNow == nil {
-		return nil
-	}
-	return c.snapshotNow()
+	mu       sync.Mutex
+	state    *PullPushContextState
+	stream   stream.Stream[schema.Schema]
+	simulate *SimulateProblem
 }
 
 func (c *PushAndPullInMemoryContext[A, B]) PullIn() (*stream.Item[Data[A]], error) {

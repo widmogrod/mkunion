@@ -168,7 +168,7 @@ func TestProjection_HappyPath(t *testing.T) {
 		}
 
 		return concat, nil
-	})
+	}, NoSnapshot{})
 	assert.NoError(t, err)
 
 	orderOfEvents = []string{}
@@ -223,8 +223,7 @@ func TestProjection_Recovery(t *testing.T) {
 			},
 			store,
 		).
-			WithMaxRecoveryAttempts(recoveryAttempts).
-			WithAutoSnapshot(false)
+			WithMaxRecoveryAttempts(recoveryAttempts)
 
 	err := Recovery[*PullPushContextState](
 		recovery,
@@ -300,8 +299,7 @@ func TestProjection_Recovery(t *testing.T) {
 			},
 			store,
 		).
-			WithMaxRecoveryAttempts(recoveryAttempts).
-			WithAutoSnapshot(true)
+			WithMaxRecoveryAttempts(recoveryAttempts)
 
 	windowStore := NewWindowInMemoryStore[float64]("window-store")
 
@@ -324,7 +322,7 @@ func TestProjection_Recovery(t *testing.T) {
 			return DoWindow[int, float64](ctx, windowStore, wd, fm, td, 0, func(x int, agg float64) (float64, error) {
 				time.Sleep(50 * time.Millisecond)
 				return float64(x) + agg, nil
-			})
+			}, recovery)
 		},
 	)
 	assert.NoError(t, err)
@@ -406,6 +404,10 @@ func TestProjection_Recovery(t *testing.T) {
 					err = ctx.AckOffset(val.Offset)
 					if err != nil {
 						return fmt.Errorf("projection.DoSink: ack offset: %w", err)
+					}
+					err = recovery.Snapshot(ctx.CurrentState())
+					if err != nil {
+						return fmt.Errorf("projection.DoSink: snapshot: %w", err)
 					}
 				}
 			}

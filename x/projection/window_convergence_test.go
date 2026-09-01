@@ -113,7 +113,7 @@ func TestDoWindow_FaultInjection_ConvergesToFaultFreeResult(t *testing.T) {
 			return DoWindow[int, int](ctx, windowStore, &FixedWindow{Width: time.Duration(windowWidth)}, &Discard{}, &AtWatermark{}, 0,
 				func(x int, agg int) (int, error) {
 					return x + agg, nil
-				})
+				}, recovery)
 		},
 	)
 	require.NoError(t, err)

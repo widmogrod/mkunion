@@ -1,13 +1,10 @@
 package projection
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
-	"sync"
-	"time"
 )
 
 var (
@@ -18,13 +15,28 @@ const (
 	RecoveryRecordType = "recovery-state"
 )
 
+// Snapshotter persists a processor's position so a retry can resume from
+// it. Recovery is explicit: code that makes progress calls Snapshot at the
+// moments that matter (after a unit of work, before a destructive step),
+// exactly like a caller would.
+type Snapshotter interface {
+	Snapshot(state SnapshotState) error
+}
+
+// NoSnapshot is the explicit choice to not checkpoint: a crash restarts
+// from the beginning.
+type NoSnapshot struct{}
+
+func (NoSnapshot) Snapshot(SnapshotState) error { return nil }
+
+var _ Snapshotter = (*RecoveryOptions[SnapshotState])(nil)
+
 func NewRecoveryOptions(id string, init func() SnapshotState, store schemaless.Repository[SnapshotState]) *RecoveryOptions[SnapshotState] {
 	return &RecoveryOptions[SnapshotState]{
 		id:                  id,
 		init:                init,
 		store:               store,
 		maxRecoveryAttempts: 3,
-		autoSnapshot:        true,
 	}
 }
 
@@ -33,35 +45,11 @@ type RecoveryOptions[A SnapshotState] struct {
 	init                func() A
 	store               schemaless.Repository[A]
 	maxRecoveryAttempts uint8
-	autoSnapshot        bool
-	// mu serializes SnapshotFrom so the periodic snapshot goroutine cannot
-	// overwrite a fresher snapshot taken by the DoWindow flush barrier
-	mu sync.Mutex
-}
-
-func (options *RecoveryOptions[A]) WithAutoSnapshot(x bool) *RecoveryOptions[A] {
-	options.autoSnapshot = x
-	return options
 }
 
 func (options *RecoveryOptions[A]) WithMaxRecoveryAttempts(x uint8) *RecoveryOptions[A] {
 	options.maxRecoveryAttempts = x
 	return options
-}
-
-func (options *RecoveryOptions[A]) SnapshotFrom(x SnapshotContext) error {
-	if x == nil {
-		return fmt.Errorf("projection.RecoveryOptions: SnapshotFrom: nil context")
-	}
-
-	options.mu.Lock()
-	defer options.mu.Unlock()
-
-	y, ok := any(x.CurrentState()).(A)
-	if !ok {
-		return fmt.Errorf("projection.RecoveryOptions: SnapshotFrom: invalid context type %T, expects %T", x, options.init)
-	}
-	return options.Snapshot(y)
 }
 
 func (options *RecoveryOptions[A]) Snapshot(x A) error {
@@ -138,70 +126,28 @@ func Recovery[T SnapshotState, A, B any](
 ) error {
 	maxAttempts := recovery.maxRecoveryAttempts
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	for {
-		select {
-		case <-ctx.Done():
-			log.Debugf("projection.Recovery: context done")
-			return nil
-
-		default:
-			state, err := recovery.LatestSnapshot()
-			if err != nil {
-				return fmt.Errorf("projection.Recovery: load last state in store; %w", err)
-			}
-
-			workCtx, err := buildCtx(any(state).(T))
-			if err != nil {
-				return fmt.Errorf("projection.Recovery: build context; %w", err)
-			}
-			workCtx.OnSnapshot(func() error {
-				return recovery.SnapshotFrom(workCtx)
-			})
-
-			// The snapshot goroutine must not outlive this attempt: a leaked
-			// goroutine would keep snapshotting a stale context while the next
-			// attempt mutates the same underlying state.
-			attemptCtx, attemptCancel := context.WithCancel(ctx)
-			var snapshotDone chan struct{}
-			if recovery.autoSnapshot {
-				snapshotDone = make(chan struct{})
-				go func() {
-					defer close(snapshotDone)
-					for {
-						select {
-						case <-attemptCtx.Done():
-							return
-						case <-time.After(100 * time.Millisecond):
-							err := recovery.SnapshotFrom(workCtx)
-							if err != nil {
-								log.Errorf("projection.Recovery: save last state in store; %s", err)
-								cancel()
-								return
-							}
-						}
-					}
-				}()
-			}
-
-			err = f(workCtx)
-			attemptCancel()
-			if snapshotDone != nil {
-				<-snapshotDone
-			}
-			if err == nil {
-				return nil
-			}
-
-			log.Debugf("projection.Recovery: recent operation error %s; %d attempts left", err, maxAttempts)
-
-			if maxAttempts == 0 {
-				return fmt.Errorf("projection.Recovery: last operation error %w; %w", err, ErrMaxRecoveryAttemptsReached)
-			}
-
-			maxAttempts--
+		state, err := recovery.LatestSnapshot()
+		if err != nil {
+			return fmt.Errorf("projection.Recovery: load last state in store; %w", err)
 		}
+
+		workCtx, err := buildCtx(any(state).(T))
+		if err != nil {
+			return fmt.Errorf("projection.Recovery: build context; %w", err)
+		}
+
+		err = f(workCtx)
+		if err == nil {
+			return nil
+		}
+
+		log.Debugf("projection.Recovery: recent operation error %s; %d attempts left", err, maxAttempts)
+
+		if maxAttempts == 0 {
+			return fmt.Errorf("projection.Recovery: last operation error %w; %w", err, ErrMaxRecoveryAttemptsReached)
+		}
+
+		maxAttempts--
 	}
 }

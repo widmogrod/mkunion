@@ -100,7 +100,7 @@ func TestDoWindowErrors(t *testing.T) {
 			wd, fm, td, "",
 			func(x int, agg string) (string, error) {
 				return "", errors.New("merge boom")
-			})
+			}, NoSnapshot{})
 		assert.ErrorContains(t, err, "merge boom")
 	})
 
@@ -119,7 +119,7 @@ func TestDoWindowErrors(t *testing.T) {
 					return "", errors.New("second merge boom")
 				}
 				return fmt.Sprintf("%d", x), nil
-			})
+			}, NoSnapshot{})
 		assert.ErrorContains(t, err, "second merge boom")
 		assert.GreaterOrEqual(t, calls["all"], 2)
 	})
@@ -132,7 +132,7 @@ func TestDoWindowErrors(t *testing.T) {
 			windowCtx(dataStream, "in", "out"),
 			&WindowInMemoryStore[string]{store: &failingWindowRepo{getErr: errors.New("db down")}, recordType: "w"},
 			wd, fm, td, "",
-			func(x int, agg string) (string, error) { return agg, nil })
+			func(x int, agg string) (string, error) { return agg, nil }, NoSnapshot{})
 		assert.ErrorContains(t, err, "load key=")
 	})
 
@@ -144,7 +144,7 @@ func TestDoWindowErrors(t *testing.T) {
 			windowCtx(dataStream, "in", "out"),
 			&WindowInMemoryStore[string]{store: &failingWindowRepo{updateErr: errors.New("db down")}, recordType: "w"},
 			wd, fm, td, "",
-			func(x int, agg string) (string, error) { return agg, nil })
+			func(x int, agg string) (string, error) { return agg, nil }, NoSnapshot{})
 		assert.ErrorContains(t, err, "save key=")
 	})
 
@@ -156,7 +156,7 @@ func TestDoWindowErrors(t *testing.T) {
 			windowCtx(dataStream, "in", "out"),
 			&WindowInMemoryStore[string]{store: &failingWindowRepo{findErr: errors.New("db down")}, recordType: "w"},
 			wd, fm, td, "",
-			func(x int, agg string) (string, error) { return agg, nil })
+			func(x int, agg string) (string, error) { return agg, nil }, NoSnapshot{})
 		assert.ErrorContains(t, err, "flush find")
 	})
 
@@ -170,7 +170,7 @@ func TestDoWindowErrors(t *testing.T) {
 			windowCtx(dataStream, "in", ""),
 			NewWindowInMemoryStore[string]("w"),
 			wd, fm, td, "",
-			func(x int, agg string) (string, error) { return fmt.Sprintf("%d", x), nil })
+			func(x int, agg string) (string, error) { return fmt.Sprintf("%d", x), nil }, NoSnapshot{})
 		assert.ErrorContains(t, err, "flush push")
 	})
 
@@ -183,7 +183,7 @@ func TestDoWindowErrors(t *testing.T) {
 			windowCtx(dataStream, "in", "out"),
 			&WindowInMemoryStore[string]{store: repo, recordType: "w"},
 			wd, fm, td, "",
-			func(x int, agg string) (string, error) { return fmt.Sprintf("%d", x), nil })
+			func(x int, agg string) (string, error) { return fmt.Sprintf("%d", x), nil }, NoSnapshot{})
 		assert.ErrorContains(t, err, "flush delete")
 	})
 
@@ -194,7 +194,7 @@ func TestDoWindowErrors(t *testing.T) {
 			windowCtx(dataStream, "", "out"), // empty pull topic cannot be pulled
 			NewWindowInMemoryStore[string]("w"),
 			wd, fm, td, "",
-			func(x int, agg string) (string, error) { return agg, nil })
+			func(x int, agg string) (string, error) { return agg, nil }, NoSnapshot{})
 		assert.ErrorContains(t, err, "pull")
 	})
 }
