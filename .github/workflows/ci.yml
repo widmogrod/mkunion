@@ -13,7 +13,7 @@ jobs:
         id: go
 
       - name: Set up Docker Compose
-        uses: docker/setup-compose-action@v1
+        uses: docker/setup-compose-action@v2
 
       - run: go get -v -t -d ./...
 
