@@ -240,359 +240,375 @@ func (i *InMemoryTwoInterpreter) run(ctx context.Context, dag Node) error {
 	return MatchNodeR1(
 		dag,
 		func(x *DoWindow) error {
-			log.Debugln("DoWindow: Start ", i.str(x))
-			var lastOffset int = 0
+			return i.runDoWindow(ctx, x)
+		},
+		func(x *DoMap) error {
+			return i.runDoMap(ctx, x)
+		},
+		func(x *DoLoad) error {
+			return i.runDoLoad(ctx, x)
+		},
+		func(x *DoJoin) error {
+			return i.runDoJoin(ctx, x)
+		},
+	)
+}
 
-			trigger := NewTriggerManager(x.Ctx.td)
+func (i *InMemoryTwoInterpreter) runDoWindow(ctx context.Context, x *DoWindow) error {
+	log.Debugln("DoWindow: Start ", i.str(x))
+	var lastOffset int = 0
 
-			timeTickers := NewTimeTicker()
-			timeTickers.Register(x.Ctx.td, trigger)
-			defer timeTickers.Unregister(x.Ctx.td)
+	trigger := NewTriggerManager(x.Ctx.td)
 
-			wb := NewWindowBuffer(x.Ctx.wd, trigger)
-			returning := func(item Item) error {
-				key := KeyedWindowKey(ToKeyedWindowFromItem(&item))
-				key = KeyWithNamespace(key, x.Ctx.Name())
+	timeTickers := NewTimeTicker()
+	timeTickers.Register(x.Ctx.td, trigger)
+	defer timeTickers.Unregister(x.Ctx.td)
 
-				return i.pubsub.Publish(ctx, x, Message{
-					Key:  item.Key,
-					Item: &item,
+	wb := NewWindowBuffer(x.Ctx.wd, trigger)
+	returning := func(item Item) error {
+		key := KeyedWindowKey(ToKeyedWindowFromItem(&item))
+		key = KeyWithNamespace(key, x.Ctx.Name())
+
+		return i.pubsub.Publish(ctx, x, Message{
+			Key:  item.Key,
+			Item: &item,
+		})
+	}
+
+	trigger.WhenTrigger(func(kw *KeyedWindow) {
+		wb.EachKeyedWindow(kw, func(group *ItemGroupedByWindow) {
+			err := returning(ToElement(group))
+			if err != nil {
+				panic(err)
+			}
+			wb.RemoveItemGropedByWindow(group)
+		})
+	})
+
+	// Subscribe first before signaling ready
+	err := i.pubsub.Subscribe(
+		ctx,
+		x.Input,
+		lastOffset,
+		func(msg Message) error {
+			if msg.Item != nil {
+				log.Info("DoWindow: buffer msg", msg)
+				z := *msg.Item
+				wb.Append(z)
+			} else if msg.Watermark != nil {
+				log.Info("DoWindow: watermark", msg)
+				trigger.SignalWatermark(*msg.Watermark)
+
+				// forward watermark
+				err := i.pubsub.Publish(ctx, x, Message{
+					Key:       msg.Key,
+					Watermark: msg.Watermark,
 				})
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				panic("DoWindow: unknown message type")
 			}
 
-			trigger.WhenTrigger(func(kw *KeyedWindow) {
-				wb.EachKeyedWindow(kw, func(group *ItemGroupedByWindow) {
-					err := returning(ToElement(group))
-					if err != nil {
-						panic(err)
-					}
-					wb.RemoveItemGropedByWindow(group)
-				})
-			})
+			return nil
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("interpreter.Window(1) %w", err)
+	}
 
-			// Subscribe first before signaling ready
-			err := i.pubsub.Subscribe(
-				ctx,
-				x.Input,
-				lastOffset,
-				func(msg Message) error {
-					if msg.Item != nil {
-						log.Info("DoWindow: buffer msg", msg)
-						z := *msg.Item
-						wb.Append(z)
-					} else if msg.Watermark != nil {
-						log.Info("DoWindow: watermark", msg)
-						trigger.SignalWatermark(*msg.Watermark)
+	// Trigger final window flush with max watermark
+	trigger.SignalWatermark(math.MaxInt64)
 
-						// forward watermark
+	log.Debugln("DoWindow: Finish", i.str(x))
+	i.pubsub.Finish(ctx, x)
+
+	return nil
+}
+
+func (i *InMemoryTwoInterpreter) runDoMap(ctx context.Context, x *DoMap) error {
+	log.Debugln("DoMap: Start ", i.str(x))
+	var lastOffset int = 0
+
+	// Subscribe first before signaling ready
+	err := i.pubsub.Subscribe(
+		ctx,
+		x.Input,
+		lastOffset,
+		func(msg Message) error {
+			if msg.Item != nil {
+				log.Info("DoMap buffer msg", msg)
+				z := *msg.Item
+
+				// If the item doesn't have a window, it means it hasn't been windowed yet
+				// Just pass it through without accumulation logic (only windows groups can be accumulated)
+				if z.Window == nil {
+					return x.OnMap.Process(z, func(item Item) {
 						err := i.pubsub.Publish(ctx, x, Message{
-							Key:       msg.Key,
-							Watermark: msg.Watermark,
+							Key:  item.Key,
+							Item: &item,
 						})
 						if err != nil {
 							panic(err)
 						}
-					} else {
-						panic("DoWindow: unknown message type")
-					}
+					})
+				}
 
-					return nil
-				},
-			)
-			if err != nil {
-				return fmt.Errorf("interpreter.Window(1) %w", err)
-			}
+				key := KeyedWindowKey(ToKeyedWindowFromItem(&z))
+				key = KeyWithNamespace(key, x.Ctx.Name())
 
-			// Trigger final window flush with max watermark
-			trigger.SignalWatermark(math.MaxInt64)
+				return MatchWindowFlushModeR1(
+					x.Ctx.fm,
+					func(y *Accumulate) error {
+						previous, err := i.bagItem.Get(key)
 
-			log.Debugln("DoWindow: Finish", i.str(x))
-			i.pubsub.Finish(ctx, x)
+						isError := err != nil && err != NotFound
+						isFound := err == nil
+						if isError {
+							panic(err)
+						}
 
-			return nil
-		},
-		func(x *DoMap) error {
-			log.Debugln("DoMap: Start ", i.str(x))
-			var lastOffset int = 0
+						var item2 Item
+						if isFound {
+							item2 = Item{
+								Key:    z.Key,
+								Window: z.Window,
+								Data: schema.MkMap(
+									schema.MkField("Previous", previous.Data),
+									schema.MkField("Current", z.Data),
+								),
+								EventTime: z.EventTime,
+							}
+						} else {
+							item2 = Item{
+								Key:    z.Key,
+								Window: z.Window,
+								Data: schema.MkMap(
+									schema.MkField("Current", z.Data),
+								),
+								EventTime: z.EventTime,
+							}
+						}
 
-			// Subscribe first before signaling ready
-			err := i.pubsub.Subscribe(
-				ctx,
-				x.Input,
-				lastOffset,
-				func(msg Message) error {
-					if msg.Item != nil {
-						log.Info("DoMap buffer msg", msg)
-						z := *msg.Item
+						return x.OnMap.Process(item2, func(item Item) {
+							err := i.bagItem.Set(key, item)
+							if err != nil {
+								panic(err)
+							}
 
-						// If the item doesn't have a window, it means it hasn't been windowed yet
-						// Just pass it through without accumulation logic (only windows groups can be accumulated)
-						if z.Window == nil {
-							return x.OnMap.Process(z, func(item Item) {
-								err := i.pubsub.Publish(ctx, x, Message{
-									Key:  item.Key,
-									Item: &item,
+							err = i.pubsub.Publish(ctx, x, Message{
+								Key:  item.Key,
+								Item: &item,
+							})
+							if err != nil {
+								panic(err)
+							}
+						})
+					},
+					func(y *Discard) error {
+						return x.OnMap.Process(z, func(item Item) {
+							err := i.pubsub.Publish(ctx, x, Message{
+								Key:  item.Key,
+								Item: &item,
+							})
+							if err != nil {
+								panic(err)
+							}
+						})
+					},
+					func(y *AccumulatingAndRetracting) error {
+						previous, err := i.bagItem.Get(key)
+
+						isError := err != nil && err != NotFound
+						isFound := err == nil
+						if isError {
+							panic(err)
+						}
+
+						log.Errorln("DoMap: AccumulatingAndRetracting ", key)
+						log.Errorln("DoMap: AccumulatingAndRetracting ", isError, isFound)
+
+						var item2 Item
+						if isFound {
+							item2 = Item{
+								Key:    z.Key,
+								Window: z.Window,
+								Data: schema.MkMap(
+									schema.MkField("Previous", previous.Data),
+									schema.MkField("Current", z.Data),
+								),
+								EventTime: z.EventTime,
+							}
+						} else {
+							item2 = Item{
+								Key:    z.Key,
+								Window: z.Window,
+								Data: schema.MkMap(
+									schema.MkField("Current", z.Data),
+								),
+								EventTime: z.EventTime,
+							}
+						}
+
+						if isFound {
+							return x.OnMap.Process(item2, func(newAggregate Item) {
+								err := i.bagItem.Set(key, newAggregate)
+								if err != nil {
+									panic(err)
+								}
+
+								err = i.pubsub.Publish(ctx, x, Message{
+									Key: newAggregate.Key,
+									Item: &Item{
+										Key: newAggregate.Key,
+										Data: PackRetractAndAggregate(
+											previous.Data,
+											newAggregate.Data,
+										),
+										EventTime: newAggregate.EventTime,
+										Window:    newAggregate.Window,
+										Type:      ItemRetractAndAggregate,
+									},
 								})
+
 								if err != nil {
 									panic(err)
 								}
 							})
 						}
 
-						key := KeyedWindowKey(ToKeyedWindowFromItem(&z))
-						key = KeyWithNamespace(key, x.Ctx.Name())
+						return x.OnMap.Process(item2, func(item Item) {
+							err := i.bagItem.Set(key, item)
+							if err != nil {
+								panic(err)
+							}
 
-						return MatchWindowFlushModeR1(
-							x.Ctx.fm,
-							func(y *Accumulate) error {
-								previous, err := i.bagItem.Get(key)
-
-								isError := err != nil && err != NotFound
-								isFound := err == nil
-								if isError {
-									panic(err)
-								}
-
-								var item2 Item
-								if isFound {
-									item2 = Item{
-										Key:    z.Key,
-										Window: z.Window,
-										Data: schema.MkMap(
-											schema.MkField("Previous", previous.Data),
-											schema.MkField("Current", z.Data),
-										),
-										EventTime: z.EventTime,
-									}
-								} else {
-									item2 = Item{
-										Key:    z.Key,
-										Window: z.Window,
-										Data: schema.MkMap(
-											schema.MkField("Current", z.Data),
-										),
-										EventTime: z.EventTime,
-									}
-								}
-
-								return x.OnMap.Process(item2, func(item Item) {
-									err := i.bagItem.Set(key, item)
-									if err != nil {
-										panic(err)
-									}
-
-									err = i.pubsub.Publish(ctx, x, Message{
-										Key:  item.Key,
-										Item: &item,
-									})
-									if err != nil {
-										panic(err)
-									}
-								})
-							},
-							func(y *Discard) error {
-								return x.OnMap.Process(z, func(item Item) {
-									err := i.pubsub.Publish(ctx, x, Message{
-										Key:  item.Key,
-										Item: &item,
-									})
-									if err != nil {
-										panic(err)
-									}
-								})
-							},
-							func(y *AccumulatingAndRetracting) error {
-								previous, err := i.bagItem.Get(key)
-
-								isError := err != nil && err != NotFound
-								isFound := err == nil
-								if isError {
-									panic(err)
-								}
-
-								log.Errorln("DoMap: AccumulatingAndRetracting ", key)
-								log.Errorln("DoMap: AccumulatingAndRetracting ", isError, isFound)
-
-								var item2 Item
-								if isFound {
-									item2 = Item{
-										Key:    z.Key,
-										Window: z.Window,
-										Data: schema.MkMap(
-											schema.MkField("Previous", previous.Data),
-											schema.MkField("Current", z.Data),
-										),
-										EventTime: z.EventTime,
-									}
-								} else {
-									item2 = Item{
-										Key:    z.Key,
-										Window: z.Window,
-										Data: schema.MkMap(
-											schema.MkField("Current", z.Data),
-										),
-										EventTime: z.EventTime,
-									}
-								}
-
-								if isFound {
-									return x.OnMap.Process(item2, func(newAggregate Item) {
-										err := i.bagItem.Set(key, newAggregate)
-										if err != nil {
-											panic(err)
-										}
-
-										err = i.pubsub.Publish(ctx, x, Message{
-											Key: newAggregate.Key,
-											Item: &Item{
-												Key: newAggregate.Key,
-												Data: PackRetractAndAggregate(
-													previous.Data,
-													newAggregate.Data,
-												),
-												EventTime: newAggregate.EventTime,
-												Window:    newAggregate.Window,
-												Type:      ItemRetractAndAggregate,
-											},
-										})
-
-										if err != nil {
-											panic(err)
-										}
-									})
-								}
-
-								return x.OnMap.Process(item2, func(item Item) {
-									err := i.bagItem.Set(key, item)
-									if err != nil {
-										panic(err)
-									}
-
-									err = i.pubsub.Publish(ctx, x, Message{
-										Key:  item.Key,
-										Item: &item,
-									})
-									if err != nil {
-										panic(err)
-									}
-								})
-							},
-						)
-					} else if msg.Watermark != nil {
-						log.Info("DoMap: watermark", msg)
-
-						// forward watermark
-						err := i.pubsub.Publish(ctx, x, Message{
-							Key:       msg.Key,
-							Watermark: msg.Watermark,
+							err = i.pubsub.Publish(ctx, x, Message{
+								Key:  item.Key,
+								Item: &item,
+							})
+							if err != nil {
+								panic(err)
+							}
 						})
-						if err != nil {
-							panic(err)
-						}
-					} else {
-						panic("DoMap: unknown message type")
-					}
+					},
+				)
+			} else if msg.Watermark != nil {
+				log.Info("DoMap: watermark", msg)
 
-					return nil
-				},
-			)
-			if err != nil {
-				return fmt.Errorf("interpreter.Map(1) %w", err)
-			}
-
-			log.Debugln("DoMap: Finish", i.str(x))
-			i.pubsub.Finish(ctx, x)
-
-			return nil
-		},
-		func(x *DoLoad) error {
-			var err error
-			log.Debugln("DoLoad: Start", i.str(x))
-			err = x.OnLoad.Process(Item{}, func(item Item) {
-				if err != nil {
-					return
-				}
-
-				if item.EventTime == 0 {
-					item.EventTime = time.Now().UnixNano()
-				}
-
-				//// calculate watermark
-				//if item.EventTime > i.watermark {
-				//	i.watermark = item.EventTime
-				//}
-
-				i.stats.Incr(fmt.Sprintf("load[%s].returning", x.Ctx.Name()), 1)
-
-				err = i.pubsub.Publish(ctx, x, Message{
-					Key:  item.Key,
-					Item: &item,
+				// forward watermark
+				err := i.pubsub.Publish(ctx, x, Message{
+					Key:       msg.Key,
+					Watermark: msg.Watermark,
 				})
-			})
-
-			if err != nil {
-				return fmt.Errorf("interpreter.DoLoad(1) %w", err)
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				panic("DoMap: unknown message type")
 			}
-
-			var mi int64 = math.MaxInt64
-			err = i.pubsub.Publish(ctx, x, Message{
-				Key:       "none",
-				Watermark: &mi,
-			})
-
-			log.Debugln("DoLoad: Finish", i.str(x))
-			i.pubsub.Finish(ctx, x)
-
-			return nil
-		},
-		func(x *DoJoin) error {
-			lastOffset := make([]int, len(x.Input))
-			for idx, _ := range x.Input {
-				lastOffset[idx] = 0
-			}
-
-			group := ExecutionGroup{ctx: ctx}
-
-			for idx := range x.Input {
-				func(idx int) {
-					group.Go(func() error {
-						return i.pubsub.Subscribe(
-							ctx,
-							x.Input[idx],
-							lastOffset[idx],
-							func(msg Message) error {
-								lastOffset[idx] = msg.Offset
-
-								i.stats.Incr(fmt.Sprintf("join[%s].returning", x.Ctx.Name()), 1)
-
-								// join streams and publish
-								err := i.pubsub.Publish(ctx, x, Message{
-									Key:       msg.Key,
-									Item:      msg.Item,
-									Watermark: msg.Watermark,
-								})
-
-								if err != nil {
-									return fmt.Errorf("interpreter.DoJoin(1) %w", err)
-								}
-
-								return nil
-							},
-						)
-					})
-				}(idx)
-			}
-
-			if err := group.Wait(); err != nil {
-				return fmt.Errorf("interpreter.DoJoin(1) %w", err)
-			}
-
-			log.Debugln("DoJoin: Finish", i.str(x))
-			i.pubsub.Finish(ctx, x)
 
 			return nil
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("interpreter.Map(1) %w", err)
+	}
+
+	log.Debugln("DoMap: Finish", i.str(x))
+	i.pubsub.Finish(ctx, x)
+
+	return nil
+}
+
+func (i *InMemoryTwoInterpreter) runDoLoad(ctx context.Context, x *DoLoad) error {
+	var err error
+	log.Debugln("DoLoad: Start", i.str(x))
+	err = x.OnLoad.Process(Item{}, func(item Item) {
+		if err != nil {
+			return
+		}
+
+		if item.EventTime == 0 {
+			item.EventTime = time.Now().UnixNano()
+		}
+
+		//// calculate watermark
+		//if item.EventTime > i.watermark {
+		//	i.watermark = item.EventTime
+		//}
+
+		i.stats.Incr(fmt.Sprintf("load[%s].returning", x.Ctx.Name()), 1)
+
+		err = i.pubsub.Publish(ctx, x, Message{
+			Key:  item.Key,
+			Item: &item,
+		})
+	})
+
+	if err != nil {
+		return fmt.Errorf("interpreter.DoLoad(1) %w", err)
+	}
+
+	var mi int64 = math.MaxInt64
+	err = i.pubsub.Publish(ctx, x, Message{
+		Key:       "none",
+		Watermark: &mi,
+	})
+
+	log.Debugln("DoLoad: Finish", i.str(x))
+	i.pubsub.Finish(ctx, x)
+
+	return nil
+}
+
+func (i *InMemoryTwoInterpreter) runDoJoin(ctx context.Context, x *DoJoin) error {
+	lastOffset := make([]int, len(x.Input))
+	for idx, _ := range x.Input {
+		lastOffset[idx] = 0
+	}
+
+	group := ExecutionGroup{ctx: ctx}
+
+	for idx := range x.Input {
+		func(idx int) {
+			group.Go(func() error {
+				return i.pubsub.Subscribe(
+					ctx,
+					x.Input[idx],
+					lastOffset[idx],
+					func(msg Message) error {
+						lastOffset[idx] = msg.Offset
+
+						i.stats.Incr(fmt.Sprintf("join[%s].returning", x.Ctx.Name()), 1)
+
+						// join streams and publish
+						err := i.pubsub.Publish(ctx, x, Message{
+							Key:       msg.Key,
+							Item:      msg.Item,
+							Watermark: msg.Watermark,
+						})
+
+						if err != nil {
+							return fmt.Errorf("interpreter.DoJoin(1) %w", err)
+						}
+
+						return nil
+					},
+				)
+			})
+		}(idx)
+	}
+
+	if err := group.Wait(); err != nil {
+		return fmt.Errorf("interpreter.DoJoin(1) %w", err)
+	}
+
+	log.Debugln("DoJoin: Finish", i.str(x))
+	i.pubsub.Finish(ctx, x)
+
+	return nil
 }
 
 func (i *InMemoryTwoInterpreter) str(x Node) string {
