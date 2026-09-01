@@ -4,11 +4,9 @@ package example
 import (
 	"github.com/widmogrod/mkunion/f"
 	"github.com/widmogrod/mkunion/x/shared"
-	"testing"
 )
 
 func init() {
-	shared.TypeRegistryStore[any]("any")
 	shared.TypeRegistryStore[AnyTime[any]]("github.com/widmogrod/mkunion/example.AnyTime[any]")
 	shared.TypeRegistryStore[AnyTime[Hours]]("github.com/widmogrod/mkunion/example.AnyTime[github.com/widmogrod/mkunion/example.Hours]")
 	shared.TypeRegistryStore[AnyTime[Seconds]]("github.com/widmogrod/mkunion/example.AnyTime[github.com/widmogrod/mkunion/example.Seconds]")
@@ -77,6 +75,4 @@ func init() {
 	shared.TypeRegistryStore[f.Result[f.Option[User], APIError]]("github.com/widmogrod/mkunion/f.Result[github.com/widmogrod/mkunion/f.Option[github.com/widmogrod/mkunion/example.User],github.com/widmogrod/mkunion/example.APIError]")
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/f.Result[github.com/widmogrod/mkunion/f.Option[github.com/widmogrod/mkunion/example.User],github.com/widmogrod/mkunion/example.APIError]", f.ResultFromJSON[f.Option[User], APIError], f.ResultToJSON[f.Option[User], APIError])
 	shared.TypeRegistryStore[f.Some[User]]("github.com/widmogrod/mkunion/f.Some[github.com/widmogrod/mkunion/example.User]")
-	shared.TypeRegistryStore[testing.B]("testing.B")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

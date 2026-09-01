@@ -3,7 +3,6 @@ package testutils
 
 import (
 	"github.com/widmogrod/mkunion/x/shared"
-	"testing"
 	"time"
 )
 
@@ -44,6 +43,5 @@ func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Record[int]", RecordFromJSON[int], RecordToJSON[int])
 	shared.TypeRegistryStore[Tree2]("github.com/widmogrod/mkunion/x/generators/testutils.Tree2")
 	shared.TypeRegistryStore[int64]("int64")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 	shared.TypeRegistryStore[time.Duration]("time.Duration")
 }

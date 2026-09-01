@@ -5,7 +5,6 @@ import (
 	"github.com/widmogrod/mkunion/x/shape"
 	"github.com/widmogrod/mkunion/x/shared"
 	"strings"
-	"testing"
 )
 
 func init() {
@@ -51,5 +50,4 @@ func init() {
 	shared.TypeRegistryStore[shape.UnionLike]("github.com/widmogrod/mkunion/x/shape.UnionLike")
 	shared.TypeRegistryStore[string]("string")
 	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

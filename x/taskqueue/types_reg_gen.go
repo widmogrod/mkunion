@@ -7,21 +7,26 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"github.com/widmogrod/mkunion/x/workflow"
-	"testing"
 )
 
 func init() {
-	shared.TypeRegistryStore[sqs.Client]("github.com/aws/aws-sdk-go-v2/service/sqs.Client")
+	shared.TypeRegistryStore[sqs.DeleteMessageBatchInput]("github.com/aws/aws-sdk-go-v2/service/sqs.DeleteMessageBatchInput")
+	shared.TypeRegistryStore[sqs.DeleteMessageBatchOutput]("github.com/aws/aws-sdk-go-v2/service/sqs.DeleteMessageBatchOutput")
+	shared.TypeRegistryStore[sqs.ReceiveMessageInput]("github.com/aws/aws-sdk-go-v2/service/sqs.ReceiveMessageInput")
+	shared.TypeRegistryStore[sqs.ReceiveMessageOutput]("github.com/aws/aws-sdk-go-v2/service/sqs.ReceiveMessageOutput")
+	shared.TypeRegistryStore[sqs.SendMessageInput]("github.com/aws/aws-sdk-go-v2/service/sqs.SendMessageInput")
+	shared.TypeRegistryStore[sqs.SendMessageOutput]("github.com/aws/aws-sdk-go-v2/service/sqs.SendMessageOutput")
+	shared.TypeRegistryStore[schemaless.FindingRecords[any]]("github.com/widmogrod/mkunion/x/storage/schemaless.FindingRecords[any]")
+	shared.TypeRegistryStore[schemaless.PageResult[any]]("github.com/widmogrod/mkunion/x/storage/schemaless.PageResult[any]")
+	shared.TypeRegistryStore[schemaless.Record[schema.Schema]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[schemaless.Record[workflow.State]]("github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.State]")
+	shared.TypeRegistryStore[schemaless.UpdateRecordsResult[any]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecordsResult[any]")
+	shared.TypeRegistryStore[schemaless.UpdateRecords[any]]("github.com/widmogrod/mkunion/x/storage/schemaless.UpdateRecords[any]")
 	shared.TypeRegistryStore[Description]("github.com/widmogrod/mkunion/x/taskqueue.Description")
 	shared.TypeRegistryStore[FunctionProcessor[schemaless.Record[workflow.State]]]("github.com/widmogrod/mkunion/x/taskqueue.FunctionProcessor[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.State]]")
 	shared.TypeRegistryStore[Queuer[any]]("github.com/widmogrod/mkunion/x/taskqueue.Queuer[any]")
 	shared.TypeRegistryStore[SQSQueue[schemaless.Record[schema.Schema]]]("github.com/widmogrod/mkunion/x/taskqueue.SQSQueue[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/schema.Schema]]")
+	shared.TypeRegistryStore[Task[any]]("github.com/widmogrod/mkunion/x/taskqueue.Task[any]")
 	shared.TypeRegistryStore[Task[schemaless.Record[workflow.State]]]("github.com/widmogrod/mkunion/x/taskqueue.Task[github.com/widmogrod/mkunion/x/storage/schemaless.Record[github.com/widmogrod/mkunion/x/workflow.State]]")
-	shared.TypeRegistryStore[workflow.Flow]("github.com/widmogrod/mkunion/x/workflow.Flow")
-	shared.TypeRegistryStore[workflow.FlowRef]("github.com/widmogrod/mkunion/x/workflow.FlowRef")
-	shared.TypeRegistryStore[workflow.FunctionInput]("github.com/widmogrod/mkunion/x/workflow.FunctionInput")
-	shared.TypeRegistryStore[workflow.FunctionOutput]("github.com/widmogrod/mkunion/x/workflow.FunctionOutput")
 	shared.TypeRegistryStore[string]("string")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

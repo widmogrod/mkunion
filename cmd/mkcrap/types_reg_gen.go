@@ -6,13 +6,12 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
 	"strings"
-	"testing"
 )
 
 func init() {
+	shared.TypeRegistryStore[cli.App]("github.com/urfave/cli/v2.App")
 	shared.TypeRegistryStore[cli.Context]("github.com/urfave/cli/v2.Context")
 	shared.TypeRegistryStore[ast.File]("go/ast.File")
 	shared.TypeRegistryStore[ast.FuncDecl]("go/ast.FuncDecl")
 	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

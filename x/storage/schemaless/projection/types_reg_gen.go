@@ -6,7 +6,6 @@ import (
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
-	"testing"
 )
 
 func init() {
@@ -79,5 +78,4 @@ func init() {
 	shared.TypeRegistryStore[Window]("github.com/widmogrod/mkunion/x/storage/schemaless/projection.Window")
 	shared.TypeRegistryStore[WindowBuffer]("github.com/widmogrod/mkunion/x/storage/schemaless/projection.WindowBuffer")
 	shared.TypeRegistryStore[WindowTrigger]("github.com/widmogrod/mkunion/x/storage/schemaless/projection.WindowTrigger")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

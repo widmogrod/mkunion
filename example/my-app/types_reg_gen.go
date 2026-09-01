@@ -2,6 +2,7 @@
 package main
 
 import (
+	"github.com/sashabaranov/go-openai"
 	"github.com/widmogrod/mkunion/x/machine"
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
@@ -12,6 +13,9 @@ import (
 )
 
 func init() {
+	shared.TypeRegistryStore[echo.Echo](".Echo")
+	shared.TypeRegistryStore[any]("any")
+	shared.TypeRegistryStore[openai.Client]("github.com/sashabaranov/go-openai.Client")
 	shared.TypeRegistryStore[ChatResponses]("github.com/widmogrod/mkunion/example/my-app.ChatResponses")
 	shared.TypeRegistryStore[SystemResponse]("github.com/widmogrod/mkunion/example/my-app.SystemResponse")
 	shared.TypeRegistryStore[UserMessage]("github.com/widmogrod/mkunion/example/my-app.UserMessage")

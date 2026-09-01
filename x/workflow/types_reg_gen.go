@@ -7,7 +7,6 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
 	"strings"
-	"testing"
 )
 
 func init() {
@@ -55,5 +54,4 @@ func init() {
 	shared.TypeRegistryStore[ToStrContext]("github.com/widmogrod/mkunion/x/workflow.ToStrContext")
 	shared.TypeRegistryStore[TryRecover]("github.com/widmogrod/mkunion/x/workflow.TryRecover")
 	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
-	shared.TypeRegistryStore[testing.T]("testing.T")
 }

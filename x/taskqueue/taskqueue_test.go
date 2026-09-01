@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/storage/schemaless"
@@ -95,20 +96,20 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 	repo := typedful.NewTypedRepository[workflow.State](store)
 	proc := &FunctionProcessor[schemaless.Record[workflow.State]]{
 		F: func(task Task[schemaless.Record[workflow.State]]) {
-			//t.Logf("task id: %s \n", task.ID)
-			t.Logf("data id: %s \n", task.Data.ID)
-			t.Logf("version: %d \n", task.Data.Version)
+			//log.Printf("task id: %s \n", task.ID)
+			log.Printf("data id: %s \n", task.Data.ID)
+			log.Printf("version: %d \n", task.Data.Version)
 			work := workflow.NewMachine(di, task.Data.Data)
 			err := work.Handle(nil, &workflow.Run{})
 			//err := work.Handle(&workflow.TryRecover{})
 			if err != nil {
-				t.Logf("err: %s", err)
+				log.Printf("err: %s", err)
 				return
 			}
 
 			newState := work.State()
 			//d, _ := schema.ToJSON(schema.FromPrimitiveGo(newState))
-			//t.Logf("newState: %s", string(d))
+			//log.Printf("newState: %s", string(d))
 
 			saving := []schemaless.Record[workflow.State]{
 				{
@@ -121,17 +122,17 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 
 			if next := workflow.ScheduleNext(newState, di); next != nil {
 				//d, _ := schema.ToJSON(schema.FromPrimitiveGo(next))
-				//t.Logf("next: %s", string(d))
+				//log.Printf("next: %s", string(d))
 				work := workflow.NewMachine(di, nil)
 				err := work.Handle(nil, next)
 				if err != nil {
-					t.Logf("err: %s", err)
+					log.Printf("err: %s", err)
 					return
 				}
 
-				t.Logf("next id=%s", workflow.GetRunIDFromBaseState(work.State()))
+				log.Printf("next id=%s", workflow.GetRunIDFromBaseState(work.State()))
 				//d, _ = schema.ToJSON(schema.FromPrimitiveGo(work.State()))
-				//t.Logf("nextState: %s", string(d))
+				//log.Printf("nextState: %s", string(d))
 
 				saving = append(saving, schemaless.Record[workflow.State]{
 					ID:   workflow.GetRunIDFromBaseState(work.State()),
@@ -150,7 +151,7 @@ AND Data["workflow.Scheduled"].ExpectedRunTimestamp > 0`,
 					// it such case (there was update) new message with new version
 					// will land in queue soon (if it pass selector)
 					t.Log("version conflict, ignoring")
-					t.Logf("err: %s", err)
+					log.Printf("err: %s", err)
 				} else {
 					panic(err)
 				}

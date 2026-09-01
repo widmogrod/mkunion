@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	shared.TypeRegistryStore[kafka.Consumer]("github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")
+	shared.TypeRegistryStore[kafka.ConfigMap]("github.com/confluentinc/confluent-kafka-go/v2/kafka.ConfigMap")
 	shared.TypeRegistryStore[kafka.Message]("github.com/confluentinc/confluent-kafka-go/v2/kafka.Message")
 	shared.TypeRegistryStore[EventTime]("github.com/widmogrod/mkunion/x/stream.EventTime")
 	shared.TypeRegistryStore[FromBeginning]("github.com/widmogrod/mkunion/x/stream.FromBeginning")
@@ -18,6 +18,7 @@ func init() {
 	shared.TypeRegistryStore[Item[schema.Schema]]("github.com/widmogrod/mkunion/x/stream.Item[github.com/widmogrod/mkunion/x/schema.Schema]")
 	shared.TypeRegistryStore[Item[int]]("github.com/widmogrod/mkunion/x/stream.Item[int]")
 	shared.TypeRegistryStore[Item[string]]("github.com/widmogrod/mkunion/x/stream.Item[string]")
+	shared.TypeRegistryStore[KafkaStream[int]]("github.com/widmogrod/mkunion/x/stream.KafkaStream[int]")
 	shared.TypeRegistryStore[Offset]("github.com/widmogrod/mkunion/x/stream.Offset")
 	shared.TypeRegistryStore[SimulateProblem]("github.com/widmogrod/mkunion/x/stream.SimulateProblem")
 	shared.TypeRegistryStore[Stream[any]]("github.com/widmogrod/mkunion/x/stream.Stream[any]")

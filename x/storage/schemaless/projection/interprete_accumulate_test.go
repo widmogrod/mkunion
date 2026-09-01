@@ -2,50 +2,26 @@ package projection
 
 import (
 	"context"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/widmogrod/mkunion/x/schema"
 )
 
-// The accumulate flush mode merges every new windowed value with the
-// previous aggregate; earlier tests covered only Discard and
-// AccumulatingAndRetracting.
-func TestInMemoryInterpreterAccumulate(t *testing.T) {
-	dag := NewDAGBuilder()
-	loaded := dag.
-		Load(&GenerateHandler{
-			Load: func(push func(message Item)) error {
-				for item := range GenerateItemsEvery(withTime(10, 0), 6, 5*time.Millisecond) {
-					push(item)
-				}
-				return nil
-			},
-		})
+// mapAccumulate merges each windowed item with the previously stored
+// aggregate; earlier tests covered only Discard and
+// AccumulatingAndRetracting. This drives the method directly, so no
+// DAG timing is involved.
+func TestMapAccumulateMergesWithPreviousAggregate(t *testing.T) {
+	interp := NewInMemoryTwoInterpreter()
 
-	windowed := loaded.
-		Window(
-			WithFixedWindow(20*time.Millisecond),
-			WithTriggers(&AtWatermark{}),
-		)
-
-	var mu sync.Mutex
-	var processed int
-	windowed.
-		Map(&SimpleProcessHandler{
+	var seen []schema.Schema
+	node := &DoMap{
+		Ctx: NewContextBuilder(),
+		OnMap: &SimpleProcessHandler{
 			P: func(x Item, returning func(Item)) error {
-				mu.Lock()
-				processed++
-				mu.Unlock()
-
-				// under accumulation the handler always receives at least
-				// the Current field; Previous appears on re-flushes
-				_, hasCurrent := schema.GetSchema(x.Data, "Current")
-				assert.True(t, hasCurrent, "accumulated items carry a Current field")
-
+				seen = append(seen, x.Data)
 				returning(Item{
 					Key:       x.Key,
 					Data:      x.Data,
@@ -54,13 +30,50 @@ func TestInMemoryInterpreterAccumulate(t *testing.T) {
 				})
 				return nil
 			},
-		}, WithAccumulate())
+		},
+	}
 
-	interpret := NewInMemoryTwoInterpreter()
-	err := interpret.Run(context.Background(), dag.Build())
-	require.NoError(t, err)
+	require.NoError(t, interp.pubsub.Register(node))
+	go func() {
+		// drain published messages so Publish never blocks
+		_ = interp.pubsub.Subscribe(context.Background(), node, 0, func(Message) error { return nil })
+	}()
 
-	mu.Lock()
-	defer mu.Unlock()
-	assert.Greater(t, processed, 0, "windows must reach the accumulating map")
+	window := &Window{Start: 0, End: 100}
+	item := func(value int64) Item {
+		return Item{
+			Key:       "k",
+			Data:      schema.MkInt(value),
+			EventTime: 10,
+			Window:    window,
+		}
+	}
+	const key = "test-namespace:k"
+
+	t.Run("first item carries only Current and is stored", func(t *testing.T) {
+		require.NoError(t, interp.mapAccumulate(context.Background(), node, item(1), key))
+
+		require.Len(t, seen, 1)
+		_, hasCurrent := schema.GetSchema(seen[0], "Current")
+		_, hasPrevious := schema.GetSchema(seen[0], "Previous")
+		assert.True(t, hasCurrent)
+		assert.False(t, hasPrevious, "no aggregate exists yet")
+
+		stored, err := interp.bagItem.Get(key)
+		require.NoError(t, err)
+		assert.Equal(t, "k", stored.Key)
+	})
+
+	t.Run("second item carries Previous and Current", func(t *testing.T) {
+		require.NoError(t, interp.mapAccumulate(context.Background(), node, item(2), key))
+
+		require.Len(t, seen, 2)
+		_, hasCurrent := schema.GetSchema(seen[1], "Current")
+		_, hasPrevious := schema.GetSchema(seen[1], "Previous")
+		assert.True(t, hasCurrent)
+		assert.True(t, hasPrevious, "the stored aggregate must be offered back")
+
+		current, _ := schema.GetSchema(seen[1], "Current")
+		assert.Equal(t, schema.MkInt(2), current)
+	})
 }
