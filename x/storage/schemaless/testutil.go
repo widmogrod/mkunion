@@ -4,6 +4,9 @@ package schemaless
 type ExampleRecord struct {
 	Name string
 	Age  int
+	// Tags is deliberately a reference type: the spec suite uses it to
+	// verify that stored data never aliases the caller's memory.
+	Tags []string
 }
 
 // refactored exampleUpdateRecords that use Save

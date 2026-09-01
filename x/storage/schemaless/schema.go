@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/widmogrod/mkunion/x/schema"
 	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shared"
 	"github.com/widmogrod/mkunion/x/storage/predicate"
 	"sort"
 	"sync"
@@ -29,6 +30,24 @@ type InMemoryRepository[A any] struct {
 	appendLog *AppendLog[A]
 	mux       sync.RWMutex
 	shapeDef  shape.Shape
+}
+
+// detach deep-copies the record's data so the store and its callers never
+// alias the same value. Real backends get this for free by serializing;
+// the in-memory reference must behave the same, otherwise a caller
+// mutating a loaded record silently rewrites the "persisted" one and
+// recovery/replay semantics diverge from production.
+func (s *InMemoryRepository[A]) detach(record Record[A]) (Record[A], error) {
+	bytes, err := shared.JSONMarshal[A](record.Data)
+	if err != nil {
+		return record, fmt.Errorf("store.InMemoryRepository.detach: marshal; %w", err)
+	}
+	data, err := shared.JSONUnmarshal[A](bytes)
+	if err != nil {
+		return record, fmt.Errorf("store.InMemoryRepository.detach: unmarshal; %w", err)
+	}
+	record.Data = data
+	return record, nil
 }
 
 // Get goes through FindingRecords on purpose: the repository keeps one
@@ -94,13 +113,16 @@ func (s *InMemoryRepository[A]) UpdateRecords(x UpdateRecords[Record[A]]) (*Upda
 	}
 
 	for _, record := range x.Saving {
-		var err error
 		var before *Record[A]
 		if b, ok := s.store[s.toKey(record)]; ok {
 			before = &b
 		}
 
 		record.Version += 1
+		record, err := s.detach(record)
+		if err != nil {
+			return nil, fmt.Errorf("store.InMemoryRepository.UpdateRecords: %w", err)
+		}
 		s.store[s.toKey(record)] = record
 
 		if before == nil {
@@ -262,6 +284,14 @@ func (s *InMemoryRepository[A]) FindingRecords(query FindingRecords[Record[A]]) 
 				}
 			}
 		}
+	}
+
+	for i, record := range records {
+		detached, err := s.detach(record)
+		if err != nil {
+			return PageResult[Record[A]]{}, fmt.Errorf("store.InMemoryRepository.FindingRecords: %w", err)
+		}
+		records[i] = detached
 	}
 
 	result := PageResult[Record[A]]{

@@ -209,8 +209,45 @@ func RunRepositorySpec(t *testing.T, backend string, newRepo NewRepoFunc, caps C
 		require.NoError(t, err)
 		assert.Equal(t, "1", got.ID)
 		assert.Equal(t, recordType, got.Type)
-		assert.Equal(t, schemaless.ExampleRecord{Name: "Alice", Age: 39}, got.Data)
+		assert.Equal(t, "Alice", got.Data.Name)
+		assert.Equal(t, 39, got.Data.Age)
+		assert.Empty(t, got.Data.Tags, "a nil slice may come back empty after serialization, but never with content")
 		assert.GreaterOrEqual(t, got.Version, uint16(1), "a stored record has a version")
+	})
+
+	r.run("stored data does not alias the saved record", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		saved := schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType,
+			Data: schemaless.ExampleRecord{Name: "Alice", Age: 39, Tags: []string{"admin"}},
+		}
+		mustSave(t, repo, saved)
+
+		saved.Data.Tags[0] = "mutated-after-save"
+
+		got, err := repo.Get("1", recordType)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"admin"}, got.Data.Tags,
+			"a repository stores a value, not a reference to the caller's memory")
+	})
+
+	r.run("data read from the store does not alias the stored data", func(t *testing.T) {
+		repo := newRepo(t)
+		recordType := uniqueRecordType()
+		mustSave(t, repo, schemaless.Record[schemaless.ExampleRecord]{
+			ID: "1", Type: recordType,
+			Data: schemaless.ExampleRecord{Name: "Alice", Age: 39, Tags: []string{"admin"}},
+		})
+
+		got, err := repo.Get("1", recordType)
+		require.NoError(t, err)
+		got.Data.Tags[0] = "mutated-after-read"
+
+		again, err := repo.Get("1", recordType)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"admin"}, again.Data.Tags,
+			"mutating a loaded record must not rewrite the persisted one; real backends serialize, and the reference implementation must isolate the same way")
 	})
 
 	r.run("update with the current version succeeds and bumps the version", func(t *testing.T) {

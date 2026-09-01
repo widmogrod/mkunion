@@ -98,6 +98,8 @@ downgrade, ❌ failing when the report was generated.
 | repository | delete of a missing record is not an error | ✅ | ✅ | ✅ |
 | repository | empty update command returns ErrEmptyCommand | ✅ | ✅ | ✅ |
 | repository | saved record can be read back with its data | ✅ | ✅ | ✅ |
+| repository | stored data does not alias the saved record | ✅ | — | — |
+| repository | data read from the store does not alias the stored data | ✅ | — | — |
 | repository | update with the current version succeeds and bumps the version | ✅ | ✅ | ✅ |
 | repository | write with a stale version fails with ErrVersionConflict | ✅ | ✅ | ✅ |
 | repository | PolicyOverwriteServerChanges wins over a stale version | ✅ | ✅ | ✅ |

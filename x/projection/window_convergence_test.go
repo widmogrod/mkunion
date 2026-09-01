@@ -100,20 +100,7 @@ func TestDoWindow_FaultInjection_ConvergesToFaultFreeResult(t *testing.T) {
 	err = Recovery(
 		recovery,
 		func(state *PullPushContextState) (*PushAndPullInMemoryContext[int, int], error) {
-			// the in-memory repository returns the stored pointer, so a live
-			// context would mutate the "persisted" snapshot in place and
-			// recovery would silently resume from fresh state; a real store
-			// serializes, so detach the state to exercise true replay
-			detached := *state
-			if state.Offset != nil {
-				offset := *state.Offset
-				detached.Offset = &offset
-			}
-			if state.Watermark != nil {
-				watermark := *state.Watermark
-				detached.Watermark = &watermark
-			}
-			ctx := NewPushAndPullInMemoryContext[int, int](&detached, dataStream)
+			ctx := NewPushAndPullInMemoryContext[int, int](state, dataStream)
 			ctx.SimulateRuntimeProblem(&SimulateProblem{
 				ErrorOnPullInProbability:  0.1,
 				ErrorOnPullIn:             fmt.Errorf("simulated pull error"),

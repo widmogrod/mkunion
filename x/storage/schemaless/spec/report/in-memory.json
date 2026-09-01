@@ -40,119 +40,131 @@
     {
       "Suite": "repository",
       "Order": 6,
-      "Name": "update with the current version succeeds and bumps the version",
+      "Name": "stored data does not alias the saved record",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 7,
-      "Name": "write with a stale version fails with ErrVersionConflict",
+      "Name": "data read from the store does not alias the stored data",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 8,
-      "Name": "PolicyOverwriteServerChanges wins over a stale version",
+      "Name": "update with the current version succeeds and bumps the version",
       "Status": "supported"
     },
     {
       "Suite": "repository",
       "Order": 9,
+      "Name": "write with a stale version fails with ErrVersionConflict",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 10,
+      "Name": "PolicyOverwriteServerChanges wins over a stale version",
+      "Status": "supported"
+    },
+    {
+      "Suite": "repository",
+      "Order": 11,
       "Name": "overwrites keep the version increasing",
       "Status": "supported",
       "Capability": "MonotonicOverwriteVersion"
     },
     {
       "Suite": "repository",
-      "Order": 10,
+      "Order": 12,
       "Name": "deleted record is gone",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 11,
+      "Order": 13,
       "Name": "where predicate filters records",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 12,
+      "Order": 14,
       "Name": "batch result maps key records by ID and type",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 13,
+      "Order": 15,
       "Name": "where predicate accepts literal values",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 14,
+      "Order": 16,
       "Name": "empty where query matches all records",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 15,
+      "Order": 17,
       "Name": "OR predicate matches either branch",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 16,
+      "Order": 18,
       "Name": "NOT over OR excludes both branches",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 17,
+      "Order": 19,
       "Name": "query without a record type is not an error",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 18,
+      "Order": 20,
       "Name": "record type separates records",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 19,
+      "Order": 21,
       "Name": "forward pagination visits every record exactly once",
       "Status": "supported"
     },
     {
       "Suite": "repository",
-      "Order": 20,
+      "Order": 22,
       "Name": "sorting orders records by a data field",
       "Status": "supported",
       "Capability": "SortByDataField"
     },
     {
       "Suite": "repository",
-      "Order": 21,
+      "Order": 23,
       "Name": "sorting orders records by a numeric data field",
       "Status": "supported",
       "Capability": "SortByDataField"
     },
     {
       "Suite": "repository",
-      "Order": 22,
+      "Order": 24,
       "Name": "sorted pagination keeps order across pages",
       "Status": "supported",
       "Capability": "SortByDataField"
     },
     {
       "Suite": "repository",
-      "Order": 23,
+      "Order": 25,
       "Name": "prev cursor pages backward",
       "Status": "supported",
       "Capability": "BackwardPagination"
     },
     {
       "Suite": "repository",
-      "Order": 24,
+      "Order": 26,
       "Name": "batch with a conflict writes nothing",
       "Status": "supported",
       "Capability": "AtomicBatch"

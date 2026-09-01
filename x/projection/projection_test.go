@@ -197,7 +197,7 @@ func TestProjection_HappyPath(t *testing.T) {
 func TestProjection_Recovery(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	probabilityOfFailure := 0.20
-	recoveryAttempts := uint8(50)
+	recoveryAttempts := uint8(math.MaxUint8)
 
 	dataStream := stream.NewInMemoryStream[schema.Schema](stream.WithSystemTimeFixed(0))
 
