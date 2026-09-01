@@ -361,137 +361,13 @@ func (i *InMemoryTwoInterpreter) runDoMap(ctx context.Context, x *DoMap) error {
 				return MatchWindowFlushModeR1(
 					x.Ctx.fm,
 					func(y *Accumulate) error {
-						previous, err := i.bagItem.Get(key)
-
-						isError := err != nil && err != NotFound
-						isFound := err == nil
-						if isError {
-							panic(err)
-						}
-
-						var item2 Item
-						if isFound {
-							item2 = Item{
-								Key:    z.Key,
-								Window: z.Window,
-								Data: schema.MkMap(
-									schema.MkField("Previous", previous.Data),
-									schema.MkField("Current", z.Data),
-								),
-								EventTime: z.EventTime,
-							}
-						} else {
-							item2 = Item{
-								Key:    z.Key,
-								Window: z.Window,
-								Data: schema.MkMap(
-									schema.MkField("Current", z.Data),
-								),
-								EventTime: z.EventTime,
-							}
-						}
-
-						return x.OnMap.Process(item2, func(item Item) {
-							err := i.bagItem.Set(key, item)
-							if err != nil {
-								panic(err)
-							}
-
-							err = i.pubsub.Publish(ctx, x, Message{
-								Key:  item.Key,
-								Item: &item,
-							})
-							if err != nil {
-								panic(err)
-							}
-						})
+						return i.mapAccumulate(ctx, x, z, key)
 					},
 					func(y *Discard) error {
-						return x.OnMap.Process(z, func(item Item) {
-							err := i.pubsub.Publish(ctx, x, Message{
-								Key:  item.Key,
-								Item: &item,
-							})
-							if err != nil {
-								panic(err)
-							}
-						})
+						return i.mapDiscard(ctx, x, z)
 					},
 					func(y *AccumulatingAndRetracting) error {
-						previous, err := i.bagItem.Get(key)
-
-						isError := err != nil && err != NotFound
-						isFound := err == nil
-						if isError {
-							panic(err)
-						}
-
-						log.Errorln("DoMap: AccumulatingAndRetracting ", key)
-						log.Errorln("DoMap: AccumulatingAndRetracting ", isError, isFound)
-
-						var item2 Item
-						if isFound {
-							item2 = Item{
-								Key:    z.Key,
-								Window: z.Window,
-								Data: schema.MkMap(
-									schema.MkField("Previous", previous.Data),
-									schema.MkField("Current", z.Data),
-								),
-								EventTime: z.EventTime,
-							}
-						} else {
-							item2 = Item{
-								Key:    z.Key,
-								Window: z.Window,
-								Data: schema.MkMap(
-									schema.MkField("Current", z.Data),
-								),
-								EventTime: z.EventTime,
-							}
-						}
-
-						if isFound {
-							return x.OnMap.Process(item2, func(newAggregate Item) {
-								err := i.bagItem.Set(key, newAggregate)
-								if err != nil {
-									panic(err)
-								}
-
-								err = i.pubsub.Publish(ctx, x, Message{
-									Key: newAggregate.Key,
-									Item: &Item{
-										Key: newAggregate.Key,
-										Data: PackRetractAndAggregate(
-											previous.Data,
-											newAggregate.Data,
-										),
-										EventTime: newAggregate.EventTime,
-										Window:    newAggregate.Window,
-										Type:      ItemRetractAndAggregate,
-									},
-								})
-
-								if err != nil {
-									panic(err)
-								}
-							})
-						}
-
-						return x.OnMap.Process(item2, func(item Item) {
-							err := i.bagItem.Set(key, item)
-							if err != nil {
-								panic(err)
-							}
-
-							err = i.pubsub.Publish(ctx, x, Message{
-								Key:  item.Key,
-								Item: &item,
-							})
-							if err != nil {
-								panic(err)
-							}
-						})
+						return i.mapAccumulatingAndRetracting(ctx, x, z, key)
 					},
 				)
 			} else if msg.Watermark != nil {
@@ -520,6 +396,146 @@ func (i *InMemoryTwoInterpreter) runDoMap(ctx context.Context, x *DoMap) error {
 	i.pubsub.Finish(ctx, x)
 
 	return nil
+}
+
+// mapAccumulate merges a windowed item with its accumulated aggregate.
+func (i *InMemoryTwoInterpreter) mapAccumulate(ctx context.Context, x *DoMap, z Item, key string) error {
+	previous, err := i.bagItem.Get(key)
+
+	isError := err != nil && err != NotFound
+	isFound := err == nil
+	if isError {
+		panic(err)
+	}
+
+	var item2 Item
+	if isFound {
+		item2 = Item{
+			Key:    z.Key,
+			Window: z.Window,
+			Data: schema.MkMap(
+				schema.MkField("Previous", previous.Data),
+				schema.MkField("Current", z.Data),
+			),
+			EventTime: z.EventTime,
+		}
+	} else {
+		item2 = Item{
+			Key:    z.Key,
+			Window: z.Window,
+			Data: schema.MkMap(
+				schema.MkField("Current", z.Data),
+			),
+			EventTime: z.EventTime,
+		}
+	}
+
+	return x.OnMap.Process(item2, func(item Item) {
+		err := i.bagItem.Set(key, item)
+		if err != nil {
+			panic(err)
+		}
+
+		err = i.pubsub.Publish(ctx, x, Message{
+			Key:  item.Key,
+			Item: &item,
+		})
+		if err != nil {
+			panic(err)
+		}
+	})
+}
+
+// mapDiscard processes a windowed item without accumulation.
+func (i *InMemoryTwoInterpreter) mapDiscard(ctx context.Context, x *DoMap, z Item) error {
+	return x.OnMap.Process(z, func(item Item) {
+		err := i.pubsub.Publish(ctx, x, Message{
+			Key:  item.Key,
+			Item: &item,
+		})
+		if err != nil {
+			panic(err)
+		}
+	})
+}
+
+// mapAccumulatingAndRetracting merges a windowed item and, when a previous
+// aggregate exists, emits a retract-and-aggregate pair.
+func (i *InMemoryTwoInterpreter) mapAccumulatingAndRetracting(ctx context.Context, x *DoMap, z Item, key string) error {
+	previous, err := i.bagItem.Get(key)
+
+	isError := err != nil && err != NotFound
+	isFound := err == nil
+	if isError {
+		panic(err)
+	}
+
+	log.Errorln("DoMap: AccumulatingAndRetracting ", key)
+	log.Errorln("DoMap: AccumulatingAndRetracting ", isError, isFound)
+
+	var item2 Item
+	if isFound {
+		item2 = Item{
+			Key:    z.Key,
+			Window: z.Window,
+			Data: schema.MkMap(
+				schema.MkField("Previous", previous.Data),
+				schema.MkField("Current", z.Data),
+			),
+			EventTime: z.EventTime,
+		}
+	} else {
+		item2 = Item{
+			Key:    z.Key,
+			Window: z.Window,
+			Data: schema.MkMap(
+				schema.MkField("Current", z.Data),
+			),
+			EventTime: z.EventTime,
+		}
+	}
+
+	if isFound {
+		return x.OnMap.Process(item2, func(newAggregate Item) {
+			err := i.bagItem.Set(key, newAggregate)
+			if err != nil {
+				panic(err)
+			}
+
+			err = i.pubsub.Publish(ctx, x, Message{
+				Key: newAggregate.Key,
+				Item: &Item{
+					Key: newAggregate.Key,
+					Data: PackRetractAndAggregate(
+						previous.Data,
+						newAggregate.Data,
+					),
+					EventTime: newAggregate.EventTime,
+					Window:    newAggregate.Window,
+					Type:      ItemRetractAndAggregate,
+				},
+			})
+
+			if err != nil {
+				panic(err)
+			}
+		})
+	}
+
+	return x.OnMap.Process(item2, func(item Item) {
+		err := i.bagItem.Set(key, item)
+		if err != nil {
+			panic(err)
+		}
+
+		err = i.pubsub.Publish(ctx, x, Message{
+			Key:  item.Key,
+			Item: &item,
+		})
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func (i *InMemoryTwoInterpreter) runDoLoad(ctx context.Context, x *DoLoad) error {

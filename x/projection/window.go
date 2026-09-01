@@ -101,6 +101,66 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 //	td            TriggerDescription
 //}
 
+// flushWindowsBelowWatermark pushes every window that closed at or before
+// the watermark downstream and removes it from the store.
+func flushWindowsBelowWatermark[A, B any](
+	ctx PushAndPull[A, B],
+	store *WindowInMemoryStore[B],
+	td TriggerDescription,
+	watermark *Watermark[A],
+) error {
+	where, err := TriggerDescriptionToWhere(td)
+	if err != nil {
+		return fmt.Errorf("projection.DoWindow: flush trigger description to whare: %w", err)
+	}
+
+	//where.Params[":key"] = schema.MkString(watermark.Key)
+	where.Params[":watermark"] = schema.MkInt(watermark.EventTime)
+
+	find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
+		RecordType: store.recordType,
+		Where:      where,
+		Sort: []schemaless.SortField{
+			{
+				Field:      "Data.Window.End",
+				Descending: false,
+			},
+			{
+				Field:      "Data.Key",
+				Descending: false,
+			},
+		},
+	}
+
+	for {
+		records, err := store.store.FindingRecords(*find)
+		if err != nil {
+			return fmt.Errorf("projection.DoWindow: flush find: %w", err)
+		}
+
+		for _, record := range records.Items {
+			err := ctx.PushOut(WindowToRecord(record.Data.Key, *record.Data))
+			if err != nil {
+				return fmt.Errorf("projection.DoWindow: flush push: %w", err)
+			}
+		}
+
+		if len(records.Items) > 0 {
+			_, err = store.store.UpdateRecords(schemaless.Delete(records.Items...))
+			if err != nil {
+				return fmt.Errorf("projection.DoWindow: flush delete: %w", err)
+			}
+		}
+
+		if records.HasNext() {
+			find = records.Next
+			continue
+		}
+
+		return nil
+	}
+}
+
 func DoWindow[A, B any](
 	ctx PushAndPull[A, B],
 	store *WindowInMemoryStore[B],
@@ -120,60 +180,7 @@ func DoWindow[A, B any](
 		fm,
 		func(x *Discard) func(watermark *Watermark[A]) error {
 			return func(watermark *Watermark[A]) error {
-				where, err := TriggerDescriptionToWhere(td)
-				if err != nil {
-					return fmt.Errorf("projection.DoWindow: flush trigger description to whare: %w", err)
-				}
-
-				//where.Params[":key"] = schema.MkString(watermark.Key)
-				where.Params[":watermark"] = schema.MkInt(watermark.EventTime)
-
-				find := &schemaless.FindingRecords[schemaless.Record[*WindowRecord[B]]]{
-					RecordType: store.recordType,
-					Where:      where,
-					Sort: []schemaless.SortField{
-						{
-							Field:      "Data.Window.End",
-							Descending: false,
-						},
-						{
-							Field:      "Data.Key",
-							Descending: false,
-						},
-					},
-				}
-
-				for {
-					records, err := store.store.FindingRecords(*find)
-					if err != nil {
-						return fmt.Errorf("projection.DoWindow: flush find: %w", err)
-					}
-
-					for _, record := range records.Items {
-						err := ctx.PushOut(WindowToRecord(record.Data.Key, *record.Data))
-						if err != nil {
-							return fmt.Errorf("projection.DoWindow: flush push: %w", err)
-						}
-					}
-
-					if len(records.Items) > 0 {
-						_, err = store.store.UpdateRecords(schemaless.Delete(records.Items...))
-						if err != nil {
-							return fmt.Errorf("projection.DoWindow: flush delete: %w", err)
-						}
-					}
-
-					if records.HasNext() {
-						find = records.Next
-						continue
-					}
-
-					if err != nil {
-						return fmt.Errorf("projection.DoWindow: flush push: %w", err)
-					}
-
-					return nil
-				}
+				return flushWindowsBelowWatermark(ctx, store, td, watermark)
 			}
 		},
 	)
