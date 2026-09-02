@@ -125,7 +125,7 @@ typed answers.
 ### What Go 1.27 generic methods give us
 
 Go 1.27 lets a method declare its own type parameters. The module is on Go 1.27,
-and `example/effect/eff_go127.go` uses them.
+and `example/effect` uses them for `Program.Then` and `Direct.Perform`.
 
 One thing to know when a project moves to generic methods: mkunion parses source
 with the `go/parser` of the Go version it runs under. A 1.26 parser rejects a
@@ -135,12 +135,12 @@ a 1.27 toolchain for `go tool mkunion` as well, so this just works.
 
 Generic methods help in two places:
 
-```go title="example/effect/eff_go127.go"
---8<-- "example/effect/eff_go127.go:program-127"
+```go title="example/effect"
+--8<-- "example/effect/eff.go:program-127"
 ```
 
-```go title="example/effect/eff_go127.go"
---8<-- "example/effect/eff_go127.go:direct-127"
+```go title="example/effect"
+--8<-- "example/effect/ops.go:direct-127"
 ```
 
 Two limits stay:
@@ -153,7 +153,7 @@ Two limits stay:
   Direct style (`GreetDirect`) removes nesting entirely, at the price of losing the
   program as a value.
 
-So generic methods are ergonomics, not new power. Everything in the 1.27 file has
+So generic methods are ergonomics, not new power. Every generic method here has
 a package-level function equivalent that works today.
 
 ### What Go cannot express

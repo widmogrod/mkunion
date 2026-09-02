@@ -84,10 +84,27 @@ func answer[R any](_ EffectOf[R], r R, err error) (any, error) {
 
 // PerformDirect performs one operation right now, outside of any program.
 // This is "direct style": plain Go code, no continuations, but also no
-// program value to inspect or replay. See Direct in eff_go127.go for the
+// program value to inspect or replay. See Direct below for the
 // method form that Go 1.27 generic methods allow.
 func PerformDirect[R any](ctx context.Context, h Handler[Effect], op EffectOf[R]) (R, error) {
 	return Run(ctx, h, Perform(op))
 }
 
 // --8<-- [end:typed-layer]
+
+// --8<-- [start:direct-127]
+
+// Direct performs operations right now against one handler.
+// Perform is one generic method that serves every operation: R is inferred from
+// the operation's Result method, so `d.Perform(&Now{})` returns (time.Time, error).
+type Direct struct {
+	Ctx     context.Context
+	Handler Handler[Effect]
+}
+
+// Perform runs one operation and returns its typed answer.
+func (d Direct) Perform[R any](op EffectOf[R]) (R, error) {
+	return PerformDirect(d.Ctx, d.Handler, op)
+}
+
+// --8<-- [end:direct-127]
