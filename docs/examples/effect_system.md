@@ -125,6 +125,30 @@ Costs: one coroutine per run (cheap, not a goroutine you schedule), and the
 `Suspend` was added to `Eff` so that a `Proc` is built on demand and the body
 does not start before `Run`.
 
+### Third pass: methods, an alias, and defaults
+
+`program_fx.go` is the same again with the most ergonomic surface we can build
+by hand. The handle becomes a receiver, the return type gets a short name, and
+a generic method (Go 1.27) covers operations without a helper:
+
+```go title="example/effect/program_fx.go"
+--8<-- "example/effect/program_fx.go:greet-fx"
+```
+
+```go title="example/effect/program_fx.go"
+--8<-- "example/effect/program_fx.go:fx-api"
+```
+
+`Defaults` lets a test handler override one method and inherit the rest, while
+the compiler still checks that the result is a complete `EffectHandler`:
+
+```go title="example/effect/program_fx.go"
+--8<-- "example/effect/program_fx.go:defaults"
+```
+
+Everything in this file follows from the union and the `Result` methods. It is
+the concrete shape a `//go:tag mkeffect:"Effect"` generator would emit.
+
 ## Handlers
 
 The same program, two meanings.
@@ -172,7 +196,7 @@ typed answers.
 ### What Go 1.27 generic methods give us
 
 Go 1.27 lets a method declare its own type parameters. The module is on Go 1.27,
-and `example/effect` uses them for `Program.Then` and `Direct.Perform`.
+and `example/effect` uses them for `Chain.Then`, `Direct.Perform` and `Fx.Do`.
 
 One thing to know when a project moves to generic methods: mkunion parses source
 with the `go/parser` of the Go version it runs under. A 1.26 parser rejects a
@@ -193,7 +217,7 @@ Generic methods help in two places:
 Two limits stay:
 
 - **Interfaces cannot have generic methods**, so a union (which is an interface)
-  cannot carry `Then` itself. A concrete wrapper such as `Program` is needed, and
+  cannot carry `Then` itself. A concrete wrapper such as `Chain` is needed, and
   the handler boundary stays `any`.
 - **Data dependencies still nest.** Chaining flattens value transforms, but a step
   that needs two earlier values needs a nested closure, as `GreetChained` shows.

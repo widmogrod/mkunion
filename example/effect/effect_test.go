@@ -166,7 +166,7 @@ func TestGreetChained_matchesGreet(t *testing.T) {
 	assert.Equal(t, traceA, traceB)
 }
 
-func TestProgram_methodTypeParameterIsInferred(t *testing.T) {
+func TestChain_methodTypeParameterIsInferred(t *testing.T) {
 	p := Start(Return[Effect](20)).
 		Map(func(n int) int { return n + 1 }).
 		Map(func(n int) string { return "n=" + strconv.Itoa(n) })

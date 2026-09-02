@@ -89,7 +89,7 @@ func PerformAs[Op, R any](op Op) Eff[Op, R] {
 // --8<-- [start:then]
 
 // Then sequences two programs: run e, feed its value to k, run what k returns.
-// The method form is Program.Then below.
+// The method form is Chain.Then below.
 func Then[Op, A, B any](e Eff[Op, A], k func(A) Eff[Op, B]) Eff[Op, B] {
 	return MatchEffR1(e,
 		func(x *Pure[Op, A]) Eff[Op, B] { return k(x.Value) },
@@ -157,26 +157,26 @@ func Trace[Op any](h Handler[Op], sink *[]Op) Handler[Op] {
 
 // --8<-- [start:program-127]
 
-// Program wraps an Eff so that Then and Map can be methods.
+// Chain wraps an Eff so that Then and Map can be methods.
 //
 // Go 1.27 lets a method declare its own type parameters, so p.Then(k) can
 // introduce B. Eff itself is an interface, and interface methods still cannot
 // have type parameters, so the union cannot carry Then; this wrapper does.
-type Program[Op, A any] struct{ Eff Eff[Op, A] }
+type Chain[Op, A any] struct{ Eff Eff[Op, A] }
 
 // Start begins a chain.
-func Start[Op, A any](e Eff[Op, A]) Program[Op, A] {
-	return Program[Op, A]{Eff: e}
+func Start[Op, A any](e Eff[Op, A]) Chain[Op, A] {
+	return Chain[Op, A]{Eff: e}
 }
 
 // Then is the method form of the package-level Then. B is a method type parameter.
-func (p Program[Op, A]) Then[B any](k func(A) Eff[Op, B]) Program[Op, B] {
-	return Program[Op, B]{Eff: Then(p.Eff, k)}
+func (p Chain[Op, A]) Then[B any](k func(A) Eff[Op, B]) Chain[Op, B] {
+	return Chain[Op, B]{Eff: Then(p.Eff, k)}
 }
 
 // Map is the method form of the package-level Map.
-func (p Program[Op, A]) Map[B any](f func(A) B) Program[Op, B] {
-	return Program[Op, B]{Eff: Map(p.Eff, f)}
+func (p Chain[Op, A]) Map[B any](f func(A) B) Chain[Op, B] {
+	return Chain[Op, B]{Eff: Map(p.Eff, f)}
 }
 
 // --8<-- [end:program-127]
