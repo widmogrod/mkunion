@@ -2,7 +2,7 @@
 //
 // The idea in one line: a program is data, and a handler gives that data meaning.
 //
-//   - Eff[Op, A] is the program. It is a union: Pure, Fail or Bind.
+//   - Eff[Op, A] is the program. It is a union: Pure, Fail, Bind or Suspend.
 //   - Op is any union of operations (see Effect in ops.go).
 //   - Handler[Op] answers one operation at a time.
 //   - Run walks the program and calls the handler until it reaches Pure or Fail.
@@ -36,9 +36,16 @@ type (
 	// Fail is a finished program holding an error.
 	Fail[Op, A any] struct{ Err error }
 	// Bind asks the handler to perform Op, then continues with the answer.
+	// When the handler fails, or the context is cancelled, Cont receives the
+	// error instead of an answer, so the program can react or unwind.
 	Bind[Op, A any] struct {
 		Op   Op
-		Cont func(answer any) Eff[Op, A]
+		Cont func(answer any, err error) Eff[Op, A]
+	}
+	// Suspend is a program that is built on demand. Proc uses it so that a
+	// direct-style body does not start before Run.
+	Suspend[Op, A any] struct {
+		Resume func() Eff[Op, A]
 	}
 )
 
@@ -65,7 +72,10 @@ func Throw[Op, A any](err error) Eff[Op, A] {
 func PerformAs[Op, R any](op Op) Eff[Op, R] {
 	return &Bind[Op, R]{
 		Op: op,
-		Cont: func(answer any) Eff[Op, R] {
+		Cont: func(answer any, err error) Eff[Op, R] {
+			if err != nil {
+				return Throw[Op, R](err)
+			}
 			value, ok := answer.(R)
 			if !ok {
 				var want R
@@ -87,8 +97,11 @@ func Then[Op, A, B any](e Eff[Op, A], k func(A) Eff[Op, B]) Eff[Op, B] {
 		func(x *Bind[Op, A]) Eff[Op, B] {
 			return &Bind[Op, B]{
 				Op:   x.Op,
-				Cont: func(answer any) Eff[Op, B] { return Then(x.Cont(answer), k) },
+				Cont: func(answer any, err error) Eff[Op, B] { return Then(x.Cont(answer, err), k) },
 			}
+		},
+		func(x *Suspend[Op, A]) Eff[Op, B] {
+			return &Suspend[Op, B]{Resume: func() Eff[Op, B] { return Then(x.Resume(), k) }}
 		},
 	)
 }
@@ -105,8 +118,8 @@ func Map[Op, A, B any](e Eff[Op, A], f func(A) B) Eff[Op, B] {
 // Run interprets a program with a handler.
 //
 // It loops instead of recursing, so a program built from a million Binds
-// does not grow the Go stack. Cancelled contexts stop the loop before the
-// next operation.
+// does not grow the Go stack. A cancelled context is not performed; its error
+// goes to the continuation like a handler error, so the program unwinds.
 func Run[Op, A any](ctx context.Context, h Handler[Op], e Eff[Op, A]) (A, error) {
 	var zero A
 	for {
@@ -116,14 +129,14 @@ func Run[Op, A any](ctx context.Context, h Handler[Op], e Eff[Op, A]) (A, error)
 		case *Fail[Op, A]:
 			return zero, x.Err
 		case *Bind[Op, A]:
-			if err := ctx.Err(); err != nil {
-				return zero, err
+			var answer any
+			err := ctx.Err()
+			if err == nil {
+				answer, err = h(ctx, x.Op)
 			}
-			answer, err := h(ctx, x.Op)
-			if err != nil {
-				return zero, err
-			}
-			e = x.Cont(answer)
+			e = x.Cont(answer, err)
+		case *Suspend[Op, A]:
+			e = x.Resume()
 		default:
 			return zero, fmt.Errorf("effect: unknown program node %T", e)
 		}

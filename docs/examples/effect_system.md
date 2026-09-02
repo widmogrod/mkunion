@@ -38,7 +38,7 @@ It is generic over the operation union, so the core does not know about `Effect`
 --8<-- "example/effect/eff.go:eff-def"
 ```
 
-`Then` sequences programs. It is a pattern match over the three variants.
+`Then` sequences programs. It is a pattern match over the variants.
 
 ```go title="example/effect/eff.go"
 --8<-- "example/effect/eff.go:then"
@@ -77,6 +77,53 @@ a continuation, so `Run` sees one `Bind` at a time.
 ```go title="example/effect/program.go"
 --8<-- "example/effect/program.go:roll"
 ```
+
+## Direct style: the same program without the nesting
+
+`Then` needs a callback for "what happens after the answer comes back", so
+every step nests one level deeper. Go has no `do` notation. What Go does have,
+since 1.23, is `iter.Pull`: a coroutine that can pause and resume.
+
+`Proc` runs a plain Go body as a coroutine. Each `Do` pauses the body, hands the
+operation to `Run` through an ordinary `Bind`, and resumes with the answer.
+
+```go title="example/effect/program_do.go"
+--8<-- "example/effect/program_do.go:greet-do"
+```
+
+```go title="example/effect/program_do.go"
+--8<-- "example/effect/program_do.go:roll-do"
+```
+
+The program is still a value. Nothing runs before `Run`. Handlers, `Trace`,
+`Then` and `Map` work unchanged, because `Proc` produces the same `Bind` chain
+that `Perform` and `Then` produce, one step at a time. The tests check that
+`GreetDo` and `Greet` leave the same trace.
+
+`Do` unwinds the body on error, and the program fails with that error, the same
+as a `Then` chain. `Attempt` returns the error instead, for bodies that want to
+react in place:
+
+```go title="example/effect/program_do.go"
+--8<-- "example/effect/program_do.go:greet-or-guest"
+```
+
+The helpers are one line each and follow from the union, like the typed layer:
+
+```go title="example/effect/program_do.go"
+--8<-- "example/effect/program_do.go:do-helpers"
+```
+
+The core behind them:
+
+```go title="example/effect/proc.go"
+--8<-- "example/effect/proc.go:proc"
+```
+
+Costs: one coroutine per run (cheap, not a goroutine you schedule), and the
+`e` parameter, because Go has no ambient context for the body to reach.
+`Suspend` was added to `Eff` so that a `Proc` is built on demand and the body
+does not start before `Run`.
 
 ## Handlers
 
@@ -150,8 +197,9 @@ Two limits stay:
   the handler boundary stays `any`.
 - **Data dependencies still nest.** Chaining flattens value transforms, but a step
   that needs two earlier values needs a nested closure, as `GreetChained` shows.
-  Direct style (`GreetDirect`) removes nesting entirely, at the price of losing the
-  program as a value.
+  `GreetDirect` removes nesting at the price of losing the program as a value.
+  `Proc` (see "Direct style" above) removes nesting and keeps the value; it needs
+  a coroutine, not generic methods.
 
 So generic methods are ergonomics, not new power. Every generic method here has
 a package-level function equivalent that works today.
