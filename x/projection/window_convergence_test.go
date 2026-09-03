@@ -21,10 +21,10 @@ import (
 // are allowed (at-least-once), but every emitted value must be the final
 // aggregate of its window - never a partial built from re-merged records.
 func TestDoWindow_FaultInjection_ConvergesToFaultFreeResult(t *testing.T) {
-	// keys*windowsPerKey = 39 windows > windowFlushPageSize, so the flush
-	// spans multiple pages; 78 records is deliberately not a multiple of
-	// snapshotEveryNRecords, so a crash near the watermark always has an
-	// unpersisted tail of records to replay
+	// keys*windowsPerKey = 39 windows > DefaultWindowFlushPageSize, so the
+	// flush spans multiple pages; 78 records is deliberately not a multiple
+	// of DefaultSnapshotEveryNRecords, so a crash near the watermark always
+	// has an unpersisted tail of records to replay
 	const (
 		keys             = 13
 		windowsPerKey    = 3

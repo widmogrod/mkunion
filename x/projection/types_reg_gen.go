@@ -10,6 +10,7 @@ import (
 )
 
 func init() {
+	shared.TypeRegistryStore[any]("any")
 	shared.TypeRegistryStore[AtWatermark]("github.com/widmogrod/mkunion/x/projection.AtWatermark")
 	shared.TypeRegistryStore[Data[any]]("github.com/widmogrod/mkunion/x/projection.Data[any]")
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/projection.Data[any]", DataFromJSON[any], DataToJSON[any])

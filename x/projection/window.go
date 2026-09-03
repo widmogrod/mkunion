@@ -101,14 +101,44 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 //	td            TriggerDescription
 //}
 
-// windowFlushPageSize bounds how many windows a single flush query loads.
-const windowFlushPageSize = 32
+const (
+	// DefaultWindowFlushPageSize bounds how many windows a single flush
+	// query loads.
+	DefaultWindowFlushPageSize uint8 = 32
 
-// snapshotEveryNRecords bounds how many records a recovery attempt has to
-// replay: relying on the time-based snapshot alone lets the persisted
-// offset fall so far behind that every retry dies inside the replay and
-// the attempt budget drains without forward progress.
-const snapshotEveryNRecords = 8
+	// DefaultSnapshotEveryNRecords bounds how many records a recovery
+	// attempt has to replay: a persisted offset that falls too far behind
+	// makes every retry die inside the replay, draining the attempt
+	// budget without forward progress.
+	DefaultSnapshotEveryNRecords = 8
+)
+
+type doWindowConfig struct {
+	snapshotEveryNRecords int
+	flushPageSize         uint8
+}
+
+type DoWindowOption func(*doWindowConfig)
+
+// WithSnapshotEveryNRecords sets how many acked records pass between
+// progress snapshots; n < 1 keeps the default.
+func WithSnapshotEveryNRecords(n int) DoWindowOption {
+	return func(c *doWindowConfig) {
+		if n >= 1 {
+			c.snapshotEveryNRecords = n
+		}
+	}
+}
+
+// WithFlushPageSize sets how many windows one flush query loads; n < 1
+// keeps the default.
+func WithFlushPageSize(n uint8) DoWindowOption {
+	return func(c *doWindowConfig) {
+		if n >= 1 {
+			c.flushPageSize = n
+		}
+	}
+}
 
 // flushWindowsBelowWatermark pushes every window that closed at or before
 // the watermark downstream and removes it from the store.
@@ -117,6 +147,7 @@ func flushWindowsBelowWatermark[A, B any](
 	store *WindowInMemoryStore[B],
 	td TriggerDescription,
 	watermark *Watermark[A],
+	pageSize uint8,
 ) error {
 	where, err := TriggerDescriptionToWhere(td)
 	if err != nil {
@@ -139,7 +170,7 @@ func flushWindowsBelowWatermark[A, B any](
 				Descending: false,
 			},
 		},
-		Limit: windowFlushPageSize,
+		Limit: pageSize,
 	}
 
 	for {
@@ -178,7 +209,15 @@ func DoWindow[A, B any](
 	init B,
 	merge func(x A, agg B) (B, error),
 	snap Snapshotter,
+	opts ...DoWindowOption,
 ) error {
+	config := doWindowConfig{
+		snapshotEveryNRecords: DefaultSnapshotEveryNRecords,
+		flushPageSize:         DefaultWindowFlushPageSize,
+	}
+	for _, opt := range opts {
+		opt(&config)
+	}
 	// recovery from failure:
 	// to avoid any double processing of data process should work only on data from last snapshot
 	// load all windows after last snapshot and before last watermark to memory
@@ -189,7 +228,7 @@ func DoWindow[A, B any](
 		fm,
 		func(x *Discard) func(watermark *Watermark[A]) error {
 			return func(watermark *Watermark[A]) error {
-				return flushWindowsBelowWatermark(ctx, store, td, watermark)
+				return flushWindowsBelowWatermark(ctx, store, td, watermark, config.flushPageSize)
 			}
 		},
 	)
@@ -340,7 +379,7 @@ func DoWindow[A, B any](
 		}
 
 		ackedRecords++
-		if ackedRecords%snapshotEveryNRecords == 0 {
+		if ackedRecords%config.snapshotEveryNRecords == 0 {
 			err = snap.Snapshot(ctx.CurrentState())
 			if err != nil {
 				return fmt.Errorf("projection.DoWindow: snapshot progress: %w", err)
