@@ -16,7 +16,7 @@ type Unit struct{}
 // The method is never called. It exists so the compiler can tie an operation
 // to its answer type in Perform and in HandlerOf.
 //
-//go:tag mkunion:"Effect,noserde"
+//go:tag mkunion:"Effect"
 type (
 	// Log writes a line somewhere.
 	Log struct{ Msg string }

@@ -164,6 +164,68 @@ The same program, two meanings.
 Handlers are functions, so middleware is a function that returns a function.
 `Trace` records every operation, in order, and is what the tests assert on.
 
+## Why not plain dependency injection?
+
+The `Fx` surface looks like interfaces and structs, because it is. The difference
+is under the surface. With dependency injection, `fx.ReadFile(path)` runs a
+method and the call is gone. With effects, it builds a value, `&ReadFile{Path:
+path}`, and every such value passes through one door, `Run`, in order, as data.
+Everything below follows from that. Each item has a test in
+`example/effect/benefits_test.go`.
+
+1. **One trace of everything.** `Trace` lists every operation of every body, in
+   order. With DI you would wrap each interface by hand.
+2. **Middleware for all effects at once.** `Retry`, `Count` and `FailEvery` each
+   wrap a `Handler` once and cover every operation of every program.
+
+    ```go title="example/effect/middleware.go"
+    --8<-- "example/effect/middleware.go:middleware"
+    ```
+
+3. **Record and replay.** `Record` writes a tape of operations and answers.
+   `Replay` answers from the tape and checks that the program still asks for the
+   same things. Run once against `Live`, replay with no clock, files or network,
+   get the same result. A golden test for any body, and drift fails loudly.
+4. **Pause and resume.** `Replay(tape, live)` serves the recorded steps and hands
+   the rest to a live handler. The test crashes `GreetFx` after two steps, resumes,
+   and shows that only the third step touched the world. This is how durable
+   workflow engines survive a crash, and what `x/workflow` in this repo does by
+   hand with its own AST.
+
+    ```go title="example/effect/recording.go"
+    --8<-- "example/effect/recording.go:recording"
+    ```
+
+5. **Fault injection.** `FailEvery` fails every nth operation of any kind. A
+   clock that jumps is a handler that embeds `Defaults` and overrides `HandleNow`.
+   Deterministic, in-process, no mocks per test.
+6. **The algebra is a mkunion union.** `Effect` has JSON, so a tape has JSON:
+   `TapeToJSON` and `TapeFromJSON` round-trip a recording, and the test replays
+   from the JSON alone. The same union exports to TypeScript with
+   `mkunion shape-export --language typescript -i example/effect/ops.go`, so a
+   browser can read or build a tape:
+
+    ```typescript
+    export type Effect = {
+        "$type"?: "effect.Log",
+        "effect.Log": Log
+    } | {
+        "$type"?: "effect.Now",
+        "effect.Now": Now
+    } | {
+        "$type"?: "effect.ReadFile",
+        "effect.ReadFile": ReadFile
+    } | {
+        "$type"?: "effect.Random",
+        "effect.Random": Random
+    }
+    ```
+
+When a program is "call three services and return" and you only need swap-for-tests,
+plain DI is enough. Effects earn their cost when you need the trace, the replay, the
+resume, or the same middleware on every call: workflow engines, sagas, simulation
+testing, audit logs, dry-run modes.
+
 ## Findings
 
 ### What unions give us
