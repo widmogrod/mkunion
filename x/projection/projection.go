@@ -79,21 +79,43 @@ func RecordToStreamItem[A any](topic string, x Data[A]) (*stream.Item[Data[A]], 
 	)
 }
 
+// Processor roles. Operators ask for the roles they use, so a signature
+// documents what an operator touches; PushAndPull composes them all.
 type (
-	PushAndPull[A, B any] interface {
+	// Source consumes records from a topic and acknowledges progress.
+	Source[A any] interface {
 		PullIn() (*stream.Item[Data[A]], error)
 		AckOffset(offset *stream.Offset) error
+	}
 
+	// Sink emits records to a topic.
+	Sink[B any] interface {
 		PushOut(Data[B]) error
+	}
+
+	// Watermarked tracks event-time progress.
+	Watermarked interface {
 		AckWatermark(watermark *stream.EventTime) error
 		LastWatermark() EventTime
+	}
 
-		// CurrentState exposes the position (offsets, watermark) so callers
-		// can hand it to a Snapshotter at the moments they choose
+	// Resumable exposes the position a processor can be resumed from,
+	// for callers to hand to a Snapshotter at the moments they choose.
+	Resumable interface {
 		CurrentState() SnapshotState
 	}
-	SnapshotContext interface {
-		CurrentState() SnapshotState
+
+	// Consumer reads a topic to its end: a Source that also follows watermarks.
+	Consumer[A any] interface {
+		Source[A]
+		Watermarked
+	}
+
+	PushAndPull[A, B any] interface {
+		Source[A]
+		Sink[B]
+		Watermarked
+		Resumable
 	}
 )
 
@@ -335,7 +357,7 @@ func (c *PushAndPullInMemoryContext[A, B]) SimulateRuntimeProblem(x *SimulatePro
 	c.simulate = x
 }
 
-func DoLoad[A any](ctx PushAndPull[any, A], f func(push func(record Data[A]) error) error) error {
+func DoLoad[A any](ctx Sink[A], f func(push func(record Data[A]) error) error) error {
 	err := f(func(record Data[A]) error {
 		return ctx.PushOut(record)
 	})
@@ -541,7 +563,7 @@ func DoJoin[A, B, C any](
 	}
 }
 
-func DoSink[A any](ctx PushAndPull[A, any], f func(*Record[A]) error) error {
+func DoSink[A any](ctx Consumer[A], f func(*Record[A]) error) error {
 	for {
 		if IsWatermarkMarksEndOfStream(ctx.LastWatermark()) {
 			return nil
