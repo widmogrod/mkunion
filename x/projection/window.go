@@ -101,6 +101,45 @@ func WindowToRecord[A any](key string, window WindowRecord[A]) *Record[A] {
 //	td            TriggerDescription
 //}
 
+const (
+	// DefaultWindowFlushPageSize bounds how many windows a single flush
+	// query loads.
+	DefaultWindowFlushPageSize uint8 = 32
+
+	// DefaultSnapshotEveryNRecords bounds how many records a recovery
+	// attempt has to replay: a persisted offset that falls too far behind
+	// makes every retry die inside the replay, draining the attempt
+	// budget without forward progress.
+	DefaultSnapshotEveryNRecords = 8
+)
+
+type doWindowConfig struct {
+	snapshotEveryNRecords int
+	flushPageSize         uint8
+}
+
+type DoWindowOption func(*doWindowConfig)
+
+// WithSnapshotEveryNRecords sets how many acked records pass between
+// progress snapshots; n < 1 keeps the default.
+func WithSnapshotEveryNRecords(n int) DoWindowOption {
+	return func(c *doWindowConfig) {
+		if n >= 1 {
+			c.snapshotEveryNRecords = n
+		}
+	}
+}
+
+// WithFlushPageSize sets how many windows one flush query loads; n < 1
+// keeps the default.
+func WithFlushPageSize(n uint8) DoWindowOption {
+	return func(c *doWindowConfig) {
+		if n >= 1 {
+			c.flushPageSize = n
+		}
+	}
+}
+
 // flushWindowsBelowWatermark pushes every window that closed at or before
 // the watermark downstream and removes it from the store.
 func flushWindowsBelowWatermark[A, B any](
@@ -108,6 +147,7 @@ func flushWindowsBelowWatermark[A, B any](
 	store *WindowInMemoryStore[B],
 	td TriggerDescription,
 	watermark *Watermark[A],
+	pageSize uint8,
 ) error {
 	where, err := TriggerDescriptionToWhere(td)
 	if err != nil {
@@ -130,6 +170,7 @@ func flushWindowsBelowWatermark[A, B any](
 				Descending: false,
 			},
 		},
+		Limit: pageSize,
 	}
 
 	for {
@@ -138,26 +179,24 @@ func flushWindowsBelowWatermark[A, B any](
 			return fmt.Errorf("projection.DoWindow: flush find: %w", err)
 		}
 
+		if len(records.Items) == 0 {
+			return nil
+		}
+
+		// delete each window right after its push, so a retry resumes with
+		// only undelivered windows; pages are deleted as they are pushed,
+		// so re-running the query is the only cursor that stays correct
 		for _, record := range records.Items {
 			err := ctx.PushOut(WindowToRecord(record.Data.Key, *record.Data))
 			if err != nil {
 				return fmt.Errorf("projection.DoWindow: flush push: %w", err)
 			}
-		}
 
-		if len(records.Items) > 0 {
-			_, err = store.store.UpdateRecords(schemaless.Delete(records.Items...))
+			_, err = store.store.UpdateRecords(schemaless.Delete(record))
 			if err != nil {
 				return fmt.Errorf("projection.DoWindow: flush delete: %w", err)
 			}
 		}
-
-		if records.HasNext() {
-			find = records.Next
-			continue
-		}
-
-		return nil
 	}
 }
 
@@ -169,7 +208,16 @@ func DoWindow[A, B any](
 	td TriggerDescription,
 	init B,
 	merge func(x A, agg B) (B, error),
+	snap Snapshotter,
+	opts ...DoWindowOption,
 ) error {
+	config := doWindowConfig{
+		snapshotEveryNRecords: DefaultSnapshotEveryNRecords,
+		flushPageSize:         DefaultWindowFlushPageSize,
+	}
+	for _, opt := range opts {
+		opt(&config)
+	}
 	// recovery from failure:
 	// to avoid any double processing of data process should work only on data from last snapshot
 	// load all windows after last snapshot and before last watermark to memory
@@ -180,13 +228,26 @@ func DoWindow[A, B any](
 		fm,
 		func(x *Discard) func(watermark *Watermark[A]) error {
 			return func(watermark *Watermark[A]) error {
-				return flushWindowsBelowWatermark(ctx, store, td, watermark)
+				return flushWindowsBelowWatermark(ctx, store, td, watermark, config.flushPageSize)
 			}
 		},
 	)
 
+	ackedRecords := 0
 	for {
 		if IsWatermarkMarksEndOfStream(ctx.LastWatermark()) {
+			// the end-of-stream watermark was acked and persisted, but a
+			// previous attempt could have crashed mid-flush: finish the
+			// flush and resend the watermark before exiting
+			watermark := ctx.LastWatermark()
+			err := flush(&Watermark[A]{EventTime: watermark})
+			if err != nil {
+				return fmt.Errorf("projection.DoWindow: flush on recovery: %w", err)
+			}
+			err = ctx.PushOut(&Watermark[B]{EventTime: watermark})
+			if err != nil {
+				return fmt.Errorf("projection.DoWindow: push watermark on recovery: %w", err)
+			}
 			log.Debugf("projection.DoWindow: pull: no more data in stream for all keys (exit)")
 			return nil
 		}
@@ -202,6 +263,7 @@ func DoWindow[A, B any](
 
 		log.Debugf("projection.DoWindow: pull: %#v", item)
 
+		completed := false
 		err = MatchDataR1(
 			item.Data,
 			func(x *Record[A]) error {
@@ -266,7 +328,26 @@ func DoWindow[A, B any](
 				return nil
 			},
 			func(x *Watermark[A]) error {
-				err := flush(x)
+				// ack and persist the state BEFORE the flush deletes windows:
+				// the deleted windows hold the dedup offsets, so a retry with
+				// a stale offset would re-merge records into fresh windows
+				// and emit partial aggregates downstream
+				err := ctx.AckWatermark(&x.EventTime)
+				if err != nil {
+					return fmt.Errorf("projection.DoWindow: ack watermark: %w", err)
+				}
+
+				err = ctx.AckOffset(item.Offset)
+				if err != nil {
+					return fmt.Errorf("projection.DoWindow: ack offset: %w", err)
+				}
+
+				err = snap.Snapshot(ctx.CurrentState())
+				if err != nil {
+					return fmt.Errorf("projection.DoWindow: snapshot before flush: %w", err)
+				}
+
+				err = flush(x)
 				if err != nil {
 					return fmt.Errorf("projection.DoWindow: flush on watermark: %w", err)
 				}
@@ -278,11 +359,7 @@ func DoWindow[A, B any](
 					return fmt.Errorf("projection.DoWindow: push watermark: %w", err)
 				}
 
-				err = ctx.AckWatermark(&x.EventTime)
-				if err != nil {
-					return fmt.Errorf("projection.DoWindow: ack watermark: %w", err)
-				}
-
+				completed = IsWatermarkMarksEndOfStream(x.EventTime)
 				return nil
 			},
 		)
@@ -291,9 +368,22 @@ func DoWindow[A, B any](
 			return fmt.Errorf("projection.DoWindow: merge data %T: %w", item, err)
 		}
 
+		if completed {
+			log.Debugf("projection.DoWindow: pull: no more data in stream for all keys (exit)")
+			return nil
+		}
+
 		err = ctx.AckOffset(item.Offset)
 		if err != nil {
 			return fmt.Errorf("projection.DoWindow: ack; %w ", err)
+		}
+
+		ackedRecords++
+		if ackedRecords%config.snapshotEveryNRecords == 0 {
+			err = snap.Snapshot(ctx.CurrentState())
+			if err != nil {
+				return fmt.Errorf("projection.DoWindow: snapshot progress: %w", err)
+			}
 		}
 	}
 }

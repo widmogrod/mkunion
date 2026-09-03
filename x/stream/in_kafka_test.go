@@ -37,4 +37,9 @@ To run this test, please set KAFKA_SERVERS like:
 			return rand.Int()
 		})
 	}
+
+	isolated := NewKafkaStream[[]string](cm, pm, WithSystemTime)
+	if assert.NotNil(t, isolated) {
+		IsolationSpec(t, isolated)
+	}
 }

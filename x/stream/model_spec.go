@@ -89,6 +89,61 @@ func HappyPathSpec[A any](t *testing.T, s Stream[A], gen func() A) {
 	})
 }
 
+// IsolationSpec verifies that a stream behaves like a log of serialized
+// messages (Kafka-like): what is pushed is captured at push time, and what
+// is pulled is a copy. Mutating a caller's value after push, or a pulled
+// item, must never change what the stream holds. The in-memory stream is
+// the reference used in recovery tests, so it must not offer a shortcut
+// (live pointers) that real brokers do not.
+func IsolationSpec(t *testing.T, s Stream[[]string]) {
+	t.Run("pushed data does not alias the caller's value", func(t *testing.T) {
+		topicName := fmt.Sprintf("topic-%d", rand.Int63())
+		item := &Item[[]string]{
+			Topic: topicName,
+			Key:   "key",
+			Data:  []string{"original"},
+		}
+		if err := s.Push(item); err != nil {
+			t.Fatalf("push should succeed, got %v", err)
+		}
+
+		item.Data[0] = "mutated-after-push"
+
+		pulled, err := s.Pull(&FromBeginning{Topic: topicName})
+		if err != nil {
+			t.Fatalf("pull should succeed, got %v", err)
+		}
+		if diff := cmp.Diff([]string{"original"}, pulled.Data); diff != "" {
+			t.Errorf("the stream must capture data at push time, got %s", diff)
+		}
+	})
+
+	t.Run("pulled item does not alias the stream's log", func(t *testing.T) {
+		topicName := fmt.Sprintf("topic-%d", rand.Int63())
+		if err := s.Push(&Item[[]string]{Topic: topicName, Key: "key", Data: []string{"original"}}); err != nil {
+			t.Fatalf("push should succeed, got %v", err)
+		}
+
+		first, err := s.Pull(&FromBeginning{Topic: topicName})
+		if err != nil {
+			t.Fatalf("pull should succeed, got %v", err)
+		}
+		first.Data[0] = "mutated-after-pull"
+		first.Key = "mutated-key"
+
+		again, err := s.Pull(&FromBeginning{Topic: topicName})
+		if err != nil {
+			t.Fatalf("pull should succeed, got %v", err)
+		}
+		if diff := cmp.Diff([]string{"original"}, again.Data); diff != "" {
+			t.Errorf("mutating a pulled item must not rewrite the log, got %s", diff)
+		}
+		if diff := cmp.Diff("key", again.Key); diff != "" {
+			t.Errorf("mutating a pulled item must not rewrite the log, got %s", diff)
+		}
+	})
+}
+
 // ItemPushAndPullEqualSpec is a helper function to test if the pushed and pulled items are equal
 func ItemPushAndPullEqualSpec[A any](t *testing.T, pushed, pulled *Item[A]) bool {
 	if pushed == nil {

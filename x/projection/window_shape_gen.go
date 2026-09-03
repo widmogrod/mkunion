@@ -15,6 +15,7 @@ func init() {
 	shape.Register(WindowKeyShape())
 	shape.Register(WindowRecordShape())
 	shape.Register(WindowShape())
+	shape.Register(doWindowConfigShape())
 }
 
 //shape:shape
@@ -221,5 +222,14 @@ func WindowRecordShape() shape.Shape {
 				},
 			},
 		},
+	}
+}
+
+//shape:shape
+func doWindowConfigShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "doWindowConfig",
+		PkgName:       "projection",
+		PkgImportName: "github.com/widmogrod/mkunion/x/projection",
 	}
 }

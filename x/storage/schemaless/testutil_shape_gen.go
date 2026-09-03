@@ -28,6 +28,12 @@ func ExampleRecordShape() shape.Shape {
 					},
 				},
 			},
+			{
+				Name: "Tags",
+				Type: &shape.ListLike{
+					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				},
+			},
 		},
 		Tags: map[string]shape.Tag{
 			"serde": {

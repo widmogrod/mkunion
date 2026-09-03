@@ -48,6 +48,19 @@ func (r *ExampleRecord) _marshalJSONExampleRecord(x ExampleRecord) ([]byte, erro
 	}
 	buf.WriteString("\"Age\":")
 	buf.Write(fieldAge)
+	var fieldTags []byte
+	fieldTags, err = r._marshalJSONSlicestring(x.Tags)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: ExampleRecord._marshalJSONExampleRecord: field name Tags; %w", err)
+	}
+	if len(fieldTags) == 0 {
+		fieldTags = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Tags\":")
+	buf.Write(fieldTags)
 	buf.WriteByte('}')
 	return buf.Bytes(), nil
 }
@@ -62,6 +75,21 @@ func (r *ExampleRecord) _marshalJSONint(x int) ([]byte, error) {
 	result, err := json.Marshal(x)
 	if err != nil {
 		return nil, fmt.Errorf("schemaless: ExampleRecord._marshalJSONint:; %w", err)
+	}
+	return result, nil
+}
+func (r *ExampleRecord) _marshalJSONSlicestring(x []string) ([]byte, error) {
+	partial := make([]json.RawMessage, len(x))
+	for i, v := range x {
+		item, err := r._marshalJSONstring(v)
+		if err != nil {
+			return nil, fmt.Errorf("schemaless: ExampleRecord._marshalJSONSlicestring: at index %d; %w", i, err)
+		}
+		partial[i] = item
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("schemaless: ExampleRecord._marshalJSONSlicestring:; %w", err)
 	}
 	return result, nil
 }
@@ -92,6 +120,12 @@ func (r *ExampleRecord) _unmarshalJSONExampleRecord(data []byte) (ExampleRecord,
 			return result, fmt.Errorf("schemaless: ExampleRecord._unmarshalJSONExampleRecord: field Age; %w", err)
 		}
 	}
+	if fieldTags, ok := partial["Tags"]; ok {
+		result.Tags, err = r._unmarshalJSONSlicestring(fieldTags)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: ExampleRecord._unmarshalJSONExampleRecord: field Tags; %w", err)
+		}
+	}
 	return result, nil
 }
 func (r *ExampleRecord) _unmarshalJSONstring(data []byte) (string, error) {
@@ -107,6 +141,22 @@ func (r *ExampleRecord) _unmarshalJSONint(data []byte) (int, error) {
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return result, fmt.Errorf("schemaless: ExampleRecord._unmarshalJSONint: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *ExampleRecord) _unmarshalJSONSlicestring(data []byte) ([]string, error) {
+	result := make([]string, 0)
+	var partial []json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("schemaless: ExampleRecord._unmarshalJSONSlicestring: native list unwrap; %w", err)
+	}
+	for i, v := range partial {
+		item, err := r._unmarshalJSONstring(v)
+		if err != nil {
+			return result, fmt.Errorf("schemaless: ExampleRecord._unmarshalJSONSlicestring: at index %d; %w", i, err)
+		}
+		result = append(result, item)
 	}
 	return result, nil
 }

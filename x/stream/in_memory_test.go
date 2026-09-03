@@ -223,3 +223,7 @@ func TestStreamHappyPathSpec(t *testing.T) {
 		return rand.Int()
 	})
 }
+
+func TestStreamIsolationSpec(t *testing.T) {
+	IsolationSpec(t, NewInMemoryStream[[]string](WithSystemTimeFixed(10)))
+}
