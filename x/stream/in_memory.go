@@ -2,6 +2,7 @@ package stream
 
 import (
 	"fmt"
+	"github.com/widmogrod/mkunion/x/shared"
 	"math/rand"
 )
 
@@ -41,6 +42,11 @@ func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 		return ErrOffsetSetOnPush
 	}
 
+	data, err := detach[A](x.Data)
+	if err != nil {
+		return fmt.Errorf("stream.InMemoryStream.Push: %w", err)
+	}
+
 	if i.values[x.Topic] == nil {
 		i.values[x.Topic] = make([]*Item[A], 0)
 	}
@@ -48,11 +54,37 @@ func (i *InMemoryStream[A]) Push(x *Item[A]) error {
 	i.values[x.Topic] = append(i.values[x.Topic], &Item[A]{
 		Topic:     x.Topic,
 		Key:       x.Key,
-		Data:      x.Data,
+		Data:      data,
 		EventTime: i.ensureEventTime(x.EventTime),
 		Offset:    mkInMemoryOffsetFromInt(len(i.values[x.Topic])),
 	})
 	return nil
+}
+
+// detach deep-copies a value through serialization, the way a broker
+// captures a message: the stream must never share memory with callers.
+func detach[A any](x A) (A, error) {
+	bytes, err := shared.JSONMarshal[A](x)
+	if err != nil {
+		return x, fmt.Errorf("stream.detach: marshal; %w", err)
+	}
+	result, err := shared.JSONUnmarshal[A](bytes)
+	if err != nil {
+		return x, fmt.Errorf("stream.detach: unmarshal; %w", err)
+	}
+	return result, nil
+}
+
+// detachItem returns a copy of a stored item with detached data, so a
+// consumer mutating what it pulled cannot rewrite the log.
+func detachItem[A any](x *Item[A]) (*Item[A], error) {
+	data, err := detach[A](x.Data)
+	if err != nil {
+		return nil, err
+	}
+	copied := *x
+	copied.Data = data
+	return &copied, nil
 }
 
 func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
@@ -81,7 +113,7 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 				return nil, ErrNoMoreNewDataInStream
 			}
 
-			return i.values[x.Topic][0], nil
+			return detachItem(i.values[x.Topic][0])
 		},
 		func(x *FromOffset) (*Item[A], error) {
 			if x.Topic == "" {
@@ -105,7 +137,7 @@ func (i *InMemoryStream[A]) Pull(fromOffset PullCMD) (*Item[A], error) {
 				return nil, ErrNoMoreNewDataInStream
 			}
 
-			return i.values[x.Topic][offset+1], nil
+			return detachItem(i.values[x.Topic][offset+1])
 		},
 	)
 }
