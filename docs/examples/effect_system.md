@@ -221,6 +221,95 @@ Everything below follows from that. Each item has a test in
     }
     ```
 
+## Beyond the happy path
+
+The six tests above show that the door exists. The tests in
+`example/effect/advanced_test.go` and `example/effect/observe_test.go` show what
+walks through it when things go wrong. They state every expected tape, trace,
+span and mailbox in full, so the data shape is visible in the test.
+
+The program under test is `Notify`. It reads a name, mails a greeting, and logs
+the receipt. `Send` is not idempotent: sending twice sends two.
+
+```go title="example/effect/program_fx.go"
+--8<-- "example/effect/program_fx.go:notify"
+```
+
+Adding `Send` to the union forced every handler, policy table and decoder in the
+package to be updated before it compiled again. Nothing was forgotten.
+
+### Retries are a policy per operation
+
+`RetryWith` asks a policy function for each operation. The policy is an exhaustive
+match, so the compiler asks "may this be retried?" for every new operation. A
+`RetryBudget` caps retries across the whole run. Sleep is injected, so the tests
+assert the backoff durations instead of waiting for them.
+
+```go title="example/effect/middleware.go"
+--8<-- "example/effect/middleware.go:retry"
+```
+
+The test also shows that middleware order is semantics. `Record(Retry(h))`
+writes one committed answer per step. `Retry(Record(h))` writes every attempt,
+failures included. Only the first tape can be resumed from.
+
+### At-least-once, and idempotency keys minted by the run
+
+The nasty fault is not "the call failed". It is "the mail server delivered, then
+the answer was lost". A retry sends the mail again. `LoseAnswerAt` injects
+exactly that fault, and the test shows two mails in the mailbox.
+
+The fix: `StepKeys` gives every step a stable key, `run-1/3`, and the handler
+passes it to the mail server as an idempotency key. All retries of one step
+share the key. On resume, the replayed steps still count, so step 3 keeps its
+key. With keys the mailbox holds one mail.
+
+```go title="example/effect/middleware.go"
+--8<-- "example/effect/middleware.go:step-keys"
+```
+
+```go title="example/effect/handlers.go"
+--8<-- "example/effect/handlers.go:mailbox"
+```
+
+### Crash at every step
+
+The tape is finite, so the crash points can be searched completely. The test
+crashes `Notify` after step 0, 1, 2, 3 and 4, resumes each time from the
+recorded facts, and asserts the same receipt and exactly one mail. `Log` has no
+key, so it is at-least-once. That is a choice the test points out.
+
+### Fault tools
+
+```go title="example/effect/middleware.go"
+--8<-- "example/effect/middleware.go:faults"
+```
+
+### Trace diff, policy, and spans
+
+A typed trace can do three things spans cannot.
+
+- **Diff two runs.** `notifyV2` in the test adds a config read and moves the
+  clock read. The output is identical, so an output test passes. `DiffTraces`
+  shows the change as a diff of operations.
+- **Enforce a policy.** `Guard` refuses operations before they run. The test
+  shows a dry-run policy: reads are fine, secrets are refused, nothing leaves the
+  process. An exhaustive match, so a new operation has to be classified.
+- **Feed OpenTelemetry.** `Spans` emits one span per operation from one place,
+  with start, end, attributes and error. The test asserts the exact spans.
+
+```go title="example/effect/observe.go"
+--8<-- "example/effect/observe.go:guard"
+```
+
+### Seeded chaos
+
+`Chaos` injects refusals and lost answers at random from a seed. The test runs
+five hundred worlds. Without keys, chaos finds double delivery in about one world
+in seven. With keys, every world is exactly-once or a clean failure, and a failing
+world replays from its seed alone. That is deterministic simulation testing in a
+unit test.
+
 When a program is "call three services and return" and you only need swap-for-tests,
 plain DI is enough. Effects earn their cost when you need the trace, the replay, the
 resume, or the same middleware on every call: workflow engines, sagas, simulation
