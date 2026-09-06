@@ -44,6 +44,7 @@ func (fx Fx) Log(msg string)              { fx.Do(&Log{Msg: msg}) }
 func (fx Fx) Now() time.Time              { return fx.Do(&Now{}) }
 func (fx Fx) ReadFile(path string) []byte { return fx.Do(&ReadFile{Path: path}) }
 func (fx Fx) Random(max int) int          { return fx.Do(&Random{Max: max}) }
+func (fx Fx) Send(to, msg string) string  { return fx.Do(&Send{To: to, Msg: msg}) }
 
 // --8<-- [end:fx-api]
 
@@ -62,8 +63,25 @@ func (Defaults) HandleReadFile(_ context.Context, op *ReadFile) ([]byte, error) 
 	return nil, fmt.Errorf("defaults: no file %q", op.Path)
 }
 func (Defaults) HandleRandom(context.Context, *Random) (int, error) { return 0, nil }
+func (Defaults) HandleSend(context.Context, *Send) (string, error)  { return "receipt-0", nil }
 
 // --8<-- [end:defaults]
+
+// --8<-- [start:notify]
+
+// Notify reads a name, mails a greeting, and logs the receipt.
+// Operations, in order: ReadFile, Now, Send, Log. Send is the one that must not
+// happen twice; the advanced tests are built around that.
+func Notify(path, to string) Program[string] {
+	return Prog(func(fx Fx) (string, error) {
+		name := strings.TrimSpace(string(fx.ReadFile(path)))
+		receipt := fx.Send(to, "Hello "+name+", it is "+fx.Now().Format(time.Kitchen))
+		fx.Log("sent " + receipt)
+		return receipt, nil
+	})
+}
+
+// --8<-- [end:notify]
 
 // --8<-- [start:greet-fx]
 

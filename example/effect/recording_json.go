@@ -70,6 +70,7 @@ func answerFromJSON(op Effect, raw json.RawMessage) (any, error) {
 		func(*Now) (any, error) { return decodeAnswer[time.Time](raw) },
 		func(*ReadFile) (any, error) { return decodeAnswer[[]byte](raw) },
 		func(*Random) (any, error) { return decodeAnswer[int](raw) },
+		func(*Send) (any, error) { return decodeAnswer[string](raw) },
 	)
 }
 

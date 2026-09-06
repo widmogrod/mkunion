@@ -16,13 +16,21 @@ import (
 // One test per benefit of "every effect is data that passes through one door".
 
 func newLive() (*Live, *bytes.Buffer) {
+	live, out, _ := newWorld()
+	return live, out
+}
+
+// newWorld is a small real world: a file, a fixed clock, a seeded die, a mail server.
+func newWorld() (*Live, *bytes.Buffer, *Mailbox) {
 	var out bytes.Buffer
+	mail := &Mailbox{}
 	return &Live{
 		Out:  &out,
 		FS:   fstest.MapFS{"name.txt": {Data: []byte("Ada\n")}},
 		Rand: rand.New(rand.NewPCG(1, 2)),
 		Now:  func() time.Time { return noon },
-	}, &out
+		Mail: mail.Send,
+	}, &out, mail
 }
 
 // 1. One trace of everything: bodies, nested calls, all styles, one ordered list.

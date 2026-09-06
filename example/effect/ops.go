@@ -26,12 +26,15 @@ type (
 	ReadFile struct{ Path string }
 	// Random asks for a number in [0, Max).
 	Random struct{ Max int }
+	// Send asks for a message to be delivered. It is not idempotent: sending twice sends two.
+	Send struct{ To, Msg string }
 )
 
 func (*Log) Result() Unit        { return Unit{} }
 func (*Now) Result() time.Time   { return time.Time{} }
 func (*ReadFile) Result() []byte { return nil }
 func (*Random) Result() int      { return 0 }
+func (*Send) Result() string     { return "" }
 
 // --8<-- [end:ops-def]
 
@@ -61,6 +64,7 @@ type EffectHandler interface {
 	HandleNow(ctx context.Context, op *Now) (time.Time, error)
 	HandleReadFile(ctx context.Context, op *ReadFile) ([]byte, error)
 	HandleRandom(ctx context.Context, op *Random) (int, error)
+	HandleSend(ctx context.Context, op *Send) (string, error)
 }
 
 // HandlerOf adapts a typed EffectHandler to the untyped Handler the core runs.
@@ -73,6 +77,7 @@ func HandlerOf(h EffectHandler) Handler[Effect] {
 			func(x *Now) (any, error) { r, err := h.HandleNow(ctx, x); return answer(x, r, err) },
 			func(x *ReadFile) (any, error) { r, err := h.HandleReadFile(ctx, x); return answer(x, r, err) },
 			func(x *Random) (any, error) { r, err := h.HandleRandom(ctx, x); return answer(x, r, err) },
+			func(x *Send) (any, error) { r, err := h.HandleSend(ctx, x); return answer(x, r, err) },
 		)
 	}
 }

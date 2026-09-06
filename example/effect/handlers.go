@@ -17,6 +17,7 @@ type Live struct {
 	FS   fs.FS
 	Rand *rand.Rand
 	Now  func() time.Time
+	Mail func(key, to, msg string) (string, error)
 }
 
 var _ EffectHandler = (*Live)(nil)
@@ -38,6 +39,11 @@ func (l *Live) HandleRandom(_ context.Context, op *Random) (int, error) {
 	return l.Rand.IntN(op.Max), nil
 }
 
+// HandleSend passes the step key along, so a mail server can drop duplicates.
+func (l *Live) HandleSend(ctx context.Context, op *Send) (string, error) {
+	return l.Mail(StepKey(ctx), op.To, op.Msg)
+}
+
 // --8<-- [end:live]
 
 // --8<-- [start:fake]
@@ -49,6 +55,7 @@ type Fake struct {
 	Files map[string]string
 	Rolls []int
 	Logs  []string
+	Sent  []string
 }
 
 var _ EffectHandler = (*Fake)(nil)
@@ -82,4 +89,39 @@ func (f *Fake) HandleRandom(_ context.Context, op *Random) (int, error) {
 	return got % op.Max, nil
 }
 
+func (f *Fake) HandleSend(_ context.Context, op *Send) (string, error) {
+	f.Sent = append(f.Sent, op.To+": "+op.Msg)
+	return fmt.Sprintf("receipt-%d", len(f.Sent)), nil
+}
+
 // --8<-- [end:fake]
+
+// --8<-- [start:mailbox]
+
+// Mailbox is a mail server. It remembers the receipt for every idempotency key,
+// so a Send that is repeated with the same key is delivered once.
+type Mailbox struct {
+	Sent     []Mail
+	receipts map[string]string
+}
+
+// Mail is one delivered message.
+type Mail struct{ Key, To, Msg string }
+
+// Send delivers, unless key was seen before; then it returns the old receipt.
+func (m *Mailbox) Send(key, to, msg string) (string, error) {
+	if receipt, ok := m.receipts[key]; ok && key != "" {
+		return receipt, nil
+	}
+	m.Sent = append(m.Sent, Mail{Key: key, To: to, Msg: msg})
+	receipt := fmt.Sprintf("receipt-%d", len(m.Sent))
+	if key != "" {
+		if m.receipts == nil {
+			m.receipts = map[string]string{}
+		}
+		m.receipts[key] = receipt
+	}
+	return receipt, nil
+}
+
+// --8<-- [end:mailbox]
