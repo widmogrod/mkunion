@@ -1,4 +1,4 @@
-package welcome
+package effect
 
 import (
 	"errors"
@@ -99,7 +99,7 @@ func AttemptAs[Op, R any](e *Env[Op], op Op) (R, error) {
 }
 
 // DoAs performs op and returns its answer. On error it unwinds the body, and
-// the program fails with that error. Prefer the typed Fx.Do in program.go.
+// the program fails with that error. Wrap it in a typed Do (see example/welcome/program.go).
 func DoAs[Op, R any](e *Env[Op], op Op) R {
 	value, err := AttemptAs[Op, R](e, op)
 	if err != nil {

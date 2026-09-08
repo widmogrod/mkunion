@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/effect"
 	"testing"
 	"time"
 
@@ -27,7 +28,7 @@ func TestPart4_oneMiddlewareCoversEveryOperation(t *testing.T) {
 	// Every second call fails. Retry (3 tries each) and journal wrap the handler once.
 	// Middleware is listed outermost first: Retry sees journal, journal sees FailEvery.
 	got, err := Interpret(context.Background(), program, live,
-		Retry[MyEff](3), journal[MyEff](&attempts), FailEvery[MyEff](2, blip))
+		effect.Retry[MyEff](3), journal[MyEff](&attempts), effect.FailEvery[MyEff](2, blip))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
@@ -48,19 +49,19 @@ func TestPart4_oneMiddlewareCoversEveryOperation(t *testing.T) {
 
 // strictPolicy is an exhaustive match. Add an operation to MyEff and this
 // function stops compiling until someone decides whether it may be retried.
-func strictPolicy(op MyEff) RetryPolicy {
+func strictPolicy(op MyEff) effect.RetryPolicy {
 	return MatchMyEffR1(op,
-		func(*Log) RetryPolicy { return RetryPolicy{Attempts: 2} },
-		func(*Now) RetryPolicy { return RetryPolicy{Attempts: 2} },
-		func(*ReadFile) RetryPolicy {
-			return RetryPolicy{Attempts: 3, Backoff: ExponentialBackoff(10 * time.Millisecond)}
+		func(*Log) effect.RetryPolicy { return effect.RetryPolicy{Attempts: 2} },
+		func(*Now) effect.RetryPolicy { return effect.RetryPolicy{Attempts: 2} },
+		func(*ReadFile) effect.RetryPolicy {
+			return effect.RetryPolicy{Attempts: 3, Backoff: effect.ExponentialBackoff(10 * time.Millisecond)}
 		},
-		func(*Random) RetryPolicy { return RetryPolicy{Attempts: 2} },
+		func(*Random) effect.RetryPolicy { return effect.RetryPolicy{Attempts: 2} },
 		// Send is not idempotent. Without an idempotency key it must not be retried.
-		func(*Send) RetryPolicy { return RetryPolicy{Attempts: 1} },
+		func(*Send) effect.RetryPolicy { return effect.RetryPolicy{Attempts: 1} },
 		// Charge may be retried on a broken line. A refusal is an answer, not a
 		// failure, so no policy can retry it (TestPart4_aRefusalIsAnAnswerNotAFailure).
-		func(*Charge) RetryPolicy { return RetryPolicy{Attempts: 3} },
+		func(*Charge) effect.RetryPolicy { return effect.RetryPolicy{Attempts: 3} },
 	)
 }
 
@@ -68,7 +69,7 @@ func strictPolicy(op MyEff) RetryPolicy {
 
 // keyedPolicy may retry everything, because StepKeys gives every step an
 // idempotency key and the mail server dedups on it.
-func keyedPolicy(MyEff) RetryPolicy { return RetryPolicy{Attempts: 3} }
+func keyedPolicy(MyEff) effect.RetryPolicy { return effect.RetryPolicy{Attempts: 3} }
 
 func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 	blip := errors.New("network blip")
@@ -81,7 +82,7 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 
 		// Fault: the 1st and 2nd call fail (ReadFile twice), then the 5th (Send).
 		_, err := Interpret(context.Background(), Notify("name.txt", to), live,
-			RetryWith(strictPolicy, nil, fakeSleep),
+			effect.RetryWith(strictPolicy, nil, fakeSleep),
 			journal[MyEff](&attempts),
 			flakyAt[MyEff](map[int]error{1: blip, 2: blip, 5: blip}))
 
@@ -101,15 +102,15 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 	t.Run("a budget caps retries across the whole run", func(t *testing.T) {
 		live, _, _ := newWorld()
 		var attempts []string
-		budget := &RetryBudget{Left: 1}
+		budget := &effect.RetryBudget{Left: 1}
 
 		// ReadFile fails twice. Policy allows 3 attempts, but the run may retry once.
 		_, err := Interpret(context.Background(), Notify("name.txt", to), live,
-			RetryWith(strictPolicy, budget, nil),
+			effect.RetryWith(strictPolicy, budget, nil),
 			journal[MyEff](&attempts),
 			flakyAt[MyEff](map[int]error{1: blip, 2: blip}))
 
-		require.ErrorIs(t, err, ErrRetryBudget)
+		require.ErrorIs(t, err, effect.ErrRetryBudget)
 		assert.Equal(t, []string{
 			"*welcome.ReadFile err: network blip",
 			"*welcome.ReadFile err: network blip",
@@ -122,11 +123,11 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 
 		// Record outside Retry: the tape holds one committed answer per step.
 		live, _, _ := newWorld()
-		var committed []Step[MyEff]
+		var committed []effect.Step[MyEff]
 		_, err := Interpret(context.Background(), program, live,
-			Record(&committed), RetryWith(strictPolicy, nil, nil), flakyAt[MyEff](map[int]error{1: blip}))
+			effect.Record(&committed), effect.RetryWith(strictPolicy, nil, nil), flakyAt[MyEff](map[int]error{1: blip}))
 		require.NoError(t, err)
-		assert.Equal(t, []Step[MyEff]{
+		assert.Equal(t, []effect.Step[MyEff]{
 			{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
 			{Op: &Now{}, Answer: noon},
 			{Op: &Send{To: to, Msg: greeting}, Answer: "receipt-1"},
@@ -135,11 +136,11 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 
 		// Record inside Retry: the tape holds every attempt, failures included.
 		live, _, _ = newWorld()
-		var attempts []Step[MyEff]
+		var attempts []effect.Step[MyEff]
 		_, err = Interpret(context.Background(), program, live,
-			RetryWith(strictPolicy, nil, nil), Record(&attempts), flakyAt[MyEff](map[int]error{1: blip}))
+			effect.RetryWith(strictPolicy, nil, nil), effect.Record(&attempts), flakyAt[MyEff](map[int]error{1: blip}))
 		require.NoError(t, err)
-		assert.Equal(t, []Step[MyEff]{
+		assert.Equal(t, []effect.Step[MyEff]{
 			{Op: &ReadFile{Path: "name.txt"}, Err: blip},
 			{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
 			{Op: &Now{}, Answer: noon},
@@ -148,11 +149,11 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		}, attempts)
 
 		// Only the committed tape replays cleanly. The attempt tape replays the failure.
-		got, err := Run(context.Background(), Replay(committed, nil), program)
+		got, err := effect.Run(context.Background(), effect.Replay(committed, nil), program)
 		require.NoError(t, err)
 		assert.Equal(t, "receipt-1", got)
 
-		_, err = Run(context.Background(), Replay(attempts, nil), program)
+		_, err = effect.Run(context.Background(), effect.Replay(attempts, nil), program)
 		require.ErrorIs(t, err, blip, "a tape of attempts is not a tape of facts")
 	})
 }
@@ -164,7 +165,7 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 		live, _, mail := newWorld()
 		// Call 3 is Send: the mail server delivers, then the answer is lost.
 		got, err := Interpret(context.Background(), Notify("name.txt", to), live,
-			RetryWith(keyedPolicy, nil, nil), LoseAnswerAt[MyEff](3, lost))
+			effect.RetryWith(keyedPolicy, nil, nil), effect.LoseAnswerAt[MyEff](3, lost))
 
 		require.NoError(t, err)
 		assert.Equal(t, "receipt-2", got, "the program only saw the second delivery")
@@ -178,7 +179,7 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 		live, _, mail := newWorld()
 		// StepKeys is outermost, so both attempts of step 3 carry "run-1/3".
 		got, err := Interpret(context.Background(), Notify("name.txt", to), live,
-			StepKeys[MyEff]("run-1"), RetryWith(keyedPolicy, nil, nil), LoseAnswerAt[MyEff](3, lost))
+			effect.StepKeys[MyEff]("run-1"), effect.RetryWith(keyedPolicy, nil, nil), effect.LoseAnswerAt[MyEff](3, lost))
 
 		require.NoError(t, err)
 		assert.Equal(t, "receipt-1", got, "the retry got the receipt of the first delivery")
@@ -193,7 +194,7 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 
 	// Reference run: no faults. Every resumed run below must reproduce it.
 	live, out, mail := newWorld()
-	want, err := Interpret(context.Background(), program, live, StepKeys[MyEff]("run-1"))
+	want, err := Interpret(context.Background(), program, live, effect.StepKeys[MyEff]("run-1"))
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", want)
 	assert.Equal(t, []Mail{{Key: "run-1/3", To: to, Msg: greeting}}, mail.Sent)
@@ -205,11 +206,11 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 		t.Run(fmt.Sprintf("crash after step %d", k), func(t *testing.T) {
 			// One world survives the crash: the mail server. Files and clock are the same.
 			live, out, mail := newWorld()
-			var tape []Step[MyEff]
+			var tape []effect.Step[MyEff]
 
 			// First life: perform k steps, then die.
 			_, err := Interpret(context.Background(), program, live,
-				StepKeys[MyEff]("run-1"), Record(&tape), CrashAfter[MyEff](k, crash))
+				effect.StepKeys[MyEff]("run-1"), effect.Record(&tape), effect.CrashAfter[MyEff](k, crash))
 			if k == len(notifyOps) {
 				require.NoError(t, err, "no crash point left")
 			} else {
@@ -222,8 +223,8 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 			// Second life: replay the facts, then continue live. Same key prefix, so
 			// step 3 is still "run-1/3" even when it is replayed. Replay is a handler
 			// of its own, so this goes through Run and Wrap, the pieces under Interpret.
-			second := Wrap(Replay(facts, MyEffHandlerFunc(live)), StepKeys[MyEff]("run-1"))
-			got, err := Run(context.Background(), second, program)
+			second := effect.Wrap(effect.Replay(facts, MyEffHandlerFunc(live)), effect.StepKeys[MyEff]("run-1"))
+			got, err := effect.Run(context.Background(), second, program)
 
 			require.NoError(t, err)
 			assert.Equal(t, want, got, "same receipt as the reference run")
@@ -238,14 +239,16 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 
 func TestPart4_seededChaos(t *testing.T) {
 	const seeds = 500
-	cfg := func(seed uint64) ChaosConfig { return ChaosConfig{Seed: seed, FailRate: 0.15, LoseAnswerRate: 0.15} }
+	cfg := func(seed uint64) effect.ChaosConfig {
+		return effect.ChaosConfig{Seed: seed, FailRate: 0.15, LoseAnswerRate: 0.15}
+	}
 
 	t.Run("without keys, chaos finds double delivery", func(t *testing.T) {
 		duplicates := map[uint64][]Mail{}
 		for seed := uint64(0); seed < seeds; seed++ {
 			live, _, mail := newWorld()
 			_, _ = Interpret(context.Background(), Notify("name.txt", to), live,
-				RetryWith(keyedPolicy, nil, nil), Chaos[MyEff](cfg(seed)))
+				effect.RetryWith(keyedPolicy, nil, nil), effect.Chaos[MyEff](cfg(seed)))
 			if len(mail.Sent) > 1 {
 				duplicates[seed] = mail.Sent
 			}
@@ -267,7 +270,7 @@ func TestPart4_seededChaos(t *testing.T) {
 		for seed := uint64(0); seed < seeds; seed++ {
 			live, _, mail := newWorld()
 			got, err := Interpret(context.Background(), Notify("name.txt", to), live,
-				StepKeys[MyEff]("run"), RetryWith(keyedPolicy, nil, nil), Chaos[MyEff](cfg(seed)))
+				effect.StepKeys[MyEff]("run"), effect.RetryWith(keyedPolicy, nil, nil), effect.Chaos[MyEff](cfg(seed)))
 
 			// The invariants. They hold in every world or the test fails with the seed.
 			if err == nil {
@@ -276,7 +279,7 @@ func TestPart4_seededChaos(t *testing.T) {
 				require.Equal(t, []Mail{{Key: "run/3", To: to, Msg: greeting}}, mail.Sent, "seed %d", seed)
 			} else {
 				outcomes["failed cleanly"]++
-				require.ErrorIs(t, err, ErrChaos, "seed %d: only injected faults may surface", seed)
+				require.ErrorIs(t, err, effect.ErrChaos, "seed %d: only injected faults may surface", seed)
 				require.LessOrEqual(t, len(mail.Sent), 1, "seed %d: never more than one mail", seed)
 				if failingErr == nil {
 					failingSeed, failingErr = seed, err
@@ -290,8 +293,8 @@ func TestPart4_seededChaos(t *testing.T) {
 		// A failing world is reproducible from its seed alone.
 		live, _, _ := newWorld()
 		_, again := Interpret(context.Background(), Notify("name.txt", to), live,
-			StepKeys[MyEff]("run"), RetryWith(keyedPolicy, nil, nil), Chaos[MyEff](cfg(failingSeed)))
-		assert.ErrorIs(t, again, ErrChaos)
+			effect.StepKeys[MyEff]("run"), effect.RetryWith(keyedPolicy, nil, nil), effect.Chaos[MyEff](cfg(failingSeed)))
+		assert.ErrorIs(t, again, effect.ErrChaos)
 		assert.Regexp(t, `^effect: \*welcome\.\w+ failed after 3 attempts: chaos: `, again.Error(), "seed %d", failingSeed)
 		assert.EqualError(t, again, failingErr.Error(), "seed %d replays the same failure", failingSeed)
 	})
@@ -318,7 +321,7 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 
 		// strictPolicy allows 3 attempts for Charge. It never gets to use them.
 		_, err := Interpret(context.Background(), program, fake,
-			RetryWith(strictPolicy, nil, nil), journal[MyEff](&attempts))
+			effect.RetryWith(strictPolicy, nil, nil), journal[MyEff](&attempts))
 
 		assert.EqualError(t, err, "charge refused: short by 5", "the program decided, in Pay")
 		assert.Equal(t, []string{"*welcome.Charge ok"}, attempts, "one attempt: the bank answered, so there was nothing to retry")
@@ -333,7 +336,7 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 		var attempts []string
 
 		got, err := Interpret(context.Background(), program, fake,
-			RetryWith(strictPolicy, nil, nil), journal[MyEff](&attempts), flakyAt[MyEff](map[int]error{1: blip}))
+			effect.RetryWith(strictPolicy, nil, nil), journal[MyEff](&attempts), flakyAt[MyEff](map[int]error{1: blip}))
 
 		require.NoError(t, err)
 		assert.Equal(t, "charge-1", got)
@@ -367,8 +370,8 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 	})
 
 	t.Run("a refusal on a tape keeps its variant", func(t *testing.T) {
-		var tape []Step[MyEff]
-		_, err := Interpret(context.Background(), Pay(10), &Fake{Budget: 5}, Record(&tape))
+		var tape []effect.Step[MyEff]
+		_, err := Interpret(context.Background(), Pay(10), &Fake{Budget: 5}, effect.Record(&tape))
 		assert.EqualError(t, err, "charge refused: short by 5")
 
 		data, err := TapeToJSON(tape)

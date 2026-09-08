@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/effect"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -38,13 +39,13 @@ func TestPart5_traceDiffFindsABehaviourRegression(t *testing.T) {
 	live, _, _ := newWorld()
 	live.FS = withConfig
 	var v1 []MyEff
-	out1, err := Interpret(context.Background(), Notify("name.txt", to), live, Trace(&v1))
+	out1, err := Interpret(context.Background(), Notify("name.txt", to), live, effect.Trace(&v1))
 	require.NoError(t, err)
 
 	live, _, _ = newWorld()
 	live.FS = withConfig
 	var v2 []MyEff
-	out2, err := Interpret(context.Background(), notifyV2("name.txt", to), live, Trace(&v2))
+	out2, err := Interpret(context.Background(), notifyV2("name.txt", to), live, effect.Trace(&v2))
 	require.NoError(t, err)
 
 	assert.Equal(t, out1, out2, "same output: an output-only test passes")
@@ -55,7 +56,7 @@ func TestPart5_traceDiffFindsABehaviourRegression(t *testing.T) {
 		`- *welcome.Now{}`,
 		`  *welcome.Send{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}`,
 		`  *welcome.Log{"Msg":"sent receipt-1"}`,
-	}, DiffTraces(v1, v2), "the behaviour diff shows the new read and the moved clock")
+	}, effect.DiffTraces(v1, v2), "the behaviour diff shows the new read and the moved clock")
 }
 
 // dryRun is an exhaustive policy: reads are fine, nothing leaves the process.
@@ -80,9 +81,9 @@ func TestPart5_policyGuardIsAuthorizationOnEffects(t *testing.T) {
 
 	live, out, mail := newWorld()
 	var trace []MyEff
-	_, err := Interpret(context.Background(), program, live, Guard(dryRun), Trace(&trace))
+	_, err := Interpret(context.Background(), program, live, effect.Guard(dryRun), effect.Trace(&trace))
 
-	require.ErrorIs(t, err, ErrDenied)
+	require.ErrorIs(t, err, effect.ErrDenied)
 	assert.EqualError(t, err, `effect: denied by policy: dry run: would send "Hello Ada, it is 12:00PM" to ada@example.com`)
 	assert.Equal(t, []MyEff{&ReadFile{Path: "name.txt"}, &Now{}}, trace, "the reads happened; the Send never reached the handler")
 	assert.Empty(t, mail.Sent)
@@ -91,7 +92,7 @@ func TestPart5_policyGuardIsAuthorizationOnEffects(t *testing.T) {
 	readSecret := Prog(func(fx Fx) (string, error) {
 		return string(fx.ReadFile("prod.env")), nil
 	})
-	_, err = Interpret(context.Background(), readSecret, live, Guard(dryRun))
+	_, err = Interpret(context.Background(), readSecret, live, effect.Guard(dryRun))
 	assert.EqualError(t, err, `effect: denied by policy: dry run: refuse to read secrets from "prod.env"`)
 }
 
@@ -100,13 +101,13 @@ func TestPart5_spansForEveryOperationFromOnePlace(t *testing.T) {
 	clock := noon
 	tick := func() time.Time { clock = clock.Add(10 * time.Millisecond); return clock }
 	at := func(ms int) time.Time { return noon.Add(time.Duration(ms) * time.Millisecond) }
-	var spans []Span
+	var spans []effect.Span
 	program := Notify("name.txt", to)
 
-	_, err := Interpret(context.Background(), program, live, Spans[MyEff](tick, &spans))
+	_, err := Interpret(context.Background(), program, live, effect.Spans[MyEff](tick, &spans))
 
 	require.NoError(t, err)
-	assert.Equal(t, []Span{
+	assert.Equal(t, []effect.Span{
 		{Name: "*welcome.ReadFile", Attrs: `{"Path":"name.txt"}`, Start: at(10), End: at(20)},
 		{Name: "*welcome.Now", Attrs: `{}`, Start: at(30), End: at(40)},
 		{Name: "*welcome.Send", Attrs: `{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}`, Start: at(50), End: at(60)},
@@ -116,9 +117,9 @@ func TestPart5_spansForEveryOperationFromOnePlace(t *testing.T) {
 	// A failure lands on the span too.
 	spans, clock = nil, noon
 	blip := errors.New("disk hiccup")
-	_, err = Interpret(context.Background(), program, live, Spans[MyEff](tick, &spans), FailEvery[MyEff](1, blip))
+	_, err = Interpret(context.Background(), program, live, effect.Spans[MyEff](tick, &spans), effect.FailEvery[MyEff](1, blip))
 	require.ErrorIs(t, err, blip)
-	assert.Equal(t, []Span{
+	assert.Equal(t, []effect.Span{
 		{Name: "*welcome.ReadFile", Attrs: `{"Path":"name.txt"}`, Start: at(10), End: at(20), Err: "disk hiccup"},
 	}, spans)
 }

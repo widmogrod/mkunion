@@ -34,8 +34,8 @@ func ProgramShape() shape.Shape {
 		IsAlias: true,
 		Type: &shape.RefName{
 			Name:          "Eff",
-			PkgName:       "welcome",
-			PkgImportName: "github.com/widmogrod/mkunion/example/welcome",
+			PkgName:       "effect",
+			PkgImportName: "github.com/widmogrod/mkunion/x/effect",
 			Indexed: []shape.Shape{
 				&shape.RefName{
 					Name:          "MyEff",

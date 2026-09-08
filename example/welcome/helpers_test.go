@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/effect"
 	"math/rand/v2"
 	"testing/fstest"
 	"time"
@@ -30,7 +31,7 @@ var notifyOps = []MyEff{
 
 // notifyTape is the tape Record writes for that run: every operation with the
 // answer the world gave.
-var notifyTape = []Step[MyEff]{
+var notifyTape = []effect.Step[MyEff]{
 	{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
 	{Op: &Now{}, Answer: noon},
 	{Op: &Send{To: to, Msg: greeting}, Answer: "receipt-1"},
@@ -55,8 +56,8 @@ func newWorld() (*Live, *bytes.Buffer, *Mailbox) {
 
 // journal records every attempt the wrapped handler sees, with its outcome.
 // It is the "what really happened" view the tests assert on.
-func journal[Op any](lines *[]string) Middleware[Op] {
-	return func(h Handler[Op]) Handler[Op] {
+func journal[Op any](lines *[]string) effect.Middleware[Op] {
+	return func(h effect.Handler[Op]) effect.Handler[Op] {
 		return func(ctx context.Context, op Op) (any, error) {
 			answer, err := h(ctx, op)
 			outcome := "ok"
@@ -70,8 +71,8 @@ func journal[Op any](lines *[]string) Middleware[Op] {
 }
 
 // flakyAt fails the calls listed in errs (1-based call number) before performing them.
-func flakyAt[Op any](errs map[int]error) Middleware[Op] {
-	return func(h Handler[Op]) Handler[Op] {
+func flakyAt[Op any](errs map[int]error) effect.Middleware[Op] {
+	return func(h effect.Handler[Op]) effect.Handler[Op] {
 		calls := 0
 		return func(ctx context.Context, op Op) (any, error) {
 			calls++
@@ -83,7 +84,7 @@ func flakyAt[Op any](errs map[int]error) Middleware[Op] {
 	}
 }
 
-func opsOf(tape []Step[MyEff]) []MyEff {
+func opsOf(tape []effect.Step[MyEff]) []MyEff {
 	ops := make([]MyEff, 0, len(tape))
 	for _, step := range tape {
 		ops = append(ops, step.Op)

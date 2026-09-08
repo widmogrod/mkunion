@@ -3,6 +3,7 @@ package welcome
 import (
 	"context"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/effect"
 	"io"
 	"io/fs"
 	"math/rand/v2"
@@ -44,7 +45,7 @@ func (l *Live) HandleRandom(_ context.Context, op *Random) (int, error) {
 
 // HandleSend passes the step key along, so a mail server can drop duplicates (part 4).
 func (l *Live) HandleSend(ctx context.Context, op *Send) (string, error) {
-	return l.Mail(StepKey(ctx), op.To, op.Msg)
+	return l.Mail(effect.StepKey(ctx), op.To, op.Msg)
 }
 
 // HandleCharge asks the bank. A refusal comes back as a value; only a broken

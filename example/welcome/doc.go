@@ -15,28 +15,27 @@
 //	  handlers.go   Live for production, Fake and Defaults for tests, Mailbox
 //	  part1_basics_test.go
 //
-//	Part 2: under the hood
-//	  eff.go        the program union (Pure, Fail, Bind, Suspend), Then, Run
-//	  proc.go       the coroutine that turns a plain body into that union
+//	Part 2: under the hood (the core lives in x/effect)
+//	  x/effect/eff.go    the program union (Pure, Fail, Bind, Suspend), Then, Run
+//	  x/effect/proc.go   the coroutine that turns a plain body into that union
 //	  part2_under_the_hood_test.go
 //
 //	Part 3: testing with tapes
-//	  recording.go, recording_json.go   Record, Replay, tape as JSON
+//	  x/effect/recording.go   Record, Replay
+//	  recording_json.go       a tape as JSON, typed per operation
 //	  part3_testing_test.go
 //
 //	Part 4: failure is normal
-//	  middleware.go   retry policies, idempotency keys, fault injection, chaos
+//	  x/effect/middleware.go   retry policies, idempotency keys, fault injection, chaos
 //	  part4_failures_test.go
 //
 //	Part 5: seeing what happened
-//	  observe.go    trace diff, policy guard, spans
+//	  x/effect/observe.go   trace diff, policy guard, spans
 //	  part5_observability_test.go
 //
 // The docs page docs/examples/effect_system.md walks through the same order.
 //
-// The type registry is off for this package. mkunion's registry generator
-// mistakes the type parameter Op of Trace for a package type, and it ignores
-// the noserde option on Eff. Both are generator bugs, not effect-system limits.
+// The type registry is off for this package, for the reasons given in x/effect/doc.go.
 //
 //go:tag mkunion:",no-type-registry"
 package welcome

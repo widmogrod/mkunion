@@ -1,4 +1,4 @@
-package welcome
+package effect
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 //
 // Op is the union of operations the program may ask for (see MyEff in ops.go).
 // The continuation in Bind receives the handler's answer as `any`; the typed
-// layer in ops.go and program.go hides that cast from user code.
+// layer a union generates (the `handler` option) hides that cast from user code.
 //
 //go:tag mkunion:"Eff[Op, A],noserde"
 type (
@@ -43,7 +43,7 @@ type (
 
 // Handler performs one operation and returns its answer.
 // The answer type is `any` because Go interfaces cannot carry generic methods,
-// even on Go 1.27. Typed wrappers live at the edges (see MyEffHandlerFunc and Fx.Do).
+// even on Go 1.27. Typed wrappers live at the edges (see the `handler` union option).
 type Handler[Op any] func(ctx context.Context, op Op) (any, error)
 
 // Middleware wraps a handler and returns a handler. Because a handler is one
@@ -72,8 +72,8 @@ func Throw[Op, A any](err error) Eff[Op, A] {
 }
 
 // PerformAs asks the handler to perform op and expects an answer of type R.
-// A wrong R becomes an error in Run. Prefer the typed Perform in ops.go, which
-// ties R to the operation at compile time.
+// A wrong R becomes an error in Run. Prefer a typed Perform built on XOf[R],
+// which ties R to the operation at compile time (see example/welcome/ops.go).
 func PerformAs[Op, R any](op Op) Eff[Op, R] {
 	return &Bind[Op, R]{
 		Op: op,

@@ -3,6 +3,7 @@ package welcome
 import (
 	"context"
 	"errors"
+	"github.com/widmogrod/mkunion/x/effect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestPart3_theTraceIsTheAssertion(t *testing.T) {
 
 	live, out, mail := newWorld()
 	var trace []MyEff
-	got, err := Interpret(context.Background(), program, live, Trace(&trace))
+	got, err := Interpret(context.Background(), program, live, effect.Trace(&trace))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
@@ -36,10 +37,10 @@ func TestPart3_recordOnceReplayForever(t *testing.T) {
 
 	// Record: one run against the real world writes a tape of facts.
 	live, _, _ := newWorld()
-	var tape []Step[MyEff]
-	want, err := Interpret(context.Background(), program, live, Record(&tape))
+	var tape []effect.Step[MyEff]
+	want, err := Interpret(context.Background(), program, live, effect.Record(&tape))
 	require.NoError(t, err)
-	assert.Equal(t, []Step[MyEff]{
+	assert.Equal(t, []effect.Step[MyEff]{
 		{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
 		{Op: &Now{}, Answer: noon},
 		{Op: &Send{To: to, Msg: greeting}, Answer: "receipt-1"},
@@ -48,17 +49,17 @@ func TestPart3_recordOnceReplayForever(t *testing.T) {
 
 	// Replay: the tape answers. No world is needed, so there is no handler:
 	// the tape goes straight to Run, the loop under Interpret (part 2).
-	got, err := Run(context.Background(), Replay(tape, nil), program)
+	got, err := effect.Run(context.Background(), effect.Replay(tape, nil), program)
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 
 	// Drift: a program that asks for something else fails loudly at the step.
-	_, err = Run(context.Background(), Replay(tape, nil), Notify("other.txt", to))
+	_, err = effect.Run(context.Background(), effect.Replay(tape, nil), Notify("other.txt", to))
 	require.ErrorContains(t, err, "replay mismatch at step 1")
 
 	// A short tape ends with a clear error instead of touching the world.
-	_, err = Run(context.Background(), Replay(tape[:2], nil), Notify("name.txt", to))
-	require.ErrorIs(t, err, ErrTapeEnded)
+	_, err = effect.Run(context.Background(), effect.Replay(tape[:2], nil), Notify("name.txt", to))
+	require.ErrorIs(t, err, effect.ErrTapeEnded)
 }
 
 // --8<-- [end:record-replay]
@@ -79,13 +80,13 @@ func TestPart3_aTapeIsJSON(t *testing.T) {
 	loaded, err := TapeFromJSON(data)
 	require.NoError(t, err)
 	assert.Equal(t, tape, loaded, "answers come back with the type each operation declared")
-	got, err := Run(context.Background(), Replay(loaded, nil), Notify("name.txt", to))
+	got, err := effect.Run(context.Background(), effect.Replay(loaded, nil), Notify("name.txt", to))
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
 }
 
 func TestPart3_tapeJSONKeepsErrorsAndRejectsGarbage(t *testing.T) {
-	data, err := TapeToJSON([]Step[MyEff]{{Op: &Now{}, Err: errors.New("clock down")}})
+	data, err := TapeToJSON([]effect.Step[MyEff]{{Op: &Now{}, Err: errors.New("clock down")}})
 	require.NoError(t, err)
 	assert.JSONEq(t, `[{"op": {"$type": "welcome.Now", "welcome.Now": {}}, "err": "clock down"}]`, string(data))
 	loaded, err := TapeFromJSON(data)

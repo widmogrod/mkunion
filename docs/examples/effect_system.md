@@ -76,8 +76,8 @@ Loops are loops. A program that performs a million operations is a million steps
 
 At the bottom, a handler is one function: it gets an operation and returns the answer.
 
-```go title="example/welcome/eff.go"
---8<-- "example/welcome/eff.go:handler"
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:handler"
 ```
 
 You will rarely write that function by hand. The `handler` option makes `mkunion` generate a typed contract from the union and its `f.Returns` labels. This is the part of `example/welcome/ops_union_gen.go` that matters:
@@ -161,8 +161,8 @@ Two habits pay off from the first test.
 
 First, assert on the **trace**, as the test above does. An output test says what came out. A trace test says what the program did to get there. `Trace` is ten lines:
 
-```go title="example/welcome/eff.go"
---8<-- "example/welcome/eff.go:trace"
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:trace"
 ```
 
 Second, override one method at a time. `Defaults` is a handler with harmless answers. It embeds the generated `MyEffDefaults` and changes two answers. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
@@ -191,16 +191,16 @@ You can use everything in Part 1 without reading this part. Read it when you wan
 
 `Program[A]` is a short name for `Eff[MyEff, A]`, and `Eff` is a generic union:
 
-```go title="example/welcome/eff.go"
---8<-- "example/welcome/eff.go:eff-def"
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:eff-def"
 ```
 
 A program is either finished (`Pure` with a value, `Fail` with an error), or it asks for one operation and says what to do with the answer (`Bind`), or it is built on demand (`Suspend`). That is the whole data model.
 
 `Then` glues two programs together. It is a pattern match over the variants, so a new variant cannot be forgotten:
 
-```go title="example/welcome/eff.go"
---8<-- "example/welcome/eff.go:then"
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:then"
 ```
 
 With `Perform` and `Then` you can build a program by hand. This is what `Fx` builds for you:
@@ -218,8 +218,8 @@ The tests run the trace and the error scenarios against both versions of `Greet`
 
 ### Run is a loop
 
-```go title="example/welcome/eff.go"
---8<-- "example/welcome/eff.go:run"
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:run"
 ```
 
 **Notice** that `Run` never recurses. It takes the next node, asks the handler, and moves on. That is why a million-step program does not grow the stack. Also notice what happens on error: the error goes to the continuation, the same as an answer. That is how a plain Go body gets to unwind, and how `Attempt` gets to see the error.
@@ -245,8 +245,8 @@ sequenceDiagram
     Body-->>Run: return "Hello Ada" (a Pure)
 ```
 
-```go title="example/welcome/proc.go"
---8<-- "example/welcome/proc.go:proc"
+```go title="x/effect/proc.go"
+--8<-- "x/effect/proc.go:proc"
 ```
 
 Every `DoAs` (which `Fx.Do` calls) pauses the body and hands the operation out as a `Bind`. `Run` asks the handler, and the answer resumes the body. An error makes `DoAs` panic with a private `abort` value that the coroutine recovers, so the body unwinds and the coroutine is released. The body does not start before `Run`, because `Proc` returns a `Suspend`; Part 1 has a test for that. Part 2's tests check that a panic in the body is not swallowed and that no coroutine leaks when a handler fails or the context is cancelled.
@@ -263,8 +263,8 @@ Now the mail. `Notify` is `Greet` plus a `Send`, and `Send` must never happen tw
 
 Because every operation and every answer is data, a run can be written down. `Record` writes the tape. `Replay` answers from it and checks that the program still asks for the same things:
 
-```go title="example/welcome/recording.go"
---8<-- "example/welcome/recording.go:recording"
+```go title="x/effect/recording.go"
+--8<-- "x/effect/recording.go:recording"
 ```
 
 ```go title="example/welcome/part3_testing_test.go"
@@ -310,8 +310,8 @@ Handlers are functions. So middleware is a function that takes a handler and ret
 
 Reading a file may be retried. Sending a mail may not, unless you can prove it is safe. `RetryWith` asks a policy for each operation. A `RetryBudget` caps retries across the whole run, and sleep is injected so tests can assert the backoff durations instead of waiting for them.
 
-```go title="example/welcome/middleware.go"
---8<-- "example/welcome/middleware.go:retry"
+```go title="x/effect/middleware.go"
+--8<-- "x/effect/middleware.go:retry"
 ```
 
 The policy is an exhaustive match, so the compiler asks "may this be retried?" for every new operation:
@@ -350,8 +350,8 @@ The rule that falls out: **a business outcome is a value in the answer type, an 
 
 The tests need faults that happen on purpose. Each one is a small wrapper:
 
-```go title="example/welcome/middleware.go"
---8<-- "example/welcome/middleware.go:faults"
+```go title="x/effect/middleware.go"
+--8<-- "x/effect/middleware.go:faults"
 ```
 
 `FailEvery` refuses before performing. `LoseAnswerAt` is the nasty one: it performs, then reports an error anyway. `CrashAfter` is a process that dies. `Chaos` rolls dice from a seed.
@@ -362,8 +362,8 @@ The nasty fault is not "the call failed". It is "the mail server delivered, then
 
 The fix comes from the run itself. `StepKeys` gives every step a stable key, `run-1/3`. The handler passes it to the mail server as an idempotency key. All retries of one step share the key. On resume, replayed steps still count, so step 3 keeps its key.
 
-```go title="example/welcome/middleware.go"
---8<-- "example/welcome/middleware.go:step-keys"
+```go title="x/effect/middleware.go"
+--8<-- "x/effect/middleware.go:step-keys"
 ```
 
 ```go title="example/welcome/handlers.go"
@@ -409,16 +409,16 @@ The test has a "version two" of `Notify` that adds a config read and moves the c
 
 `Guard` refuses operations before they run. Authorization and dry-run are the same function: an exhaustive match, so a new operation has to be classified.
 
-```go title="example/welcome/observe.go"
---8<-- "example/welcome/observe.go:guard"
+```go title="x/effect/observe.go"
+--8<-- "x/effect/observe.go:guard"
 ```
 
 ### Feed your tracing backend
 
 `Spans` emits one span per operation, with start, end, attributes and error, from one place. With dependency injection you would instrument each client.
 
-```go title="example/welcome/observe.go"
---8<-- "example/welcome/observe.go:spans"
+```go title="x/effect/observe.go"
+--8<-- "x/effect/observe.go:spans"
 ```
 
 ## When to use this, and when not

@@ -3,6 +3,7 @@ package welcome
 import (
 	"context"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/effect"
 	"strings"
 	"time"
 
@@ -16,24 +17,24 @@ import (
 // --8<-- [start:fx-api]
 
 // Program is a program over the MyEff operations that yields A.
-type Program[A any] = Eff[MyEff, A]
+type Program[A any] = effect.Eff[MyEff, A]
 
 // Fx is the handle a program body uses to ask for operations.
-type Fx struct{ env *Env[MyEff] }
+type Fx struct{ env *effect.Env[MyEff] }
 
 // Prog turns a plain Go body into a Program. The body runs later, inside Run,
 // as a coroutine: every operation pauses it and the handler's answer resumes it.
 func Prog[A any](body func(fx Fx) (A, error)) Program[A] {
-	return Proc(func(e *Env[MyEff]) (A, error) { return body(Fx{env: e}) })
+	return effect.Proc(func(e *effect.Env[MyEff]) (A, error) { return body(Fx{env: e}) })
 }
 
 // Do asks for any operation and returns its typed answer. R is inferred from
 // the operation's f.Returns. On error the body stops, and the program
 // fails with that error.
-func (fx Fx) Do[R any](op MyEffOf[R]) R { return DoAs[MyEff, R](fx.env, op) }
+func (fx Fx) Do[R any](op MyEffOf[R]) R { return effect.DoAs[MyEff, R](fx.env, op) }
 
 // Attempt is Do that returns the error instead of stopping the body.
-func (fx Fx) Attempt[R any](op MyEffOf[R]) (R, error) { return AttemptAs[MyEff, R](fx.env, op) }
+func (fx Fx) Attempt[R any](op MyEffOf[R]) (R, error) { return effect.AttemptAs[MyEff, R](fx.env, op) }
 
 // One method per operation. Mechanical, like the typed layer in ops.go.
 
@@ -53,8 +54,8 @@ func (fx Fx) Send(to, msg string) string  { return fx.Do(&Send{To: to, Msg: msg}
 // gets meaning: h answers every operation, in order. Middleware is optional
 // and listed outermost first, so Interpret(ctx, p, h, Retry(3), Record(&tape))
 // retries around a recorder: the tape sees every attempt.
-func Interpret[A any](ctx context.Context, program Program[A], h MyEffHandler, middleware ...Middleware[MyEff]) (A, error) {
-	return Run(ctx, Wrap(MyEffHandlerFunc(h), middleware...), program)
+func Interpret[A any](ctx context.Context, program Program[A], h MyEffHandler, middleware ...effect.Middleware[MyEff]) (A, error) {
+	return effect.Run(ctx, effect.Wrap(MyEffHandlerFunc(h), middleware...), program)
 }
 
 // --8<-- [end:interpret]

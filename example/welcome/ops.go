@@ -1,6 +1,7 @@
 package welcome
 
 import (
+	"github.com/widmogrod/mkunion/x/effect"
 	"time"
 
 	"github.com/widmogrod/mkunion/f"
@@ -77,8 +78,8 @@ type (
 
 // Perform asks for one operation as a program. R is inferred from the
 // operation's f.Returns, so `Perform(&Now{})` is an Eff[MyEff, time.Time].
-func Perform[R any](op MyEffOf[R]) Eff[MyEff, R] {
-	return PerformAs[MyEff, R](op)
+func Perform[R any](op MyEffOf[R]) effect.Eff[MyEff, R] {
+	return effect.PerformAs[MyEff, R](op)
 }
 
 // --8<-- [end:typed-layer]

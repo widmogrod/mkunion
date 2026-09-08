@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/widmogrod/mkunion/x/effect"
 	"time"
 
 	"github.com/widmogrod/mkunion/f"
@@ -23,7 +24,7 @@ type jsonStep struct {
 }
 
 // TapeToJSON encodes a recording.
-func TapeToJSON(tape []Step[MyEff]) ([]byte, error) {
+func TapeToJSON(tape []effect.Step[MyEff]) ([]byte, error) {
 	steps := make([]jsonStep, 0, len(tape))
 	for _, step := range tape {
 		op, err := MyEffToJSON(step.Op)
@@ -42,18 +43,18 @@ func TapeToJSON(tape []Step[MyEff]) ([]byte, error) {
 }
 
 // TapeFromJSON decodes a recording. Each answer gets the type its operation declared.
-func TapeFromJSON(data []byte) ([]Step[MyEff], error) {
+func TapeFromJSON(data []byte) ([]effect.Step[MyEff], error) {
 	var steps []jsonStep
 	if err := json.Unmarshal(data, &steps); err != nil {
 		return nil, err
 	}
-	tape := make([]Step[MyEff], 0, len(steps))
+	tape := make([]effect.Step[MyEff], 0, len(steps))
 	for i, js := range steps {
 		op, err := MyEffFromJSON(js.Op)
 		if err != nil {
 			return nil, fmt.Errorf("step %d: %w", i, err)
 		}
-		step := Step[MyEff]{Op: op}
+		step := effect.Step[MyEff]{Op: op}
 		if js.Err != "" {
 			step.Err = errors.New(js.Err)
 		} else if step.Answer, err = answerFromJSON(op, js.Answer); err != nil {

@@ -2,6 +2,7 @@ package welcome
 
 import (
 	"context"
+	"github.com/widmogrod/mkunion/x/effect"
 	"strconv"
 	"testing"
 	"time"
@@ -23,7 +24,7 @@ func TestPart1_sameProgramFakeHandler(t *testing.T) {
 
 	fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada\n"}}
 	var trace []MyEff
-	got, err := Interpret(ctx, program, fake, Trace(&trace))
+	got, err := Interpret(ctx, program, fake, effect.Trace(&trace))
 
 	require.NoError(t, err)
 	assert.Equal(t, "Hello Ada, it is 12:00PM", got)
@@ -64,7 +65,7 @@ func TestPart1_handlerErrorStopsTheProgram(t *testing.T) {
 
 	fake := &Fake{Clock: noon} // no files
 	var trace []MyEff
-	_, err := Interpret(context.Background(), program, fake, Trace(&trace))
+	_, err := Interpret(context.Background(), program, fake, effect.Trace(&trace))
 
 	require.ErrorContains(t, err, `no file "missing.txt"`)
 	assert.Equal(t, []MyEff{&ReadFile{Path: "missing.txt"}}, trace, "nothing after the failing operation runs")
@@ -77,7 +78,7 @@ func TestPart1_cancelledContextStopsBeforeTheNextOperation(t *testing.T) {
 	program := Greet("name.txt")
 
 	var trace []MyEff
-	_, err := Interpret(ctx, program, &Fake{}, Trace(&trace))
+	_, err := Interpret(ctx, program, &Fake{}, effect.Trace(&trace))
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Empty(t, trace)
@@ -171,4 +172,4 @@ func TestPart1_aHandlerCanBeThreeClosures(t *testing.T) {
 
 // Program[A] is an alias, not a new type: the assignment below is checked by
 // the compiler, so there is nothing left to test at run time.
-var _ Eff[MyEff, string] = Program[string](nil)
+var _ effect.Eff[MyEff, string] = Program[string](nil)
