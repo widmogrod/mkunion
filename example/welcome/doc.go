@@ -39,4 +39,4 @@
 // the noserde option on Eff. Both are generator bugs, not effect-system limits.
 //
 //go:tag mkunion:",no-type-registry"
-package effect
+package welcome

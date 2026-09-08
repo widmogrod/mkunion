@@ -1,4 +1,4 @@
-package effect
+package welcome
 
 import (
 	"context"
@@ -108,7 +108,7 @@ func TestPart2_aWrongAnswerTypeIsAnErrorNotAPanic(t *testing.T) {
 	for _, style := range styles {
 		t.Run(style.name, func(t *testing.T) {
 			_, err := Run(context.Background(), lying, style.greet("name.txt"))
-			require.ErrorContains(t, err, "handler answered string to *effect.ReadFile, want []uint8")
+			require.ErrorContains(t, err, "handler answered string to *welcome.ReadFile, want []uint8")
 		})
 	}
 }

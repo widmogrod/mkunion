@@ -1,4 +1,4 @@
-package effect
+package welcome
 
 import (
 	"errors"

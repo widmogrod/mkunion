@@ -1,4 +1,4 @@
-package effect
+package welcome
 
 import (
 	"context"
@@ -49,12 +49,12 @@ func TestPart5_traceDiffFindsABehaviourRegression(t *testing.T) {
 
 	assert.Equal(t, out1, out2, "same output: an output-only test passes")
 	assert.Equal(t, []string{
-		`+ *effect.ReadFile{"Path":"config.txt"}`,
-		`+ *effect.Now{}`,
-		`  *effect.ReadFile{"Path":"name.txt"}`,
-		`- *effect.Now{}`,
-		`  *effect.Send{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}`,
-		`  *effect.Log{"Msg":"sent receipt-1"}`,
+		`+ *welcome.ReadFile{"Path":"config.txt"}`,
+		`+ *welcome.Now{}`,
+		`  *welcome.ReadFile{"Path":"name.txt"}`,
+		`- *welcome.Now{}`,
+		`  *welcome.Send{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}`,
+		`  *welcome.Log{"Msg":"sent receipt-1"}`,
 	}, DiffTraces(v1, v2), "the behaviour diff shows the new read and the moved clock")
 }
 
@@ -107,10 +107,10 @@ func TestPart5_spansForEveryOperationFromOnePlace(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, []Span{
-		{Name: "*effect.ReadFile", Attrs: `{"Path":"name.txt"}`, Start: at(10), End: at(20)},
-		{Name: "*effect.Now", Attrs: `{}`, Start: at(30), End: at(40)},
-		{Name: "*effect.Send", Attrs: `{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}`, Start: at(50), End: at(60)},
-		{Name: "*effect.Log", Attrs: `{"Msg":"sent receipt-1"}`, Start: at(70), End: at(80)},
+		{Name: "*welcome.ReadFile", Attrs: `{"Path":"name.txt"}`, Start: at(10), End: at(20)},
+		{Name: "*welcome.Now", Attrs: `{}`, Start: at(30), End: at(40)},
+		{Name: "*welcome.Send", Attrs: `{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}`, Start: at(50), End: at(60)},
+		{Name: "*welcome.Log", Attrs: `{"Msg":"sent receipt-1"}`, Start: at(70), End: at(80)},
 	}, spans)
 
 	// A failure lands on the span too.
@@ -119,6 +119,6 @@ func TestPart5_spansForEveryOperationFromOnePlace(t *testing.T) {
 	_, err = Interpret(context.Background(), program, live, Spans[MyEff](tick, &spans), FailEvery[MyEff](1, blip))
 	require.ErrorIs(t, err, blip)
 	assert.Equal(t, []Span{
-		{Name: "*effect.ReadFile", Attrs: `{"Path":"name.txt"}`, Start: at(10), End: at(20), Err: "disk hiccup"},
+		{Name: "*welcome.ReadFile", Attrs: `{"Path":"name.txt"}`, Start: at(10), End: at(20), Err: "disk hiccup"},
 	}, spans)
 }

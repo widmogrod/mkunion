@@ -1,4 +1,4 @@
-package effect
+package welcome
 
 import (
 	"context"
@@ -113,7 +113,7 @@ func attrs(op any) string {
 	return fmt.Sprintf("%+v", op)
 }
 
-// describe is attrs with the operation's type in front: *effect.Log{"Msg":"hi"}.
+// describe is attrs with the operation's type in front: *welcome.Log{"Msg":"hi"}.
 func describe(op any) string {
 	return fmt.Sprintf("%T%s", op, attrs(op))
 }

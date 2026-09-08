@@ -1,4 +1,4 @@
-package effect
+package welcome
 
 import (
 	"context"
@@ -32,13 +32,13 @@ func TestPart4_oneMiddlewareCoversEveryOperation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
 	assert.Equal(t, []string{
-		"*effect.ReadFile ok",
-		"*effect.Now err: network blip",
-		"*effect.Now ok",
-		"*effect.Send err: network blip",
-		"*effect.Send ok",
-		"*effect.Log err: network blip",
-		"*effect.Log ok",
+		"*welcome.ReadFile ok",
+		"*welcome.Now err: network blip",
+		"*welcome.Now ok",
+		"*welcome.Send err: network blip",
+		"*welcome.Send ok",
+		"*welcome.Log err: network blip",
+		"*welcome.Log ok",
 	}, attempts, "every operation was retried by the same wrapper")
 	assert.Equal(t, []Mail{{Key: "", To: to, Msg: greeting}}, mail.Sent,
 		"FailEvery refuses before performing, so this retry was harmless. The next tests show when it is not.")
@@ -88,11 +88,11 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		require.ErrorIs(t, err, blip)
 		assert.EqualError(t, err, "network blip", "Send was not retried, so its error passes through unwrapped")
 		assert.Equal(t, []string{
-			"*effect.ReadFile err: network blip",
-			"*effect.ReadFile err: network blip",
-			"*effect.ReadFile ok",
-			"*effect.Now ok",
-			"*effect.Send err: network blip",
+			"*welcome.ReadFile err: network blip",
+			"*welcome.ReadFile err: network blip",
+			"*welcome.ReadFile ok",
+			"*welcome.Now ok",
+			"*welcome.Send err: network blip",
 		}, attempts)
 		assert.Equal(t, []time.Duration{10 * time.Millisecond, 20 * time.Millisecond}, waits, "exponential backoff before each ReadFile retry")
 		assert.Empty(t, mail.Sent, "the failed Send delivered nothing")
@@ -111,8 +111,8 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 
 		require.ErrorIs(t, err, ErrRetryBudget)
 		assert.Equal(t, []string{
-			"*effect.ReadFile err: network blip",
-			"*effect.ReadFile err: network blip",
+			"*welcome.ReadFile err: network blip",
+			"*welcome.ReadFile err: network blip",
 		}, attempts, "one retry was spent; the second was refused by the budget")
 		assert.Equal(t, 0, budget.Left)
 	})
@@ -292,7 +292,7 @@ func TestPart4_seededChaos(t *testing.T) {
 		_, again := Interpret(context.Background(), Notify("name.txt", to), live,
 			StepKeys[MyEff]("run"), RetryWith(keyedPolicy, nil, nil), Chaos[MyEff](cfg(failingSeed)))
 		assert.ErrorIs(t, again, ErrChaos)
-		assert.Regexp(t, `^effect: \*effect\.\w+ failed after 3 attempts: chaos: `, again.Error(), "seed %d", failingSeed)
+		assert.Regexp(t, `^effect: \*welcome\.\w+ failed after 3 attempts: chaos: `, again.Error(), "seed %d", failingSeed)
 		assert.EqualError(t, again, failingErr.Error(), "seed %d replays the same failure", failingSeed)
 	})
 }
@@ -321,7 +321,7 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 			RetryWith(strictPolicy, nil, nil), journal[MyEff](&attempts))
 
 		assert.EqualError(t, err, "charge refused: short by 5", "the program decided, in Pay")
-		assert.Equal(t, []string{"*effect.Charge ok"}, attempts, "one attempt: the bank answered, so there was nothing to retry")
+		assert.Equal(t, []string{"*welcome.Charge ok"}, attempts, "one attempt: the bank answered, so there was nothing to retry")
 		assert.Empty(t, fake.Charged)
 	})
 
@@ -338,9 +338,9 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "charge-1", got)
 		assert.Equal(t, []string{
-			"*effect.Charge err: bank: connection reset",
-			"*effect.Charge ok",
-			"*effect.Log ok",
+			"*welcome.Charge err: bank: connection reset",
+			"*welcome.Charge ok",
+			"*welcome.Log ok",
 		}, attempts)
 		assert.Equal(t, []int{10}, fake.Charged)
 	})
@@ -374,8 +374,8 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 		data, err := TapeToJSON(tape)
 		require.NoError(t, err)
 		assert.JSONEq(t, `[
-			{"op": {"$type": "effect.Charge", "effect.Charge": {"Amount": 10}},
-			 "answer": {"$type": "f.Err", "f.Err": {"Error": {"$type": "effect.OutOfBudget", "effect.OutOfBudget": {"Missing": 5}}}}}
+			{"op": {"$type": "welcome.Charge", "welcome.Charge": {"Amount": 10}},
+			 "answer": {"$type": "f.Err", "f.Err": {"Error": {"$type": "welcome.OutOfBudget", "welcome.OutOfBudget": {"Missing": 5}}}}}
 		]`, string(data), "the answer is a union, so it is written with the JSON mkunion generates for it")
 
 		loaded, err := TapeFromJSON(data)
