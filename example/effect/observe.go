@@ -2,6 +2,7 @@ package effect
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -36,13 +37,13 @@ func DiffTraces[Op any](want, got []Op) []string {
 	for i < n || j < m {
 		switch {
 		case i < n && j < m && reflect.DeepEqual(want[i], got[j]):
-			lines = append(lines, fmt.Sprintf("  %#v", want[i]))
+			lines = append(lines, "  "+describe(want[i]))
 			i, j = i+1, j+1
 		case j < m && (i == n || lcs[i][j+1] >= lcs[i+1][j]):
-			lines = append(lines, fmt.Sprintf("+ %#v", got[j]))
+			lines = append(lines, "+ "+describe(got[j]))
 			j++
 		default:
-			lines = append(lines, fmt.Sprintf("- %#v", want[i]))
+			lines = append(lines, "- "+describe(want[i]))
 			i++
 		}
 	}
@@ -83,7 +84,7 @@ type Span struct {
 // Spans emits one span per operation, for every operation, from one place.
 func Spans[Op any](h Handler[Op], now func() time.Time, sink *[]Span) Handler[Op] {
 	return func(ctx context.Context, op Op) (any, error) {
-		span := Span{Name: fmt.Sprintf("%T", op), Attrs: fmt.Sprintf("%+v", op), Start: now()}
+		span := Span{Name: fmt.Sprintf("%T", op), Attrs: attrs(op), Start: now()}
 		answer, err := h(ctx, op)
 		span.End = now()
 		if err != nil {
@@ -95,3 +96,20 @@ func Spans[Op any](h Handler[Op], now func() time.Time, sink *[]Span) Handler[Op
 }
 
 // --8<-- [end:spans]
+
+// attrs renders an operation's fields as JSON, through the serde mkunion
+// generated for it. JSON shows the data and skips the f.Returns phantom,
+// which fmt's %+v would print as `Returns:{}`.
+func attrs(op any) string {
+	if m, ok := op.(json.Marshaler); ok {
+		if data, err := m.MarshalJSON(); err == nil {
+			return string(data)
+		}
+	}
+	return fmt.Sprintf("%+v", op)
+}
+
+// describe is attrs with the operation's type in front: *effect.Log{"Msg":"hi"}.
+func describe(op any) string {
+	return fmt.Sprintf("%T%s", op, attrs(op))
+}

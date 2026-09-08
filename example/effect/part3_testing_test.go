@@ -19,7 +19,7 @@ func TestPart3_theTraceIsTheAssertion(t *testing.T) {
 	live, out, mail := newWorld()
 	var trace []Effect
 
-	got, err := Run(context.Background(), Trace(HandlerOf(live), &trace), Notify("name.txt", to))
+	got, err := Run(context.Background(), Trace(EffectHandlerFunc(live), &trace), Notify("name.txt", to))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
@@ -34,7 +34,7 @@ func TestPart3_recordOnceReplayForever(t *testing.T) {
 	// Record: one run against the real world writes a tape of facts.
 	live, _, _ := newWorld()
 	var tape []Step[Effect]
-	want, err := Run(context.Background(), Record(HandlerOf(live), &tape), Notify("name.txt", to))
+	want, err := Run(context.Background(), Record(EffectHandlerFunc(live), &tape), Notify("name.txt", to))
 	require.NoError(t, err)
 	assert.Equal(t, []Step[Effect]{
 		{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},

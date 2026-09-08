@@ -43,7 +43,7 @@ type (
 
 // Handler performs one operation and returns its answer.
 // The answer type is `any` because Go interfaces cannot carry generic methods,
-// even on Go 1.27. Typed wrappers live at the edges (see HandlerOf and Fx.Do).
+// even on Go 1.27. Typed wrappers live at the edges (see EffectHandlerFunc and Fx.Do).
 type Handler[Op any] func(ctx context.Context, op Op) (any, error)
 
 // --8<-- [end:handler]

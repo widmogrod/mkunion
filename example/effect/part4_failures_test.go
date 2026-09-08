@@ -23,7 +23,7 @@ func TestPart4_oneMiddlewareCoversEveryOperation(t *testing.T) {
 	var attempts []string
 
 	// Every second call fails. Retry (3 tries each) and journal wrap the handler once.
-	h := Retry(journal(FailEvery(HandlerOf(live), 2, blip), &attempts), 3)
+	h := Retry(journal(FailEvery(EffectHandlerFunc(live), 2, blip), &attempts), 3)
 	got, err := Run(context.Background(), h, Notify("name.txt", to))
 
 	require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		fakeSleep := func(d time.Duration) { waits = append(waits, d) }
 
 		// Fault: the 1st and 2nd call fail (ReadFile twice), then the 5th (Send).
-		failing := flakyAt(HandlerOf(live), map[int]error{1: blip, 2: blip, 5: blip})
+		failing := flakyAt(EffectHandlerFunc(live), map[int]error{1: blip, 2: blip, 5: blip})
 		h := RetryWith(journal(failing, &attempts), strictPolicy, nil, fakeSleep)
 
 		_, err := Run(context.Background(), h, Notify("name.txt", to))
@@ -98,7 +98,7 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		budget := &RetryBudget{Left: 1}
 
 		// ReadFile fails twice. Policy allows 3 attempts, but the run may retry once.
-		failing := flakyAt(HandlerOf(live), map[int]error{1: blip, 2: blip})
+		failing := flakyAt(EffectHandlerFunc(live), map[int]error{1: blip, 2: blip})
 		h := RetryWith(journal(failing, &attempts), strictPolicy, budget, nil)
 
 		_, err := Run(context.Background(), h, Notify("name.txt", to))
@@ -115,7 +115,7 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		// Record outside Retry: the tape holds one committed answer per step.
 		live, _, _ := newWorld()
 		var committed []Step[Effect]
-		failing := flakyAt(HandlerOf(live), map[int]error{1: blip})
+		failing := flakyAt(EffectHandlerFunc(live), map[int]error{1: blip})
 		_, err := Run(context.Background(), Record(RetryWith(failing, strictPolicy, nil, nil), &committed), Notify("name.txt", to))
 		require.NoError(t, err)
 		assert.Equal(t, []Step[Effect]{
@@ -128,7 +128,7 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		// Record inside Retry: the tape holds every attempt, failures included.
 		live, _, _ = newWorld()
 		var attempts []Step[Effect]
-		failing = flakyAt(HandlerOf(live), map[int]error{1: blip})
+		failing = flakyAt(EffectHandlerFunc(live), map[int]error{1: blip})
 		_, err = Run(context.Background(), RetryWith(Record(failing, &attempts), strictPolicy, nil, nil), Notify("name.txt", to))
 		require.NoError(t, err)
 		assert.Equal(t, []Step[Effect]{
@@ -155,7 +155,7 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 	t.Run("without keys the mail is sent twice", func(t *testing.T) {
 		live, _, mail := newWorld()
 		// Call 3 is Send: the mail server delivers, then the answer is lost.
-		h := RetryWith(LoseAnswerAt(HandlerOf(live), 3, lost), keyedPolicy, nil, nil)
+		h := RetryWith(LoseAnswerAt(EffectHandlerFunc(live), 3, lost), keyedPolicy, nil, nil)
 
 		got, err := Run(context.Background(), h, Notify("name.txt", to))
 
@@ -170,7 +170,7 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 	t.Run("with keys the mail server drops the duplicate", func(t *testing.T) {
 		live, _, mail := newWorld()
 		// StepKeys is outermost, so both attempts of step 3 carry "run-1/3".
-		h := StepKeys(RetryWith(LoseAnswerAt(HandlerOf(live), 3, lost), keyedPolicy, nil, nil), "run-1")
+		h := StepKeys(RetryWith(LoseAnswerAt(EffectHandlerFunc(live), 3, lost), keyedPolicy, nil, nil), "run-1")
 
 		got, err := Run(context.Background(), h, Notify("name.txt", to))
 
@@ -185,7 +185,7 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 	// Reference run: no faults. Every resumed run below must reproduce it.
 	live, out, mail := newWorld()
-	want, err := Run(context.Background(), StepKeys(HandlerOf(live), "run-1"), Notify("name.txt", to))
+	want, err := Run(context.Background(), StepKeys(EffectHandlerFunc(live), "run-1"), Notify("name.txt", to))
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", want)
 	assert.Equal(t, []Mail{{Key: "run-1/3", To: to, Msg: greeting}}, mail.Sent)
@@ -200,7 +200,7 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 			var tape []Step[Effect]
 
 			// First life: perform k steps, then die.
-			first := StepKeys(Record(CrashAfter(HandlerOf(live), k, crash), &tape), "run-1")
+			first := StepKeys(Record(CrashAfter(EffectHandlerFunc(live), k, crash), &tape), "run-1")
 			_, err := Run(context.Background(), first, Notify("name.txt", to))
 			if k == len(notifyOps) {
 				require.NoError(t, err, "no crash point left")
@@ -213,7 +213,7 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 
 			// Second life: replay the facts, then continue live. Same key prefix, so
 			// step 3 is still "run-1/3" even when it is replayed.
-			second := StepKeys(Replay(facts, HandlerOf(live)), "run-1")
+			second := StepKeys(Replay(facts, EffectHandlerFunc(live)), "run-1")
 			got, err := Run(context.Background(), second, Notify("name.txt", to))
 
 			require.NoError(t, err)
@@ -235,7 +235,7 @@ func TestPart4_seededChaos(t *testing.T) {
 		duplicates := map[uint64][]Mail{}
 		for seed := uint64(0); seed < seeds; seed++ {
 			live, _, mail := newWorld()
-			h := RetryWith(Chaos(HandlerOf(live), cfg(seed)), keyedPolicy, nil, nil)
+			h := RetryWith(Chaos(EffectHandlerFunc(live), cfg(seed)), keyedPolicy, nil, nil)
 			_, _ = Run(context.Background(), h, Notify("name.txt", to))
 			if len(mail.Sent) > 1 {
 				duplicates[seed] = mail.Sent
@@ -257,7 +257,7 @@ func TestPart4_seededChaos(t *testing.T) {
 		var failingErr error
 		for seed := uint64(0); seed < seeds; seed++ {
 			live, _, mail := newWorld()
-			h := StepKeys(RetryWith(Chaos(HandlerOf(live), cfg(seed)), keyedPolicy, nil, nil), "run")
+			h := StepKeys(RetryWith(Chaos(EffectHandlerFunc(live), cfg(seed)), keyedPolicy, nil, nil), "run")
 			got, err := Run(context.Background(), h, Notify("name.txt", to))
 
 			// The invariants. They hold in every world or the test fails with the seed.
@@ -280,7 +280,7 @@ func TestPart4_seededChaos(t *testing.T) {
 
 		// A failing world is reproducible from its seed alone.
 		live, _, _ := newWorld()
-		h := StepKeys(RetryWith(Chaos(HandlerOf(live), cfg(failingSeed)), keyedPolicy, nil, nil), "run")
+		h := StepKeys(RetryWith(Chaos(EffectHandlerFunc(live), cfg(failingSeed)), keyedPolicy, nil, nil), "run")
 		_, again := Run(context.Background(), h, Notify("name.txt", to))
 		assert.ErrorIs(t, again, ErrChaos)
 		assert.Regexp(t, `^effect: \*effect\.\w+ failed after 3 attempts: chaos: `, again.Error(), "seed %d", failingSeed)

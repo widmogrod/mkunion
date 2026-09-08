@@ -25,7 +25,7 @@ func Prog[A any](body func(fx Fx) (A, error)) Program[A] {
 }
 
 // Do asks for any operation and returns its typed answer. R is inferred from
-// the operation's Result method. On error the body stops, and the program
+// the operation's f.Returns. On error the body stops, and the program
 // fails with that error.
 func (fx Fx) Do[R any](op EffectOf[R]) R { return DoAs[Effect, R](fx.env, op) }
 
