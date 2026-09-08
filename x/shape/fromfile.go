@@ -1271,11 +1271,11 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 				return nil
 			}
 
-			// the registry is the output of this index; reading a previous
-			// version back in would keep every past mistake alive forever
-			if strings.HasSuffix(path, "types_reg_gen.go") {
-				return nil
-			}
+			// NOTE: types_reg_gen.go, the output of this index, is read back
+			// in. That keeps a mistake alive across runs (delete the file to
+			// clear it), but it is also what keeps instantiations that only
+			// test files use in the registry, since _test.go is skipped above.
+			// Skipping it needs those tests to register their own types first.
 
 			f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 			if err != nil {
