@@ -522,6 +522,10 @@ func ExtractPkgImportNames(x Shape) map[string]string {
 			}
 
 			for _, y := range x.Fields {
+				if IsPhantomField(y) {
+					// a phantom carries no data, so generated code never names its type
+					continue
+				}
 				result = joinMaps(result, ExtractPkgImportNames(y.Type))
 			}
 
