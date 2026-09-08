@@ -82,18 +82,24 @@ func stepProc[Op, A any](st *procState[Op, A], next func() (Op, bool), stop func
 	}
 }
 
+// perform hands op to Run and returns the raw answer, untyped.
+func (e *Env[Op]) perform(op Op) (any, error) {
+	if !e.yield(op) {
+		return nil, ErrStopped
+	}
+	return e.answer, e.err
+}
+
 // AttemptAs performs op and returns the handler's answer or error.
 func AttemptAs[Op, R any](e *Env[Op], op Op) (R, error) {
 	var zero R
-	if !e.yield(op) {
-		return zero, ErrStopped
+	answer, err := e.perform(op)
+	if err != nil {
+		return zero, err
 	}
-	if e.err != nil {
-		return zero, e.err
-	}
-	value, ok := e.answer.(R)
+	value, ok := answer.(R)
 	if !ok {
-		return zero, fmt.Errorf("effect: handler answered %T to %T, want %T", e.answer, op, zero)
+		return zero, fmt.Errorf("effect: handler answered %T to %T, want %T", answer, op, zero)
 	}
 	return value, nil
 }
