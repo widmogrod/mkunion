@@ -20,12 +20,14 @@ type Step[Op any] struct {
 	Err    error
 }
 
-// Record wraps a handler and appends every step to tape.
-func Record[Op any](h Handler[Op], tape *[]Step[Op]) Handler[Op] {
-	return func(ctx context.Context, op Op) (any, error) {
-		answer, err := h(ctx, op)
-		*tape = append(*tape, Step[Op]{Op: op, Answer: answer, Err: err})
-		return answer, err
+// Record appends every step a handler performs to tape.
+func Record[Op any](tape *[]Step[Op]) Middleware[Op] {
+	return func(h Handler[Op]) Handler[Op] {
+		return func(ctx context.Context, op Op) (any, error) {
+			answer, err := h(ctx, op)
+			*tape = append(*tape, Step[Op]{Op: op, Answer: answer, Err: err})
+			return answer, err
+		}
 	}
 }
 

@@ -54,7 +54,7 @@ A program is a function that gets a handle, `Fx`, and calls methods on it. It re
 --8<-- "example/effect/program.go:greet"
 ```
 
-There is one thing to keep in mind. Calling `Greet("name.txt")` performs nothing. It returns a `Program[string]`, a value. The body runs later, when you hand the value to `Run` together with a handler. Part 2 explains how that works. For now, the surface:
+There is one thing to keep in mind. Calling `Greet("name.txt")` performs nothing. It returns a `Program[string]`, a value. The body runs later, when you hand the value to `Interpret` together with a handler. Part 2 explains how that works. For now, the surface:
 
 ```go title="example/effect/program.go"
 --8<-- "example/effect/program.go:fx-api"
@@ -66,7 +66,7 @@ There is one thing to keep in mind. Calling `Greet("name.txt")` performs nothing
 --8<-- "example/effect/program.go:greet-or-guest"
 ```
 
-Loops are loops. A program that performs a million operations is a million steps in `Run`, not a million stack frames:
+Loops are loops. A program that performs a million operations is a million steps in the interpreter, not a million stack frames:
 
 ```go title="example/effect/program.go"
 --8<-- "example/effect/program.go:roll"
@@ -139,15 +139,21 @@ For tests there is `Fake`, which answers from fixed data and remembers what was 
 --8<-- "example/effect/handlers.go:fake"
 ```
 
-### Run it
+### Interpret it
 
-`Run` takes a context, a handler and a program. The first test does exactly that, and also wraps the handler in `Trace`, which records every operation in order:
+Two steps, on two lines. First build the program. Then interpret it with a handler:
 
 ```go title="example/effect/part1_basics_test.go"
 --8<-- "example/effect/part1_basics_test.go:run-fake"
 ```
 
-Swap `MyEffHandlerFunc(fake)` for `MyEffHandlerFunc(live)` and the same program writes a real log line. The tests in `example/effect/part1_basics_test.go` do both, and also show that a handler error stops the program at that step, and that a cancelled context stops it before the next one.
+**Notice** the shape of the test. `program := Greet("name.txt")` is a value; the fake does not exist yet when it is built. `Interpret` is where it runs. With dependency injection those two lines are one line, and nothing sits in between. Here something can: `Trace(&trace)` is middleware, it sees every operation on its way to the handler and records it. Parts 3 to 5 put a lot more in that gap.
+
+```go title="example/effect/program.go"
+--8<-- "example/effect/program.go:interpret"
+```
+
+Swap `fake` for `live` and the same program writes a real log line. The tests in `example/effect/part1_basics_test.go` do both, and also show that a handler error stops the program at that step, and that a cancelled context stops it before the next one.
 
 ### Testing on day one
 
@@ -170,6 +176,12 @@ Second, override one method at a time. `Defaults` is a handler with harmless ans
 ```
 
 **Notice** that `Defaults` refuses to read files. A test cannot depend on a file by accident.
+
+Third, when a handler is three closures, write three closures. `MyEffFuncs` is generated with the rest of the typed layer: a struct with one function per operation, and a nil function answers with the zero value:
+
+```go title="example/effect/part1_basics_test.go"
+--8<-- "example/effect/part1_basics_test.go:inline-handler"
+```
 
 ## Part 2: under the hood
 
@@ -308,7 +320,7 @@ The policy is an exhaustive match, so the compiler asks "may this be retried?" f
 --8<-- "example/effect/part4_failures_test.go:strict-policy"
 ```
 
-**Notice** that middleware order is semantics. `Record(Retry(h))` writes one committed answer per step. `Retry(Record(h))` writes every attempt, failures included. Only the first tape replays to success; the second replays the failure. The test shows both tapes side by side.
+**Notice** that middleware order is semantics. Middleware is listed outermost first. `Record(&tape), Retry(3)` writes one committed answer per step. `Retry(3), Record(&tape)` writes every attempt, failures included. Only the first tape replays to success; the second replays the failure. The test shows both tapes side by side.
 
 ### A refusal is an answer, not a failure
 

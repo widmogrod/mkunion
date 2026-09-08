@@ -55,27 +55,31 @@ func newWorld() (*Live, *bytes.Buffer, *Mailbox) {
 
 // journal records every attempt the wrapped handler sees, with its outcome.
 // It is the "what really happened" view the tests assert on.
-func journal[Op any](h Handler[Op], lines *[]string) Handler[Op] {
-	return func(ctx context.Context, op Op) (any, error) {
-		answer, err := h(ctx, op)
-		outcome := "ok"
-		if err != nil {
-			outcome = "err: " + err.Error()
+func journal[Op any](lines *[]string) Middleware[Op] {
+	return func(h Handler[Op]) Handler[Op] {
+		return func(ctx context.Context, op Op) (any, error) {
+			answer, err := h(ctx, op)
+			outcome := "ok"
+			if err != nil {
+				outcome = "err: " + err.Error()
+			}
+			*lines = append(*lines, fmt.Sprintf("%T %s", op, outcome))
+			return answer, err
 		}
-		*lines = append(*lines, fmt.Sprintf("%T %s", op, outcome))
-		return answer, err
 	}
 }
 
 // flakyAt fails the calls listed in errs (1-based call number) before performing them.
-func flakyAt[Op any](h Handler[Op], errs map[int]error) Handler[Op] {
-	calls := 0
-	return func(ctx context.Context, op Op) (any, error) {
-		calls++
-		if err, ok := errs[calls]; ok {
-			return nil, err
+func flakyAt[Op any](errs map[int]error) Middleware[Op] {
+	return func(h Handler[Op]) Handler[Op] {
+		calls := 0
+		return func(ctx context.Context, op Op) (any, error) {
+			calls++
+			if err, ok := errs[calls]; ok {
+				return nil, err
+			}
+			return h(ctx, op)
 		}
-		return h(ctx, op)
 	}
 }
 

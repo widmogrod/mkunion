@@ -1,6 +1,7 @@
 package effect
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -43,6 +44,20 @@ func (fx Fx) Random(max int) int          { return fx.Do(&Random{Max: max}) }
 func (fx Fx) Send(to, msg string) string  { return fx.Do(&Send{To: to, Msg: msg}) }
 
 // --8<-- [end:fx-api]
+
+// --8<-- [start:interpret]
+
+// Interpret runs a program against a handler and returns its value.
+//
+// The program was built earlier and performed nothing. Interpret is where it
+// gets meaning: h answers every operation, in order. Middleware is optional
+// and listed outermost first, so Interpret(ctx, p, h, Retry(3), Record(&tape))
+// retries around a recorder: the tape sees every attempt.
+func Interpret[A any](ctx context.Context, program Program[A], h MyEffHandler, middleware ...Middleware[MyEff]) (A, error) {
+	return Run(ctx, Wrap(MyEffHandlerFunc(h), middleware...), program)
+}
+
+// --8<-- [end:interpret]
 
 // --8<-- [start:greet]
 

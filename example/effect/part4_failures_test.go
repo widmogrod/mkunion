@@ -18,13 +18,16 @@ import (
 // "the call failed" but "the mail went out, then the answer was lost".
 
 func TestPart4_oneMiddlewareCoversEveryOperation(t *testing.T) {
+	program := Notify("name.txt", to)
+
 	live, _, mail := newWorld()
 	blip := errors.New("network blip")
 	var attempts []string
 
 	// Every second call fails. Retry (3 tries each) and journal wrap the handler once.
-	h := Retry(journal(FailEvery(MyEffHandlerFunc(live), 2, blip), &attempts), 3)
-	got, err := Run(context.Background(), h, Notify("name.txt", to))
+	// Middleware is listed outermost first: Retry sees journal, journal sees FailEvery.
+	got, err := Interpret(context.Background(), program, live,
+		Retry[MyEff](3), journal[MyEff](&attempts), FailEvery[MyEff](2, blip))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
@@ -77,10 +80,10 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		fakeSleep := func(d time.Duration) { waits = append(waits, d) }
 
 		// Fault: the 1st and 2nd call fail (ReadFile twice), then the 5th (Send).
-		failing := flakyAt(MyEffHandlerFunc(live), map[int]error{1: blip, 2: blip, 5: blip})
-		h := RetryWith(journal(failing, &attempts), strictPolicy, nil, fakeSleep)
-
-		_, err := Run(context.Background(), h, Notify("name.txt", to))
+		_, err := Interpret(context.Background(), Notify("name.txt", to), live,
+			RetryWith(strictPolicy, nil, fakeSleep),
+			journal[MyEff](&attempts),
+			flakyAt[MyEff](map[int]error{1: blip, 2: blip, 5: blip}))
 
 		require.ErrorIs(t, err, blip)
 		assert.EqualError(t, err, "network blip", "Send was not retried, so its error passes through unwrapped")
@@ -101,10 +104,10 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		budget := &RetryBudget{Left: 1}
 
 		// ReadFile fails twice. Policy allows 3 attempts, but the run may retry once.
-		failing := flakyAt(MyEffHandlerFunc(live), map[int]error{1: blip, 2: blip})
-		h := RetryWith(journal(failing, &attempts), strictPolicy, budget, nil)
-
-		_, err := Run(context.Background(), h, Notify("name.txt", to))
+		_, err := Interpret(context.Background(), Notify("name.txt", to), live,
+			RetryWith(strictPolicy, budget, nil),
+			journal[MyEff](&attempts),
+			flakyAt[MyEff](map[int]error{1: blip, 2: blip}))
 
 		require.ErrorIs(t, err, ErrRetryBudget)
 		assert.Equal(t, []string{
@@ -115,11 +118,13 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 	})
 
 	t.Run("middleware order decides what the tape records", func(t *testing.T) {
+		program := Notify("name.txt", to)
+
 		// Record outside Retry: the tape holds one committed answer per step.
 		live, _, _ := newWorld()
 		var committed []Step[MyEff]
-		failing := flakyAt(MyEffHandlerFunc(live), map[int]error{1: blip})
-		_, err := Run(context.Background(), Record(RetryWith(failing, strictPolicy, nil, nil), &committed), Notify("name.txt", to))
+		_, err := Interpret(context.Background(), program, live,
+			Record(&committed), RetryWith(strictPolicy, nil, nil), flakyAt[MyEff](map[int]error{1: blip}))
 		require.NoError(t, err)
 		assert.Equal(t, []Step[MyEff]{
 			{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
@@ -131,8 +136,8 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		// Record inside Retry: the tape holds every attempt, failures included.
 		live, _, _ = newWorld()
 		var attempts []Step[MyEff]
-		failing = flakyAt(MyEffHandlerFunc(live), map[int]error{1: blip})
-		_, err = Run(context.Background(), RetryWith(Record(failing, &attempts), strictPolicy, nil, nil), Notify("name.txt", to))
+		_, err = Interpret(context.Background(), program, live,
+			RetryWith(strictPolicy, nil, nil), Record(&attempts), flakyAt[MyEff](map[int]error{1: blip}))
 		require.NoError(t, err)
 		assert.Equal(t, []Step[MyEff]{
 			{Op: &ReadFile{Path: "name.txt"}, Err: blip},
@@ -143,11 +148,11 @@ func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 		}, attempts)
 
 		// Only the committed tape replays cleanly. The attempt tape replays the failure.
-		got, err := Run(context.Background(), Replay(committed, nil), Notify("name.txt", to))
+		got, err := Run(context.Background(), Replay(committed, nil), program)
 		require.NoError(t, err)
 		assert.Equal(t, "receipt-1", got)
 
-		_, err = Run(context.Background(), Replay(attempts, nil), Notify("name.txt", to))
+		_, err = Run(context.Background(), Replay(attempts, nil), program)
 		require.ErrorIs(t, err, blip, "a tape of attempts is not a tape of facts")
 	})
 }
@@ -158,9 +163,8 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 	t.Run("without keys the mail is sent twice", func(t *testing.T) {
 		live, _, mail := newWorld()
 		// Call 3 is Send: the mail server delivers, then the answer is lost.
-		h := RetryWith(LoseAnswerAt(MyEffHandlerFunc(live), 3, lost), keyedPolicy, nil, nil)
-
-		got, err := Run(context.Background(), h, Notify("name.txt", to))
+		got, err := Interpret(context.Background(), Notify("name.txt", to), live,
+			RetryWith(keyedPolicy, nil, nil), LoseAnswerAt[MyEff](3, lost))
 
 		require.NoError(t, err)
 		assert.Equal(t, "receipt-2", got, "the program only saw the second delivery")
@@ -173,9 +177,8 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 	t.Run("with keys the mail server drops the duplicate", func(t *testing.T) {
 		live, _, mail := newWorld()
 		// StepKeys is outermost, so both attempts of step 3 carry "run-1/3".
-		h := StepKeys(RetryWith(LoseAnswerAt(MyEffHandlerFunc(live), 3, lost), keyedPolicy, nil, nil), "run-1")
-
-		got, err := Run(context.Background(), h, Notify("name.txt", to))
+		got, err := Interpret(context.Background(), Notify("name.txt", to), live,
+			StepKeys[MyEff]("run-1"), RetryWith(keyedPolicy, nil, nil), LoseAnswerAt[MyEff](3, lost))
 
 		require.NoError(t, err)
 		assert.Equal(t, "receipt-1", got, "the retry got the receipt of the first delivery")
@@ -186,9 +189,11 @@ func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 }
 
 func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
+	program := Notify("name.txt", to)
+
 	// Reference run: no faults. Every resumed run below must reproduce it.
 	live, out, mail := newWorld()
-	want, err := Run(context.Background(), StepKeys(MyEffHandlerFunc(live), "run-1"), Notify("name.txt", to))
+	want, err := Interpret(context.Background(), program, live, StepKeys[MyEff]("run-1"))
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", want)
 	assert.Equal(t, []Mail{{Key: "run-1/3", To: to, Msg: greeting}}, mail.Sent)
@@ -203,8 +208,8 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 			var tape []Step[MyEff]
 
 			// First life: perform k steps, then die.
-			first := StepKeys(Record(CrashAfter(MyEffHandlerFunc(live), k, crash), &tape), "run-1")
-			_, err := Run(context.Background(), first, Notify("name.txt", to))
+			_, err := Interpret(context.Background(), program, live,
+				StepKeys[MyEff]("run-1"), Record(&tape), CrashAfter[MyEff](k, crash))
 			if k == len(notifyOps) {
 				require.NoError(t, err, "no crash point left")
 			} else {
@@ -215,9 +220,10 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 			facts := tape[:k] // drop the crashed step; it is not a fact about the world
 
 			// Second life: replay the facts, then continue live. Same key prefix, so
-			// step 3 is still "run-1/3" even when it is replayed.
-			second := StepKeys(Replay(facts, MyEffHandlerFunc(live)), "run-1")
-			got, err := Run(context.Background(), second, Notify("name.txt", to))
+			// step 3 is still "run-1/3" even when it is replayed. Replay is a handler
+			// of its own, so this goes through Run and Wrap, the pieces under Interpret.
+			second := Wrap(Replay(facts, MyEffHandlerFunc(live)), StepKeys[MyEff]("run-1"))
+			got, err := Run(context.Background(), second, program)
 
 			require.NoError(t, err)
 			assert.Equal(t, want, got, "same receipt as the reference run")
@@ -238,8 +244,8 @@ func TestPart4_seededChaos(t *testing.T) {
 		duplicates := map[uint64][]Mail{}
 		for seed := uint64(0); seed < seeds; seed++ {
 			live, _, mail := newWorld()
-			h := RetryWith(Chaos(MyEffHandlerFunc(live), cfg(seed)), keyedPolicy, nil, nil)
-			_, _ = Run(context.Background(), h, Notify("name.txt", to))
+			_, _ = Interpret(context.Background(), Notify("name.txt", to), live,
+				RetryWith(keyedPolicy, nil, nil), Chaos[MyEff](cfg(seed)))
 			if len(mail.Sent) > 1 {
 				duplicates[seed] = mail.Sent
 			}
@@ -260,8 +266,8 @@ func TestPart4_seededChaos(t *testing.T) {
 		var failingErr error
 		for seed := uint64(0); seed < seeds; seed++ {
 			live, _, mail := newWorld()
-			h := StepKeys(RetryWith(Chaos(MyEffHandlerFunc(live), cfg(seed)), keyedPolicy, nil, nil), "run")
-			got, err := Run(context.Background(), h, Notify("name.txt", to))
+			got, err := Interpret(context.Background(), Notify("name.txt", to), live,
+				StepKeys[MyEff]("run"), RetryWith(keyedPolicy, nil, nil), Chaos[MyEff](cfg(seed)))
 
 			// The invariants. They hold in every world or the test fails with the seed.
 			if err == nil {
@@ -283,8 +289,8 @@ func TestPart4_seededChaos(t *testing.T) {
 
 		// A failing world is reproducible from its seed alone.
 		live, _, _ := newWorld()
-		h := StepKeys(RetryWith(Chaos(MyEffHandlerFunc(live), cfg(failingSeed)), keyedPolicy, nil, nil), "run")
-		_, again := Run(context.Background(), h, Notify("name.txt", to))
+		_, again := Interpret(context.Background(), Notify("name.txt", to), live,
+			StepKeys[MyEff]("run"), RetryWith(keyedPolicy, nil, nil), Chaos[MyEff](cfg(failingSeed)))
 		assert.ErrorIs(t, again, ErrChaos)
 		assert.Regexp(t, `^effect: \*effect\.\w+ failed after 3 attempts: chaos: `, again.Error(), "seed %d", failingSeed)
 		assert.EqualError(t, again, failingErr.Error(), "seed %d replays the same failure", failingSeed)
@@ -305,12 +311,14 @@ func firstSeed(m map[uint64][]Mail) uint64 {
 // The type system keeps them apart, so Retry can only ever see the second.
 func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 	t.Run("a refusal is not retried, whatever the policy says", func(t *testing.T) {
+		program := Pay(10)
+
 		fake := &Fake{Budget: 5}
 		var attempts []string
 
 		// strictPolicy allows 3 attempts for Charge. It never gets to use them.
-		h := RetryWith(journal(MyEffHandlerFunc(fake), &attempts), strictPolicy, nil, nil)
-		_, err := Run(context.Background(), h, Pay(10))
+		_, err := Interpret(context.Background(), program, fake,
+			RetryWith(strictPolicy, nil, nil), journal[MyEff](&attempts))
 
 		assert.EqualError(t, err, "charge refused: short by 5", "the program decided, in Pay")
 		assert.Equal(t, []string{"*effect.Charge ok"}, attempts, "one attempt: the bank answered, so there was nothing to retry")
@@ -318,12 +326,14 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 	})
 
 	t.Run("a broken line is retried, and the charge goes through once", func(t *testing.T) {
+		program := Pay(10)
+
 		fake := &Fake{Budget: 15}
 		blip := errors.New("bank: connection reset")
 		var attempts []string
 
-		h := RetryWith(journal(flakyAt(MyEffHandlerFunc(fake), map[int]error{1: blip}), &attempts), strictPolicy, nil, nil)
-		got, err := Run(context.Background(), h, Pay(10))
+		got, err := Interpret(context.Background(), program, fake,
+			RetryWith(strictPolicy, nil, nil), journal[MyEff](&attempts), flakyAt[MyEff](map[int]error{1: blip}))
 
 		require.NoError(t, err)
 		assert.Equal(t, "charge-1", got)
@@ -338,7 +348,7 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 	t.Run("every refusal is a variant, and the program matches all of them", func(t *testing.T) {
 		live, _, _ := newWorld() // budget 15, quota 2 charges, resets at 1PM
 		run := func(amount int) (string, error) {
-			return Run(context.Background(), MyEffHandlerFunc(live), Pay(amount))
+			return Interpret(context.Background(), Pay(amount), live)
 		}
 
 		got, err := run(10)
@@ -358,7 +368,7 @@ func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
 
 	t.Run("a refusal on a tape keeps its variant", func(t *testing.T) {
 		var tape []Step[MyEff]
-		_, err := Run(context.Background(), Record(MyEffHandlerFunc(&Fake{Budget: 5}), &tape), Pay(10))
+		_, err := Interpret(context.Background(), Pay(10), &Fake{Budget: 5}, Record(&tape))
 		assert.EqualError(t, err, "charge refused: short by 5")
 
 		data, err := TapeToJSON(tape)

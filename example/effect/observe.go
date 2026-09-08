@@ -59,12 +59,14 @@ var ErrDenied = errors.New("effect: denied by policy")
 
 // Guard refuses operations before they are performed. allow is usually an
 // exhaustive match over the union: authorization or dry-run as one function.
-func Guard[Op any](h Handler[Op], allow func(Op) error) Handler[Op] {
-	return func(ctx context.Context, op Op) (any, error) {
-		if err := allow(op); err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrDenied, err)
+func Guard[Op any](allow func(Op) error) Middleware[Op] {
+	return func(h Handler[Op]) Handler[Op] {
+		return func(ctx context.Context, op Op) (any, error) {
+			if err := allow(op); err != nil {
+				return nil, fmt.Errorf("%w: %w", ErrDenied, err)
+			}
+			return h(ctx, op)
 		}
-		return h(ctx, op)
 	}
 }
 
@@ -82,16 +84,18 @@ type Span struct {
 }
 
 // Spans emits one span per operation, for every operation, from one place.
-func Spans[Op any](h Handler[Op], now func() time.Time, sink *[]Span) Handler[Op] {
-	return func(ctx context.Context, op Op) (any, error) {
-		span := Span{Name: fmt.Sprintf("%T", op), Attrs: attrs(op), Start: now()}
-		answer, err := h(ctx, op)
-		span.End = now()
-		if err != nil {
-			span.Err = err.Error()
+func Spans[Op any](now func() time.Time, sink *[]Span) Middleware[Op] {
+	return func(h Handler[Op]) Handler[Op] {
+		return func(ctx context.Context, op Op) (any, error) {
+			span := Span{Name: fmt.Sprintf("%T", op), Attrs: attrs(op), Start: now()}
+			answer, err := h(ctx, op)
+			span.End = now()
+			if err != nil {
+				span.Err = err.Error()
+			}
+			*sink = append(*sink, span)
+			return answer, err
 		}
-		*sink = append(*sink, span)
-		return answer, err
 	}
 }
 

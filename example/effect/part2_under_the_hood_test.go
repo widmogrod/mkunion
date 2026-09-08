@@ -50,7 +50,7 @@ func TestPart2_bothStylesLeaveTheSameTrace(t *testing.T) {
 			fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada\n"}}
 			var trace []MyEff
 
-			got, err := Run(context.Background(), Trace(MyEffHandlerFunc(fake), &trace), style.greet("name.txt"))
+			got, err := Run(context.Background(), Wrap(MyEffHandlerFunc(fake), Trace(&trace)), style.greet("name.txt"))
 
 			require.NoError(t, err)
 			assert.Equal(t, "Hello Ada, it is 12:00PM", got)
@@ -69,7 +69,7 @@ func TestPart2_bothStylesStopOnTheFirstError(t *testing.T) {
 			fake := &Fake{Clock: noon}
 			var trace []MyEff
 
-			_, err := Run(context.Background(), Trace(MyEffHandlerFunc(fake), &trace), style.greet("missing.txt"))
+			_, err := Run(context.Background(), Wrap(MyEffHandlerFunc(fake), Trace(&trace)), style.greet("missing.txt"))
 
 			require.ErrorContains(t, err, `no file "missing.txt"`)
 			assert.Equal(t, []MyEff{&ReadFile{Path: "missing.txt"}}, trace)
@@ -96,7 +96,7 @@ func TestPart2_thenAndMapAreOrdinaryValues(t *testing.T) {
 	// Then composes a plain-Go program with a hand-built one: one Bind chain.
 	mixed := Then(RollUntil(6, 10), func(int) Program[time.Time] { return Perform(&Now{}) })
 	var trace []MyEff
-	when, err := Run(context.Background(), Trace(MyEffHandlerFunc(&Fake{Clock: noon, Rolls: []int{0, 5}}), &trace), mixed)
+	when, err := Run(context.Background(), Wrap(MyEffHandlerFunc(&Fake{Clock: noon, Rolls: []int{0, 5}}), Trace(&trace)), mixed)
 	require.NoError(t, err)
 	assert.Equal(t, noon, when)
 	assert.Equal(t, []MyEff{&Random{Max: 6}, &Random{Max: 6}, &Now{}}, trace, "two rolls from the body, then the hand-built step")

@@ -12,16 +12,18 @@ import (
 
 // Part 1: the basics.
 //
-// A program is plain Go against Fx. It performs nothing until Run gives it a
-// handler. The same program runs against Fake in tests and Live in production.
+// A program is plain Go against Fx. It performs nothing until Interpret gives
+// it a handler. The same program runs against Fake in tests and Live in production.
 
 // --8<-- [start:run-fake]
 
 func TestPart1_sameProgramFakeHandler(t *testing.T) {
+	ctx := context.Background()
+	program := Greet("name.txt") // a value; nothing has run yet
+
 	fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada\n"}}
 	var trace []MyEff
-
-	got, err := Run(context.Background(), Trace(MyEffHandlerFunc(fake), &trace), Greet("name.txt"))
+	got, err := Interpret(ctx, program, fake, Trace(&trace))
 
 	require.NoError(t, err)
 	assert.Equal(t, "Hello Ada, it is 12:00PM", got)
@@ -36,9 +38,10 @@ func TestPart1_sameProgramFakeHandler(t *testing.T) {
 // --8<-- [end:run-fake]
 
 func TestPart1_sameProgramLiveHandler(t *testing.T) {
-	live, out, _ := newWorld()
+	program := Greet("name.txt")
 
-	got, err := Run(context.Background(), MyEffHandlerFunc(live), Greet("name.txt"))
+	live, out, _ := newWorld()
+	got, err := Interpret(context.Background(), program, live)
 
 	require.NoError(t, err)
 	assert.Equal(t, "Hello Ada, it is 12:00PM", got)
@@ -51,16 +54,17 @@ func TestPart1_buildingAProgramPerformsNothing(t *testing.T) {
 	prog := Greet("name.txt")
 
 	assert.Empty(t, fake.Logs, "nothing ran yet")
-	_, err := Run(context.Background(), MyEffHandlerFunc(fake), prog)
+	_, err := Interpret(context.Background(), prog, fake)
 	require.NoError(t, err)
 	assert.Len(t, fake.Logs, 1, "now it did")
 }
 
 func TestPart1_handlerErrorStopsTheProgram(t *testing.T) {
+	program := Greet("missing.txt")
+
 	fake := &Fake{Clock: noon} // no files
 	var trace []MyEff
-
-	_, err := Run(context.Background(), Trace(MyEffHandlerFunc(fake), &trace), Greet("missing.txt"))
+	_, err := Interpret(context.Background(), program, fake, Trace(&trace))
 
 	require.ErrorContains(t, err, `no file "missing.txt"`)
 	assert.Equal(t, []MyEff{&ReadFile{Path: "missing.txt"}}, trace, "nothing after the failing operation runs")
@@ -70,18 +74,20 @@ func TestPart1_handlerErrorStopsTheProgram(t *testing.T) {
 func TestPart1_cancelledContextStopsBeforeTheNextOperation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	var trace []MyEff
+	program := Greet("name.txt")
 
-	_, err := Run(ctx, Trace(MyEffHandlerFunc(&Fake{}), &trace), Greet("name.txt"))
+	var trace []MyEff
+	_, err := Interpret(ctx, program, &Fake{}, Trace(&trace))
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Empty(t, trace)
 }
 
 func TestPart1_attemptHandlesAnErrorInPlace(t *testing.T) {
-	fake := &Fake{} // no files: ReadFile fails, the body carries on
+	program := GreetOrGuest("missing.txt")
 
-	got, err := Run(context.Background(), MyEffHandlerFunc(fake), GreetOrGuest("missing.txt"))
+	fake := &Fake{} // no files: ReadFile fails, the body carries on
+	got, err := Interpret(context.Background(), program, fake)
 
 	require.NoError(t, err)
 	assert.Equal(t, "Hello guest", got)
@@ -106,27 +112,29 @@ func TestPart1_defaultsLetATestOverrideOneMethod(t *testing.T) {
 		return fx.Now().Format(time.Kitchen) + " and rolled " + strconv.Itoa(fx.Random(6)), nil
 	})
 
-	got, err := Run(context.Background(), MyEffHandlerFunc(clockOnly{at: noon}), prog)
+	got, err := Interpret(context.Background(), prog, clockOnly{at: noon})
 
 	require.NoError(t, err)
 	assert.Equal(t, "12:00PM and rolled 0", got)
 
-	_, err = Run(context.Background(), MyEffHandlerFunc(clockOnly{}), Greet("name.txt"))
+	_, err = Interpret(context.Background(), Greet("name.txt"), clockOnly{})
 	assert.EqualError(t, err, `defaults: no file "name.txt"`, "Defaults refuses reads, so a test cannot depend on one by accident")
 }
 
 func TestPart1_aLoopIsALoop(t *testing.T) {
 	const rolls = 1_000_000
-	_, err := Run(context.Background(), MyEffHandlerFunc(&Fake{Rolls: []int{0}}), RollUntil(6, rolls))
+	program := RollUntil(6, rolls) // one value, interpreted twice below
+
+	_, err := Interpret(context.Background(), program, &Fake{Rolls: []int{0}})
 	require.ErrorContains(t, err, "no 6 in 1000000 rolls", "a million operations, no stack growth")
 
-	got, err := Run(context.Background(), MyEffHandlerFunc(&Fake{Rolls: []int{0, 0, 5}}), RollUntil(6, rolls))
+	got, err := Interpret(context.Background(), program, &Fake{Rolls: []int{0, 0, 5}})
 	require.NoError(t, err)
 	assert.Equal(t, 3, got, "the third roll was a six")
 }
 
 func TestPart1_aFakeSaysWhenItHasNoAnswer(t *testing.T) {
-	_, err := Run(context.Background(), MyEffHandlerFunc(&Fake{}), RollUntil(6, 1))
+	_, err := Interpret(context.Background(), RollUntil(6, 1), &Fake{})
 	assert.EqualError(t, err, "fake: no rolls configured")
 }
 
@@ -135,11 +143,31 @@ func TestPart1_fxDoInfersTheAnswerType(t *testing.T) {
 		return fx.Do(&Now{}), nil // no type annotation: R comes from Now's f.Returns
 	})
 
-	got, err := Run(context.Background(), MyEffHandlerFunc(&Fake{Clock: noon}), prog)
+	got, err := Interpret(context.Background(), prog, &Fake{Clock: noon})
 
 	require.NoError(t, err)
 	assert.Equal(t, noon, got)
 }
+
+// --8<-- [start:inline-handler]
+
+func TestPart1_aHandlerCanBeThreeClosures(t *testing.T) {
+	ctx := context.Background()
+	program := Greet("name.txt")
+
+	var logged []string
+	got, err := Interpret(ctx, program, MyEffFuncs{
+		ReadFile: func(context.Context, *ReadFile) ([]byte, error) { return []byte("Ada"), nil },
+		Now:      func(context.Context, *Now) (time.Time, error) { return noon, nil },
+		Log:      func(_ context.Context, op *Log) (Unit, error) { logged = append(logged, op.Msg); return Unit{}, nil },
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "Hello Ada, it is 12:00PM", got)
+	assert.Equal(t, []string{"Hello Ada, it is 12:00PM"}, logged)
+}
+
+// --8<-- [end:inline-handler]
 
 // Program[A] is an alias, not a new type: the assignment below is checked by
 // the compiler, so there is nothing left to test at run time.

@@ -38,13 +38,13 @@ func TestPart5_traceDiffFindsABehaviourRegression(t *testing.T) {
 	live, _, _ := newWorld()
 	live.FS = withConfig
 	var v1 []MyEff
-	out1, err := Run(context.Background(), Trace(MyEffHandlerFunc(live), &v1), Notify("name.txt", to))
+	out1, err := Interpret(context.Background(), Notify("name.txt", to), live, Trace(&v1))
 	require.NoError(t, err)
 
 	live, _, _ = newWorld()
 	live.FS = withConfig
 	var v2 []MyEff
-	out2, err := Run(context.Background(), Trace(MyEffHandlerFunc(live), &v2), notifyV2("name.txt", to))
+	out2, err := Interpret(context.Background(), notifyV2("name.txt", to), live, Trace(&v2))
 	require.NoError(t, err)
 
 	assert.Equal(t, out1, out2, "same output: an output-only test passes")
@@ -76,10 +76,11 @@ func dryRun(op MyEff) error {
 }
 
 func TestPart5_policyGuardIsAuthorizationOnEffects(t *testing.T) {
+	program := Notify("name.txt", to)
+
 	live, out, mail := newWorld()
 	var trace []MyEff
-
-	_, err := Run(context.Background(), Guard(Trace(MyEffHandlerFunc(live), &trace), dryRun), Notify("name.txt", to))
+	_, err := Interpret(context.Background(), program, live, Guard(dryRun), Trace(&trace))
 
 	require.ErrorIs(t, err, ErrDenied)
 	assert.EqualError(t, err, `effect: denied by policy: dry run: would send "Hello Ada, it is 12:00PM" to ada@example.com`)
@@ -87,9 +88,10 @@ func TestPart5_policyGuardIsAuthorizationOnEffects(t *testing.T) {
 	assert.Empty(t, mail.Sent)
 	assert.Empty(t, out.String())
 
-	_, err = Run(context.Background(), Guard(MyEffHandlerFunc(live), dryRun), Prog(func(fx Fx) (string, error) {
+	readSecret := Prog(func(fx Fx) (string, error) {
 		return string(fx.ReadFile("prod.env")), nil
-	}))
+	})
+	_, err = Interpret(context.Background(), readSecret, live, Guard(dryRun))
 	assert.EqualError(t, err, `effect: denied by policy: dry run: refuse to read secrets from "prod.env"`)
 }
 
@@ -99,8 +101,9 @@ func TestPart5_spansForEveryOperationFromOnePlace(t *testing.T) {
 	tick := func() time.Time { clock = clock.Add(10 * time.Millisecond); return clock }
 	at := func(ms int) time.Time { return noon.Add(time.Duration(ms) * time.Millisecond) }
 	var spans []Span
+	program := Notify("name.txt", to)
 
-	_, err := Run(context.Background(), Spans(MyEffHandlerFunc(live), tick, &spans), Notify("name.txt", to))
+	_, err := Interpret(context.Background(), program, live, Spans[MyEff](tick, &spans))
 
 	require.NoError(t, err)
 	assert.Equal(t, []Span{
@@ -113,7 +116,7 @@ func TestPart5_spansForEveryOperationFromOnePlace(t *testing.T) {
 	// A failure lands on the span too.
 	spans, clock = nil, noon
 	blip := errors.New("disk hiccup")
-	_, err = Run(context.Background(), Spans(FailEvery(MyEffHandlerFunc(live), 1, blip), tick, &spans), Notify("name.txt", to))
+	_, err = Interpret(context.Background(), program, live, Spans[MyEff](tick, &spans), FailEvery[MyEff](1, blip))
 	require.ErrorIs(t, err, blip)
 	assert.Equal(t, []Span{
 		{Name: "*effect.ReadFile", Attrs: `{"Path":"name.txt"}`, Start: at(10), End: at(20), Err: "disk hiccup"},

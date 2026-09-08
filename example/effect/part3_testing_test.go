@@ -16,10 +16,11 @@ import (
 // test from here on is Notify, whose Send must never happen twice.
 
 func TestPart3_theTraceIsTheAssertion(t *testing.T) {
+	program := Notify("name.txt", to)
+
 	live, out, mail := newWorld()
 	var trace []MyEff
-
-	got, err := Run(context.Background(), Trace(MyEffHandlerFunc(live), &trace), Notify("name.txt", to))
+	got, err := Interpret(context.Background(), program, live, Trace(&trace))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
@@ -31,10 +32,12 @@ func TestPart3_theTraceIsTheAssertion(t *testing.T) {
 // --8<-- [start:record-replay]
 
 func TestPart3_recordOnceReplayForever(t *testing.T) {
+	program := Notify("name.txt", to)
+
 	// Record: one run against the real world writes a tape of facts.
 	live, _, _ := newWorld()
 	var tape []Step[MyEff]
-	want, err := Run(context.Background(), Record(MyEffHandlerFunc(live), &tape), Notify("name.txt", to))
+	want, err := Interpret(context.Background(), program, live, Record(&tape))
 	require.NoError(t, err)
 	assert.Equal(t, []Step[MyEff]{
 		{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
@@ -43,8 +46,9 @@ func TestPart3_recordOnceReplayForever(t *testing.T) {
 		{Op: &Log{Msg: "sent receipt-1"}, Answer: Unit{}},
 	}, tape)
 
-	// Replay: the tape answers. No world is needed.
-	got, err := Run(context.Background(), Replay(tape, nil), Notify("name.txt", to))
+	// Replay: the tape answers. No world is needed, so there is no handler:
+	// the tape goes straight to Run, the loop under Interpret (part 2).
+	got, err := Run(context.Background(), Replay(tape, nil), program)
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 

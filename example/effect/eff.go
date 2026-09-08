@@ -46,6 +46,19 @@ type (
 // even on Go 1.27. Typed wrappers live at the edges (see MyEffHandlerFunc and Fx.Do).
 type Handler[Op any] func(ctx context.Context, op Op) (any, error)
 
+// Middleware wraps a handler and returns a handler. Because a handler is one
+// function, one middleware sees every operation of every program.
+type Middleware[Op any] func(Handler[Op]) Handler[Op]
+
+// Wrap applies middleware to a handler, first listed outermost:
+// Wrap(h, A, B) is A(B(h)), so A sees an operation first and its answer last.
+func Wrap[Op any](h Handler[Op], middleware ...Middleware[Op]) Handler[Op] {
+	for i := len(middleware) - 1; i >= 0; i-- {
+		h = middleware[i](h)
+	}
+	return h
+}
+
 // --8<-- [end:handler]
 
 // Return lifts a value into a finished program.
@@ -139,12 +152,14 @@ func Run[Op, A any](ctx context.Context, h Handler[Op], e Eff[Op, A]) (A, error)
 
 // --8<-- [start:trace]
 
-// Trace wraps a handler and records every operation it performs, in order.
+// Trace records every operation a handler performs, in order.
 // It is the smallest example of middleware (see middleware.go for more).
-func Trace[Op any](h Handler[Op], sink *[]Op) Handler[Op] {
-	return func(ctx context.Context, op Op) (any, error) {
-		*sink = append(*sink, op)
-		return h(ctx, op)
+func Trace[Op any](sink *[]Op) Middleware[Op] {
+	return func(h Handler[Op]) Handler[Op] {
+		return func(ctx context.Context, op Op) (any, error) {
+			*sink = append(*sink, op)
+			return h(ctx, op)
+		}
 	}
 }
 
