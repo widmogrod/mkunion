@@ -12,10 +12,4 @@
 // operations and handlers are typed per variant. This package does not know
 // any particular union; example/welcome is the walkthrough, and
 // example/compose shows two unions from two packages in one program.
-//
-// The type registry is off for this package. mkunion's registry generator
-// mistakes the type parameter Op of Trace for a package type, and it ignores
-// the noserde option on Eff. Both are generator bugs, not effect-system limits.
-//
-//go:tag mkunion:",no-type-registry"
 package effect

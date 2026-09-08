@@ -34,8 +34,4 @@
 //	  part5_observability_test.go
 //
 // The docs page docs/examples/effect_system.md walks through the same order.
-//
-// The type registry is off for this package, for the reasons given in x/effect/doc.go.
-//
-//go:tag mkunion:",no-type-registry"
 package welcome

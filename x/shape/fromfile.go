@@ -1271,6 +1271,12 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 				return nil
 			}
 
+			// the registry is the output of this index; reading a previous
+			// version back in would keep every past mistake alive forever
+			if strings.HasSuffix(path, "types_reg_gen.go") {
+				return nil
+			}
+
 			f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 			if err != nil {
 				return fmt.Errorf("could not parse file %s; %w", path, err)
@@ -1502,13 +1508,14 @@ func (walker *IndexedTypeWalker) visitFuncDecl(t *ast.FuncDecl) ast.Visitor {
 	fun := t.Type
 
 	prev := walker.filterGenericTypes
+	// A method may have its own type parameters (Go 1.27 generic methods) on
+	// top of the receiver's. Neither set names a real type.
+	walker.filterGenericTypes = walker.typeParamNames(fun.TypeParams)
 	if t.Recv != nil {
-		walker.filterGenericTypes = walker.guessParamNamesReceiver(t.Recv)
+		walker.filterGenericTypes = append(walker.filterGenericTypes, walker.guessParamNamesReceiver(t.Recv)...)
 		for _, param := range t.Recv.List {
 			walker.registerIndexedShape(param.Type)
 		}
-	} else {
-		walker.filterGenericTypes = walker.typeParamNames(fun.TypeParams)
 	}
 
 	if fun.TypeParams != nil {
@@ -1678,6 +1685,38 @@ func (walker *IndexedTypeWalker) guessParamNamesReceiver(x *ast.FieldList) []str
 	return result
 }
 
+// mentionsTypeParam reports whether a shape names one of the type parameters
+// in scope anywhere inside it: Box[T], *[]T, map[string]T, func's T.
+func mentionsTypeParam(x Shape, names []string) bool {
+	if len(names) == 0 || x == nil {
+		return false
+	}
+	return MatchShapeR1(
+		x,
+		func(*Any) bool { return false },
+		func(y *RefName) bool {
+			for _, name := range names {
+				if y.Name == name {
+					return true
+				}
+			}
+			for _, idx := range y.Indexed {
+				if mentionsTypeParam(idx, names) {
+					return true
+				}
+			}
+			return false
+		},
+		func(y *PointerLike) bool { return mentionsTypeParam(y.Type, names) },
+		func(y *AliasLike) bool { return mentionsTypeParam(y.Type, names) },
+		func(*PrimitiveLike) bool { return false },
+		func(y *ListLike) bool { return mentionsTypeParam(y.Element, names) },
+		func(y *MapLike) bool { return mentionsTypeParam(y.Key, names) || mentionsTypeParam(y.Val, names) },
+		func(*StructLike) bool { return false },
+		func(*UnionLike) bool { return false },
+	)
+}
+
 func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 	switch arg.(type) {
 	case *ast.IndexExpr, *ast.IndexListExpr, *ast.StarExpr:
@@ -1694,30 +1733,9 @@ func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 			indexed = ptr.Type
 		}
 
-		if len(walker.filterGenericTypes) > 0 {
-			indexedName := Name(indexed)
-			for _, name := range walker.filterGenericTypes {
-				if name == indexedName {
-					// we extracted type parameter, not interested in it
-					return
-				}
-
-				typeParams := ExtractIndexedTypes(indexed)
-				for {
-					if len(typeParams) == 0 {
-						break
-					}
-
-					tp := typeParams[0]
-					typeParams = typeParams[1:]
-					if Name(tp) == name {
-						// we extracted type parameter, not interested in it
-						return
-					}
-
-					typeParams = append(typeParams, ExtractIndexedTypes(tp)...)
-				}
-			}
+		if mentionsTypeParam(indexed, walker.filterGenericTypes) {
+			// a type parameter is not a type; nothing to register
+			return
 		}
 
 		name := ToGoTypeName(indexed,

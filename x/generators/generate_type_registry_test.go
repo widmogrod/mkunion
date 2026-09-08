@@ -94,3 +94,23 @@ func handleFetch(result FetchResult) string {
 	require.NotContains(t, typeRegistryContentns, `[None[User]]`)
 
 }
+
+func TestGenerateTypeRegistry_noserdeUnionHasNoJSONToRegister(t *testing.T) {
+	log.SetLevel(log.ErrorLevel)
+	contents := `package testutils
+
+import "github.com/widmogrod/mkunion/x/effect"
+
+// Eff is tagged noserde: it has no FromJSON/ToJSON, so the registry must not name them.
+func program(p effect.Eff[string, int]) effect.Eff[string, int] { return p }
+`
+	pkgName := "github.com/widmogrod/mkunion/x/generators/testutils"
+	walker := shape.NewIndexedTypeWalkerWithContentBody(contents, func(x *shape.IndexedTypeWalker) { x.SetPkgImportName(pkgName) })
+
+	buff, err := GenerateTypeRegistry(walker, shape.LookupShapeOnDisk)
+	require.NoError(t, err)
+
+	registry := buff.String()
+	require.Contains(t, registry, `shared.TypeRegistryStore[effect.Eff[string,int]]`, "the type itself is still registered")
+	require.NotContains(t, registry, `EffFromJSON`, "no JSON codec exists for a noserde union")
+}
