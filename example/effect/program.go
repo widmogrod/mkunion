@@ -14,25 +14,25 @@ import (
 
 // --8<-- [start:fx-api]
 
-// Program is a program over the Effect operations that yields A.
-type Program[A any] = Eff[Effect, A]
+// Program is a program over the MyEff operations that yields A.
+type Program[A any] = Eff[MyEff, A]
 
 // Fx is the handle a program body uses to ask for operations.
-type Fx struct{ env *Env[Effect] }
+type Fx struct{ env *Env[MyEff] }
 
 // Prog turns a plain Go body into a Program. The body runs later, inside Run,
 // as a coroutine: every operation pauses it and the handler's answer resumes it.
 func Prog[A any](body func(fx Fx) (A, error)) Program[A] {
-	return Proc(func(e *Env[Effect]) (A, error) { return body(Fx{env: e}) })
+	return Proc(func(e *Env[MyEff]) (A, error) { return body(Fx{env: e}) })
 }
 
 // Do asks for any operation and returns its typed answer. R is inferred from
 // the operation's f.Returns. On error the body stops, and the program
 // fails with that error.
-func (fx Fx) Do[R any](op EffectOf[R]) R { return DoAs[Effect, R](fx.env, op) }
+func (fx Fx) Do[R any](op MyEffOf[R]) R { return DoAs[MyEff, R](fx.env, op) }
 
 // Attempt is Do that returns the error instead of stopping the body.
-func (fx Fx) Attempt[R any](op EffectOf[R]) (R, error) { return AttemptAs[Effect, R](fx.env, op) }
+func (fx Fx) Attempt[R any](op MyEffOf[R]) (R, error) { return AttemptAs[MyEff, R](fx.env, op) }
 
 // One method per operation. Mechanical, like the typed layer in ops.go.
 

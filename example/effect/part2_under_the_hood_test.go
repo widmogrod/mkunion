@@ -48,13 +48,13 @@ func TestPart2_bothStylesLeaveTheSameTrace(t *testing.T) {
 	for _, style := range styles {
 		t.Run(style.name, func(t *testing.T) {
 			fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada\n"}}
-			var trace []Effect
+			var trace []MyEff
 
-			got, err := Run(context.Background(), Trace(EffectHandlerFunc(fake), &trace), style.greet("name.txt"))
+			got, err := Run(context.Background(), Trace(MyEffHandlerFunc(fake), &trace), style.greet("name.txt"))
 
 			require.NoError(t, err)
 			assert.Equal(t, "Hello Ada, it is 12:00PM", got)
-			assert.Equal(t, []Effect{
+			assert.Equal(t, []MyEff{
 				&ReadFile{Path: "name.txt"},
 				&Now{},
 				&Log{Msg: "Hello Ada, it is 12:00PM"},
@@ -67,43 +67,43 @@ func TestPart2_bothStylesStopOnTheFirstError(t *testing.T) {
 	for _, style := range styles {
 		t.Run(style.name, func(t *testing.T) {
 			fake := &Fake{Clock: noon}
-			var trace []Effect
+			var trace []MyEff
 
-			_, err := Run(context.Background(), Trace(EffectHandlerFunc(fake), &trace), style.greet("missing.txt"))
+			_, err := Run(context.Background(), Trace(MyEffHandlerFunc(fake), &trace), style.greet("missing.txt"))
 
 			require.ErrorContains(t, err, `no file "missing.txt"`)
-			assert.Equal(t, []Effect{&ReadFile{Path: "missing.txt"}}, trace)
+			assert.Equal(t, []MyEff{&ReadFile{Path: "missing.txt"}}, trace)
 		})
 	}
 }
 
 func TestPart2_thenAndMapAreOrdinaryValues(t *testing.T) {
 	// Return and Map need no handler at all: nothing is performed.
-	prog := Map(Return[Effect](20), func(n int) int { return n + 1 })
-	got, err := Run(context.Background(), EffectHandlerFunc(&Fake{}), prog)
+	prog := Map(Return[MyEff](20), func(n int) int { return n + 1 })
+	got, err := Run(context.Background(), MyEffHandlerFunc(&Fake{}), prog)
 	require.NoError(t, err)
 	assert.Equal(t, 21, got)
 
 	// Throw short-circuits: the continuation is never built, the handler never called.
 	boom := errors.New("boom")
 	called := false
-	h := func(context.Context, Effect) (any, error) { called = true; return nil, nil }
-	failed := Then(Throw[Effect, int](boom), func(int) Program[Unit] { return Perform(&Log{Msg: "unreachable"}) })
+	h := func(context.Context, MyEff) (any, error) { called = true; return nil, nil }
+	failed := Then(Throw[MyEff, int](boom), func(int) Program[Unit] { return Perform(&Log{Msg: "unreachable"}) })
 	_, err = Run(context.Background(), h, failed)
 	require.ErrorIs(t, err, boom)
 	assert.False(t, called)
 
 	// Then composes a plain-Go program with a hand-built one: one Bind chain.
 	mixed := Then(RollUntil(6, 10), func(int) Program[time.Time] { return Perform(&Now{}) })
-	var trace []Effect
-	when, err := Run(context.Background(), Trace(EffectHandlerFunc(&Fake{Clock: noon, Rolls: []int{0, 5}}), &trace), mixed)
+	var trace []MyEff
+	when, err := Run(context.Background(), Trace(MyEffHandlerFunc(&Fake{Clock: noon, Rolls: []int{0, 5}}), &trace), mixed)
 	require.NoError(t, err)
 	assert.Equal(t, noon, when)
-	assert.Equal(t, []Effect{&Random{Max: 6}, &Random{Max: 6}, &Now{}}, trace, "two rolls from the body, then the hand-built step")
+	assert.Equal(t, []MyEff{&Random{Max: 6}, &Random{Max: 6}, &Now{}}, trace, "two rolls from the body, then the hand-built step")
 }
 
 func TestPart2_aWrongAnswerTypeIsAnErrorNotAPanic(t *testing.T) {
-	lying := func(context.Context, Effect) (any, error) { return "not bytes", nil }
+	lying := func(context.Context, MyEff) (any, error) { return "not bytes", nil }
 
 	for _, style := range styles {
 		t.Run(style.name, func(t *testing.T) {
@@ -116,24 +116,24 @@ func TestPart2_aWrongAnswerTypeIsAnErrorNotAPanic(t *testing.T) {
 // bogusEff satisfies the Eff interface without being a generated variant.
 type bogusEff struct{}
 
-func (bogusEff) AcceptEff(EffVisitor[Effect, int]) any { return nil }
+func (bogusEff) AcceptEff(EffVisitor[MyEff, int]) any { return nil }
 
 func TestPart2_runRefusesAnUnknownNode(t *testing.T) {
-	_, err := Run[Effect, int](context.Background(), EffectHandlerFunc(&Fake{}), bogusEff{})
+	_, err := Run[MyEff, int](context.Background(), MyEffHandlerFunc(&Fake{}), bogusEff{})
 	require.ErrorContains(t, err, "unknown program node")
 }
 
 func TestPart2_procIsACoroutine(t *testing.T) {
 	t.Run("a body panic is not swallowed", func(t *testing.T) {
-		boom := Proc(func(*Env[Effect]) (int, error) { panic("boom") })
+		boom := Proc(func(*Env[MyEff]) (int, error) { panic("boom") })
 		assert.PanicsWithValue(t, "boom", func() {
-			_, _ = Run(context.Background(), EffectHandlerFunc(&Fake{}), boom)
+			_, _ = Run(context.Background(), MyEffHandlerFunc(&Fake{}), boom)
 		})
 	})
 
 	t.Run("a handler error unwinds the body and frees the coroutine", func(t *testing.T) {
 		before := runtime.NumGoroutine()
-		_, err := Run(context.Background(), EffectHandlerFunc(&Fake{}), Greet("missing.txt"))
+		_, err := Run(context.Background(), MyEffHandlerFunc(&Fake{}), Greet("missing.txt"))
 		require.Error(t, err)
 		assertNoLeak(t, before)
 	})
@@ -142,20 +142,20 @@ func TestPart2_procIsACoroutine(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		before := runtime.NumGoroutine()
-		_, err := Run(ctx, EffectHandlerFunc(&Fake{}), Greet("name.txt"))
+		_, err := Run(ctx, MyEffHandlerFunc(&Fake{}), Greet("name.txt"))
 		require.ErrorIs(t, err, context.Canceled)
 		assertNoLeak(t, before)
 	})
 
 	t.Run("Attempt sees the context error", func(t *testing.T) {
 		var seen error
-		prog := Proc(func(e *Env[Effect]) (int, error) {
-			_, seen = AttemptAs[Effect, time.Time](e, &Now{})
+		prog := Proc(func(e *Env[MyEff]) (int, error) {
+			_, seen = AttemptAs[MyEff, time.Time](e, &Now{})
 			return 0, seen
 		})
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		_, err := Run(ctx, EffectHandlerFunc(&Fake{}), prog)
+		_, err := Run(ctx, MyEffHandlerFunc(&Fake{}), prog)
 		require.ErrorIs(t, err, context.Canceled)
 		assert.ErrorIs(t, seen, context.Canceled)
 	})

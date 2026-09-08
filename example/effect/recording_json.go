@@ -10,7 +10,7 @@ import (
 )
 
 // A tape as JSON. The operations use the JSON that mkunion generates for the
-// Effect union, so a tape can be stored, shipped to another machine, or read by
+// MyEff union, so a tape can be stored, shipped to another machine, or read by
 // TypeScript (see `mkunion shape-export`). Answers are decoded into the type each
 // operation declares in Result.
 
@@ -23,10 +23,10 @@ type jsonStep struct {
 }
 
 // TapeToJSON encodes a recording.
-func TapeToJSON(tape []Step[Effect]) ([]byte, error) {
+func TapeToJSON(tape []Step[MyEff]) ([]byte, error) {
 	steps := make([]jsonStep, 0, len(tape))
 	for _, step := range tape {
-		op, err := EffectToJSON(step.Op)
+		op, err := MyEffToJSON(step.Op)
 		if err != nil {
 			return nil, err
 		}
@@ -42,18 +42,18 @@ func TapeToJSON(tape []Step[Effect]) ([]byte, error) {
 }
 
 // TapeFromJSON decodes a recording. Each answer gets the type its operation declared.
-func TapeFromJSON(data []byte) ([]Step[Effect], error) {
+func TapeFromJSON(data []byte) ([]Step[MyEff], error) {
 	var steps []jsonStep
 	if err := json.Unmarshal(data, &steps); err != nil {
 		return nil, err
 	}
-	tape := make([]Step[Effect], 0, len(steps))
+	tape := make([]Step[MyEff], 0, len(steps))
 	for i, js := range steps {
-		op, err := EffectFromJSON(js.Op)
+		op, err := MyEffFromJSON(js.Op)
 		if err != nil {
 			return nil, fmt.Errorf("step %d: %w", i, err)
 		}
-		step := Step[Effect]{Op: op}
+		step := Step[MyEff]{Op: op}
 		if js.Err != "" {
 			step.Err = errors.New(js.Err)
 		} else if step.Answer, err = answerFromJSON(op, js.Answer); err != nil {
@@ -67,8 +67,8 @@ func TapeFromJSON(data []byte) ([]Step[Effect], error) {
 // answerToJSON encodes an answer. Plain values use encoding/json. An answer
 // that is a union needs the JSON mkunion generates for it, so the variant
 // survives the round trip. Exhaustive, so a new operation cannot be forgotten.
-func answerToJSON(op Effect, answer any) (json.RawMessage, error) {
-	return MatchEffectR2(op,
+func answerToJSON(op MyEff, answer any) (json.RawMessage, error) {
+	return MatchMyEffR2(op,
 		func(*Log) (json.RawMessage, error) { return json.Marshal(answer) },
 		func(*Now) (json.RawMessage, error) { return json.Marshal(answer) },
 		func(*ReadFile) (json.RawMessage, error) { return json.Marshal(answer) },
@@ -81,8 +81,8 @@ func answerToJSON(op Effect, answer any) (json.RawMessage, error) {
 }
 
 // answerFromJSON decodes raw into the answer type op declares.
-func answerFromJSON(op Effect, raw json.RawMessage) (any, error) {
-	return MatchEffectR2(op,
+func answerFromJSON(op MyEff, raw json.RawMessage) (any, error) {
+	return MatchMyEffR2(op,
 		func(*Log) (any, error) { return decodeAnswer[Unit](raw) },
 		func(*Now) (any, error) { return decodeAnswer[time.Time](raw) },
 		func(*ReadFile) (any, error) { return decodeAnswer[[]byte](raw) },

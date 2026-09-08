@@ -21,7 +21,7 @@ const to = "ada@example.com"
 const greeting = "Hello Ada, it is 12:00PM"
 
 // notifyOps is the trace Notify("name.txt", to) leaves, in order.
-var notifyOps = []Effect{
+var notifyOps = []MyEff{
 	&ReadFile{Path: "name.txt"},
 	&Now{},
 	&Send{To: to, Msg: greeting},
@@ -30,7 +30,7 @@ var notifyOps = []Effect{
 
 // notifyTape is the tape Record writes for that run: every operation with the
 // answer the world gave.
-var notifyTape = []Step[Effect]{
+var notifyTape = []Step[MyEff]{
 	{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
 	{Op: &Now{}, Answer: noon},
 	{Op: &Send{To: to, Msg: greeting}, Answer: "receipt-1"},
@@ -79,8 +79,8 @@ func flakyAt[Op any](h Handler[Op], errs map[int]error) Handler[Op] {
 	}
 }
 
-func opsOf(tape []Step[Effect]) []Effect {
-	ops := make([]Effect, 0, len(tape))
+func opsOf(tape []Step[MyEff]) []MyEff {
+	ops := make([]MyEff, 0, len(tape))
 	for _, step := range tape {
 		ops = append(ops, step.Op)
 	}

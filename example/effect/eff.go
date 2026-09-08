@@ -13,7 +13,7 @@ import (
 
 // Eff is a program that performs operations of type Op and yields a value of type A.
 //
-// Op is the union of operations the program may ask for (see Effect in ops.go).
+// Op is the union of operations the program may ask for (see MyEff in ops.go).
 // The continuation in Bind receives the handler's answer as `any`; the typed
 // layer in ops.go and program.go hides that cast from user code.
 //
@@ -43,7 +43,7 @@ type (
 
 // Handler performs one operation and returns its answer.
 // The answer type is `any` because Go interfaces cannot carry generic methods,
-// even on Go 1.27. Typed wrappers live at the edges (see EffectHandlerFunc and Fx.Do).
+// even on Go 1.27. Typed wrappers live at the edges (see MyEffHandlerFunc and Fx.Do).
 type Handler[Op any] func(ctx context.Context, op Op) (any, error)
 
 // --8<-- [end:handler]

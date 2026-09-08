@@ -23,7 +23,7 @@ type Live struct {
 	Bank func(amount int) (f.Result[Receipt, ChargeError], error)
 }
 
-var _ EffectHandler = (*Live)(nil)
+var _ MyEffHandler = (*Live)(nil)
 
 func (l *Live) HandleLog(_ context.Context, op *Log) (Unit, error) {
 	_, err := fmt.Fprintln(l.Out, op.Msg)
@@ -69,7 +69,7 @@ type Fake struct {
 	Charged []int
 }
 
-var _ EffectHandler = (*Fake)(nil)
+var _ MyEffHandler = (*Fake)(nil)
 
 func (f *Fake) HandleLog(_ context.Context, op *Log) (Unit, error) {
 	f.Logs = append(f.Logs, op.Msg)
@@ -119,16 +119,16 @@ func (fk *Fake) HandleCharge(_ context.Context, op *Charge) (f.Result[Receipt, C
 
 // --8<-- [start:defaults]
 
-// Defaults is an EffectHandler with harmless answers. Embed it in a test
+// Defaults is an MyEffHandler with harmless answers. Embed it in a test
 // handler and override only the methods the test cares about. The compiler
-// still checks that the embedding type is a complete EffectHandler.
+// still checks that the embedding type is a complete MyEffHandler.
 //
-// The generated EffectDefaults answers every operation with a zero value.
+// The generated MyEffDefaults answers every operation with a zero value.
 // Defaults keeps that, except a read: a test must not depend on a file it
 // never declared, so ReadFile fails loudly.
-type Defaults struct{ EffectDefaults }
+type Defaults struct{ MyEffDefaults }
 
-var _ EffectHandler = Defaults{}
+var _ MyEffHandler = Defaults{}
 
 func (Defaults) HandleReadFile(_ context.Context, op *ReadFile) ([]byte, error) {
 	return nil, fmt.Errorf("defaults: no file %q", op.Path)

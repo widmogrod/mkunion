@@ -83,9 +83,9 @@ At the bottom, a handler is one function: it gets an operation and returns the a
 You will rarely write that function by hand. The `handler` option makes `mkunion` generate a typed contract from the union and its `f.Returns` labels. This is the part of `example/effect/ops_union_gen.go` that matters:
 
 ```go title="example/effect/ops_union_gen.go (generated)"
-// EffectHandler answers every Effect with the type it declares in f.Returns.
-// Adding a variant to Effect breaks every EffectHandler at compile time.
-type EffectHandler interface {
+// MyEffHandler answers every MyEff with the type it declares in f.Returns.
+// Adding a variant to MyEff breaks every MyEffHandler at compile time.
+type MyEffHandler interface {
 	HandleLog(ctx context.Context, op *Log) (Unit, error)
 	HandleNow(ctx context.Context, op *Now) (time.Time, error)
 	HandleReadFile(ctx context.Context, op *ReadFile) ([]byte, error)
@@ -94,30 +94,30 @@ type EffectHandler interface {
 	HandleCharge(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error)
 }
 
-// EffectOf is an Effect that answers with R.
-type EffectOf[R any] interface {
-	Effect
-	HandleEffect(ctx context.Context, h EffectHandler) (R, error)
+// MyEffOf is an MyEff that answers with R.
+type MyEffOf[R any] interface {
+	MyEff
+	HandleEffect(ctx context.Context, h MyEffHandler) (R, error)
 }
 
-// *Now is an EffectOf[time.Time], and nothing else.
-func (r *Now) HandleEffect(ctx context.Context, h EffectHandler) (time.Time, error) {
+// *Now is an MyEffOf[time.Time], and nothing else.
+func (r *Now) HandleEffect(ctx context.Context, h MyEffHandler) (time.Time, error) {
 	return h.HandleNow(ctx, r)
 }
 
-// EffectHandlerFunc adapts a typed EffectHandler to a plain function over the union.
-func EffectHandlerFunc(h EffectHandler) func(ctx context.Context, op Effect) (any, error)
+// MyEffHandlerFunc adapts a typed MyEffHandler to a plain function over the union.
+func MyEffHandlerFunc(h MyEffHandler) func(ctx context.Context, op MyEff) (any, error)
 
-// EffectDefaults answers every Effect with the zero value of its declared type.
-type EffectDefaults struct{}
+// MyEffDefaults answers every MyEff with the zero value of its declared type.
+type MyEffDefaults struct{}
 ```
 
 Four things, all from one declaration:
 
-- `EffectHandler` is the contract: one method per operation, typed by its `f.Returns`. Adding an operation breaks every handler until it handles the new case. When `Charge` was added to this example, the compiler pointed at every handler, policy and decoder that needed a decision.
-- `EffectOf[R]` ties an operation to its answer. `*Now` satisfies `EffectOf[time.Time]` and nothing else, so `fx.Do(&Now{})` can only be a `time.Time`. Go interfaces cannot carry generic methods, so this is how a per-variant answer type is spelled in Go: on the interface's type parameter, and in the handler's method signatures.
-- `EffectHandlerFunc` is the adapter to the function `Run` uses.
-- `EffectDefaults` is a handler that answers everything with a zero value, for tests.
+- `MyEffHandler` is the contract: one method per operation, typed by its `f.Returns`. Adding an operation breaks every handler until it handles the new case. When `Charge` was added to this example, the compiler pointed at every handler, policy and decoder that needed a decision.
+- `MyEffOf[R]` ties an operation to its answer. `*Now` satisfies `MyEffOf[time.Time]` and nothing else, so `fx.Do(&Now{})` can only be a `time.Time`. Go interfaces cannot carry generic methods, so this is how a per-variant answer type is spelled in Go: on the interface's type parameter, and in the handler's method signatures.
+- `MyEffHandlerFunc` is the adapter to the function `Run` uses.
+- `MyEffDefaults` is a handler that answers everything with a zero value, for tests.
 
 The one piece still written by hand is `Perform`, the bridge from an operation to a program. It is two lines:
 
@@ -147,7 +147,7 @@ For tests there is `Fake`, which answers from fixed data and remembers what was 
 --8<-- "example/effect/part1_basics_test.go:run-fake"
 ```
 
-Swap `EffectHandlerFunc(fake)` for `EffectHandlerFunc(live)` and the same program writes a real log line. The tests in `example/effect/part1_basics_test.go` do both, and also show that a handler error stops the program at that step, and that a cancelled context stops it before the next one.
+Swap `MyEffHandlerFunc(fake)` for `MyEffHandlerFunc(live)` and the same program writes a real log line. The tests in `example/effect/part1_basics_test.go` do both, and also show that a handler error stops the program at that step, and that a cancelled context stops it before the next one.
 
 ### Testing on day one
 
@@ -159,7 +159,7 @@ First, assert on the **trace**, as the test above does. An output test says what
 --8<-- "example/effect/eff.go:trace"
 ```
 
-Second, override one method at a time. `Defaults` is a handler with harmless answers. It embeds the generated `EffectDefaults` and changes two answers. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
+Second, override one method at a time. `Defaults` is a handler with harmless answers. It embeds the generated `MyEffDefaults` and changes two answers. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
 
 ```go title="example/effect/handlers.go"
 --8<-- "example/effect/handlers.go:defaults"
@@ -177,7 +177,7 @@ You can use everything in Part 1 without reading this part. Read it when you wan
 
 ### A program is a union too
 
-`Program[A]` is a short name for `Eff[Effect, A]`, and `Eff` is a generic union:
+`Program[A]` is a short name for `Eff[MyEff, A]`, and `Eff` is a generic union:
 
 ```go title="example/effect/eff.go"
 --8<-- "example/effect/eff.go:eff-def"
@@ -263,7 +263,7 @@ A tape is a golden test that you did not have to write, and it guards against dr
 
 ### A tape is JSON
 
-The `Effect` union has JSON, generated by `mkunion`, so a tape has JSON too. Answers are decoded into the type each operation declared:
+The `MyEff` union has JSON, generated by `mkunion`, so a tape has JSON too. Answers are decoded into the type each operation declared:
 
 ```go title="example/effect/recording_json.go"
 --8<-- "example/effect/recording_json.go:tape-json"
@@ -272,7 +272,7 @@ The `Effect` union has JSON, generated by `mkunion`, so a tape has JSON too. Ans
 The test in `example/effect/part3_testing_test.go` shows the exact JSON and replays from it alone. The same union exports to TypeScript, so a browser can read or build a tape. This is the output of `mkunion shape-export --language typescript -i example/effect/ops.go`, trimmed to the union:
 
 ```typescript
-export type Effect = {
+export type MyEff = {
     "$type"?: "effect.Log",
     "effect.Log": Log
 } | {
@@ -423,8 +423,8 @@ A union of operations, a handler per environment, and one `Run` loop are enough 
 
     A few things learned while building this, for whoever extends it.
 
-    - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so the union interface `Eff` cannot have a `Then` method, and the `Bind` chain stays `any` inside, with `EffectOf[R]` keeping it typed at the edges.
-    - **The typed layer is generated.** `EffectHandler`, `EffectOf`, the typed dispatch, `EffectHandlerFunc` and `EffectDefaults` come from the `handler` union option and the `f.Returns` labels (see `x/generators/handler_generator.go`). Still by hand: `Perform`, the `Fx` convenience methods, and the two exhaustive matches in `recording_json.go` that pick the JSON codec per answer. The last one could be generated too, once serde knows about `f.Returns`.
+    - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so the union interface `Eff` cannot have a `Then` method, and the `Bind` chain stays `any` inside, with `MyEffOf[R]` keeping it typed at the edges.
+    - **The typed layer is generated.** `MyEffHandler`, `MyEffOf`, the typed dispatch, `MyEffHandlerFunc` and `MyEffDefaults` come from the `handler` union option and the `f.Returns` labels (see `x/generators/handler_generator.go`). Still by hand: `Perform`, the `Fx` convenience methods, and the two exhaustive matches in `recording_json.go` that pick the JSON codec per answer. The last one could be generated too, once serde knows about `f.Returns`.
     - **Extensible effects are not expressible.** Go cannot say "this program uses `Log` and `Now` but not `Send`" as a type built on the fly. Two workable models: small unions wrapped into one app union with a lift function, or capability interfaces on `Fx` (`interface{ Clock; FS }`) with one app union underneath. Neither is in this example yet.
     - **Generator bugs found on the way.** The type registry generator produced code that does not compile for this package, so the registry is off with `//go:tag mkunion:",no-type-registry"`. It mistook the type parameter `Op` in `Trace[Op any](..., sink *[]Op)` for a package type, and it ignored `noserde` on `Eff`.
 

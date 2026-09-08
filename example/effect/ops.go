@@ -11,15 +11,15 @@ import (
 // Unit is the answer of an operation that has nothing to return.
 type Unit struct{}
 
-// Effect is the set of operations our programs may ask for.
+// MyEff is the set of operations our programs may ask for.
 //
 // Each variant embeds f.Returns[R] to declare the type of its answer. The
 // `handler` option makes mkunion generate the typed layer from it:
-// EffectHandler (one method per operation), EffectOf[R] (an Effect that
-// answers with R), EffectHandlerFunc (the adapter Run uses) and
-// EffectDefaults (zero answers, for tests). See ops_union_gen.go.
+// MyEffHandler (one method per operation), MyEffOf[R] (an MyEff that
+// answers with R), MyEffHandlerFunc (the adapter Run uses) and
+// MyEffDefaults (zero answers, for tests). See ops_union_gen.go.
 //
-//go:tag mkunion:"Effect,handler"
+//go:tag mkunion:"MyEff,handler"
 type (
 	// Log writes a line somewhere.
 	Log struct {
@@ -76,9 +76,9 @@ type (
 // --8<-- [start:typed-layer]
 
 // Perform asks for one operation as a program. R is inferred from the
-// operation's f.Returns, so `Perform(&Now{})` is an Eff[Effect, time.Time].
-func Perform[R any](op EffectOf[R]) Eff[Effect, R] {
-	return PerformAs[Effect, R](op)
+// operation's f.Returns, so `Perform(&Now{})` is an Eff[MyEff, time.Time].
+func Perform[R any](op MyEffOf[R]) Eff[MyEff, R] {
+	return PerformAs[MyEff, R](op)
 }
 
 // --8<-- [end:typed-layer]

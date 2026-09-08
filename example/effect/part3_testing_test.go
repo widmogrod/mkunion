@@ -17,9 +17,9 @@ import (
 
 func TestPart3_theTraceIsTheAssertion(t *testing.T) {
 	live, out, mail := newWorld()
-	var trace []Effect
+	var trace []MyEff
 
-	got, err := Run(context.Background(), Trace(EffectHandlerFunc(live), &trace), Notify("name.txt", to))
+	got, err := Run(context.Background(), Trace(MyEffHandlerFunc(live), &trace), Notify("name.txt", to))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
@@ -33,10 +33,10 @@ func TestPart3_theTraceIsTheAssertion(t *testing.T) {
 func TestPart3_recordOnceReplayForever(t *testing.T) {
 	// Record: one run against the real world writes a tape of facts.
 	live, _, _ := newWorld()
-	var tape []Step[Effect]
-	want, err := Run(context.Background(), Record(EffectHandlerFunc(live), &tape), Notify("name.txt", to))
+	var tape []Step[MyEff]
+	want, err := Run(context.Background(), Record(MyEffHandlerFunc(live), &tape), Notify("name.txt", to))
 	require.NoError(t, err)
-	assert.Equal(t, []Step[Effect]{
+	assert.Equal(t, []Step[MyEff]{
 		{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
 		{Op: &Now{}, Answer: noon},
 		{Op: &Send{To: to, Msg: greeting}, Answer: "receipt-1"},
@@ -81,7 +81,7 @@ func TestPart3_aTapeIsJSON(t *testing.T) {
 }
 
 func TestPart3_tapeJSONKeepsErrorsAndRejectsGarbage(t *testing.T) {
-	data, err := TapeToJSON([]Step[Effect]{{Op: &Now{}, Err: errors.New("clock down")}})
+	data, err := TapeToJSON([]Step[MyEff]{{Op: &Now{}, Err: errors.New("clock down")}})
 	require.NoError(t, err)
 	assert.JSONEq(t, `[{"op": {"$type": "effect.Now", "effect.Now": {}}, "err": "clock down"}]`, string(data))
 	loaded, err := TapeFromJSON(data)
@@ -91,7 +91,7 @@ func TestPart3_tapeJSONKeepsErrorsAndRejectsGarbage(t *testing.T) {
 	_, err = TapeFromJSON([]byte(`not json`))
 	require.Error(t, err)
 	_, err = TapeFromJSON([]byte(`[{"op":{"$type":"effect.Nope"}}]`))
-	assert.EqualError(t, err, "step 0: effect.EffectFromJSON: unknown type: effect.Nope")
+	assert.EqualError(t, err, "step 0: effect.MyEffFromJSON: unknown type: effect.Nope")
 	_, err = TapeFromJSON([]byte(`[{"op":{"$type":"effect.Random","effect.Random":{"Max":6}},"answer":"six"}]`))
 	assert.EqualError(t, err, "step 0: json: cannot unmarshal string into Go value of type int", "an answer of the wrong type is refused")
 }
