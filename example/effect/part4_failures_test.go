@@ -11,45 +11,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Beyond the happy path. Each test states the data it expects in full, so the
-// shape of a tape, a trace or a mailbox is visible in the test itself.
+// Part 4: failure is normal.
 //
-// The program under test is Notify. Its operations, in order:
-//
-//	1. ReadFile{Path: "name.txt"}   -> "Ada\n"
-//	2. Now{}                        -> noon
-//	3. Send{To, Msg}                -> "receipt-1"   (must never happen twice)
-//	4. Log{Msg: "sent receipt-1"}   -> Unit{}
+// Middleware wraps the handler once and sees every operation. That is where
+// retries, idempotency keys and fault injection live. The nasty case is not
+// "the call failed" but "the mail went out, then the answer was lost".
 
-const to = "ada@example.com"
+func TestPart4_oneMiddlewareCoversEveryOperation(t *testing.T) {
+	live, _, mail := newWorld()
+	blip := errors.New("network blip")
+	var attempts []string
 
-var (
-	greeting  = "Hello Ada, it is 12:00PM"
-	notifyOps = []Effect{
-		&ReadFile{Path: "name.txt"},
-		&Now{},
-		&Send{To: to, Msg: greeting},
-		&Log{Msg: "sent receipt-1"},
-	}
-)
+	// Every second call fails. Retry (3 tries each) and journal wrap the handler once.
+	h := Retry(journal(FailEvery(HandlerOf(live), 2, blip), &attempts), 3)
+	got, err := Run(context.Background(), h, Notify("name.txt", to))
 
-// journal records every attempt the wrapped handler sees, with its outcome.
-// It is the "what really happened" view the tests assert on.
-func journal[Op any](h Handler[Op], lines *[]string) Handler[Op] {
-	return func(ctx context.Context, op Op) (any, error) {
-		answer, err := h(ctx, op)
-		outcome := "ok"
-		if err != nil {
-			outcome = "err: " + err.Error()
-		}
-		*lines = append(*lines, fmt.Sprintf("%T %s", op, outcome))
-		return answer, err
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "receipt-1", got)
+	assert.Equal(t, []string{
+		"*effect.ReadFile ok",
+		"*effect.Now err: network blip",
+		"*effect.Now ok",
+		"*effect.Send err: network blip",
+		"*effect.Send ok",
+		"*effect.Log err: network blip",
+		"*effect.Log ok",
+	}, attempts, "every operation was retried by the same ten lines")
+	assert.Equal(t, []Mail{{Key: "", To: to, Msg: greeting}}, mail.Sent,
+		"FailEvery refuses before performing, so this retry was harmless. The next tests show when it is not.")
 }
-
-// ---------------------------------------------------------------------------
-// 1. Retries are a policy per operation, not one number.
-// ---------------------------------------------------------------------------
 
 // strictPolicy is an exhaustive match. Add an operation to Effect and this
 // function stops compiling until someone decides whether it may be retried.
@@ -66,7 +56,11 @@ func strictPolicy(op Effect) RetryPolicy {
 	)
 }
 
-func TestAdvanced1_retryPolicyPerOperation(t *testing.T) {
+// keyedPolicy may retry everything, because StepKeys gives every step an
+// idempotency key and the mail server dedups on it.
+func keyedPolicy(Effect) RetryPolicy { return RetryPolicy{Attempts: 3} }
+
+func TestPart4_retryIsAPolicyPerOperation(t *testing.T) {
 	blip := errors.New("network blip")
 
 	t.Run("ReadFile is retried with backoff, Send is not", func(t *testing.T) {
@@ -82,7 +76,7 @@ func TestAdvanced1_retryPolicyPerOperation(t *testing.T) {
 		_, err := Run(context.Background(), h, Notify("name.txt", to))
 
 		require.ErrorIs(t, err, blip)
-		assert.Equal(t, "network blip", err.Error(), "Send was not retried, so its error passes through unwrapped")
+		assert.EqualError(t, err, "network blip", "Send was not retried, so its error passes through unwrapped")
 		assert.Equal(t, []string{
 			"*effect.ReadFile err: network blip",
 			"*effect.ReadFile err: network blip",
@@ -151,26 +145,7 @@ func TestAdvanced1_retryPolicyPerOperation(t *testing.T) {
 	})
 }
 
-// flakyAt fails the calls listed in errs (1-based call number) before performing them.
-func flakyAt[Op any](h Handler[Op], errs map[int]error) Handler[Op] {
-	calls := 0
-	return func(ctx context.Context, op Op) (any, error) {
-		calls++
-		if err, ok := errs[calls]; ok {
-			return nil, err
-		}
-		return h(ctx, op)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// 2. At-least-once is the real problem. Idempotency keys minted by the run fix it.
-// ---------------------------------------------------------------------------
-
-// keyedPolicy may retry Send, because every step carries an idempotency key.
-func keyedPolicy(Effect) RetryPolicy { return RetryPolicy{Attempts: 3} }
-
-func TestAdvanced2_idempotencyKeysMakeSendSafeToRetry(t *testing.T) {
+func TestPart4_atLeastOnceAndIdempotencyKeys(t *testing.T) {
 	lost := errors.New("connection reset after write")
 
 	t.Run("without keys the mail is sent twice", func(t *testing.T) {
@@ -203,12 +178,8 @@ func TestAdvanced2_idempotencyKeysMakeSendSafeToRetry(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// 3. Crash at every step, resume, and prove exactly-once. A complete search.
-// ---------------------------------------------------------------------------
-
-func TestAdvanced3_crashAtEveryStepThenResume(t *testing.T) {
-	// Reference run: no faults. This is what every resumed run must reproduce.
+func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
+	// Reference run: no faults. Every resumed run below must reproduce it.
 	live, out, mail := newWorld()
 	want, err := Run(context.Background(), StepKeys(HandlerOf(live), "run-1"), Notify("name.txt", to))
 	require.NoError(t, err)
@@ -223,8 +194,7 @@ func TestAdvanced3_crashAtEveryStepThenResume(t *testing.T) {
 			live, out, mail := newWorld()
 			var tape []Step[Effect]
 
-			// First life: perform k steps, then die. The k-th answer may already be
-			// in the world (CrashAfter fails the call after the k-th, so step k committed).
+			// First life: perform k steps, then die.
 			first := StepKeys(Record(CrashAfter(HandlerOf(live), k, crash), &tape), "run-1")
 			_, err := Run(context.Background(), first, Notify("name.txt", to))
 			if k == len(notifyOps) {
@@ -244,19 +214,76 @@ func TestAdvanced3_crashAtEveryStepThenResume(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, want, got, "same receipt as the reference run")
 			assert.Equal(t, []Mail{{Key: "run-1/3", To: to, Msg: greeting}}, mail.Sent, "exactly one mail, whatever the crash point")
-
-			// Log has no key, so it is at-least-once. Crash right after the Log
-			// (k == 4 is the clean run; k == 3 crashes before Log) never duplicates
-			// here, but a crash after Log with a lost answer would. That is a choice.
+			// Log has no key, so it is at-least-once by choice. Here the crash is
+			// always before a step, so the log line is never duplicated.
 			assert.Equal(t, "sent receipt-1\n", out.String())
 		})
 	}
 }
 
-func opsOf(tape []Step[Effect]) []Effect {
-	ops := make([]Effect, 0, len(tape))
-	for _, step := range tape {
-		ops = append(ops, step.Op)
+func TestPart4_seededChaos(t *testing.T) {
+	const seeds = 500
+	cfg := func(seed uint64) ChaosConfig { return ChaosConfig{Seed: seed, FailRate: 0.15, LoseAnswerRate: 0.15} }
+
+	t.Run("without keys, chaos finds double delivery", func(t *testing.T) {
+		duplicates := map[uint64][]Mail{}
+		for seed := uint64(0); seed < seeds; seed++ {
+			live, _, mail := newWorld()
+			h := RetryWith(Chaos(HandlerOf(live), cfg(seed)), keyedPolicy, nil, nil)
+			_, _ = Run(context.Background(), h, Notify("name.txt", to))
+			if len(mail.Sent) > 1 {
+				duplicates[seed] = mail.Sent
+			}
+		}
+		require.NotEmpty(t, duplicates, "some seed must hit: Send performed, answer lost, retried")
+		t.Logf("double delivery in %d of %d seeds", len(duplicates), seeds)
+
+		first := firstSeed(duplicates)
+		assert.Equal(t, []Mail{
+			{Key: "", To: to, Msg: greeting},
+			{Key: "", To: to, Msg: greeting},
+		}, duplicates[first], "seed %d: the shape of the bug", first)
+	})
+
+	t.Run("with keys, every world is exactly-once or a clean failure", func(t *testing.T) {
+		outcomes := map[string]int{}
+		var failingSeed uint64
+		var failingErr error
+		for seed := uint64(0); seed < seeds; seed++ {
+			live, _, mail := newWorld()
+			h := StepKeys(RetryWith(Chaos(HandlerOf(live), cfg(seed)), keyedPolicy, nil, nil), "run")
+			got, err := Run(context.Background(), h, Notify("name.txt", to))
+
+			// The invariants. They hold in every world or the test fails with the seed.
+			if err == nil {
+				outcomes["ok"]++
+				require.Equal(t, "receipt-1", got, "seed %d", seed)
+				require.Equal(t, []Mail{{Key: "run/3", To: to, Msg: greeting}}, mail.Sent, "seed %d", seed)
+			} else {
+				outcomes["failed cleanly"]++
+				require.ErrorIs(t, err, ErrChaos, "seed %d: only injected faults may surface", seed)
+				require.LessOrEqual(t, len(mail.Sent), 1, "seed %d: never more than one mail", seed)
+				if failingErr == nil {
+					failingSeed, failingErr = seed, err
+				}
+			}
+		}
+		t.Logf("outcomes over %d seeds: %v", seeds, outcomes)
+		require.Positive(t, outcomes["ok"])
+		require.Positive(t, outcomes["failed cleanly"], "chaos strong enough to exhaust retries sometimes")
+
+		// A failing world is reproducible from its seed alone.
+		live, _, _ := newWorld()
+		h := StepKeys(RetryWith(Chaos(HandlerOf(live), cfg(failingSeed)), keyedPolicy, nil, nil), "run")
+		_, again := Run(context.Background(), h, Notify("name.txt", to))
+		assert.EqualError(t, again, failingErr.Error(), "seed %d replays the same failure", failingSeed)
+	})
+}
+
+func firstSeed(m map[uint64][]Mail) uint64 {
+	first := ^uint64(0)
+	for seed := range m {
+		first = min(first, seed)
 	}
-	return ops
+	return first
 }

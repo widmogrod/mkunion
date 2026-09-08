@@ -10,11 +10,11 @@ type Unit struct{}
 
 // --8<-- [start:ops-def]
 
-// Effect is the set of operations our sample programs may ask for.
+// Effect is the set of operations our programs may ask for.
 //
 // Each variant declares the type of its answer with a phantom Result method.
 // The method is never called. It exists so the compiler can tie an operation
-// to its answer type in Perform and in HandlerOf.
+// to its answer type, in Fx.Do and in HandlerOf.
 //
 //go:tag mkunion:"Effect"
 type (
@@ -50,8 +50,8 @@ type EffectOf[R any] interface {
 	Result() R
 }
 
-// Perform asks for one operation. R is inferred from the operation's Result method,
-// so `Perform(&Now{})` has type Eff[Effect, time.Time] without any annotation.
+// Perform asks for one operation as a program. R is inferred from the
+// operation's Result method, so `Perform(&Now{})` is an Eff[Effect, time.Time].
 func Perform[R any](op EffectOf[R]) Eff[Effect, R] {
 	return PerformAs[Effect, R](op)
 }
@@ -87,29 +87,4 @@ func answer[R any](_ EffectOf[R], r R, err error) (any, error) {
 	return r, err
 }
 
-// PerformDirect performs one operation right now, outside of any program.
-// This is "direct style": plain Go code, no continuations, but also no
-// program value to inspect or replay. See Direct below for the
-// method form that Go 1.27 generic methods allow.
-func PerformDirect[R any](ctx context.Context, h Handler[Effect], op EffectOf[R]) (R, error) {
-	return Run(ctx, h, Perform(op))
-}
-
 // --8<-- [end:typed-layer]
-
-// --8<-- [start:direct-127]
-
-// Direct performs operations right now against one handler.
-// Perform is one generic method that serves every operation: R is inferred from
-// the operation's Result method, so `d.Perform(&Now{})` returns (time.Time, error).
-type Direct struct {
-	Ctx     context.Context
-	Handler Handler[Effect]
-}
-
-// Perform runs one operation and returns its typed answer.
-func (d Direct) Perform[R any](op EffectOf[R]) (R, error) {
-	return PerformDirect(d.Ctx, d.Handler, op)
-}
-
-// --8<-- [end:direct-127]

@@ -1,0 +1,173 @@
+package effect
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// Part 2: under the hood.
+//
+// A Program is an Eff: a union of Pure, Fail, Bind and Suspend. Fx.Do builds
+// Bind nodes for you, from a coroutine. You can also build them by hand with
+// Perform and Then. Both styles produce the same data, and the tests prove it.
+
+// --8<-- [start:greet-then]
+
+// greetWithThen is Greet built by hand: Perform makes a one-step program, Then
+// chains the next step onto its answer. This is what Fx.Do does for you.
+func greetWithThen(path string) Program[string] {
+	return Then(Perform(&ReadFile{Path: path}), func(raw []byte) Program[string] {
+		return Then(Perform(&Now{}), func(now time.Time) Program[string] {
+			msg := fmt.Sprintf("Hello %s, it is %s", strings.TrimSpace(string(raw)), now.Format(time.Kitchen))
+			return Map(Perform(&Log{Msg: msg}), func(Unit) string { return msg })
+		})
+	})
+}
+
+// --8<-- [end:greet-then]
+
+// styles is the option selector for this part: the same program, two ways of
+// writing it. Every test below runs against both.
+var styles = []struct {
+	name  string
+	greet func(path string) Program[string]
+}{
+	{"fx (plain Go body, default)", Greet},
+	{"then (explicit continuations)", greetWithThen},
+}
+
+func TestPart2_bothStylesLeaveTheSameTrace(t *testing.T) {
+	for _, style := range styles {
+		t.Run(style.name, func(t *testing.T) {
+			fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada\n"}}
+			var trace []Effect
+
+			got, err := Run(context.Background(), Trace(HandlerOf(fake), &trace), style.greet("name.txt"))
+
+			require.NoError(t, err)
+			assert.Equal(t, "Hello Ada, it is 12:00PM", got)
+			assert.Equal(t, []Effect{
+				&ReadFile{Path: "name.txt"},
+				&Now{},
+				&Log{Msg: "Hello Ada, it is 12:00PM"},
+			}, trace)
+		})
+	}
+}
+
+func TestPart2_bothStylesStopOnTheFirstError(t *testing.T) {
+	for _, style := range styles {
+		t.Run(style.name, func(t *testing.T) {
+			fake := &Fake{Clock: noon}
+			var trace []Effect
+
+			_, err := Run(context.Background(), Trace(HandlerOf(fake), &trace), style.greet("missing.txt"))
+
+			require.ErrorContains(t, err, `no file "missing.txt"`)
+			assert.Equal(t, []Effect{&ReadFile{Path: "missing.txt"}}, trace)
+		})
+	}
+}
+
+func TestPart2_thenAndMapAreOrdinaryValues(t *testing.T) {
+	// Return and Map need no handler at all: nothing is performed.
+	prog := Map(Return[Effect](20), func(n int) int { return n + 1 })
+	got, err := Run(context.Background(), HandlerOf(&Fake{}), prog)
+	require.NoError(t, err)
+	assert.Equal(t, 21, got)
+
+	// Throw short-circuits: the continuation is never built, the handler never called.
+	boom := errors.New("boom")
+	called := false
+	h := func(context.Context, Effect) (any, error) { called = true; return nil, nil }
+	failed := Then(Throw[Effect, int](boom), func(int) Program[Unit] { return Perform(&Log{Msg: "unreachable"}) })
+	_, err = Run(context.Background(), h, failed)
+	require.ErrorIs(t, err, boom)
+	assert.False(t, called)
+
+	// Then composes a plain-Go program with a hand-built one.
+	mixed := Then(RollUntil(6, 10), func(int) Program[time.Time] { return Perform(&Now{}) })
+	when, err := Run(context.Background(), HandlerOf(&Fake{Clock: noon, Rolls: []int{5}}), mixed)
+	require.NoError(t, err)
+	assert.Equal(t, noon, when)
+}
+
+func TestPart2_aWrongAnswerTypeIsAnErrorNotAPanic(t *testing.T) {
+	lying := func(context.Context, Effect) (any, error) { return "not bytes", nil }
+
+	for _, style := range styles {
+		t.Run(style.name, func(t *testing.T) {
+			_, err := Run(context.Background(), lying, style.greet("name.txt"))
+			require.ErrorContains(t, err, "handler answered string to *effect.ReadFile, want []uint8")
+		})
+	}
+}
+
+// bogusEff satisfies the Eff interface without being a generated variant.
+type bogusEff struct{}
+
+func (bogusEff) AcceptEff(EffVisitor[Effect, int]) any { return nil }
+
+func TestPart2_runRefusesAnUnknownNode(t *testing.T) {
+	_, err := Run[Effect, int](context.Background(), HandlerOf(&Fake{}), bogusEff{})
+	require.ErrorContains(t, err, "unknown program node")
+}
+
+func TestPart2_procIsACoroutine(t *testing.T) {
+	t.Run("a body panic is not swallowed", func(t *testing.T) {
+		boom := Proc(func(*Env[Effect]) (int, error) { panic("boom") })
+		assert.PanicsWithValue(t, "boom", func() {
+			_, _ = Run(context.Background(), HandlerOf(&Fake{}), boom)
+		})
+	})
+
+	t.Run("a handler error unwinds the body and frees the coroutine", func(t *testing.T) {
+		before := runtime.NumGoroutine()
+		_, err := Run(context.Background(), HandlerOf(&Fake{}), Greet("missing.txt"))
+		require.Error(t, err)
+		assertNoLeak(t, before)
+	})
+
+	t.Run("a cancelled context unwinds the body too", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		before := runtime.NumGoroutine()
+		_, err := Run(ctx, HandlerOf(&Fake{}), Greet("name.txt"))
+		require.ErrorIs(t, err, context.Canceled)
+		assertNoLeak(t, before)
+	})
+
+	t.Run("Attempt sees the context error", func(t *testing.T) {
+		var seen error
+		prog := Proc(func(e *Env[Effect]) (int, error) {
+			_, seen = AttemptAs[Effect, time.Time](e, &Now{})
+			return 0, seen
+		})
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, err := Run(ctx, HandlerOf(&Fake{}), prog)
+		require.ErrorIs(t, err, context.Canceled)
+		assert.ErrorIs(t, seen, context.Canceled)
+	})
+}
+
+// assertNoLeak waits briefly for the coroutine behind a Proc to be gone.
+func assertNoLeak(t *testing.T, before int) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if runtime.NumGoroutine() <= before {
+			return
+		}
+		runtime.Gosched()
+	}
+	assert.LessOrEqual(t, runtime.NumGoroutine(), before, "coroutine leaked")
+}

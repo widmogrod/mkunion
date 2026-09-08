@@ -1,19 +1,3 @@
-// Package effect explores an algebraic effect system built from mkunion unions.
-//
-// The idea in one line: a program is data, and a handler gives that data meaning.
-//
-//   - Eff[Op, A] is the program. It is a union: Pure, Fail, Bind or Suspend.
-//   - Op is any union of operations (see Effect in ops.go).
-//   - Handler[Op] answers one operation at a time.
-//   - Run walks the program and calls the handler until it reaches Pure or Fail.
-//
-// This file is the reusable core. Nothing here knows about a concrete operation.
-//
-// The type registry is off for this package. mkunion's registry generator
-// mistakes the type parameter Op of Trace for a package type, and it ignores
-// the noserde option on Eff. Both are generator bugs, not effect-system limits.
-//
-//go:tag mkunion:",no-type-registry"
 package effect
 
 import (
@@ -21,13 +5,17 @@ import (
 	"fmt"
 )
 
+// This file is the reusable core. Nothing here knows about a concrete
+// operation. Eff[Op, A] is the program, Handler[Op] answers one operation,
+// Run walks the program and calls the handler until it reaches Pure or Fail.
+
 // --8<-- [start:eff-def]
 
 // Eff is a program that performs operations of type Op and yields a value of type A.
 //
-// Op is the union of operations the program may ask for (see Effect).
+// Op is the union of operations the program may ask for (see Effect in ops.go).
 // The continuation in Bind receives the handler's answer as `any`; the typed
-// constructors in ops.go hide that cast from user code.
+// layer in ops.go and program.go hides that cast from user code.
 //
 //go:tag mkunion:"Eff[Op, A],noserde"
 type (
@@ -43,7 +31,7 @@ type (
 		Cont func(answer any, err error) Eff[Op, A]
 	}
 	// Suspend is a program that is built on demand. Proc uses it so that a
-	// direct-style body does not start before Run.
+	// plain Go body does not start before Run.
 	Suspend[Op, A any] struct {
 		Resume func() Eff[Op, A]
 	}
@@ -53,7 +41,7 @@ type (
 
 // Handler performs one operation and returns its answer.
 // The answer type is `any` because Go interfaces cannot carry generic methods,
-// even on Go 1.27. Typed wrappers live at the edges (see HandlerOf and Perform).
+// even on Go 1.27. Typed wrappers live at the edges (see HandlerOf and Fx.Do).
 type Handler[Op any] func(ctx context.Context, op Op) (any, error)
 
 // Return lifts a value into a finished program.
@@ -89,7 +77,7 @@ func PerformAs[Op, R any](op Op) Eff[Op, R] {
 // --8<-- [start:then]
 
 // Then sequences two programs: run e, feed its value to k, run what k returns.
-// The method form is Chain.Then below.
+// It is a pattern match over the variants, so a new variant cannot be forgotten.
 func Then[Op, A, B any](e Eff[Op, A], k func(A) Eff[Op, B]) Eff[Op, B] {
 	return MatchEffR1(e,
 		func(x *Pure[Op, A]) Eff[Op, B] { return k(x.Value) },
@@ -145,9 +133,11 @@ func Run[Op, A any](ctx context.Context, h Handler[Op], e Eff[Op, A]) (A, error)
 
 // --8<-- [end:run]
 
+// --8<-- [start:trace]
+
 // Trace wraps a handler and records every operation it performs, in order.
-// It is the smallest example of handler composition: handlers are functions,
-// so middleware is a function that returns a function.
+// It is the smallest example of middleware: handlers are functions, so
+// middleware is a function that returns a function.
 func Trace[Op any](h Handler[Op], sink *[]Op) Handler[Op] {
 	return func(ctx context.Context, op Op) (any, error) {
 		*sink = append(*sink, op)
@@ -155,28 +145,4 @@ func Trace[Op any](h Handler[Op], sink *[]Op) Handler[Op] {
 	}
 }
 
-// --8<-- [start:program-127]
-
-// Chain wraps an Eff so that Then and Map can be methods.
-//
-// Go 1.27 lets a method declare its own type parameters, so p.Then(k) can
-// introduce B. Eff itself is an interface, and interface methods still cannot
-// have type parameters, so the union cannot carry Then; this wrapper does.
-type Chain[Op, A any] struct{ Eff Eff[Op, A] }
-
-// Start begins a chain.
-func Start[Op, A any](e Eff[Op, A]) Chain[Op, A] {
-	return Chain[Op, A]{Eff: e}
-}
-
-// Then is the method form of the package-level Then. B is a method type parameter.
-func (p Chain[Op, A]) Then[B any](k func(A) Eff[Op, B]) Chain[Op, B] {
-	return Chain[Op, B]{Eff: Then(p.Eff, k)}
-}
-
-// Map is the method form of the package-level Map.
-func (p Chain[Op, A]) Map[B any](f func(A) B) Chain[Op, B] {
-	return Chain[Op, B]{Eff: Map(p.Eff, f)}
-}
-
-// --8<-- [end:program-127]
+// --8<-- [end:trace]

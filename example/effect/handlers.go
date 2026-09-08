@@ -39,7 +39,7 @@ func (l *Live) HandleRandom(_ context.Context, op *Random) (int, error) {
 	return l.Rand.IntN(op.Max), nil
 }
 
-// HandleSend passes the step key along, so a mail server can drop duplicates.
+// HandleSend passes the step key along, so a mail server can drop duplicates (part 4).
 func (l *Live) HandleSend(ctx context.Context, op *Send) (string, error) {
 	return l.Mail(StepKey(ctx), op.To, op.Msg)
 }
@@ -48,8 +48,8 @@ func (l *Live) HandleSend(ctx context.Context, op *Send) (string, error) {
 
 // --8<-- [start:fake]
 
-// Fake answers from fixed data and remembers what was logged.
-// Tests use it to run programs with no clock, file system or randomness.
+// Fake answers from fixed data and remembers what was logged and sent.
+// Tests use it to run programs with no clock, file system, randomness or mail.
 type Fake struct {
 	Clock time.Time
 	Files map[string]string
@@ -95,6 +95,25 @@ func (f *Fake) HandleSend(_ context.Context, op *Send) (string, error) {
 }
 
 // --8<-- [end:fake]
+
+// --8<-- [start:defaults]
+
+// Defaults is an EffectHandler with harmless answers. Embed it in a test
+// handler and override only the methods the test cares about. The compiler
+// still checks that the embedding type is a complete EffectHandler.
+type Defaults struct{}
+
+var _ EffectHandler = Defaults{}
+
+func (Defaults) HandleLog(context.Context, *Log) (Unit, error)      { return Unit{}, nil }
+func (Defaults) HandleNow(context.Context, *Now) (time.Time, error) { return time.Time{}, nil }
+func (Defaults) HandleReadFile(_ context.Context, op *ReadFile) ([]byte, error) {
+	return nil, fmt.Errorf("defaults: no file %q", op.Path)
+}
+func (Defaults) HandleRandom(context.Context, *Random) (int, error) { return 0, nil }
+func (Defaults) HandleSend(context.Context, *Send) (string, error)  { return "receipt-0", nil }
+
+// --8<-- [end:defaults]
 
 // --8<-- [start:mailbox]
 
