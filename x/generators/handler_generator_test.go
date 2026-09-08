@@ -81,6 +81,40 @@ func (QueryDefaults) HandleLastSeen(context.Context, *LastSeen) (time.Time, erro
 	return zero, nil
 }
 
+// QueryFuncs is a QueryHandler made of functions, one per operation, for handlers
+// written inline. A nil function answers with the zero value of its declared type.
+type QueryFuncs struct {
+	GetUser func(ctx context.Context, op *GetUser) (*User, error)
+	Count func(ctx context.Context, op *Count) (int, error)
+	LastSeen func(ctx context.Context, op *LastSeen) (time.Time, error)
+}
+
+var _ QueryHandler = QueryFuncs{}
+
+func (fs QueryFuncs) HandleGetUser(ctx context.Context, op *GetUser) (*User, error) {
+	if fs.GetUser == nil {
+		var zero *User
+		return zero, nil
+	}
+	return fs.GetUser(ctx, op)
+}
+
+func (fs QueryFuncs) HandleCount(ctx context.Context, op *Count) (int, error) {
+	if fs.Count == nil {
+		var zero int
+		return zero, nil
+	}
+	return fs.Count(ctx, op)
+}
+
+func (fs QueryFuncs) HandleLastSeen(ctx context.Context, op *LastSeen) (time.Time, error) {
+	if fs.LastSeen == nil {
+		var zero time.Time
+		return zero, nil
+	}
+	return fs.LastSeen(ctx, op)
+}
+
 `, string(result))
 
 	assert.Equal(t, PkgMap{"context": "context", "time": "time"}, g.ExtractImports(),

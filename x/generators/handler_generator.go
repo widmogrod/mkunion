@@ -25,6 +25,7 @@ import (
 //	func (r *GetUser) HandleQuery(...) (*User, error)   // *GetUser is a QueryOf[*User]
 //	func QueryHandlerFunc(h QueryHandler) func(ctx context.Context, op Query) (any, error)
 //	type QueryDefaults struct{}              // zero answers, embed and override
+//	type QueryFuncs struct{ GetUser func(...); Count func(...) }   // inline handlers
 //
 // Go interfaces cannot carry generic methods, so the per-variant answer type
 // lives on QueryOf[R] and in the handler's method signatures. Adding a variant
@@ -148,6 +149,24 @@ func (g *HandlerGenerator) Generate() ([]byte, error) {
 		fmt.Fprintf(out, "func (%sDefaults) Handle%s(context.Context, *%s) (%s, error) {\n", name, v.name, v.typ, v.answer)
 		fmt.Fprintf(out, "\tvar zero %s\n", v.answer)
 		fmt.Fprintf(out, "\treturn zero, nil\n")
+		fmt.Fprintf(out, "}\n\n")
+	}
+
+	fmt.Fprintf(out, "// %sFuncs is a %sHandler made of functions, one per operation, for handlers\n", name, name)
+	fmt.Fprintf(out, "// written inline. A nil function answers with the zero value of its declared type.\n")
+	fmt.Fprintf(out, "type %sFuncs struct {\n", name)
+	for _, v := range variants {
+		fmt.Fprintf(out, "\t%s func(ctx context.Context, op *%s) (%s, error)\n", v.name, v.typ, v.answer)
+	}
+	fmt.Fprintf(out, "}\n\n")
+	fmt.Fprintf(out, "var _ %sHandler = %sFuncs{}\n\n", name, name)
+	for _, v := range variants {
+		fmt.Fprintf(out, "func (fs %sFuncs) Handle%s(ctx context.Context, op *%s) (%s, error) {\n", name, v.name, v.typ, v.answer)
+		fmt.Fprintf(out, "\tif fs.%s == nil {\n", v.name)
+		fmt.Fprintf(out, "\t\tvar zero %s\n", v.answer)
+		fmt.Fprintf(out, "\t\treturn zero, nil\n")
+		fmt.Fprintf(out, "\t}\n")
+		fmt.Fprintf(out, "\treturn fs.%s(ctx, op)\n", v.name)
 		fmt.Fprintf(out, "}\n\n")
 	}
 

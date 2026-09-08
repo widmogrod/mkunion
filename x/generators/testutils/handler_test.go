@@ -67,3 +67,18 @@ func TestQueryHandlerFunc_dispatchesEveryVariant(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, &User{ID: "1"}, answer)
 }
+
+func TestQueryFuncs_inlineHandler(t *testing.T) {
+	ctx := context.Background()
+	h := QueryFuncs{
+		Count: func(context.Context, *Count) (int, error) { return 7, nil },
+	}
+
+	count, err := Ask(ctx, h, &Count{})
+	require.NoError(t, err)
+	assert.Equal(t, 7, count)
+
+	user, err := Ask(ctx, h, &GetUser{ID: "1"})
+	require.NoError(t, err)
+	assert.Nil(t, user, "a nil function answers with the zero value")
+}
