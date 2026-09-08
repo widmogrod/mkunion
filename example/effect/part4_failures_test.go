@@ -55,6 +55,9 @@ func strictPolicy(op Effect) RetryPolicy {
 		func(*Random) RetryPolicy { return RetryPolicy{Attempts: 2} },
 		// Send is not idempotent. Without an idempotency key it must not be retried.
 		func(*Send) RetryPolicy { return RetryPolicy{Attempts: 1} },
+		// Charge may be retried on a broken line. A refusal is an answer, not a
+		// failure, so no policy can retry it (TestPart4_aRefusalIsAnAnswerNotAFailure).
+		func(*Charge) RetryPolicy { return RetryPolicy{Attempts: 3} },
 	)
 }
 
@@ -295,3 +298,80 @@ func firstSeed(m map[uint64][]Mail) uint64 {
 	}
 	return first
 }
+
+// --8<-- [start:refusal]
+
+// A refused charge is an answer. A broken line to the bank is a failure.
+// The type system keeps them apart, so Retry can only ever see the second.
+func TestPart4_aRefusalIsAnAnswerNotAFailure(t *testing.T) {
+	t.Run("a refusal is not retried, whatever the policy says", func(t *testing.T) {
+		fake := &Fake{Budget: 5}
+		var attempts []string
+
+		// strictPolicy allows 3 attempts for Charge. It never gets to use them.
+		h := RetryWith(journal(EffectHandlerFunc(fake), &attempts), strictPolicy, nil, nil)
+		_, err := Run(context.Background(), h, Pay(10))
+
+		assert.EqualError(t, err, "charge refused: short by 5", "the program decided, in Pay")
+		assert.Equal(t, []string{"*effect.Charge ok"}, attempts, "one attempt: the bank answered, so there was nothing to retry")
+		assert.Empty(t, fake.Charged)
+	})
+
+	t.Run("a broken line is retried, and the charge goes through once", func(t *testing.T) {
+		fake := &Fake{Budget: 15}
+		blip := errors.New("bank: connection reset")
+		var attempts []string
+
+		h := RetryWith(journal(flakyAt(EffectHandlerFunc(fake), map[int]error{1: blip}), &attempts), strictPolicy, nil, nil)
+		got, err := Run(context.Background(), h, Pay(10))
+
+		require.NoError(t, err)
+		assert.Equal(t, "charge-1", got)
+		assert.Equal(t, []string{
+			"*effect.Charge err: bank: connection reset",
+			"*effect.Charge ok",
+			"*effect.Log ok",
+		}, attempts)
+		assert.Equal(t, []int{10}, fake.Charged)
+	})
+
+	t.Run("every refusal is a variant, and the program matches all of them", func(t *testing.T) {
+		live, _, _ := newWorld() // budget 15, quota 2 charges, resets at 1PM
+		run := func(amount int) (string, error) {
+			return Run(context.Background(), EffectHandlerFunc(live), Pay(amount))
+		}
+
+		got, err := run(10)
+		require.NoError(t, err)
+		assert.Equal(t, "charge-1", got)
+
+		_, err = run(10)
+		assert.EqualError(t, err, "charge refused: short by 5")
+
+		got, err = run(5)
+		require.NoError(t, err)
+		assert.Equal(t, "charge-2", got)
+
+		_, err = run(1)
+		assert.EqualError(t, err, "charge refused: quota resets at 1:00PM")
+	})
+
+	t.Run("a refusal on a tape keeps its variant", func(t *testing.T) {
+		var tape []Step[Effect]
+		_, err := Run(context.Background(), Record(EffectHandlerFunc(&Fake{Budget: 5}), &tape), Pay(10))
+		assert.EqualError(t, err, "charge refused: short by 5")
+
+		data, err := TapeToJSON(tape)
+		require.NoError(t, err)
+		assert.JSONEq(t, `[
+			{"op": {"$type": "effect.Charge", "effect.Charge": {"Amount": 10}},
+			 "answer": {"$type": "f.Err", "f.Err": {"Error": {"$type": "effect.OutOfBudget", "effect.OutOfBudget": {"Missing": 5}}}}}
+		]`, string(data), "the answer is a union, so it is written with the JSON mkunion generates for it")
+
+		loaded, err := TapeFromJSON(data)
+		require.NoError(t, err)
+		assert.Equal(t, tape, loaded)
+	})
+}
+
+// --8<-- [end:refusal]

@@ -42,12 +42,14 @@ var notifyTape = []Step[Effect]{
 func newWorld() (*Live, *bytes.Buffer, *Mailbox) {
 	var out bytes.Buffer
 	mail := &Mailbox{}
+	bank := &Bank{Budget: 15, Quota: 2, ResetAt: noon.Add(time.Hour)}
 	return &Live{
 		Out:  &out,
 		FS:   fstest.MapFS{"name.txt": {Data: []byte("Ada\n")}},
 		Rand: rand.New(rand.NewPCG(1, 2)),
 		Now:  func() time.Time { return noon },
 		Mail: mail.Send,
+		Bank: bank.Charge,
 	}, &out, mail
 }
 

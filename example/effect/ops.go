@@ -43,9 +43,35 @@ type (
 		f.Returns[string]
 		To, Msg string
 	}
+	// Charge asks to take Amount from the customer's account. Its answer is a
+	// Result: a Receipt, or a ChargeError that says why the charge was refused.
+	Charge struct {
+		f.Returns[f.Result[Receipt, ChargeError]]
+		Amount int
+	}
 )
 
 // --8<-- [end:ops-def]
+
+// --8<-- [start:charge-error]
+
+// Receipt is the proof of a charge that went through.
+type Receipt struct{ ID string }
+
+// ChargeError is every way a charge can be refused. These are answers, not
+// failures: the bank did its job and said no. A program must decide what to
+// do with each one, and retry middleware never sees them, because they are
+// values, not Go errors. A timeout or a lost connection is a Go error.
+//
+//go:tag mkunion:"ChargeError"
+type (
+	// OutOfBudget means the account is short by Missing.
+	OutOfBudget struct{ Missing int }
+	// QuotaExceeded means the account may charge again after ResetAt.
+	QuotaExceeded struct{ ResetAt time.Time }
+)
+
+// --8<-- [end:charge-error]
 
 // --8<-- [start:typed-layer]
 

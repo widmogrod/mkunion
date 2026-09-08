@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/widmogrod/mkunion/f"
 )
 
 // A program is plain Go written against Fx. Calling Greet or Notify performs
@@ -107,3 +109,30 @@ func RollUntil(want, maxRolls int) Program[int] {
 }
 
 // --8<-- [end:roll]
+
+// --8<-- [start:pay]
+
+// Pay charges the customer and logs the receipt. A refusal is an answer, so
+// the body matches on it, exhaustively, and decides. A timeout would be a Go
+// error: fx.Do would stop the body, and Retry (part 4) would have a say first.
+func Pay(amount int) Program[string] {
+	return Prog(func(fx Fx) (string, error) {
+		outcome := fx.Do(&Charge{Amount: amount}) // f.Result[Receipt, ChargeError], no cast
+		return f.MatchResultR2(outcome,
+			func(ok *f.Ok[Receipt, ChargeError]) (string, error) {
+				fx.Log("charged " + ok.Value.ID)
+				return ok.Value.ID, nil
+			},
+			func(refused *f.Err[Receipt, ChargeError]) (string, error) {
+				return "", MatchChargeErrorR1(refused.Error,
+					func(x *OutOfBudget) error { return fmt.Errorf("charge refused: short by %d", x.Missing) },
+					func(x *QuotaExceeded) error {
+						return fmt.Errorf("charge refused: quota resets at %s", x.ResetAt.Format(time.Kitchen))
+					},
+				)
+			},
+		)
+	})
+}
+
+// --8<-- [end:pay]

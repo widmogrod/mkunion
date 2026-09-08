@@ -71,6 +71,7 @@ func dryRun(op Effect) error {
 		},
 		func(*Random) error { return nil },
 		func(x *Send) error { return fmt.Errorf("dry run: would send %q to %s", x.Msg, x.To) },
+		func(x *Charge) error { return fmt.Errorf("dry run: would charge %d", x.Amount) },
 	)
 }
 

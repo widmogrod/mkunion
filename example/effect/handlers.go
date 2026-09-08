@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"math/rand/v2"
 	"time"
+
+	"github.com/widmogrod/mkunion/f"
 )
 
 // --8<-- [start:live]
@@ -18,6 +20,7 @@ type Live struct {
 	Rand *rand.Rand
 	Now  func() time.Time
 	Mail func(key, to, msg string) (string, error)
+	Bank func(amount int) (f.Result[Receipt, ChargeError], error)
 }
 
 var _ EffectHandler = (*Live)(nil)
@@ -44,6 +47,12 @@ func (l *Live) HandleSend(ctx context.Context, op *Send) (string, error) {
 	return l.Mail(StepKey(ctx), op.To, op.Msg)
 }
 
+// HandleCharge asks the bank. A refusal comes back as a value; only a broken
+// line to the bank is an error.
+func (l *Live) HandleCharge(_ context.Context, op *Charge) (f.Result[Receipt, ChargeError], error) {
+	return l.Bank(op.Amount)
+}
+
 // --8<-- [end:live]
 
 // --8<-- [start:fake]
@@ -51,11 +60,13 @@ func (l *Live) HandleSend(ctx context.Context, op *Send) (string, error) {
 // Fake answers from fixed data and remembers what was logged and sent.
 // Tests use it to run programs with no clock, file system, randomness or mail.
 type Fake struct {
-	Clock time.Time
-	Files map[string]string
-	Rolls []int
-	Logs  []string
-	Sent  []string
+	Clock   time.Time
+	Files   map[string]string
+	Rolls   []int
+	Budget  int
+	Logs    []string
+	Sent    []string
+	Charged []int
 }
 
 var _ EffectHandler = (*Fake)(nil)
@@ -94,6 +105,16 @@ func (f *Fake) HandleSend(_ context.Context, op *Send) (string, error) {
 	return fmt.Sprintf("receipt-%d", len(f.Sent)), nil
 }
 
+// HandleCharge spends Budget. Past it, the answer is OutOfBudget, not an error.
+func (fk *Fake) HandleCharge(_ context.Context, op *Charge) (f.Result[Receipt, ChargeError], error) {
+	if op.Amount > fk.Budget {
+		return f.MkErr[Receipt, ChargeError](&OutOfBudget{Missing: op.Amount - fk.Budget}), nil
+	}
+	fk.Budget -= op.Amount
+	fk.Charged = append(fk.Charged, op.Amount)
+	return f.MkOk[ChargeError](Receipt{ID: fmt.Sprintf("charge-%d", len(fk.Charged))}), nil
+}
+
 // --8<-- [end:fake]
 
 // --8<-- [start:defaults]
@@ -113,6 +134,9 @@ func (Defaults) HandleReadFile(_ context.Context, op *ReadFile) ([]byte, error) 
 	return nil, fmt.Errorf("defaults: no file %q", op.Path)
 }
 func (Defaults) HandleSend(context.Context, *Send) (string, error) { return "receipt-0", nil }
+func (Defaults) HandleCharge(context.Context, *Charge) (f.Result[Receipt, ChargeError], error) {
+	return f.MkOk[ChargeError](Receipt{ID: "charge-0"}), nil
+}
 
 // --8<-- [end:defaults]
 
@@ -145,3 +169,30 @@ func (m *Mailbox) Send(key, to, msg string) (string, error) {
 }
 
 // --8<-- [end:mailbox]
+
+// --8<-- [start:bank]
+
+// Bank is an account with a budget and a daily quota of charges.
+type Bank struct {
+	Budget  int
+	Quota   int
+	ResetAt time.Time
+	Charged []int
+}
+
+// Charge takes amount from the account. The two refusals are answers: the
+// bank worked, and said no. Nothing here returns a Go error, because nothing
+// here can break; a real client would return one for a timeout.
+func (b *Bank) Charge(amount int) (f.Result[Receipt, ChargeError], error) {
+	if len(b.Charged) >= b.Quota {
+		return f.MkErr[Receipt, ChargeError](&QuotaExceeded{ResetAt: b.ResetAt}), nil
+	}
+	if amount > b.Budget {
+		return f.MkErr[Receipt, ChargeError](&OutOfBudget{Missing: amount - b.Budget}), nil
+	}
+	b.Budget -= amount
+	b.Charged = append(b.Charged, amount)
+	return f.MkOk[ChargeError](Receipt{ID: fmt.Sprintf("charge-%d", len(b.Charged))}), nil
+}
+
+// --8<-- [end:bank]

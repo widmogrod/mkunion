@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/widmogrod/mkunion/f"
 )
 
 // A tape as JSON. The operations use the JSON that mkunion generates for the
@@ -31,7 +33,7 @@ func TapeToJSON(tape []Step[Effect]) ([]byte, error) {
 		js := jsonStep{Op: op}
 		if step.Err != nil {
 			js.Err = step.Err.Error()
-		} else if js.Answer, err = json.Marshal(step.Answer); err != nil {
+		} else if js.Answer, err = answerToJSON(step.Op, step.Answer); err != nil {
 			return nil, err
 		}
 		steps = append(steps, js)
@@ -62,8 +64,23 @@ func TapeFromJSON(data []byte) ([]Step[Effect], error) {
 	return tape, nil
 }
 
-// answerFromJSON decodes raw into the answer type op declares. Exhaustive, so a
-// new operation cannot be forgotten here.
+// answerToJSON encodes an answer. Plain values use encoding/json. An answer
+// that is a union needs the JSON mkunion generates for it, so the variant
+// survives the round trip. Exhaustive, so a new operation cannot be forgotten.
+func answerToJSON(op Effect, answer any) (json.RawMessage, error) {
+	return MatchEffectR2(op,
+		func(*Log) (json.RawMessage, error) { return json.Marshal(answer) },
+		func(*Now) (json.RawMessage, error) { return json.Marshal(answer) },
+		func(*ReadFile) (json.RawMessage, error) { return json.Marshal(answer) },
+		func(*Random) (json.RawMessage, error) { return json.Marshal(answer) },
+		func(*Send) (json.RawMessage, error) { return json.Marshal(answer) },
+		func(*Charge) (json.RawMessage, error) {
+			return f.ResultToJSON(answer.(f.Result[Receipt, ChargeError]))
+		},
+	)
+}
+
+// answerFromJSON decodes raw into the answer type op declares.
 func answerFromJSON(op Effect, raw json.RawMessage) (any, error) {
 	return MatchEffectR2(op,
 		func(*Log) (any, error) { return decodeAnswer[Unit](raw) },
@@ -71,6 +88,7 @@ func answerFromJSON(op Effect, raw json.RawMessage) (any, error) {
 		func(*ReadFile) (any, error) { return decodeAnswer[[]byte](raw) },
 		func(*Random) (any, error) { return decodeAnswer[int](raw) },
 		func(*Send) (any, error) { return decodeAnswer[string](raw) },
+		func(*Charge) (any, error) { return f.ResultFromJSON[Receipt, ChargeError](raw) },
 	)
 }
 
