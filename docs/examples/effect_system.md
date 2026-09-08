@@ -12,6 +12,7 @@ You will learn:
 - how to handle **failure** the way an experienced engineer does: retry policies per operation, idempotency keys, crash and resume, seeded chaos
 - how to keep a **business refusal** ("out of budget") apart from an **infrastructure failure** ("connection reset"), so retry only ever sees the second
 - how a typed **trace** can be diffed, guarded by a policy, and turned into spans
+- how two packages that each own an effect union are **composed** into one program, with one handler and one trace
 
 Side note: if you want to go straight to the final code, then go into the [example/welcome/](https://github.com/widmogrod/mkunion/tree/main/example/welcome) directory. `doc.go` lists the files in reading order, and every part has a test file that shows the behaviour with real data.
 
@@ -421,6 +422,68 @@ The test has a "version two" of `Notify` that adds a config read and moves the c
 --8<-- "x/effect/observe.go:spans"
 ```
 
+## Part 6: two packages, one program
+
+So far one package owned the union. Real code has libraries: a `clock` package should not know about mail, and a `mailer` package should not know about time. Each owns its own union, ships programs built from it, and is tested alone. An application composes them.
+
+Go cannot build "the union of these two unions" on the fly. The application declares it, one variant per package, and `x/effect` does the rest.
+
+### A package owns its union
+
+```go title="example/compose/clock/clock.go"
+--8<-- "example/compose/clock/clock.go:ops"
+```
+
+```go title="example/compose/mailer/mailer.go"
+--8<-- "example/compose/mailer/mailer.go:ops"
+```
+
+**Notice** that both packages import `x/effect` and nothing else from this story. `WaitUntil` and `Notify` are programs over the package's own union. The package can test them with its own generated `EffectFuncs`, with no application around it:
+
+```go title="example/compose/mailer/mailer_test.go"
+--8<-- "example/compose/mailer/mailer_test.go:alone"
+```
+
+### The application declares the union of unions
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:union"
+```
+
+**Notice** `Handler`. Each package generated its own typed handler; the application only routes. Adding a package is adding a variant, and `MatchAppEffR2` then refuses to compile until `Handler` routes it.
+
+### Lift and Embed carry programs across
+
+```go title="x/effect/compose.go"
+--8<-- "x/effect/compose.go:lift"
+```
+
+The application's `Fx` uses them. One generic method per package performs any operation of that package, typed by its `f.Returns`. Two more methods embed the programs the packages ship:
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:fx"
+```
+
+And a program reads as if there were one package:
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:remind"
+```
+
+### One handler, one trace, one middleware
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:one-trace"
+```
+
+**Notice** the trace. Five operations from two packages, in the order the body asked, as one list of values. The second test in that file puts one `Retry` around both packages; the third shows a failure in `mailer` stopping the body before the last `clock` step. Nothing in Parts 3 to 5 changes: the tape, the keys, the chaos and the diff work over `AppEff` the way they worked over `MyEff`.
+
+A package's program can also be lifted as a value, with no body around it:
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:lift"
+```
+
 ## When to use this, and when not
 
 The `Fx` surface looks like interfaces and structs, because it is. The difference is under the surface. With dependency injection, `fx.ReadFile(path)` runs a method and the call is gone. With effects, it builds a value and that value passes through one door, `Run`, in order, as data. Everything in Parts 3 to 5 follows from that one door.
@@ -437,8 +500,8 @@ A union of operations, a handler per environment, and one `Run` loop are enough 
 
     - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so the union interface `Eff` cannot have a `Then` method, and the `Bind` chain stays `any` inside, with `MyEffOf[R]` keeping it typed at the edges.
     - **The typed layer is generated.** `MyEffHandler`, `MyEffOf`, the typed dispatch, `MyEffHandlerFunc` and `MyEffDefaults` come from the `handler` union option and the `f.Returns` labels (see `x/generators/handler_generator.go`). Still by hand: `Perform`, the `Fx` convenience methods, and the two exhaustive matches in `recording_json.go` that pick the JSON codec per answer. The last one could be generated too, once serde knows about `f.Returns`.
-    - **Extensible effects are not expressible.** Go cannot say "this program uses `Log` and `Now` but not `Send`" as a type built on the fly. Two workable models: small unions wrapped into one app union with a lift function, or capability interfaces on `Fx` (`interface{ Clock; FS }`) with one app union underneath. Neither is in this example yet.
-    - **Generator bugs found on the way.** The type registry generator produced code that does not compile for this package, so the registry is off with `//go:tag mkunion:",no-type-registry"`. It mistook the type parameter `Op` in `Trace[Op any](..., sink *[]Op)` for a package type, and it ignored `noserde` on `Eff`.
+    - **Extensible effects are not expressible.** Go cannot say "this program uses `Log` and `Now` but not `Send`" as a type built on the fly. Part 6 uses the workable model: small unions wrapped into one application union, with `Lift` and `Embed` from `x/effect`. The other model, capability interfaces on `Fx` (`interface{ Clock; FS }`) over one application union, is not shown.
+    - **Generator bugs found on the way, now fixed.** The type registry generator mistook type parameters of generic methods, and type parameters inside slices and maps, for package types; it ignored `noserde` on `Eff`; and it read its own previous output back in, which kept every past mistake alive. All three are fixed on this branch, with tests, and the registry is on for every package here.
 
 ## Next steps
 
