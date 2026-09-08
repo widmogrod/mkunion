@@ -109,9 +109,16 @@ func AttemptAs[Op, R any](e *Env[Op], op Op) (R, error) {
 func DoAs[Op, R any](e *Env[Op], op Op) R {
 	value, err := AttemptAs[Op, R](e, op)
 	if err != nil {
-		panic(abort{err: err})
+		e.Unwind(err)
 	}
 	return value
+}
+
+// Unwind stops the body with err, the way DoAs does when an operation fails:
+// nothing after it runs, and the program fails with err. Use it when a
+// helper around Embed or AttemptAs wants DoAs semantics.
+func (e *Env[Op]) Unwind(err error) {
+	panic(abort{err: err})
 }
 
 // --8<-- [end:proc]
