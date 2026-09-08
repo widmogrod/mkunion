@@ -145,6 +145,16 @@ func generateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		}
 		shapesContents.Write(contents)
 
+		if shape.TagHasOption(union.Tags, "mkunion", "handler") {
+			genHandler := generators.NewHandlerGenerator(union)
+			contents, err = genHandler.Generate()
+			if err != nil {
+				return shapesContents, fmt.Errorf("failed to generate handler for %s: %w", shape.ToGoTypeName(union), err)
+			}
+			shapesContents.Write(contents)
+			pkgMap = generators.MergePkgMaps(pkgMap, genHandler.ExtractImports())
+		}
+
 		if shape.TagHasOption(union.Tags, "mkunion", "noserde") {
 			continue
 		}
