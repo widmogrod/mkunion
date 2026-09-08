@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
+// --8<-- [start:ops-def]
+
 // Unit is the answer of an operation that has nothing to return.
 type Unit struct{}
-
-// --8<-- [start:ops-def]
 
 // Effect is the set of operations our programs may ask for.
 //

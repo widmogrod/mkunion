@@ -17,6 +17,8 @@ import (
 // Then and Map work unchanged, because Proc produces the same Bind chain that
 // Perform and Then produce, one step at a time.
 
+// --8<-- [start:proc]
+
 // Env is the handle a direct-style body uses to perform operations.
 type Env[Op any] struct {
 	yield  func(Op) bool
@@ -36,8 +38,6 @@ type procState[Op, A any] struct {
 	value A
 	err   error
 }
-
-// --8<-- [start:proc]
 
 // Proc turns a direct-style body into a program.
 //

@@ -39,10 +39,14 @@ type (
 
 // --8<-- [end:eff-def]
 
+// --8<-- [start:handler]
+
 // Handler performs one operation and returns its answer.
 // The answer type is `any` because Go interfaces cannot carry generic methods,
 // even on Go 1.27. Typed wrappers live at the edges (see HandlerOf and Fx.Do).
 type Handler[Op any] func(ctx context.Context, op Op) (any, error)
+
+// --8<-- [end:handler]
 
 // Return lifts a value into a finished program.
 func Return[Op, A any](value A) Eff[Op, A] {
@@ -136,8 +140,7 @@ func Run[Op, A any](ctx context.Context, h Handler[Op], e Eff[Op, A]) (A, error)
 // --8<-- [start:trace]
 
 // Trace wraps a handler and records every operation it performs, in order.
-// It is the smallest example of middleware: handlers are functions, so
-// middleware is a function that returns a function.
+// It is the smallest example of middleware (see middleware.go for more).
 func Trace[Op any](h Handler[Op], sink *[]Op) Handler[Op] {
 	return func(ctx context.Context, op Op) (any, error) {
 		*sink = append(*sink, op)

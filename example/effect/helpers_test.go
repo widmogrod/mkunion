@@ -28,6 +28,15 @@ var notifyOps = []Effect{
 	&Log{Msg: "sent receipt-1"},
 }
 
+// notifyTape is the tape Record writes for that run: every operation with the
+// answer the world gave.
+var notifyTape = []Step[Effect]{
+	{Op: &ReadFile{Path: "name.txt"}, Answer: []byte("Ada\n")},
+	{Op: &Now{}, Answer: noon},
+	{Op: &Send{To: to, Msg: greeting}, Answer: "receipt-1"},
+	{Op: &Log{Msg: "sent receipt-1"}, Answer: Unit{}},
+}
+
 // newWorld is a small real world: one file, a fixed clock, a seeded die, and a
 // mail server. Live talks to it; the tests inspect it.
 func newWorld() (*Live, *bytes.Buffer, *Mailbox) {

@@ -36,10 +36,12 @@ func TestPart4_oneMiddlewareCoversEveryOperation(t *testing.T) {
 		"*effect.Send ok",
 		"*effect.Log err: network blip",
 		"*effect.Log ok",
-	}, attempts, "every operation was retried by the same ten lines")
+	}, attempts, "every operation was retried by the same wrapper")
 	assert.Equal(t, []Mail{{Key: "", To: to, Msg: greeting}}, mail.Sent,
 		"FailEvery refuses before performing, so this retry was harmless. The next tests show when it is not.")
 }
+
+// --8<-- [start:strict-policy]
 
 // strictPolicy is an exhaustive match. Add an operation to Effect and this
 // function stops compiling until someone decides whether it may be retried.
@@ -55,6 +57,8 @@ func strictPolicy(op Effect) RetryPolicy {
 		func(*Send) RetryPolicy { return RetryPolicy{Attempts: 1} },
 	)
 }
+
+// --8<-- [end:strict-policy]
 
 // keyedPolicy may retry everything, because StepKeys gives every step an
 // idempotency key and the mail server dedups on it.
@@ -187,6 +191,7 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 	assert.Equal(t, []Mail{{Key: "run-1/3", To: to, Msg: greeting}}, mail.Sent)
 	assert.Equal(t, "sent receipt-1\n", out.String())
 
+	// --8<-- [start:crash-resume]
 	crash := errors.New("power cut")
 	for k := 0; k <= len(notifyOps); k++ {
 		t.Run(fmt.Sprintf("crash after step %d", k), func(t *testing.T) {
@@ -219,6 +224,7 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 			assert.Equal(t, "sent receipt-1\n", out.String())
 		})
 	}
+	// --8<-- [end:crash-resume]
 }
 
 func TestPart4_seededChaos(t *testing.T) {
@@ -276,6 +282,8 @@ func TestPart4_seededChaos(t *testing.T) {
 		live, _, _ := newWorld()
 		h := StepKeys(RetryWith(Chaos(HandlerOf(live), cfg(failingSeed)), keyedPolicy, nil, nil), "run")
 		_, again := Run(context.Background(), h, Notify("name.txt", to))
+		assert.ErrorIs(t, again, ErrChaos)
+		assert.Regexp(t, `^effect: \*effect\.\w+ failed after 3 attempts: chaos: `, again.Error(), "seed %d", failingSeed)
 		assert.EqualError(t, again, failingErr.Error(), "seed %d replays the same failure", failingSeed)
 	})
 }

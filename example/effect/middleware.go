@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-// Middleware wraps a Handler and gets every operation of every program, in
-// order, as data. One function covers all operations. With plain dependency
-// injection this would be one wrapper per interface, per method.
+// Middleware wraps a Handler once and sees every operation of every program,
+// in order, as data. With plain dependency injection each of these would be
+// one wrapper per interface, per method.
 
 // --8<-- [start:retry]
 
@@ -104,14 +104,6 @@ func StepKey(ctx context.Context) string {
 // --8<-- [end:step-keys]
 
 // --8<-- [start:faults]
-
-// Count records how many times each operation type was performed.
-func Count[Op any](h Handler[Op], counts map[string]int) Handler[Op] {
-	return func(ctx context.Context, op Op) (any, error) {
-		counts[fmt.Sprintf("%T", op)]++
-		return h(ctx, op)
-	}
-}
 
 // FailEvery makes every nth operation fail with err, before it is performed.
 func FailEvery[Op any](h Handler[Op], n int, err error) Handler[Op] {

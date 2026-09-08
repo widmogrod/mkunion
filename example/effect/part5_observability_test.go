@@ -110,11 +110,11 @@ func TestPart5_spansForEveryOperationFromOnePlace(t *testing.T) {
 	}, spans)
 
 	// A failure lands on the span too.
-	spans = nil
+	spans, clock = nil, noon
 	blip := errors.New("disk hiccup")
 	_, err = Run(context.Background(), Spans(FailEvery(HandlerOf(live), 1, blip), tick, &spans), Notify("name.txt", to))
 	require.ErrorIs(t, err, blip)
 	assert.Equal(t, []Span{
-		{Name: "*effect.ReadFile", Attrs: "&{Path:name.txt}", Start: at(90), End: at(100), Err: "disk hiccup"},
+		{Name: "*effect.ReadFile", Attrs: "&{Path:name.txt}", Start: at(10), End: at(20), Err: "disk hiccup"},
 	}, spans)
 }

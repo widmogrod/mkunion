@@ -93,11 +93,13 @@ func TestPart2_thenAndMapAreOrdinaryValues(t *testing.T) {
 	require.ErrorIs(t, err, boom)
 	assert.False(t, called)
 
-	// Then composes a plain-Go program with a hand-built one.
+	// Then composes a plain-Go program with a hand-built one: one Bind chain.
 	mixed := Then(RollUntil(6, 10), func(int) Program[time.Time] { return Perform(&Now{}) })
-	when, err := Run(context.Background(), HandlerOf(&Fake{Clock: noon, Rolls: []int{5}}), mixed)
+	var trace []Effect
+	when, err := Run(context.Background(), Trace(HandlerOf(&Fake{Clock: noon, Rolls: []int{0, 5}}), &trace), mixed)
 	require.NoError(t, err)
 	assert.Equal(t, noon, when)
+	assert.Equal(t, []Effect{&Random{Max: 6}, &Random{Max: 6}, &Now{}}, trace, "two rolls from the body, then the hand-built step")
 }
 
 func TestPart2_aWrongAnswerTypeIsAnErrorNotAPanic(t *testing.T) {

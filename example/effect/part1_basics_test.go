@@ -15,6 +15,8 @@ import (
 // A program is plain Go against Fx. It performs nothing until Run gives it a
 // handler. The same program runs against Fake in tests and Live in production.
 
+// --8<-- [start:run-fake]
+
 func TestPart1_sameProgramFakeHandler(t *testing.T) {
 	fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada\n"}}
 	var trace []Effect
@@ -30,6 +32,8 @@ func TestPart1_sameProgramFakeHandler(t *testing.T) {
 		&Log{Msg: "Hello Ada, it is 12:00PM"},
 	}, trace, "every operation, in order, as data")
 }
+
+// --8<-- [end:run-fake]
 
 func TestPart1_sameProgramLiveHandler(t *testing.T) {
 	live, out, _ := newWorld()
@@ -84,6 +88,8 @@ func TestPart1_attemptHandlesAnErrorInPlace(t *testing.T) {
 	assert.Equal(t, []string{"Hello guest"}, fake.Logs)
 }
 
+// --8<-- [start:clock-only]
+
 // clockOnly overrides one method; Defaults supplies the other four.
 type clockOnly struct {
 	Defaults
@@ -91,6 +97,8 @@ type clockOnly struct {
 }
 
 func (c clockOnly) HandleNow(context.Context, *Now) (time.Time, error) { return c.at, nil }
+
+// --8<-- [end:clock-only]
 
 func TestPart1_defaultsLetATestOverrideOneMethod(t *testing.T) {
 	prog := Prog(func(fx Fx) (string, error) {
@@ -115,9 +123,11 @@ func TestPart1_aLoopIsALoop(t *testing.T) {
 	got, err := Run(context.Background(), HandlerOf(&Fake{Rolls: []int{0, 0, 5}}), RollUntil(6, rolls))
 	require.NoError(t, err)
 	assert.Equal(t, 3, got, "the third roll was a six")
+}
 
-	_, err = Run(context.Background(), HandlerOf(&Fake{}), RollUntil(6, 1))
-	require.ErrorContains(t, err, "no rolls configured", "a Fake with no rolls says so")
+func TestPart1_aFakeSaysWhenItHasNoAnswer(t *testing.T) {
+	_, err := Run(context.Background(), HandlerOf(&Fake{}), RollUntil(6, 1))
+	assert.EqualError(t, err, "fake: no rolls configured")
 }
 
 func TestPart1_fxDoInfersTheAnswerType(t *testing.T) {
@@ -131,8 +141,6 @@ func TestPart1_fxDoInfersTheAnswerType(t *testing.T) {
 	assert.Equal(t, noon, got)
 }
 
-func TestPart1_programIsAnAliasForEff(t *testing.T) {
-	var p Program[string] = Greet("name.txt")
-	var e Eff[Effect, string] = p
-	assert.NotNil(t, e, "same type, shorter name")
-}
+// Program[A] is an alias, not a new type: the assignment below is checked by
+// the compiler, so there is nothing left to test at run time.
+var _ Eff[Effect, string] = Program[string](nil)

@@ -28,6 +28,8 @@ func TestPart3_theTraceIsTheAssertion(t *testing.T) {
 	assert.Equal(t, "sent receipt-1\n", out.String())
 }
 
+// --8<-- [start:record-replay]
+
 func TestPart3_recordOnceReplayForever(t *testing.T) {
 	// Record: one run against the real world writes a tape of facts.
 	live, _, _ := newWorld()
@@ -55,11 +57,10 @@ func TestPart3_recordOnceReplayForever(t *testing.T) {
 	require.ErrorIs(t, err, ErrTapeEnded)
 }
 
+// --8<-- [end:record-replay]
+
 func TestPart3_aTapeIsJSON(t *testing.T) {
-	live, _, _ := newWorld()
-	var tape []Step[Effect]
-	want, err := Run(context.Background(), Record(HandlerOf(live), &tape), Notify("name.txt", to))
-	require.NoError(t, err)
+	tape := notifyTape // the tape from the test above, as a literal
 
 	data, err := TapeToJSON(tape)
 	require.NoError(t, err)
@@ -76,7 +77,7 @@ func TestPart3_aTapeIsJSON(t *testing.T) {
 	assert.Equal(t, tape, loaded, "answers come back with the type each operation declared")
 	got, err := Run(context.Background(), Replay(loaded, nil), Notify("name.txt", to))
 	require.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, "receipt-1", got)
 }
 
 func TestPart3_tapeJSONKeepsErrorsAndRejectsGarbage(t *testing.T) {
@@ -90,7 +91,7 @@ func TestPart3_tapeJSONKeepsErrorsAndRejectsGarbage(t *testing.T) {
 	_, err = TapeFromJSON([]byte(`not json`))
 	require.Error(t, err)
 	_, err = TapeFromJSON([]byte(`[{"op":{"$type":"effect.Nope"}}]`))
-	require.ErrorContains(t, err, "step 0")
+	assert.EqualError(t, err, "step 0: effect.EffectFromJSON: unknown type: effect.Nope")
 	_, err = TapeFromJSON([]byte(`[{"op":{"$type":"effect.Random","effect.Random":{"Max":6}},"answer":"six"}]`))
-	require.ErrorContains(t, err, "step 0", "an answer of the wrong type is refused")
+	assert.EqualError(t, err, "step 0: json: cannot unmarshal string into Go value of type int", "an answer of the wrong type is refused")
 }
