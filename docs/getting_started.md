@@ -55,6 +55,14 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   //go:tag mkunion:",no-type-registry"
   package example
   ```
+- `go:tag mkunion:"Query,handler"` - also generate a typed handler for the union. Every variant embeds `f.Returns[R]` to declare its answer type; `mkunion` generates `QueryHandler` (one typed method per variant), `QueryOf[R]`, `QueryHandlerFunc` and `QueryDefaults`. See the [effect system](./examples/effect_system.md) example.
+  ```go
+  //go:tag mkunion:"Query,handler"
+  type (
+      GetUser struct{ f.Returns[*User]; ID string }
+      Count   struct{ f.Returns[int] }
+  )
+  ```
 - `go:tag mkmatch` - generate custom pattern matching function from interface definition
   ```go title="example/shape.go"
   --8<-- "example/shape.go:match-def"

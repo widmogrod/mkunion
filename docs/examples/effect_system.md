@@ -10,6 +10,7 @@ You will learn:
 - how the same program runs against the **real world** in production and against a **fake** in tests
 - how to **record a run as a tape**, replay it without any I/O, and store it as JSON
 - how to handle **failure** the way an experienced engineer does: retry policies per operation, idempotency keys, crash and resume, seeded chaos
+- how to keep a **business refusal** ("out of budget") apart from an **infrastructure failure** ("connection reset"), so retry only ever sees the second
 - how a typed **trace** can be diffed, guarded by a policy, and turned into spans
 
 Side note: if you want to go straight to the final code, then go into the [example/effect/](https://github.com/widmogrod/mkunion/tree/main/example/effect) directory. `doc.go` lists the files in reading order, and every part has a test file that shows the behaviour with real data.
@@ -41,7 +42,9 @@ Each operation is a struct in a `type (...)` block tagged with `mkunion`, exactl
 --8<-- "example/effect/ops.go:ops-def"
 ```
 
-**Notice** the `Result` methods. They are never called. Each one tells the compiler what type of answer an operation gets back: a `ReadFile` answers with `[]byte`, a `Send` answers with a receipt `string`, a `Log` answers with `Unit`, the empty struct, because there is nothing to return. Go's type inference reads these methods, so later you can write `fx.Do(&Now{})` and get a `time.Time` without spelling it out.
+**Notice** the embedded `f.Returns[...]` in every operation. It is a phantom: no fields, no methods, nothing at runtime. It is a label for the compiler and for `mkunion`. It says what type of answer an operation gets back: a `ReadFile` answers with `[]byte`, a `Send` answers with a receipt `string`, a `Log` answers with `Unit`, the empty struct, because there is nothing to return. Later you can write `fx.Do(&Now{})` and get a `time.Time` without spelling it out.
+
+**Notice** also the `handler` option in the tag. It tells `mkunion` to read those labels and generate the typed layer for the union. The next section shows what comes out.
 
 ### Programs are plain Go
 
@@ -77,13 +80,50 @@ At the bottom, a handler is one function: it gets an operation and returns the a
 --8<-- "example/effect/eff.go:handler"
 ```
 
-You will rarely write that function by hand. `EffectHandler` is the typed contract, one method per operation, and `HandlerOf` turns it into the function the core runs:
+You will rarely write that function by hand. The `handler` option makes `mkunion` generate a typed contract from the union and its `f.Returns` labels. This is the part of `example/effect/ops_union_gen.go` that matters:
+
+```go title="example/effect/ops_union_gen.go (generated)"
+// EffectHandler answers every Effect with the type it declares in f.Returns.
+// Adding a variant to Effect breaks every EffectHandler at compile time.
+type EffectHandler interface {
+	HandleLog(ctx context.Context, op *Log) (Unit, error)
+	HandleNow(ctx context.Context, op *Now) (time.Time, error)
+	HandleReadFile(ctx context.Context, op *ReadFile) ([]byte, error)
+	HandleRandom(ctx context.Context, op *Random) (int, error)
+	HandleSend(ctx context.Context, op *Send) (string, error)
+	HandleCharge(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error)
+}
+
+// EffectOf is an Effect that answers with R.
+type EffectOf[R any] interface {
+	Effect
+	HandleEffect(ctx context.Context, h EffectHandler) (R, error)
+}
+
+// *Now is an EffectOf[time.Time], and nothing else.
+func (r *Now) HandleEffect(ctx context.Context, h EffectHandler) (time.Time, error) {
+	return h.HandleNow(ctx, r)
+}
+
+// EffectHandlerFunc adapts a typed EffectHandler to a plain function over the union.
+func EffectHandlerFunc(h EffectHandler) func(ctx context.Context, op Effect) (any, error)
+
+// EffectDefaults answers every Effect with the zero value of its declared type.
+type EffectDefaults struct{}
+```
+
+Four things, all from one declaration:
+
+- `EffectHandler` is the contract: one method per operation, typed by its `f.Returns`. Adding an operation breaks every handler until it handles the new case. When `Charge` was added to this example, the compiler pointed at every handler, policy and decoder that needed a decision.
+- `EffectOf[R]` ties an operation to its answer. `*Now` satisfies `EffectOf[time.Time]` and nothing else, so `fx.Do(&Now{})` can only be a `time.Time`. Go interfaces cannot carry generic methods, so this is how a per-variant answer type is spelled in Go: on the interface's type parameter, and in the handler's method signatures.
+- `EffectHandlerFunc` is the adapter to the function `Run` uses.
+- `EffectDefaults` is a handler that answers everything with a zero value, for tests.
+
+The one piece still written by hand is `Perform`, the bridge from an operation to a program. It is two lines:
 
 ```go title="example/effect/ops.go"
 --8<-- "example/effect/ops.go:typed-layer"
 ```
-
-**Notice** two compile-time checks in `HandlerOf`. `MatchEffectR2` is exhaustive, so adding an operation to the union breaks every handler until it handles the new case. The little `answer` helper refuses to compile when a handler method returns a type other than the one the operation declared. That is the union doing its job. When `Send` was added to this example, the compiler pointed at every handler, policy and decoder that needed a decision.
 
 For production there is `Live`:
 
@@ -107,7 +147,7 @@ For tests there is `Fake`, which answers from fixed data and remembers what was 
 --8<-- "example/effect/part1_basics_test.go:run-fake"
 ```
 
-Swap `HandlerOf(fake)` for `HandlerOf(live)` and the same program writes a real log line. The tests in `example/effect/part1_basics_test.go` do both, and also show that a handler error stops the program at that step, and that a cancelled context stops it before the next one.
+Swap `EffectHandlerFunc(fake)` for `EffectHandlerFunc(live)` and the same program writes a real log line. The tests in `example/effect/part1_basics_test.go` do both, and also show that a handler error stops the program at that step, and that a cancelled context stops it before the next one.
 
 ### Testing on day one
 
@@ -119,7 +159,7 @@ First, assert on the **trace**, as the test above does. An output test says what
 --8<-- "example/effect/eff.go:trace"
 ```
 
-Second, override one method at a time. `Defaults` is a handler with harmless answers. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
+Second, override one method at a time. `Defaults` is a handler with harmless answers. It embeds the generated `EffectDefaults` and changes two answers. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
 
 ```go title="example/effect/handlers.go"
 --8<-- "example/effect/handlers.go:defaults"
@@ -270,6 +310,30 @@ The policy is an exhaustive match, so the compiler asks "may this be retried?" f
 
 **Notice** that middleware order is semantics. `Record(Retry(h))` writes one committed answer per step. `Retry(Record(h))` writes every attempt, failures included. Only the first tape replays to success; the second replays the failure. The test shows both tapes side by side.
 
+### A refusal is an answer, not a failure
+
+"Out of budget" and "connection reset" are not the same kind of thing, and one `error` channel mixes them up. A bank that refuses a charge did its job. A line to the bank that dropped did not. Retry must see the second and never the first.
+
+The answer type keeps them apart. `Charge` answers with a `Result`: a `Receipt`, or a `ChargeError` that says why:
+
+```go title="example/effect/ops.go"
+--8<-- "example/effect/ops.go:charge-error"
+```
+
+The program matches on the answer. Exhaustively, so a new refusal is a compile error in every program that charges:
+
+```go title="example/effect/program.go"
+--8<-- "example/effect/program.go:pay"
+```
+
+A refusal is a value, so no retry policy can ever retry it. A broken line is a Go error, so the policy gets its say. A refusal on a tape keeps its variant, because a union answer is written with the JSON `mkunion` generates for it:
+
+```go title="example/effect/part4_failures_test.go"
+--8<-- "example/effect/part4_failures_test.go:refusal"
+```
+
+The rule that falls out: **a business outcome is a value in the answer type, an infrastructure failure is a Go error.** Everything in this part follows that rule.
+
 ### Fault tools
 
 The tests need faults that happen on purpose. Each one is a small wrapper:
@@ -319,13 +383,15 @@ A trace of typed operations can do three things log lines and spans cannot.
 The test has a "version two" of `Notify` that adds a config read and moves the clock read. The output is identical, so an output test passes. `DiffTraces` shows the change:
 
 ```
-+ &effect.ReadFile{Path:"config.txt"}
-+ &effect.Now{}
-  &effect.ReadFile{Path:"name.txt"}
-- &effect.Now{}
-  &effect.Send{To:"ada@example.com", Msg:"Hello Ada, it is 12:00PM"}
-  &effect.Log{Msg:"sent receipt-1"}
++ *effect.ReadFile{"Path":"config.txt"}
++ *effect.Now{}
+  *effect.ReadFile{"Path":"name.txt"}
+- *effect.Now{}
+  *effect.Send{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}
+  *effect.Log{"Msg":"sent receipt-1"}
 ```
+
+(Each line is the operation's type and the JSON `mkunion` generates for it.)
 
 ### Enforce a policy
 
@@ -357,8 +423,8 @@ A union of operations, a handler per environment, and one `Run` loop are enough 
 
     A few things learned while building this, for whoever extends it.
 
-    - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so the union interface `Eff` cannot have a `Then` method, and the handler boundary stays `any` with typed wrappers at the edges.
-    - **The typed layer is mechanical.** `EffectOf`, `Perform`, `EffectHandler`, `HandlerOf`, the `Fx` methods, `Defaults` and `answerFromJSON` all follow from the union and the `Result` methods. A `//go:tag mkeffect:"Effect"` generator could emit them. `mkunion` already carries custom tags into shapes and has the `mkmatch` pattern for a tag-driven generator.
+    - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so the union interface `Eff` cannot have a `Then` method, and the `Bind` chain stays `any` inside, with `EffectOf[R]` keeping it typed at the edges.
+    - **The typed layer is generated.** `EffectHandler`, `EffectOf`, the typed dispatch, `EffectHandlerFunc` and `EffectDefaults` come from the `handler` union option and the `f.Returns` labels (see `x/generators/handler_generator.go`). Still by hand: `Perform`, the `Fx` convenience methods, and the two exhaustive matches in `recording_json.go` that pick the JSON codec per answer. The last one could be generated too, once serde knows about `f.Returns`.
     - **Extensible effects are not expressible.** Go cannot say "this program uses `Log` and `Now` but not `Send`" as a type built on the fly. Two workable models: small unions wrapped into one app union with a lift function, or capability interfaces on `Fx` (`interface{ Clock; FS }`) with one app union underneath. Neither is in this example yet.
     - **Generator bugs found on the way.** The type registry generator produced code that does not compile for this package, so the registry is off with `//go:tag mkunion:",no-type-registry"`. It mistook the type parameter `Op` in `Trace[Op any](..., sink *[]Op)` for a package type, and it ignored `noserde` on `Eff`.
 
@@ -366,4 +432,4 @@ A union of operations, a handler per environment, and one `Run` loop are enough 
 
 - **[State Machines](./state_machine.md)** - the other way this repository turns behaviour into data
 - **[Generic Unions](./generic_union.md)** - the mechanics `Eff[Op, A]` builds on
-- **[Custom Pattern Matching](./custom_pattern_matching.md)** - the tag-driven generator pattern a `mkeffect` step would follow
+- **[Custom Pattern Matching](./custom_pattern_matching.md)** - the other tag-driven generator in this repository

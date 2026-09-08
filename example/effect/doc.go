@@ -9,7 +9,8 @@
 // a test file with the same number that shows the behaviour with real data.
 //
 //	Part 1: the basics (start here)
-//	  ops.go        the operations, as a union, each with its answer type
+//	  ops.go        the operations, as a union, each with its answer type in f.Returns
+//	                (the typed handler is generated from it, see ops_union_gen.go)
 //	  program.go    programs written as plain Go against Fx
 //	  handlers.go   Live for production, Fake and Defaults for tests, Mailbox
 //	  part1_basics_test.go
