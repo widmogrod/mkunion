@@ -1,9 +1,9 @@
 // Package clock is a library that owns one effect union: time.
 //
 // It knows nothing about the applications that use it. It ships the union,
-// a typed Perform, one program built from its own operations (WaitUntil),
-// and a handler for the real clock. An application composes it with other
-// packages; see example/compose.
+// one program built from its own operations (WaitUntil), and a handler for
+// the real clock. Its programs are effect.Eff[effect.Op, A], the same type as
+// every other package's, so an application can run them as they are.
 package clock
 
 import (
@@ -29,19 +29,14 @@ type (
 	}
 )
 
-// Perform asks for one clock operation as a program. R comes from f.Returns.
-func Perform[R any](op EffectOf[R]) effect.Eff[Effect, R] {
-	return effect.PerformAs[Effect, R](op)
-}
-
 // WaitUntil is a program this package ships: read the clock, then sleep the
-// difference. An application lifts it into its own union (see example/compose).
-func WaitUntil(t time.Time) effect.Eff[Effect, effect.Unit] {
-	return effect.Then(Perform(&Now{}), func(now time.Time) effect.Eff[Effect, effect.Unit] {
+// difference. It is over effect.Op, so any application can run it as is.
+func WaitUntil(t time.Time) effect.Eff[effect.Op, effect.Unit] {
+	return effect.Then(effect.Perform(&Now{}), func(now time.Time) effect.Eff[effect.Op, effect.Unit] {
 		if !t.After(now) {
-			return effect.Return[Effect](effect.Unit{})
+			return effect.Return[effect.Op](effect.Unit{})
 		}
-		return Perform(&Sleep{For: t.Sub(now)})
+		return effect.Perform(&Sleep{For: t.Sub(now)})
 	})
 }
 

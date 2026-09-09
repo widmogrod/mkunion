@@ -113,6 +113,31 @@ func (r *Send) HandleEffect(ctx context.Context, h EffectHandler) (string, error
 	return h.HandleSend(ctx, r)
 }
 
+// Perform and Answer let a variant be performed by any handler value that has
+// this union's Handle methods, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
+func (r *Resolve) Answer(ctx context.Context, h any) (string, error) {
+	typed, ok := h.(EffectHandler)
+	if !ok {
+		var zero string
+		return zero, fmt.Errorf("mailer: handler %T does not implement EffectHandler", h)
+	}
+	return typed.HandleResolve(ctx, r)
+}
+
+func (r *Resolve) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *Send) Answer(ctx context.Context, h any) (string, error) {
+	typed, ok := h.(EffectHandler)
+	if !ok {
+		var zero string
+		return zero, fmt.Errorf("mailer: handler %T does not implement EffectHandler", h)
+	}
+	return typed.HandleSend(ctx, r)
+}
+
+func (r *Send) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
 // EffectHandlerFunc adapts a typed EffectHandler to a plain function over the union.
 // The answer is the type the variant declares; only its static type is lost.
 func EffectHandlerFunc(h EffectHandler) func(ctx context.Context, op Effect) (any, error) {

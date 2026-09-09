@@ -115,6 +115,31 @@ func (r *Sleep) HandleEffect(ctx context.Context, h EffectHandler) (effect.Unit,
 	return h.HandleSleep(ctx, r)
 }
 
+// Perform and Answer let a variant be performed by any handler value that has
+// this union's Handle methods, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
+func (r *Now) Answer(ctx context.Context, h any) (time.Time, error) {
+	typed, ok := h.(EffectHandler)
+	if !ok {
+		var zero time.Time
+		return zero, fmt.Errorf("clock: handler %T does not implement EffectHandler", h)
+	}
+	return typed.HandleNow(ctx, r)
+}
+
+func (r *Now) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *Sleep) Answer(ctx context.Context, h any) (effect.Unit, error) {
+	typed, ok := h.(EffectHandler)
+	if !ok {
+		var zero effect.Unit
+		return zero, fmt.Errorf("clock: handler %T does not implement EffectHandler", h)
+	}
+	return typed.HandleSleep(ctx, r)
+}
+
+func (r *Sleep) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
 // EffectHandlerFunc adapts a typed EffectHandler to a plain function over the union.
 // The answer is the type the variant declares; only its static type is lost.
 func EffectHandlerFunc(h EffectHandler) func(ctx context.Context, op Effect) (any, error) {

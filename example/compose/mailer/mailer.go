@@ -1,8 +1,8 @@
 // Package mailer is a library that owns one effect union: mail.
 //
 // Like clock, it knows nothing about the applications that use it. It ships
-// the union, a typed Perform, and one program built from its own operations
-// (Notify). The test in this package shows it can be tested on its own.
+// the union and one program built from its own operations (Notify). The test
+// in this package shows it can be tested on its own.
 package mailer
 
 import (
@@ -28,15 +28,10 @@ type (
 	}
 )
 
-// Perform asks for one mail operation as a program. R comes from f.Returns.
-func Perform[R any](op EffectOf[R]) effect.Eff[Effect, R] {
-	return effect.PerformAs[Effect, R](op)
-}
-
 // Notify is a program this package ships: resolve a name, then send to it.
-func Notify(name, msg string) effect.Eff[Effect, string] {
-	return effect.Then(Perform(&Resolve{Name: name}), func(to string) effect.Eff[Effect, string] {
-		return Perform(&Send{To: to, Msg: msg})
+func Notify(name, msg string) effect.Eff[effect.Op, string] {
+	return effect.Then(effect.Perform(&Resolve{Name: name}), func(to string) effect.Eff[effect.Op, string] {
+		return effect.Perform(&Send{To: to, Msg: msg})
 	})
 }
 

@@ -7,9 +7,9 @@ import (
 )
 
 func init() {
-	shared.TypeRegistryStore[ClockOp]("github.com/widmogrod/mkunion/example/compose.ClockOp")
-	shared.TypeRegistryStore[MailOp]("github.com/widmogrod/mkunion/example/compose.MailOp")
-	shared.TypeRegistryStore[Program[string]]("github.com/widmogrod/mkunion/example/compose.Program[string]")
-	shared.TypeRegistryStore[effect.Env[AppEff]]("github.com/widmogrod/mkunion/x/effect.Env[github.com/widmogrod/mkunion/example/compose.AppEff]")
-	shared.TypeRegistryStore[effect.Handler[AppEff]]("github.com/widmogrod/mkunion/x/effect.Handler[github.com/widmogrod/mkunion/example/compose.AppEff]")
+	shared.TypeRegistryStore[effect.Bind[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Bind[github.com/widmogrod/mkunion/x/effect.Op,string]")
+	shared.TypeRegistryStore[effect.Eff[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Eff[github.com/widmogrod/mkunion/x/effect.Op,string]")
+	shared.TypeRegistryStore[effect.Fail[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Fail[github.com/widmogrod/mkunion/x/effect.Op,string]")
+	shared.TypeRegistryStore[effect.Pure[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Pure[github.com/widmogrod/mkunion/x/effect.Op,string]")
+	shared.TypeRegistryStore[effect.Suspend[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Suspend[github.com/widmogrod/mkunion/x/effect.Op,string]")
 }

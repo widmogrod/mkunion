@@ -15,16 +15,16 @@ import (
 func TestNotify_resolvesThenSends(t *testing.T) {
 	program := Notify("ada", "hi")
 
-	var trace []Effect
+	var trace []effect.Op
 	fake := EffectFuncs{
 		Resolve: func(_ context.Context, op *Resolve) (string, error) { return op.Name + "@example.com", nil },
 		Send:    func(context.Context, *Send) (string, error) { return "receipt-1", nil },
 	}
-	got, err := effect.Run(context.Background(), effect.Wrap(EffectHandlerFunc(fake), effect.Trace(&trace)), program)
+	got, err := effect.Interpret(context.Background(), program, fake, effect.Trace(&trace))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)
-	assert.Equal(t, []Effect{
+	assert.Equal(t, []effect.Op{
 		&Resolve{Name: "ada"},
 		&Send{To: "ada@example.com", Msg: "hi"},
 	}, trace)
