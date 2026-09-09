@@ -424,9 +424,7 @@ The test has a "version two" of `Notify` that adds a config read and moves the c
 
 ## Part 6: two packages, one program
 
-So far one package owned the union. Real code has libraries: a `clock` package should not know about mail, and a `mailer` package should not know about time. Each owns its own union, ships programs built from it, and is tested alone. An application composes them.
-
-Go cannot build "the union of these two unions" on the fly. The application declares it, one variant per package, and `x/effect` does the rest.
+So far one package owned the union. Real code has libraries: a `clock` package should not know about mail, and a `mailer` package should not know about time. Each owns its own union, ships programs built from it, and is tested alone. An application uses both in one program, with one handler and one trace, and writes no glue for it.
 
 ### A package owns its union
 
@@ -438,51 +436,65 @@ Go cannot build "the union of these two unions" on the fly. The application decl
 --8<-- "example/compose/mailer/mailer.go:ops"
 ```
 
-**Notice** that both packages import `x/effect` and nothing else from this story. `WaitUntil` and `Notify` are programs over the package's own union. The package can test them with its own generated `EffectFuncs`, with no application around it:
+**Notice** the type of `WaitUntil` and `Notify`: `effect.Eff[effect.Op, ...]`, not `Eff[clock.Effect, ...]`. `effect.Op` is one interface for every operation of every union generated with the `handler` option. That is what lets two packages share a program. The package still tests alone, with its own generated `EffectFuncs`:
 
 ```go title="example/compose/mailer/mailer_test.go"
 --8<-- "example/compose/mailer/mailer_test.go:alone"
 ```
 
-### The application declares the union of unions
+### How one `Op` type covers every union
 
-```go title="example/compose/app.go"
---8<-- "example/compose/app.go:union"
+```go title="x/effect/op.go"
+--8<-- "x/effect/op.go:op"
 ```
 
-**Notice** `Handler`. Each package generated its own typed handler; the application only routes. Adding a package is adding a variant, and `MatchAppEffR2` then refuses to compile until `Handler` routes it.
+The `handler` option generates `Perform` and `Answer` on every variant. `Answer` asserts that the handler value has that union's `Handle` methods, and calls the right one, typed. So a handler for two packages is a value that has both packages' methods: a struct that embeds one handler per package. `effect.Fx` is the handle a body uses; it has no per-package methods, because it needs none:
 
-### Lift and Embed carry programs across
-
-```go title="x/effect/compose.go"
---8<-- "x/effect/compose.go:lift"
+```go title="x/effect/op.go"
+--8<-- "x/effect/op.go:fx"
 ```
 
-The application's `Fx` uses them. One generic method per package performs any operation of that package, typed by its `f.Returns`. Two more methods embed the programs the packages ship:
-
-```go title="example/compose/app.go"
---8<-- "example/compose/app.go:fx"
-```
-
-And a program reads as if there were one package:
+### The application
 
 ```go title="example/compose/app.go"
 --8<-- "example/compose/app.go:remind"
 ```
 
+**Notice** what is not there. No application union, no injectors, no router, no lift. `fx.Run` runs a program a package shipped; `fx.Do` performs one operation as a struct. The whole of `app.go` beyond `Remind` is one interface:
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:handlers"
+```
+
+That interface is the one thing a per-application union gave for free: the compiler's word that the handler covers every package. Here it costs one line, at the edge, where the handler enters.
+
 ### One handler, one trace, one middleware
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:world"
+```
 
 ```go title="example/compose/app_test.go"
 --8<-- "example/compose/app_test.go:one-trace"
 ```
 
-**Notice** the trace. Five operations from two packages, in the order the body asked, as one list of values. The second test in that file puts one `Retry` around both packages; the third shows a failure in `mailer` stopping the body before the last `clock` step. Nothing in Parts 3 to 5 changes: the tape, the keys, the chaos and the diff work over `AppEff` the way they worked over `MyEff`.
-
-A package's program can also be lifted as a value, with no body around it:
+**Notice** the trace. Five operations from two packages, in the order the body asked, as one list of values. The second test in that file puts one `Retry` around both packages; the third shows a failure in `mailer` stopping the body before the last `clock` step. Nothing in Parts 3 to 5 changes: the tape, the keys, the chaos and the diff work over `effect.Op` the way they worked over `MyEff`.
 
 ```go title="example/compose/app_test.go"
---8<-- "example/compose/app_test.go:lift"
+--8<-- "example/compose/app_test.go:as-is"
 ```
+
+### What this trades away
+
+An exhaustive match over the application's operations. A retry policy or a dry-run guard over `effect.Op` is a type switch with a default, not a `MatchXR1` that breaks when a package adds an operation. Per package, the match is still exhaustive, and a policy can be built per package and combined.
+
+When an application needs that exhaustive match, it can still declare its own union with one variant per package, and carry programs across with `effect.Lift` and `effect.Embed`:
+
+```go title="x/effect/compose.go"
+--8<-- "x/effect/compose.go:lift"
+```
+
+That is the strict model. It costs a wrapper union, a router and one `Fx` method per package. Start with `effect.Op` and move to it only when a compile-time check over the whole application is worth that.
 
 ## When to use this, and when not
 
@@ -500,7 +512,7 @@ A union of operations, a handler per environment, and one `Run` loop are enough 
 
     - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so the union interface `Eff` cannot have a `Then` method, and the `Bind` chain stays `any` inside, with `MyEffOf[R]` keeping it typed at the edges.
     - **The typed layer is generated.** `MyEffHandler`, `MyEffOf`, the typed dispatch, `MyEffHandlerFunc` and `MyEffDefaults` come from the `handler` union option and the `f.Returns` labels (see `x/generators/handler_generator.go`). Still by hand: `Perform`, the `Fx` convenience methods, and the two exhaustive matches in `recording_json.go` that pick the JSON codec per answer. The last one could be generated too, once serde knows about `f.Returns`.
-    - **Extensible effects are not expressible.** Go cannot say "this program uses `Log` and `Now` but not `Send`" as a type built on the fly. Part 6 uses the workable model: small unions wrapped into one application union, with `Lift` and `Embed` from `x/effect`. The other model, capability interfaces on `Fx` (`interface{ Clock; FS }`) over one application union, is not shown.
+    - **Extensible effects are not expressible.** Go cannot say "this program uses `Log` and `Now` but not `Send`" as a type built on the fly. Part 6 gets most of the way with one `Op` interface for every union plus an intersection interface for the handler. The strict model, one wrapper union per application with `Lift` and `Embed`, stays available.
     - **Generator bugs found on the way, now fixed.** The type registry generator mistook type parameters of generic methods, and type parameters inside slices and maps, for package types; it ignored `noserde` on `Eff`; and it read its own previous output back in, which kept every past mistake alive. All three are fixed on this branch, with tests, and the registry is on for every package here.
 
 ## Next steps
