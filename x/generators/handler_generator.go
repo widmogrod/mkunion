@@ -38,7 +38,7 @@ type HandlerGenerator struct {
 func NewHandlerGenerator(union *shape.UnionLike) *HandlerGenerator {
 	return &HandlerGenerator{
 		union:   union,
-		pkgUsed: PkgMap{"context": "context"},
+		pkgUsed: PkgMap{"context": "context", "fmt": "fmt"},
 	}
 }
 
@@ -127,6 +127,21 @@ func (g *HandlerGenerator) Generate() ([]byte, error) {
 		fmt.Fprintf(out, "func (r *%s) Handle%s(ctx context.Context, h %sHandler) (%s, error) {\n", v.typ, name, name, v.answer)
 		fmt.Fprintf(out, "\treturn h.Handle%s(ctx, r)\n", v.name)
 		fmt.Fprintf(out, "}\n\n")
+	}
+
+	fmt.Fprintf(out, "// Perform and Answer let a variant be performed by any handler value that has\n")
+	fmt.Fprintf(out, "// this union's Handle methods, so operations from several unions can share one\n")
+	fmt.Fprintf(out, "// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.\n")
+	for _, v := range variants {
+		fmt.Fprintf(out, "func (r *%s) Answer(ctx context.Context, h any) (%s, error) {\n", v.typ, v.answer)
+		fmt.Fprintf(out, "\ttyped, ok := h.(%sHandler)\n", name)
+		fmt.Fprintf(out, "\tif !ok {\n")
+		fmt.Fprintf(out, "\t\tvar zero %s\n", v.answer)
+		fmt.Fprintf(out, "\t\treturn zero, fmt.Errorf(\"%s: handler %%T does not implement %s\", h)\n", shape.ToGoPkgName(g.union), name+"Handler")
+		fmt.Fprintf(out, "\t}\n")
+		fmt.Fprintf(out, "\treturn typed.Handle%s(ctx, r)\n", v.name)
+		fmt.Fprintf(out, "}\n\n")
+		fmt.Fprintf(out, "func (r *%s) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }\n\n", v.typ)
 	}
 
 	fmt.Fprintf(out, "// %sHandlerFunc adapts a typed %sHandler to a plain function over the union.\n", name, name)

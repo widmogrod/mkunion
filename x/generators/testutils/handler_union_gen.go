@@ -135,6 +135,42 @@ func (r *LastSeen) HandleQuery(ctx context.Context, h QueryHandler) (time.Time, 
 	return h.HandleLastSeen(ctx, r)
 }
 
+// Perform and Answer let a variant be performed by any handler value that has
+// this union's Handle methods, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
+func (r *GetUser) Answer(ctx context.Context, h any) (*User, error) {
+	typed, ok := h.(QueryHandler)
+	if !ok {
+		var zero *User
+		return zero, fmt.Errorf("testutils: handler %T does not implement QueryHandler", h)
+	}
+	return typed.HandleGetUser(ctx, r)
+}
+
+func (r *GetUser) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *Count) Answer(ctx context.Context, h any) (int, error) {
+	typed, ok := h.(QueryHandler)
+	if !ok {
+		var zero int
+		return zero, fmt.Errorf("testutils: handler %T does not implement QueryHandler", h)
+	}
+	return typed.HandleCount(ctx, r)
+}
+
+func (r *Count) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *LastSeen) Answer(ctx context.Context, h any) (time.Time, error) {
+	typed, ok := h.(QueryHandler)
+	if !ok {
+		var zero time.Time
+		return zero, fmt.Errorf("testutils: handler %T does not implement QueryHandler", h)
+	}
+	return typed.HandleLastSeen(ctx, r)
+}
+
+func (r *LastSeen) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
 // QueryHandlerFunc adapts a typed QueryHandler to a plain function over the union.
 // The answer is the type the variant declares; only its static type is lost.
 func QueryHandlerFunc(h QueryHandler) func(ctx context.Context, op Query) (any, error) {
