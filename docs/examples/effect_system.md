@@ -12,7 +12,9 @@ You will learn:
 - how to handle **failure** the way an experienced engineer does: retry policies per operation, idempotency keys, crash and resume, seeded chaos
 - how to keep a **business refusal** ("out of budget") apart from an **infrastructure failure** ("connection reset"), so retry only ever sees the second
 - how a typed **trace** can be diffed, guarded by a policy, and turned into spans
-- how two packages that each own an effect union are **composed** into one program, with one handler and one trace
+- how packages that each own an effect union are **composed** into one program, with one handler and one trace
+- how **business refusals** (validation, rate limit, quota, out of credits) stay values that a program decides on, while a broken line stays an error that middleware retries
+- how programs are **recomposed from primitives**: a wait-and-retry, a fallback, with no body and no middleware
 
 Side note: if you want to go straight to the final code, then go into the [example/welcome/](https://github.com/widmogrod/mkunion/tree/main/example/welcome) directory. `doc.go` lists the files in reading order, and every part has a test file that shows the behaviour with real data.
 
@@ -483,6 +485,60 @@ That interface is the one thing a per-application union gave for free: the compi
 ```go title="example/compose/app_test.go"
 --8<-- "example/compose/app_test.go:as-is"
 ```
+
+### Business refusals across packages
+
+Part 4 split "the bank said no" from "the line to the bank broke". A third package, `billing`, does that for real. One operation, four refusals, each a variant:
+
+```go title="example/compose/billing/billing.go"
+--8<-- "example/compose/billing/billing.go:ops"
+```
+
+**Notice** that a refusal is an answer, so a program has to look at it, and Retry middleware cannot. And notice that the four are different problems. Validation: the request is wrong, and the same request again is wrong again. Rate limit: wait a little. Quota: wait until a time. Credits: only money helps. A single `error` would make them look the same. A union keeps them apart, and the compiler asks every program what to do with each.
+
+### Recomposing programs from primitives
+
+`billing` ships a program that handles the one refusal it can handle on its own, "too fast", by waiting as long as the bank asks and trying again. It is built from `Then`, `Return` and a match, with no body, and it composes `clock.Sleep` with its own `Charge` across packages:
+
+```go title="example/compose/billing/billing.go"
+--8<-- "example/compose/billing/billing.go:patience"
+```
+
+A program is a value, so it is tested like one, alone, with a scripted bank:
+
+```go title="example/compose/billing/billing_test.go"
+--8<-- "example/compose/billing/billing_test.go:patience-test"
+```
+
+**Notice** the last case. A connection reset is a Go error. The program never sees it; `Retry` around it does, and the trace shows two charges with no sleep between them. Patience and Retry are two different things, and the types keep them apart.
+
+### The application decides the rest
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:paid"
+```
+
+Three kinds of decision in one body. The library already handled "too fast". The application handles "quota" its own way: wait for the reset, once. Everything else is given up as a typed error that a caller can still match on. The test states every case, with the trace each one leaves:
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:paid-test"
+```
+
+And because a finished program is still a value, a fallback goes around it without opening it. `Catch` is `Then` for the failure side; `OrElse` is `Catch` that ignores the error:
+
+```go title="x/effect/combinators.go"
+--8<-- "x/effect/combinators.go:catch"
+```
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:recomposed"
+```
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:recomposed-test"
+```
+
+Two styles, then, and both are values. A body, with `fx.Do` and `fx.Run`, reads as plain Go and is right for the application's own logic. Primitives, with `Then`, `Map`, `Catch` and `Return`, need no body and are right for the small reusable pieces a package ships: a wait, a fallback, a retry with a rule. `fx.Run` lets a body use the second inside the first.
 
 ### What this trades away
 
