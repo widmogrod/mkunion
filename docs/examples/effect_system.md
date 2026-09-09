@@ -495,5 +495,6 @@ A union of operations, a handler per environment, and one `Run` loop are enough 
 ## Next steps
 
 - **[State Machines](./state_machine.md)** - the other way this repository turns behaviour into data
+- **[Typed handlers](./typed_handler.md)** - the `handler` option on its own, with no effect system around it
 - **[Generic Unions](./generic_union.md)** - the mechanics `Eff[Op, A]` builds on
 - **[Custom Pattern Matching](./custom_pattern_matching.md)** - the other tag-driven generator in this repository

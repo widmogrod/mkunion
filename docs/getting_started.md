@@ -55,7 +55,7 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   //go:tag mkunion:",no-type-registry"
   package example
   ```
-- `go:tag mkunion:"Query,handler"` - also generate a typed handler for the union. Every variant embeds `f.Returns[R]` to declare its answer type; `mkunion` generates `QueryHandler` (one typed method per variant), `QueryOf[R]`, `QueryHandlerFunc` and `QueryDefaults`. See the [effect system](./examples/effect_system.md) example.
+- `go:tag mkunion:"Query,handler"` - also generate a typed handler for the union. Every variant embeds `f.Returns[R]` to declare its answer type; `mkunion` generates `QueryHandler` (one typed method per variant), `QueryOf[R]`, `QueryHandlerFunc` and `QueryDefaults`. See [Typed handlers](./examples/typed_handler.md).
   ```go
   //go:tag mkunion:"Query,handler"
   type (
@@ -170,4 +170,5 @@ You can read more about it in the [Marshaling union in JSON](./examples/json.md)
 
 - **[Union and generic types](./examples/generic_union.md)** - Learn about generic unions
 - **[Custom Pattern Matching](./examples/custom_pattern_matching.md)** - Learn about custom pattern matching
+- **[Typed handlers](./examples/typed_handler.md)** - Learn about unions where each variant declares its own answer type
 - **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON
