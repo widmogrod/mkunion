@@ -510,6 +510,75 @@ func (r *Charge) HandleMyEff(ctx context.Context, h MyEffHandler) (f.Result[Rece
 	return h.HandleCharge(ctx, r)
 }
 
+// Perform and Answer let a variant be performed by any handler value that has
+// this union's Handle methods, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
+func (r *Log) Answer(ctx context.Context, h any) (Unit, error) {
+	typed, ok := h.(MyEffHandler)
+	if !ok {
+		var zero Unit
+		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+	}
+	return typed.HandleLog(ctx, r)
+}
+
+func (r *Log) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *Now) Answer(ctx context.Context, h any) (time.Time, error) {
+	typed, ok := h.(MyEffHandler)
+	if !ok {
+		var zero time.Time
+		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+	}
+	return typed.HandleNow(ctx, r)
+}
+
+func (r *Now) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *ReadFile) Answer(ctx context.Context, h any) ([]uint8, error) {
+	typed, ok := h.(MyEffHandler)
+	if !ok {
+		var zero []uint8
+		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+	}
+	return typed.HandleReadFile(ctx, r)
+}
+
+func (r *ReadFile) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *Random) Answer(ctx context.Context, h any) (int, error) {
+	typed, ok := h.(MyEffHandler)
+	if !ok {
+		var zero int
+		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+	}
+	return typed.HandleRandom(ctx, r)
+}
+
+func (r *Random) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *Send) Answer(ctx context.Context, h any) (string, error) {
+	typed, ok := h.(MyEffHandler)
+	if !ok {
+		var zero string
+		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+	}
+	return typed.HandleSend(ctx, r)
+}
+
+func (r *Send) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
+func (r *Charge) Answer(ctx context.Context, h any) (f.Result[Receipt, ChargeError], error) {
+	typed, ok := h.(MyEffHandler)
+	if !ok {
+		var zero f.Result[Receipt, ChargeError]
+		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+	}
+	return typed.HandleCharge(ctx, r)
+}
+
+func (r *Charge) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
+
 // MyEffHandlerFunc adapts a typed MyEffHandler to a plain function over the union.
 // The answer is the type the variant declares; only its static type is lost.
 func MyEffHandlerFunc(h MyEffHandler) func(ctx context.Context, op MyEff) (any, error) {
