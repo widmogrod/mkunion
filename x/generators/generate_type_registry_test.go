@@ -95,6 +95,31 @@ func handleFetch(result FetchResult) string {
 
 }
 
+func TestGenerateTypeRegistry_importsThePackagesOfTypeArguments(t *testing.T) {
+	log.SetLevel(log.ErrorLevel)
+	contents := `package testutils
+
+import (
+	"time"
+
+	"github.com/widmogrod/mkunion/f"
+)
+
+// The variant is from f, its type arguments from time and this package.
+// The registry names all three, so it must import time as well.
+func stamp(x *f.Ok[time.Time, User]) *f.Ok[time.Time, User] { return x }
+`
+	pkgName := "github.com/widmogrod/mkunion/x/generators/testutils"
+	walker := shape.NewIndexedTypeWalkerWithContentBody(contents, func(x *shape.IndexedTypeWalker) { x.SetPkgImportName(pkgName) })
+
+	buff, err := GenerateTypeRegistry(walker, shape.LookupShapeOnDisk)
+	require.NoError(t, err)
+
+	registry := buff.String()
+	require.Contains(t, registry, `shared.TypeRegistryStore[f.Ok[time.Time,User]]`)
+	require.Contains(t, registry, `"time"`, "a package named only inside a type argument is imported")
+}
+
 func TestGenerateTypeRegistry_noserdeUnionHasNoJSONToRegister(t *testing.T) {
 	log.SetLevel(log.ErrorLevel)
 	contents := `package testutils

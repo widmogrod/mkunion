@@ -6,9 +6,25 @@ import (
 )
 
 func init() {
+	shape.Register(billingFuncsShape())
 	shape.Register(clockFuncsShape())
 	shape.Register(mailFuncsShape())
 	shape.Register(worldShape())
+}
+
+//shape:shape
+func billingFuncsShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "billingFuncs",
+		PkgName:       "compose",
+		PkgImportName: "github.com/widmogrod/mkunion/example/compose",
+		IsAlias:       true,
+		Type: &shape.RefName{
+			Name:          "EffectFuncs",
+			PkgName:       "billing",
+			PkgImportName: "github.com/widmogrod/mkunion/example/compose/billing",
+		},
+	}
 }
 
 //shape:shape
@@ -54,6 +70,10 @@ func worldShape() shape.Shape {
 			},
 			{
 				Name: "mailFuncs",
+				Type: &shape.Any{},
+			},
+			{
+				Name: "billingFuncs",
 				Type: &shape.Any{},
 			},
 		},

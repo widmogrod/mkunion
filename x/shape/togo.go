@@ -606,6 +606,11 @@ func ExtractPkgImportNamesForTypeInitialisation(x Shape) map[string]string {
 				result[x.PkgName] = x.PkgImportName
 			}
 
+			// an instantiated struct names its type arguments: f.Ok[time.Time, E]
+			for _, y := range x.TypeParams {
+				result = joinMaps(result, ExtractPkgImportNames(y.Type))
+			}
+
 			return result
 		},
 		func(x *UnionLike) map[string]string {

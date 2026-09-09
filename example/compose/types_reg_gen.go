@@ -2,11 +2,16 @@
 package compose
 
 import (
+	"github.com/widmogrod/mkunion/example/compose/billing"
+	"github.com/widmogrod/mkunion/f"
 	"github.com/widmogrod/mkunion/x/effect"
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
 func init() {
+	shared.TypeRegistryStore[ErrNotSent]("github.com/widmogrod/mkunion/example/compose.ErrNotSent")
+	shared.TypeRegistryStore[f.Err[billing.Receipt, billing.ChargeError]]("github.com/widmogrod/mkunion/f.Err[github.com/widmogrod/mkunion/example/compose/billing.Receipt,github.com/widmogrod/mkunion/example/compose/billing.ChargeError]")
+	shared.TypeRegistryStore[f.Ok[billing.Receipt, billing.ChargeError]]("github.com/widmogrod/mkunion/f.Ok[github.com/widmogrod/mkunion/example/compose/billing.Receipt,github.com/widmogrod/mkunion/example/compose/billing.ChargeError]")
 	shared.TypeRegistryStore[effect.Bind[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Bind[github.com/widmogrod/mkunion/x/effect.Op,string]")
 	shared.TypeRegistryStore[effect.Eff[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Eff[github.com/widmogrod/mkunion/x/effect.Op,string]")
 	shared.TypeRegistryStore[effect.Fail[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Fail[github.com/widmogrod/mkunion/x/effect.Op,string]")
