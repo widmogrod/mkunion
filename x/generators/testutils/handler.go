@@ -12,11 +12,13 @@ type User struct {
 	Name string
 }
 
-// Query shows the `handler` union option: every variant embeds f.Returns[R]
-// to declare its answer type, and mkunion generates QueryHandler, QueryOf[R],
-// QueryHandlerFunc and QueryDefaults from it.
+// Query shows the typed handler: a variant embeds f.Returns[R] to declare its
+// answer type, and that marker alone makes mkunion generate one handler
+// interface per variant, QueryHandler for the whole union, HandleQuery with
+// one typed arm per variant, and Perform on every variant that has a marker.
+// Touch has no marker: it is handled with an error only, and has no Perform.
 //
-//go:tag mkunion:"Query,handler"
+//go:tag mkunion:"Query"
 type (
 	GetUser struct {
 		f.Returns[*User]
@@ -27,4 +29,5 @@ type (
 		f.Returns[time.Time]
 		ID string
 	}
+	Touch struct{ ID string }
 )

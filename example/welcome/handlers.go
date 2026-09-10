@@ -124,17 +124,20 @@ func (fk *Fake) HandleCharge(_ context.Context, op *Charge) (f.Result[Receipt, C
 // handler and override only the methods the test cares about. The compiler
 // still checks that the embedding type is a complete MyEffHandler.
 //
-// The generated MyEffDefaults answers every operation with a zero value.
-// Defaults keeps that, except a read: a test must not depend on a file it
-// never declared, so ReadFile fails loudly.
-type Defaults struct{ MyEffDefaults }
+// Nothing here is generated: every answer is written down, so a reader can
+// see what a test gets when it does not say. A read fails loudly: a test
+// must not depend on a file it never declared.
+type Defaults struct{}
 
 var _ MyEffHandler = Defaults{}
 
+func (Defaults) HandleLog(context.Context, *Log) (Unit, error)      { return Unit{}, nil }
+func (Defaults) HandleNow(context.Context, *Now) (time.Time, error) { return time.Time{}, nil }
 func (Defaults) HandleReadFile(_ context.Context, op *ReadFile) ([]byte, error) {
 	return nil, fmt.Errorf("defaults: no file %q", op.Path)
 }
-func (Defaults) HandleSend(context.Context, *Send) (string, error) { return "receipt-0", nil }
+func (Defaults) HandleRandom(context.Context, *Random) (int, error) { return 0, nil }
+func (Defaults) HandleSend(context.Context, *Send) (string, error)  { return "receipt-0", nil }
 func (Defaults) HandleCharge(context.Context, *Charge) (f.Result[Receipt, ChargeError], error) {
 	return f.MkOk[ChargeError](Receipt{ID: "charge-0"}), nil
 }

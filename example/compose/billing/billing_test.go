@@ -13,34 +13,31 @@ import (
 	"github.com/widmogrod/mkunion/x/effect"
 )
 
-type clockFuncs = clock.EffectFuncs
-
 // bank answers Charge from a script of outcomes, and sleeps by noting it.
 // It is one handler for two packages, so ChargeWithPatience can run alone.
+// It has no HandleNow: ChargeWithPatience never asks for the time, and a
+// handler only needs the methods the program performs.
 type bank struct {
-	EffectFuncs
-	clockFuncs
-	slept []time.Duration
+	charge func(ctx context.Context, op *Charge) (Outcome, error)
+	slept  []time.Duration
 }
 
 func scripted(outcomes ...Outcome) *bank {
-	b := &bank{}
-	b.EffectFuncs = EffectFuncs{
-		Charge: func(context.Context, *Charge) (Outcome, error) {
-			next := outcomes[0]
-			if len(outcomes) > 1 {
-				outcomes = outcomes[1:]
-			}
-			return next, nil
-		},
-	}
-	b.clockFuncs = clock.EffectFuncs{
-		Sleep: func(_ context.Context, op *clock.Sleep) (effect.Unit, error) {
-			b.slept = append(b.slept, op.For)
-			return effect.Unit{}, nil
-		},
-	}
-	return b
+	return &bank{charge: func(context.Context, *Charge) (Outcome, error) {
+		next := outcomes[0]
+		if len(outcomes) > 1 {
+			outcomes = outcomes[1:]
+		}
+		return next, nil
+	}}
+}
+
+func (b *bank) HandleCharge(ctx context.Context, op *Charge) (Outcome, error) {
+	return b.charge(ctx, op)
+}
+func (b *bank) HandleSleep(_ context.Context, op *clock.Sleep) (effect.Unit, error) {
+	b.slept = append(b.slept, op.For)
+	return effect.Unit{}, nil
 }
 
 func ok(id string) Outcome          { return f.MkOk[ChargeError](Receipt{ID: id}) }
@@ -94,9 +91,9 @@ func TestChargeWithPatience(t *testing.T) {
 	t.Run("a broken line is a Go error, and Retry middleware owns it", func(t *testing.T) {
 		b := scripted(ok("c1"))
 		blip := errors.New("bank: connection reset")
-		charge := b.EffectFuncs.Charge
+		charge := b.charge
 		calls := 0
-		b.EffectFuncs.Charge = func(ctx context.Context, op *Charge) (Outcome, error) {
+		b.charge = func(ctx context.Context, op *Charge) (Outcome, error) {
 			if calls++; calls == 1 {
 				return nil, blip
 			}

@@ -46,7 +46,7 @@ type Outcome = f.Result[Receipt, ChargeError]
 
 // Effect is what this package can ask for.
 //
-//go:tag mkunion:"Effect,handler"
+//go:tag mkunion:"Effect"
 type (
 	// Charge asks to take Amount from the account.
 	Charge struct {

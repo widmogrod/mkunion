@@ -65,16 +65,6 @@ func DefaultsShape() shape.Shape {
 		Name:          "Defaults",
 		PkgName:       "welcome",
 		PkgImportName: "github.com/widmogrod/mkunion/example/welcome",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "MyEffDefaults",
-				Type: &shape.RefName{
-					Name:          "MyEffDefaults",
-					PkgName:       "welcome",
-					PkgImportName: "github.com/widmogrod/mkunion/example/welcome",
-				},
-			},
-		},
 	}
 }
 

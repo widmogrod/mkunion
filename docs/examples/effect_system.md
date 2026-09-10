@@ -43,16 +43,22 @@ Each operation is a struct in a `type (...)` block tagged with `mkunion`, exactl
 
 **Notice** the embedded `f.Returns[...]` in every operation. It has no fields and no methods. It is a label that says what type of answer the operation gets back: `ReadFile` answers with `[]byte`, `Now` with `time.Time`, `Log` with `Unit`, the empty struct, because there is nothing to return. The compiler reads the label, so later `fx.Do(&Now{})` is a `time.Time` without you spelling it out.
 
-**Notice** also the `handler` option in the tag. It makes `mkunion` generate, from those labels, the one interface a handler must implement:
+**Notice** there is no option in the tag. The labels are the switch: `mkunion` sees `f.Returns` and generates, from those labels, one interface per operation and the one interface a handler must implement:
 
 ```go title="example/welcome/ops_union_gen.go (generated)"
+type (
+	MyEffLogHandler    interface { HandleLog(ctx context.Context, op *Log) (Unit, error) }
+	MyEffNowHandler    interface { HandleNow(ctx context.Context, op *Now) (time.Time, error) }
+	// ... one per operation
+)
+
 type MyEffHandler interface {
-	HandleLog(ctx context.Context, op *Log) (Unit, error)
-	HandleNow(ctx context.Context, op *Now) (time.Time, error)
-	HandleReadFile(ctx context.Context, op *ReadFile) ([]byte, error)
-	HandleRandom(ctx context.Context, op *Random) (int, error)
-	HandleSend(ctx context.Context, op *Send) (string, error)
-	HandleCharge(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error)
+	MyEffLogHandler
+	MyEffNowHandler
+	MyEffReadFileHandler
+	MyEffRandomHandler
+	MyEffSendHandler
+	MyEffChargeHandler
 }
 ```
 
@@ -104,13 +110,13 @@ They pay off from the first test.
 
 First, assert on the **trace**, as the test above does. An output test says what came out. A trace test says what the program did to get there.
 
-Second, override one method at a time. `Defaults` answers everything harmlessly. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
+Second, override one method at a time. `Defaults` is a hand-written handler with harmless answers, every one of them spelled out in `handlers.go`. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
 
 ```go title="example/welcome/part1_basics_test.go"
 --8<-- "example/welcome/part1_basics_test.go:clock-only"
 ```
 
-Third, when a handler is three closures, write three closures. `MyEffFuncs` is generated too: a struct with one function per operation, and a nil function answers with a zero value:
+Third, when a handler is closures, write closures. `HandleMyEff` is generated: the function form of a handler, one typed arm per operation, all of them required, so nothing is answered by accident:
 
 ```go title="example/welcome/part1_basics_test.go"
 --8<-- "example/welcome/part1_basics_test.go:inline-handler"
@@ -142,7 +148,7 @@ You can use everything in Part 1 without this part. Read it when you want to kno
 --8<-- "example/welcome/program.go:fx-api"
 ```
 
-`Do` takes a `MyEffOf[R]`, which `mkunion` generated next to `MyEffHandler`: an operation that answers with `R`. `*Now` satisfies `MyEffOf[time.Time]` and nothing else. Go interfaces cannot carry generic methods, so this is how "each variant has its own answer type" is spelled in Go: on the interface's type parameter, and in the handler's method signatures. `Interpret` is three lines on the same idea:
+`Do` takes a `MyEffOf[R]`, two lines in `ops.go`: an `MyEff` with a `Ret() R` method. That method comes from the embedded `f.Returns[R]`, so `*Now` satisfies `MyEffOf[time.Time]` and nothing else, and the compiler infers `R`. Go interfaces cannot carry generic methods, so this is how "each variant has its own answer type" is spelled in Go: on the variant, through its label, and in the handler's method signatures. `Interpret` feeds the handler's methods to the generated `HandleMyEff`, which is exhaustive:
 
 ```go title="example/welcome/program.go"
 --8<-- "example/welcome/program.go:interpret"
@@ -375,7 +381,7 @@ The Welcome Mail service used its own union everywhere, and got exhaustive polic
 --8<-- "example/compose/mailer/mailer.go:ops"
 ```
 
-**Notice** the type of `WaitUntil` and `Notify`: `effect.Eff[effect.Op, ...]`, not `Eff[clock.Effect, ...]`. `effect.Op` is one interface that every operation of every `handler` union satisfies. That is what lets two packages share a program. The package still tests alone, with its own generated `EffectFuncs`:
+**Notice** the type of `WaitUntil` and `Notify`: `effect.Eff[effect.Op, ...]`, not `Eff[clock.Effect, ...]`. `effect.Op` is one interface that every operation with an `f.Returns` label satisfies. That is what lets two packages share a program. The package still tests alone, with a two-method fake:
 
 ```go title="example/compose/mailer/mailer_test.go"
 --8<-- "example/compose/mailer/mailer_test.go:alone"
@@ -417,7 +423,7 @@ A handler for three packages is a value that has all three packages' methods. `H
 --8<-- "x/effect/op.go:op"
 ```
 
-The `handler` option generates `Perform` and `Answer` on every variant. `Answer` checks that the handler value has that union's `Handle` methods, and calls the right one, typed. That is the whole trick, and it is why `Handlers` above is needed: without it, a missing package is found at the first operation of that package instead of at compile time, with an error that names both.
+`mkunion` generates `Perform` on every variant that has an `f.Returns` label. `Perform` checks that the handler value has that one variant's `Handle` method, and calls it. The answer's type is carried by the label's `Ret() R`, which is how `effect.OpOf[R]` infers `R`. That is the whole trick, and it is why `Handlers` above is needed: without it, a missing package is found at the first operation of that package instead of at compile time, with an error that names the handler and the method.
 
 ### Business refusals, for real
 
@@ -488,13 +494,13 @@ A union of operations, a handler per environment, and one `Run` loop are enough 
 ??? note "Notes for contributors"
 
     - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so `Eff` cannot have a `Then` method, and the `Bind` chain stays `any` inside, with `MyEffOf[R]` and `effect.OpOf[R]` keeping it typed at the edges.
-    - **The typed layer is generated** by the `handler` union option from the `f.Returns` labels (`x/generators/handler_generator.go`). Still by hand: the `Fx` convenience methods in `welcome`, and the two exhaustive matches in `recording_json.go` that pick a JSON codec per answer.
+    - **The typed layer is generated** from the `f.Returns` labels alone, with no tag option (`x/generators/handler_generator.go`): one interface per variant, one for the union, the exhaustive `HandleX` function, and `Perform` on labelled variants. Nothing generated has a default. Still by hand: `MyEffOf[R]`, `HandlerOf` and the `Fx` convenience methods in `welcome`, and the two exhaustive matches in `recording_json.go` that pick a JSON codec per answer.
     - **Extensible effects are not expressible** in Go's type system. Part 6 gets most of the way with one `Op` interface plus an intersection interface for the handler; `Lift` and `Embed` in `x/effect/compose.go` are the strict alternative.
     - **Generator bugs fixed on the way.** The type registry mistook type parameters of generic methods, and inside slices and maps, for package types; ignored `noserde` on `Eff`; and dropped imports named only in a type argument. All have tests. One remains: the registry reads its own previous output back in (see the note in `x/shape/fromfile.go`).
 
 ## Next steps
 
 - **[State Machines](./state_machine.md)** - the other way this repository turns behaviour into data
-- **[Typed handlers](./typed_handler.md)** - the `handler` option on its own, with no effect system around it
+- **[Typed handlers](./typed_handler.md)** - `f.Returns` on its own, with no effect system around it
 - **[Generic Unions](./generic_union.md)** - the mechanics `Eff[Op, A]` builds on
 - **[Custom Pattern Matching](./custom_pattern_matching.md)** - the other tag-driven generator in this repository

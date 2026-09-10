@@ -7,6 +7,7 @@ import (
 
 func init() {
 	shape.Register(CountUsersShape())
+	shape.Register(DeleteUserShape())
 	shape.Register(FindUsersShape())
 	shape.Register(GetUserShape())
 	shape.Register(InMemoryShape())
@@ -25,6 +26,7 @@ func QueryShape() shape.Shape {
 			GetUserShape(),
 			FindUsersShape(),
 			CountUsersShape(),
+			DeleteUserShape(),
 		},
 	}
 }
@@ -121,6 +123,25 @@ func CountUsersShape() shape.Shape {
 						},
 					},
 				},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion": {
+				Value: "Query",
+			},
+		},
+	}
+}
+
+func DeleteUserShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "DeleteUser",
+		PkgName:       "query",
+		PkgImportName: "github.com/widmogrod/mkunion/example/query",
+		Fields: []*shape.FieldLike{
+			{
+				Name: "ID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
 			},
 		},
 		Tags: map[string]shape.Tag{

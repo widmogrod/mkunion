@@ -89,107 +89,58 @@ func MatchEffectR0(
 	}
 }
 
-// EffectHandler answers every Effect with the type it declares in f.Returns.
-// Adding a variant to Effect breaks every EffectHandler at compile time.
-type EffectHandler interface {
-	HandleNow(ctx context.Context, op *Now) (time.Time, error)
-	HandleSleep(ctx context.Context, op *Sleep) (effect.Unit, error)
-}
-
-// EffectOf is a Effect that answers with R.
-type EffectOf[R any] interface {
-	Effect
-	HandleEffect(ctx context.Context, h EffectHandler) (R, error)
-}
-
-var (
-	_ EffectOf[time.Time]   = (*Now)(nil)
-	_ EffectOf[effect.Unit] = (*Sleep)(nil)
+// One handler interface per Effect variant, so a handler can be assembled from
+// parts. A variant with f.Returns answers with that type; one without answers
+// with an error only.
+type (
+	EffectNowHandler interface {
+		HandleNow(ctx context.Context, op *Now) (time.Time, error)
+	}
+	EffectSleepHandler interface {
+		HandleSleep(ctx context.Context, op *Sleep) (effect.Unit, error)
+	}
 )
 
-func (r *Now) HandleEffect(ctx context.Context, h EffectHandler) (time.Time, error) {
-	return h.HandleNow(ctx, r)
+// EffectHandler handles every Effect. Adding a variant to Effect breaks every
+// EffectHandler at compile time.
+type EffectHandler interface {
+	EffectNowHandler
+	EffectSleepHandler
 }
 
-func (r *Sleep) HandleEffect(ctx context.Context, h EffectHandler) (effect.Unit, error) {
-	return h.HandleSleep(ctx, r)
+// HandleEffect hands op to the arm for its variant. Each arm is typed by the
+// variant's f.Returns; the answer comes back untyped because the arms do not
+// share a type. Exhaustive: every arm must be given.
+func HandleEffect(
+	ctx context.Context,
+	op Effect,
+	onNow func(ctx context.Context, op *Now) (time.Time, error),
+	onSleep func(ctx context.Context, op *Sleep) (effect.Unit, error),
+) (any, error) {
+	return MatchEffectR2(op,
+		func(x *Now) (any, error) { return onNow(ctx, x) },
+		func(x *Sleep) (any, error) { return onSleep(ctx, x) },
+	)
 }
 
-// Perform and Answer let a variant be performed by any handler value that has
-// this union's Handle methods, so operations from several unions can share one
-// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
-func (r *Now) Answer(ctx context.Context, h any) (time.Time, error) {
-	typed, ok := h.(EffectHandler)
+// Perform lets a variant with f.Returns be performed by any handler value that
+// has its Handle method, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
+// type is carried by f.Returns.Ret, not by Perform.
+func (r *Now) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(EffectNowHandler)
 	if !ok {
-		var zero time.Time
-		return zero, fmt.Errorf("clock: handler %T does not implement EffectHandler", h)
+		return nil, fmt.Errorf("clock: handler %T does not implement EffectNowHandler", h)
 	}
 	return typed.HandleNow(ctx, r)
 }
 
-func (r *Now) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *Sleep) Answer(ctx context.Context, h any) (effect.Unit, error) {
-	typed, ok := h.(EffectHandler)
+func (r *Sleep) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(EffectSleepHandler)
 	if !ok {
-		var zero effect.Unit
-		return zero, fmt.Errorf("clock: handler %T does not implement EffectHandler", h)
+		return nil, fmt.Errorf("clock: handler %T does not implement EffectSleepHandler", h)
 	}
 	return typed.HandleSleep(ctx, r)
-}
-
-func (r *Sleep) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-// EffectHandlerFunc adapts a typed EffectHandler to a plain function over the union.
-// The answer is the type the variant declares; only its static type is lost.
-func EffectHandlerFunc(h EffectHandler) func(ctx context.Context, op Effect) (any, error) {
-	return func(ctx context.Context, op Effect) (any, error) {
-		return MatchEffectR2(op,
-			func(x *Now) (any, error) { return x.HandleEffect(ctx, h) },
-			func(x *Sleep) (any, error) { return x.HandleEffect(ctx, h) },
-		)
-	}
-}
-
-// EffectDefaults answers every Effect with the zero value of its declared type.
-// Embed it in a handler and override only the methods you care about.
-type EffectDefaults struct{}
-
-var _ EffectHandler = EffectDefaults{}
-
-func (EffectDefaults) HandleNow(context.Context, *Now) (time.Time, error) {
-	var zero time.Time
-	return zero, nil
-}
-
-func (EffectDefaults) HandleSleep(context.Context, *Sleep) (effect.Unit, error) {
-	var zero effect.Unit
-	return zero, nil
-}
-
-// EffectFuncs is a EffectHandler made of functions, one per operation, for handlers
-// written inline. A nil function answers with the zero value of its declared type.
-type EffectFuncs struct {
-	Now   func(ctx context.Context, op *Now) (time.Time, error)
-	Sleep func(ctx context.Context, op *Sleep) (effect.Unit, error)
-}
-
-var _ EffectHandler = EffectFuncs{}
-
-func (fs EffectFuncs) HandleNow(ctx context.Context, op *Now) (time.Time, error) {
-	if fs.Now == nil {
-		var zero time.Time
-		return zero, nil
-	}
-	return fs.Now(ctx, op)
-}
-
-func (fs EffectFuncs) HandleSleep(ctx context.Context, op *Sleep) (effect.Unit, error) {
-	if fs.Sleep == nil {
-		var zero effect.Unit
-		return zero, nil
-	}
-	return fs.Sleep(ctx, op)
 }
 
 func init() {

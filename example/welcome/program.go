@@ -55,7 +55,17 @@ func (fx Fx) Send(to, msg string) string  { return fx.Do(&Send{To: to, Msg: msg}
 // and listed outermost first, so Interpret(ctx, p, h, Retry(3), Record(&tape))
 // retries around a recorder: the tape sees every attempt.
 func Interpret[A any](ctx context.Context, program Program[A], h MyEffHandler, middleware ...effect.Middleware[MyEff]) (A, error) {
-	return effect.Run(ctx, effect.Wrap(MyEffHandlerFunc(h), middleware...), program)
+	return effect.Run(ctx, effect.Wrap(HandlerOf(h), middleware...), program)
+}
+
+// HandlerOf turns a typed handler into the plain function Run walks with.
+// HandleMyEff is exhaustive: one arm per operation, here the handler's own
+// methods. Add an operation to MyEff and this line stops compiling.
+func HandlerOf(h MyEffHandler) effect.Handler[MyEff] {
+	return func(ctx context.Context, op MyEff) (any, error) {
+		return HandleMyEff(ctx, op,
+			h.HandleLog, h.HandleNow, h.HandleReadFile, h.HandleRandom, h.HandleSend, h.HandleCharge)
+	}
 }
 
 // --8<-- [end:interpret]

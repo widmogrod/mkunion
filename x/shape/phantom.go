@@ -25,3 +25,20 @@ func IsPhantomField(field *FieldLike) bool {
 	_, ok := ReturnsOf(field)
 	return ok
 }
+
+// UnionDeclaresReturns reports whether at least one variant of the union
+// embeds f.Returns[R]. Such a union gets a typed handler generated for it.
+func UnionDeclaresReturns(union *UnionLike) bool {
+	for _, v := range union.Variant {
+		st, ok := v.(*StructLike)
+		if !ok {
+			continue
+		}
+		for _, field := range st.Fields {
+			if IsPhantomField(field) {
+				return true
+			}
+		}
+	}
+	return false
+}

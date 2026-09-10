@@ -11,19 +11,29 @@ import (
 )
 
 // Ask performs one query and returns its answer with the type the variant
-// declared. R is inferred from the argument, so a caller never spells it.
-func Ask[R any](ctx context.Context, h QueryHandler, q QueryOf[R]) (R, error) {
-	return q.HandleQuery(ctx, h)
+// declared. R is inferred from the f.Returns marker, so a caller never spells
+// it. The cast is safe: Perform hands the variant to its own typed method.
+func Ask[R any](ctx context.Context, h QueryHandler, q interface {
+	Query
+	Ret() R
+	Perform(ctx context.Context, h any) (any, error)
+}) (R, error) {
+	answer, err := q.Perform(ctx, h)
+	if err != nil {
+		var zero R
+		return zero, err
+	}
+	return answer.(R), nil
 }
 
-// users answers from a map. It embeds QueryDefaults so only GetUser and
-// Count need a body; LastSeen falls back to the zero time.
+// users answers from a map. It is a complete QueryHandler: every variant has
+// a method, nothing is defaulted.
 type users struct {
-	QueryDefaults
-	byID map[string]*User
+	byID    map[string]*User
+	touched []string
 }
 
-func (u users) HandleGetUser(_ context.Context, op *GetUser) (*User, error) {
+func (u *users) HandleGetUser(_ context.Context, op *GetUser) (*User, error) {
 	user, ok := u.byID[op.ID]
 	if !ok {
 		return nil, errors.New("no such user")
@@ -31,13 +41,24 @@ func (u users) HandleGetUser(_ context.Context, op *GetUser) (*User, error) {
 	return user, nil
 }
 
-func (u users) HandleCount(context.Context, *Count) (int, error) {
+func (u *users) HandleCount(context.Context, *Count) (int, error) {
 	return len(u.byID), nil
 }
 
+func (u *users) HandleLastSeen(context.Context, *LastSeen) (time.Time, error) {
+	return time.Time{}, nil
+}
+
+func (u *users) HandleTouch(_ context.Context, op *Touch) error {
+	u.touched = append(u.touched, op.ID)
+	return nil
+}
+
+var _ QueryHandler = (*users)(nil)
+
 func TestQueryHandler_answersWithDeclaredType(t *testing.T) {
 	ctx := context.Background()
-	h := users{byID: map[string]*User{"1": {ID: "1", Name: "Ada"}}}
+	h := &users{byID: map[string]*User{"1": {ID: "1", Name: "Ada"}}}
 
 	user, err := Ask(ctx, h, &GetUser{ID: "1"}) // user is *User, no cast
 	require.NoError(t, err)
@@ -47,7 +68,7 @@ func TestQueryHandler_answersWithDeclaredType(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, count)
 
-	seen, err := Ask(ctx, h, &LastSeen{ID: "1"}) // seen is time.Time, from QueryDefaults
+	seen, err := Ask(ctx, h, &LastSeen{ID: "1"}) // seen is time.Time
 	require.NoError(t, err)
 	assert.Equal(t, time.Time{}, seen)
 
@@ -55,30 +76,40 @@ func TestQueryHandler_answersWithDeclaredType(t *testing.T) {
 	assert.EqualError(t, err, "no such user")
 }
 
-func TestQueryHandlerFunc_dispatchesEveryVariant(t *testing.T) {
+func TestHandleQuery_functionForm(t *testing.T) {
 	ctx := context.Background()
-	run := QueryHandlerFunc(users{byID: map[string]*User{"1": {ID: "1"}}})
-
-	answer, err := run(ctx, &Count{})
-	require.NoError(t, err)
-	assert.Equal(t, 1, answer, "the untyped adapter carries the declared answer as any")
-
-	answer, err = run(ctx, &GetUser{ID: "1"})
-	require.NoError(t, err)
-	assert.Equal(t, &User{ID: "1"}, answer)
-}
-
-func TestQueryFuncs_inlineHandler(t *testing.T) {
-	ctx := context.Background()
-	h := QueryFuncs{
-		Count: func(context.Context, *Count) (int, error) { return 7, nil },
+	var touched []string
+	run := func(op Query) (any, error) {
+		return HandleQuery(ctx, op,
+			func(context.Context, *GetUser) (*User, error) { return &User{ID: "1"}, nil },
+			func(context.Context, *Count) (int, error) { return 7, nil },
+			func(context.Context, *LastSeen) (time.Time, error) { return time.Time{}, nil },
+			func(_ context.Context, op *Touch) error { touched = append(touched, op.ID); return nil },
+		)
 	}
 
-	count, err := Ask(ctx, h, &Count{})
+	answer, err := run(&Count{})
 	require.NoError(t, err)
-	assert.Equal(t, 7, count)
+	assert.Equal(t, 7, answer, "the answer comes back as any, with the declared value inside")
 
-	user, err := Ask(ctx, h, &GetUser{ID: "1"})
+	answer, err = run(&Touch{ID: "x"})
 	require.NoError(t, err)
-	assert.Nil(t, user, "a nil function answers with the zero value")
+	assert.Nil(t, answer, "a variant without f.Returns answers with nil")
+	assert.Equal(t, []string{"x"}, touched)
+}
+
+// countOnly has one method. It is a QueryCountHandler, not a QueryHandler.
+type countOnly struct{}
+
+func (countOnly) HandleCount(context.Context, *Count) (int, error) { return 3, nil }
+
+func TestPerform_asksOnlyForTheVariantsMethod(t *testing.T) {
+	ctx := context.Background()
+
+	answer, err := (&Count{}).Perform(ctx, countOnly{})
+	require.NoError(t, err)
+	assert.Equal(t, 3, answer, "a handler with just HandleCount performs Count")
+
+	_, err = (&GetUser{ID: "1"}).Perform(ctx, countOnly{})
+	assert.EqualError(t, err, "testutils: handler testutils.countOnly does not implement QueryGetUserHandler")
 }

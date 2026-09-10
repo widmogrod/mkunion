@@ -13,6 +13,7 @@ type QueryVisitor interface {
 	VisitGetUser(v *GetUser) any
 	VisitFindUsers(v *FindUsers) any
 	VisitCountUsers(v *CountUsers) any
+	VisitDeleteUser(v *DeleteUser) any
 }
 
 type Query interface {
@@ -23,17 +24,20 @@ var (
 	_ Query = (*GetUser)(nil)
 	_ Query = (*FindUsers)(nil)
 	_ Query = (*CountUsers)(nil)
+	_ Query = (*DeleteUser)(nil)
 )
 
 func (r *GetUser) AcceptQuery(v QueryVisitor) any    { return v.VisitGetUser(r) }
 func (r *FindUsers) AcceptQuery(v QueryVisitor) any  { return v.VisitFindUsers(r) }
 func (r *CountUsers) AcceptQuery(v QueryVisitor) any { return v.VisitCountUsers(r) }
+func (r *DeleteUser) AcceptQuery(v QueryVisitor) any { return v.VisitDeleteUser(r) }
 
 func MatchQueryR3[T0, T1, T2 any](
 	x Query,
 	f1 func(x *GetUser) (T0, T1, T2),
 	f2 func(x *FindUsers) (T0, T1, T2),
 	f3 func(x *CountUsers) (T0, T1, T2),
+	f4 func(x *DeleteUser) (T0, T1, T2),
 ) (T0, T1, T2) {
 	switch v := x.(type) {
 	case *GetUser:
@@ -42,6 +46,8 @@ func MatchQueryR3[T0, T1, T2 any](
 		return f2(v)
 	case *CountUsers:
 		return f3(v)
+	case *DeleteUser:
+		return f4(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -54,6 +60,7 @@ func MatchQueryR2[T0, T1 any](
 	f1 func(x *GetUser) (T0, T1),
 	f2 func(x *FindUsers) (T0, T1),
 	f3 func(x *CountUsers) (T0, T1),
+	f4 func(x *DeleteUser) (T0, T1),
 ) (T0, T1) {
 	switch v := x.(type) {
 	case *GetUser:
@@ -62,6 +69,8 @@ func MatchQueryR2[T0, T1 any](
 		return f2(v)
 	case *CountUsers:
 		return f3(v)
+	case *DeleteUser:
+		return f4(v)
 	}
 	var result1 T0
 	var result2 T1
@@ -73,6 +82,7 @@ func MatchQueryR1[T0 any](
 	f1 func(x *GetUser) T0,
 	f2 func(x *FindUsers) T0,
 	f3 func(x *CountUsers) T0,
+	f4 func(x *DeleteUser) T0,
 ) T0 {
 	switch v := x.(type) {
 	case *GetUser:
@@ -81,6 +91,8 @@ func MatchQueryR1[T0 any](
 		return f2(v)
 	case *CountUsers:
 		return f3(v)
+	case *DeleteUser:
+		return f4(v)
 	}
 	var result1 T0
 	return result1
@@ -91,6 +103,7 @@ func MatchQueryR0(
 	f1 func(x *GetUser),
 	f2 func(x *FindUsers),
 	f3 func(x *CountUsers),
+	f4 func(x *DeleteUser),
 ) {
 	switch v := x.(type) {
 	case *GetUser:
@@ -99,146 +112,88 @@ func MatchQueryR0(
 		f2(v)
 	case *CountUsers:
 		f3(v)
+	case *DeleteUser:
+		f4(v)
 	}
 }
 
-// QueryHandler answers every Query with the type it declares in f.Returns.
-// Adding a variant to Query breaks every QueryHandler at compile time.
-type QueryHandler interface {
-	HandleGetUser(ctx context.Context, op *GetUser) (*User, error)
-	HandleFindUsers(ctx context.Context, op *FindUsers) ([]User, error)
-	HandleCountUsers(ctx context.Context, op *CountUsers) (int, error)
-}
-
-// QueryOf is a Query that answers with R.
-type QueryOf[R any] interface {
-	Query
-	HandleQuery(ctx context.Context, h QueryHandler) (R, error)
-}
-
-var (
-	_ QueryOf[*User]  = (*GetUser)(nil)
-	_ QueryOf[[]User] = (*FindUsers)(nil)
-	_ QueryOf[int]    = (*CountUsers)(nil)
+// One handler interface per Query variant, so a handler can be assembled from
+// parts. A variant with f.Returns answers with that type; one without answers
+// with an error only.
+type (
+	QueryGetUserHandler interface {
+		HandleGetUser(ctx context.Context, op *GetUser) (*User, error)
+	}
+	QueryFindUsersHandler interface {
+		HandleFindUsers(ctx context.Context, op *FindUsers) ([]User, error)
+	}
+	QueryCountUsersHandler interface {
+		HandleCountUsers(ctx context.Context, op *CountUsers) (int, error)
+	}
+	QueryDeleteUserHandler interface {
+		HandleDeleteUser(ctx context.Context, op *DeleteUser) error
+	}
 )
 
-func (r *GetUser) HandleQuery(ctx context.Context, h QueryHandler) (*User, error) {
-	return h.HandleGetUser(ctx, r)
+// QueryHandler handles every Query. Adding a variant to Query breaks every
+// QueryHandler at compile time.
+type QueryHandler interface {
+	QueryGetUserHandler
+	QueryFindUsersHandler
+	QueryCountUsersHandler
+	QueryDeleteUserHandler
 }
 
-func (r *FindUsers) HandleQuery(ctx context.Context, h QueryHandler) ([]User, error) {
-	return h.HandleFindUsers(ctx, r)
+// HandleQuery hands op to the arm for its variant. Each arm is typed by the
+// variant's f.Returns; the answer comes back untyped because the arms do not
+// share a type. Exhaustive: every arm must be given.
+func HandleQuery(
+	ctx context.Context,
+	op Query,
+	onGetUser func(ctx context.Context, op *GetUser) (*User, error),
+	onFindUsers func(ctx context.Context, op *FindUsers) ([]User, error),
+	onCountUsers func(ctx context.Context, op *CountUsers) (int, error),
+	onDeleteUser func(ctx context.Context, op *DeleteUser) error,
+) (any, error) {
+	return MatchQueryR2(op,
+		func(x *GetUser) (any, error) { return onGetUser(ctx, x) },
+		func(x *FindUsers) (any, error) { return onFindUsers(ctx, x) },
+		func(x *CountUsers) (any, error) { return onCountUsers(ctx, x) },
+		func(x *DeleteUser) (any, error) { return nil, onDeleteUser(ctx, x) },
+	)
 }
 
-func (r *CountUsers) HandleQuery(ctx context.Context, h QueryHandler) (int, error) {
-	return h.HandleCountUsers(ctx, r)
-}
-
-// Perform and Answer let a variant be performed by any handler value that has
-// this union's Handle methods, so operations from several unions can share one
-// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
-func (r *GetUser) Answer(ctx context.Context, h any) (*User, error) {
-	typed, ok := h.(QueryHandler)
+// Perform lets a variant with f.Returns be performed by any handler value that
+// has its Handle method, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
+// type is carried by f.Returns.Ret, not by Perform.
+func (r *GetUser) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(QueryGetUserHandler)
 	if !ok {
-		var zero *User
-		return zero, fmt.Errorf("query: handler %T does not implement QueryHandler", h)
+		return nil, fmt.Errorf("query: handler %T does not implement QueryGetUserHandler", h)
 	}
 	return typed.HandleGetUser(ctx, r)
 }
 
-func (r *GetUser) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *FindUsers) Answer(ctx context.Context, h any) ([]User, error) {
-	typed, ok := h.(QueryHandler)
+func (r *FindUsers) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(QueryFindUsersHandler)
 	if !ok {
-		var zero []User
-		return zero, fmt.Errorf("query: handler %T does not implement QueryHandler", h)
+		return nil, fmt.Errorf("query: handler %T does not implement QueryFindUsersHandler", h)
 	}
 	return typed.HandleFindUsers(ctx, r)
 }
 
-func (r *FindUsers) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *CountUsers) Answer(ctx context.Context, h any) (int, error) {
-	typed, ok := h.(QueryHandler)
+func (r *CountUsers) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(QueryCountUsersHandler)
 	if !ok {
-		var zero int
-		return zero, fmt.Errorf("query: handler %T does not implement QueryHandler", h)
+		return nil, fmt.Errorf("query: handler %T does not implement QueryCountUsersHandler", h)
 	}
 	return typed.HandleCountUsers(ctx, r)
 }
 
-func (r *CountUsers) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-// QueryHandlerFunc adapts a typed QueryHandler to a plain function over the union.
-// The answer is the type the variant declares; only its static type is lost.
-func QueryHandlerFunc(h QueryHandler) func(ctx context.Context, op Query) (any, error) {
-	return func(ctx context.Context, op Query) (any, error) {
-		return MatchQueryR2(op,
-			func(x *GetUser) (any, error) { return x.HandleQuery(ctx, h) },
-			func(x *FindUsers) (any, error) { return x.HandleQuery(ctx, h) },
-			func(x *CountUsers) (any, error) { return x.HandleQuery(ctx, h) },
-		)
-	}
-}
-
-// QueryDefaults answers every Query with the zero value of its declared type.
-// Embed it in a handler and override only the methods you care about.
-type QueryDefaults struct{}
-
-var _ QueryHandler = QueryDefaults{}
-
-func (QueryDefaults) HandleGetUser(context.Context, *GetUser) (*User, error) {
-	var zero *User
-	return zero, nil
-}
-
-func (QueryDefaults) HandleFindUsers(context.Context, *FindUsers) ([]User, error) {
-	var zero []User
-	return zero, nil
-}
-
-func (QueryDefaults) HandleCountUsers(context.Context, *CountUsers) (int, error) {
-	var zero int
-	return zero, nil
-}
-
-// QueryFuncs is a QueryHandler made of functions, one per operation, for handlers
-// written inline. A nil function answers with the zero value of its declared type.
-type QueryFuncs struct {
-	GetUser    func(ctx context.Context, op *GetUser) (*User, error)
-	FindUsers  func(ctx context.Context, op *FindUsers) ([]User, error)
-	CountUsers func(ctx context.Context, op *CountUsers) (int, error)
-}
-
-var _ QueryHandler = QueryFuncs{}
-
-func (fs QueryFuncs) HandleGetUser(ctx context.Context, op *GetUser) (*User, error) {
-	if fs.GetUser == nil {
-		var zero *User
-		return zero, nil
-	}
-	return fs.GetUser(ctx, op)
-}
-
-func (fs QueryFuncs) HandleFindUsers(ctx context.Context, op *FindUsers) ([]User, error) {
-	if fs.FindUsers == nil {
-		var zero []User
-		return zero, nil
-	}
-	return fs.FindUsers(ctx, op)
-}
-
-func (fs QueryFuncs) HandleCountUsers(ctx context.Context, op *CountUsers) (int, error) {
-	if fs.CountUsers == nil {
-		var zero int
-		return zero, nil
-	}
-	return fs.CountUsers(ctx, op)
-}
-
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.CountUsers", CountUsersFromJSON, CountUsersToJSON)
+	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.DeleteUser", DeleteUserFromJSON, DeleteUserToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.FindUsers", FindUsersFromJSON, FindUsersToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.GetUser", GetUserFromJSON, GetUserToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.Query", QueryFromJSON, QueryToJSON)
@@ -249,6 +204,7 @@ type QueryUnionJSON struct {
 	GetUser    json.RawMessage `json:"query.GetUser,omitempty"`
 	FindUsers  json.RawMessage `json:"query.FindUsers,omitempty"`
 	CountUsers json.RawMessage `json:"query.CountUsers,omitempty"`
+	DeleteUser json.RawMessage `json:"query.DeleteUser,omitempty"`
 }
 
 func QueryFromJSON(x []byte) (Query, error) {
@@ -271,6 +227,8 @@ func QueryFromJSON(x []byte) (Query, error) {
 		return FindUsersFromJSON(data.FindUsers)
 	case "query.CountUsers":
 		return CountUsersFromJSON(data.CountUsers)
+	case "query.DeleteUser":
+		return DeleteUserFromJSON(data.DeleteUser)
 	}
 
 	if data.GetUser != nil {
@@ -279,6 +237,8 @@ func QueryFromJSON(x []byte) (Query, error) {
 		return FindUsersFromJSON(data.FindUsers)
 	} else if data.CountUsers != nil {
 		return CountUsersFromJSON(data.CountUsers)
+	} else if data.DeleteUser != nil {
+		return DeleteUserFromJSON(data.DeleteUser)
 	}
 	return nil, fmt.Errorf("query.QueryFromJSON: unknown type: %s", data.Type)
 }
@@ -317,6 +277,16 @@ func QueryToJSON(x Query) ([]byte, error) {
 			return json.Marshal(QueryUnionJSON{
 				Type:       "query.CountUsers",
 				CountUsers: body,
+			})
+		},
+		func(y *DeleteUser) ([]byte, error) {
+			body, err := DeleteUserToJSON(y)
+			if err != nil {
+				return nil, fmt.Errorf("query.QueryToJSON: %w", err)
+			}
+			return json.Marshal(QueryUnionJSON{
+				Type:       "query.DeleteUser",
+				DeleteUser: body,
 			})
 		},
 	)
@@ -529,6 +499,89 @@ func (r *CountUsers) _unmarshalJSONCountUsers(data []byte) (CountUsers, error) {
 	err := json.Unmarshal(data, &partial)
 	if err != nil {
 		return result, fmt.Errorf("query: CountUsers._unmarshalJSONCountUsers: native struct unwrap; %w", err)
+	}
+	return result, nil
+}
+
+func DeleteUserFromJSON(x []byte) (*DeleteUser, error) {
+	result := new(DeleteUser)
+	err := result.UnmarshalJSON(x)
+	if err != nil {
+		return nil, fmt.Errorf("query.DeleteUserFromJSON: %w", err)
+	}
+	return result, nil
+}
+
+func DeleteUserToJSON(x *DeleteUser) ([]byte, error) {
+	return x.MarshalJSON()
+}
+
+var (
+	_ json.Unmarshaler = (*DeleteUser)(nil)
+	_ json.Marshaler   = (*DeleteUser)(nil)
+)
+
+func (r *DeleteUser) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	return r._marshalJSONDeleteUser(*r)
+}
+func (r *DeleteUser) _marshalJSONDeleteUser(x DeleteUser) ([]byte, error) {
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
+	var err error
+	var fieldID []byte
+	fieldID, err = r._marshalJSONstring(x.ID)
+	if err != nil {
+		return nil, fmt.Errorf("query: DeleteUser._marshalJSONDeleteUser: field name ID; %w", err)
+	}
+	if len(fieldID) == 0 {
+		fieldID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"ID\":")
+	buf.Write(fieldID)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+func (r *DeleteUser) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("query: DeleteUser._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *DeleteUser) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONDeleteUser(data)
+	if err != nil {
+		return fmt.Errorf("query: DeleteUser.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *DeleteUser) _unmarshalJSONDeleteUser(data []byte) (DeleteUser, error) {
+	result := DeleteUser{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("query: DeleteUser._unmarshalJSONDeleteUser: native struct unwrap; %w", err)
+	}
+	if fieldID, ok := partial["ID"]; ok {
+		result.ID, err = r._unmarshalJSONstring(fieldID)
+		if err != nil {
+			return result, fmt.Errorf("query: DeleteUser._unmarshalJSONDeleteUser: field ID; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *DeleteUser) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("query: DeleteUser._unmarshalJSONstring: native primitive unwrap; %w", err)
 	}
 	return result, nil
 }

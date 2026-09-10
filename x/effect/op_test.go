@@ -7,40 +7,43 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/widmogrod/mkunion/f"
 )
 
-// Two hand-written "unions", the way the handler option would generate them:
-// each operation performs itself against any handler that has its method.
+// Two hand-written "unions", the way mkunion generates them from f.Returns:
+// each operation performs itself against any handler that has its method,
+// and the embedded marker's Ret carries the answer type.
 
-type greet struct{ Name string }
+type greet struct {
+	f.Returns[string]
+	Name string
+}
 
 type greeter interface {
 	HandleGreet(ctx context.Context, op *greet) (string, error)
 }
 
-func (g *greet) Answer(_ context.Context, h any) (string, error) {
+func (g *greet) Perform(_ context.Context, h any) (any, error) {
 	typed, ok := h.(greeter)
 	if !ok {
-		return "", errors.New("a: handler does not implement greeter")
+		return nil, errors.New("a: handler does not implement greeter")
 	}
 	return typed.HandleGreet(context.Background(), g)
 }
-func (g *greet) Perform(ctx context.Context, h any) (any, error) { return g.Answer(ctx, h) }
 
-type count struct{}
+type count struct{ f.Returns[int] }
 
 type counter interface {
 	HandleCount(ctx context.Context, op *count) (int, error)
 }
 
-func (c *count) Answer(_ context.Context, h any) (int, error) {
+func (c *count) Perform(_ context.Context, h any) (any, error) {
 	typed, ok := h.(counter)
 	if !ok {
-		return 0, errors.New("b: handler does not implement counter")
+		return nil, errors.New("b: handler does not implement counter")
 	}
 	return typed.HandleCount(context.Background(), c)
 }
-func (c *count) Perform(ctx context.Context, h any) (any, error) { return c.Answer(ctx, h) }
 
 // both is one handler value for both unions.
 type both struct{ n int }

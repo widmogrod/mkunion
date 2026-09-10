@@ -460,235 +460,114 @@ func MatchMyEffR0(
 	}
 }
 
-// MyEffHandler answers every MyEff with the type it declares in f.Returns.
-// Adding a variant to MyEff breaks every MyEffHandler at compile time.
-type MyEffHandler interface {
-	HandleLog(ctx context.Context, op *Log) (Unit, error)
-	HandleNow(ctx context.Context, op *Now) (time.Time, error)
-	HandleReadFile(ctx context.Context, op *ReadFile) ([]uint8, error)
-	HandleRandom(ctx context.Context, op *Random) (int, error)
-	HandleSend(ctx context.Context, op *Send) (string, error)
-	HandleCharge(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error)
-}
-
-// MyEffOf is a MyEff that answers with R.
-type MyEffOf[R any] interface {
-	MyEff
-	HandleMyEff(ctx context.Context, h MyEffHandler) (R, error)
-}
-
-var (
-	_ MyEffOf[Unit]                           = (*Log)(nil)
-	_ MyEffOf[time.Time]                      = (*Now)(nil)
-	_ MyEffOf[[]uint8]                        = (*ReadFile)(nil)
-	_ MyEffOf[int]                            = (*Random)(nil)
-	_ MyEffOf[string]                         = (*Send)(nil)
-	_ MyEffOf[f.Result[Receipt, ChargeError]] = (*Charge)(nil)
+// One handler interface per MyEff variant, so a handler can be assembled from
+// parts. A variant with f.Returns answers with that type; one without answers
+// with an error only.
+type (
+	MyEffLogHandler interface {
+		HandleLog(ctx context.Context, op *Log) (Unit, error)
+	}
+	MyEffNowHandler interface {
+		HandleNow(ctx context.Context, op *Now) (time.Time, error)
+	}
+	MyEffReadFileHandler interface {
+		HandleReadFile(ctx context.Context, op *ReadFile) ([]uint8, error)
+	}
+	MyEffRandomHandler interface {
+		HandleRandom(ctx context.Context, op *Random) (int, error)
+	}
+	MyEffSendHandler interface {
+		HandleSend(ctx context.Context, op *Send) (string, error)
+	}
+	MyEffChargeHandler interface {
+		HandleCharge(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error)
+	}
 )
 
-func (r *Log) HandleMyEff(ctx context.Context, h MyEffHandler) (Unit, error) {
-	return h.HandleLog(ctx, r)
+// MyEffHandler handles every MyEff. Adding a variant to MyEff breaks every
+// MyEffHandler at compile time.
+type MyEffHandler interface {
+	MyEffLogHandler
+	MyEffNowHandler
+	MyEffReadFileHandler
+	MyEffRandomHandler
+	MyEffSendHandler
+	MyEffChargeHandler
 }
 
-func (r *Now) HandleMyEff(ctx context.Context, h MyEffHandler) (time.Time, error) {
-	return h.HandleNow(ctx, r)
+// HandleMyEff hands op to the arm for its variant. Each arm is typed by the
+// variant's f.Returns; the answer comes back untyped because the arms do not
+// share a type. Exhaustive: every arm must be given.
+func HandleMyEff(
+	ctx context.Context,
+	op MyEff,
+	onLog func(ctx context.Context, op *Log) (Unit, error),
+	onNow func(ctx context.Context, op *Now) (time.Time, error),
+	onReadFile func(ctx context.Context, op *ReadFile) ([]uint8, error),
+	onRandom func(ctx context.Context, op *Random) (int, error),
+	onSend func(ctx context.Context, op *Send) (string, error),
+	onCharge func(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error),
+) (any, error) {
+	return MatchMyEffR2(op,
+		func(x *Log) (any, error) { return onLog(ctx, x) },
+		func(x *Now) (any, error) { return onNow(ctx, x) },
+		func(x *ReadFile) (any, error) { return onReadFile(ctx, x) },
+		func(x *Random) (any, error) { return onRandom(ctx, x) },
+		func(x *Send) (any, error) { return onSend(ctx, x) },
+		func(x *Charge) (any, error) { return onCharge(ctx, x) },
+	)
 }
 
-func (r *ReadFile) HandleMyEff(ctx context.Context, h MyEffHandler) ([]uint8, error) {
-	return h.HandleReadFile(ctx, r)
-}
-
-func (r *Random) HandleMyEff(ctx context.Context, h MyEffHandler) (int, error) {
-	return h.HandleRandom(ctx, r)
-}
-
-func (r *Send) HandleMyEff(ctx context.Context, h MyEffHandler) (string, error) {
-	return h.HandleSend(ctx, r)
-}
-
-func (r *Charge) HandleMyEff(ctx context.Context, h MyEffHandler) (f.Result[Receipt, ChargeError], error) {
-	return h.HandleCharge(ctx, r)
-}
-
-// Perform and Answer let a variant be performed by any handler value that has
-// this union's Handle methods, so operations from several unions can share one
-// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
-func (r *Log) Answer(ctx context.Context, h any) (Unit, error) {
-	typed, ok := h.(MyEffHandler)
+// Perform lets a variant with f.Returns be performed by any handler value that
+// has its Handle method, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
+// type is carried by f.Returns.Ret, not by Perform.
+func (r *Log) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(MyEffLogHandler)
 	if !ok {
-		var zero Unit
-		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+		return nil, fmt.Errorf("welcome: handler %T does not implement MyEffLogHandler", h)
 	}
 	return typed.HandleLog(ctx, r)
 }
 
-func (r *Log) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *Now) Answer(ctx context.Context, h any) (time.Time, error) {
-	typed, ok := h.(MyEffHandler)
+func (r *Now) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(MyEffNowHandler)
 	if !ok {
-		var zero time.Time
-		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+		return nil, fmt.Errorf("welcome: handler %T does not implement MyEffNowHandler", h)
 	}
 	return typed.HandleNow(ctx, r)
 }
 
-func (r *Now) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *ReadFile) Answer(ctx context.Context, h any) ([]uint8, error) {
-	typed, ok := h.(MyEffHandler)
+func (r *ReadFile) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(MyEffReadFileHandler)
 	if !ok {
-		var zero []uint8
-		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+		return nil, fmt.Errorf("welcome: handler %T does not implement MyEffReadFileHandler", h)
 	}
 	return typed.HandleReadFile(ctx, r)
 }
 
-func (r *ReadFile) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *Random) Answer(ctx context.Context, h any) (int, error) {
-	typed, ok := h.(MyEffHandler)
+func (r *Random) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(MyEffRandomHandler)
 	if !ok {
-		var zero int
-		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+		return nil, fmt.Errorf("welcome: handler %T does not implement MyEffRandomHandler", h)
 	}
 	return typed.HandleRandom(ctx, r)
 }
 
-func (r *Random) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *Send) Answer(ctx context.Context, h any) (string, error) {
-	typed, ok := h.(MyEffHandler)
+func (r *Send) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(MyEffSendHandler)
 	if !ok {
-		var zero string
-		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+		return nil, fmt.Errorf("welcome: handler %T does not implement MyEffSendHandler", h)
 	}
 	return typed.HandleSend(ctx, r)
 }
 
-func (r *Send) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *Charge) Answer(ctx context.Context, h any) (f.Result[Receipt, ChargeError], error) {
-	typed, ok := h.(MyEffHandler)
+func (r *Charge) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(MyEffChargeHandler)
 	if !ok {
-		var zero f.Result[Receipt, ChargeError]
-		return zero, fmt.Errorf("welcome: handler %T does not implement MyEffHandler", h)
+		return nil, fmt.Errorf("welcome: handler %T does not implement MyEffChargeHandler", h)
 	}
 	return typed.HandleCharge(ctx, r)
-}
-
-func (r *Charge) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-// MyEffHandlerFunc adapts a typed MyEffHandler to a plain function over the union.
-// The answer is the type the variant declares; only its static type is lost.
-func MyEffHandlerFunc(h MyEffHandler) func(ctx context.Context, op MyEff) (any, error) {
-	return func(ctx context.Context, op MyEff) (any, error) {
-		return MatchMyEffR2(op,
-			func(x *Log) (any, error) { return x.HandleMyEff(ctx, h) },
-			func(x *Now) (any, error) { return x.HandleMyEff(ctx, h) },
-			func(x *ReadFile) (any, error) { return x.HandleMyEff(ctx, h) },
-			func(x *Random) (any, error) { return x.HandleMyEff(ctx, h) },
-			func(x *Send) (any, error) { return x.HandleMyEff(ctx, h) },
-			func(x *Charge) (any, error) { return x.HandleMyEff(ctx, h) },
-		)
-	}
-}
-
-// MyEffDefaults answers every MyEff with the zero value of its declared type.
-// Embed it in a handler and override only the methods you care about.
-type MyEffDefaults struct{}
-
-var _ MyEffHandler = MyEffDefaults{}
-
-func (MyEffDefaults) HandleLog(context.Context, *Log) (Unit, error) {
-	var zero Unit
-	return zero, nil
-}
-
-func (MyEffDefaults) HandleNow(context.Context, *Now) (time.Time, error) {
-	var zero time.Time
-	return zero, nil
-}
-
-func (MyEffDefaults) HandleReadFile(context.Context, *ReadFile) ([]uint8, error) {
-	var zero []uint8
-	return zero, nil
-}
-
-func (MyEffDefaults) HandleRandom(context.Context, *Random) (int, error) {
-	var zero int
-	return zero, nil
-}
-
-func (MyEffDefaults) HandleSend(context.Context, *Send) (string, error) {
-	var zero string
-	return zero, nil
-}
-
-func (MyEffDefaults) HandleCharge(context.Context, *Charge) (f.Result[Receipt, ChargeError], error) {
-	var zero f.Result[Receipt, ChargeError]
-	return zero, nil
-}
-
-// MyEffFuncs is a MyEffHandler made of functions, one per operation, for handlers
-// written inline. A nil function answers with the zero value of its declared type.
-type MyEffFuncs struct {
-	Log      func(ctx context.Context, op *Log) (Unit, error)
-	Now      func(ctx context.Context, op *Now) (time.Time, error)
-	ReadFile func(ctx context.Context, op *ReadFile) ([]uint8, error)
-	Random   func(ctx context.Context, op *Random) (int, error)
-	Send     func(ctx context.Context, op *Send) (string, error)
-	Charge   func(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error)
-}
-
-var _ MyEffHandler = MyEffFuncs{}
-
-func (fs MyEffFuncs) HandleLog(ctx context.Context, op *Log) (Unit, error) {
-	if fs.Log == nil {
-		var zero Unit
-		return zero, nil
-	}
-	return fs.Log(ctx, op)
-}
-
-func (fs MyEffFuncs) HandleNow(ctx context.Context, op *Now) (time.Time, error) {
-	if fs.Now == nil {
-		var zero time.Time
-		return zero, nil
-	}
-	return fs.Now(ctx, op)
-}
-
-func (fs MyEffFuncs) HandleReadFile(ctx context.Context, op *ReadFile) ([]uint8, error) {
-	if fs.ReadFile == nil {
-		var zero []uint8
-		return zero, nil
-	}
-	return fs.ReadFile(ctx, op)
-}
-
-func (fs MyEffFuncs) HandleRandom(ctx context.Context, op *Random) (int, error) {
-	if fs.Random == nil {
-		var zero int
-		return zero, nil
-	}
-	return fs.Random(ctx, op)
-}
-
-func (fs MyEffFuncs) HandleSend(ctx context.Context, op *Send) (string, error) {
-	if fs.Send == nil {
-		var zero string
-		return zero, nil
-	}
-	return fs.Send(ctx, op)
-}
-
-func (fs MyEffFuncs) HandleCharge(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error) {
-	if fs.Charge == nil {
-		var zero f.Result[Receipt, ChargeError]
-		return zero, nil
-	}
-	return fs.Charge(ctx, op)
 }
 
 func init() {

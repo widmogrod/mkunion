@@ -145,7 +145,7 @@ func generateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		}
 		shapesContents.Write(contents)
 
-		if shape.TagHasOption(union.Tags, "mkunion", "handler") {
+		if shape.UnionDeclaresReturns(union) {
 			genHandler := generators.NewHandlerGenerator(union)
 			contents, err = genHandler.Generate()
 			if err != nil {

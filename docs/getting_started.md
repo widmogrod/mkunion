@@ -55,9 +55,9 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   //go:tag mkunion:",no-type-registry"
   package example
   ```
-- `go:tag mkunion:"Query,handler"` - also generate a typed handler for the union. Every variant embeds `f.Returns[R]` to declare its answer type; `mkunion` generates `QueryHandler` (one typed method per variant), `QueryOf[R]`, `QueryHandlerFunc` and `QueryDefaults`. See [Typed handlers](./examples/typed_handler.md).
+- `f.Returns[R]` embedded in a variant - declares the variant's answer type. A union with at least one such variant also gets a typed handler: one interface per variant, `QueryHandler` for the whole union, and an exhaustive `HandleQuery` function with one typed arm per variant. No tag option is needed. See [Typed handlers](./examples/typed_handler.md).
   ```go
-  //go:tag mkunion:"Query,handler"
+  //go:tag mkunion:"Query"
   type (
       GetUser struct{ f.Returns[*User]; ID string }
       Count   struct{ f.Returns[int] }

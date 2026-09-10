@@ -87,107 +87,58 @@ func MatchEffectR0(
 	}
 }
 
-// EffectHandler answers every Effect with the type it declares in f.Returns.
-// Adding a variant to Effect breaks every EffectHandler at compile time.
-type EffectHandler interface {
-	HandleResolve(ctx context.Context, op *Resolve) (string, error)
-	HandleSend(ctx context.Context, op *Send) (string, error)
-}
-
-// EffectOf is a Effect that answers with R.
-type EffectOf[R any] interface {
-	Effect
-	HandleEffect(ctx context.Context, h EffectHandler) (R, error)
-}
-
-var (
-	_ EffectOf[string] = (*Resolve)(nil)
-	_ EffectOf[string] = (*Send)(nil)
+// One handler interface per Effect variant, so a handler can be assembled from
+// parts. A variant with f.Returns answers with that type; one without answers
+// with an error only.
+type (
+	EffectResolveHandler interface {
+		HandleResolve(ctx context.Context, op *Resolve) (string, error)
+	}
+	EffectSendHandler interface {
+		HandleSend(ctx context.Context, op *Send) (string, error)
+	}
 )
 
-func (r *Resolve) HandleEffect(ctx context.Context, h EffectHandler) (string, error) {
-	return h.HandleResolve(ctx, r)
+// EffectHandler handles every Effect. Adding a variant to Effect breaks every
+// EffectHandler at compile time.
+type EffectHandler interface {
+	EffectResolveHandler
+	EffectSendHandler
 }
 
-func (r *Send) HandleEffect(ctx context.Context, h EffectHandler) (string, error) {
-	return h.HandleSend(ctx, r)
+// HandleEffect hands op to the arm for its variant. Each arm is typed by the
+// variant's f.Returns; the answer comes back untyped because the arms do not
+// share a type. Exhaustive: every arm must be given.
+func HandleEffect(
+	ctx context.Context,
+	op Effect,
+	onResolve func(ctx context.Context, op *Resolve) (string, error),
+	onSend func(ctx context.Context, op *Send) (string, error),
+) (any, error) {
+	return MatchEffectR2(op,
+		func(x *Resolve) (any, error) { return onResolve(ctx, x) },
+		func(x *Send) (any, error) { return onSend(ctx, x) },
+	)
 }
 
-// Perform and Answer let a variant be performed by any handler value that has
-// this union's Handle methods, so operations from several unions can share one
-// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.
-func (r *Resolve) Answer(ctx context.Context, h any) (string, error) {
-	typed, ok := h.(EffectHandler)
+// Perform lets a variant with f.Returns be performed by any handler value that
+// has its Handle method, so operations from several unions can share one
+// program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
+// type is carried by f.Returns.Ret, not by Perform.
+func (r *Resolve) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(EffectResolveHandler)
 	if !ok {
-		var zero string
-		return zero, fmt.Errorf("mailer: handler %T does not implement EffectHandler", h)
+		return nil, fmt.Errorf("mailer: handler %T does not implement EffectResolveHandler", h)
 	}
 	return typed.HandleResolve(ctx, r)
 }
 
-func (r *Resolve) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-func (r *Send) Answer(ctx context.Context, h any) (string, error) {
-	typed, ok := h.(EffectHandler)
+func (r *Send) Perform(ctx context.Context, h any) (any, error) {
+	typed, ok := h.(EffectSendHandler)
 	if !ok {
-		var zero string
-		return zero, fmt.Errorf("mailer: handler %T does not implement EffectHandler", h)
+		return nil, fmt.Errorf("mailer: handler %T does not implement EffectSendHandler", h)
 	}
 	return typed.HandleSend(ctx, r)
-}
-
-func (r *Send) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }
-
-// EffectHandlerFunc adapts a typed EffectHandler to a plain function over the union.
-// The answer is the type the variant declares; only its static type is lost.
-func EffectHandlerFunc(h EffectHandler) func(ctx context.Context, op Effect) (any, error) {
-	return func(ctx context.Context, op Effect) (any, error) {
-		return MatchEffectR2(op,
-			func(x *Resolve) (any, error) { return x.HandleEffect(ctx, h) },
-			func(x *Send) (any, error) { return x.HandleEffect(ctx, h) },
-		)
-	}
-}
-
-// EffectDefaults answers every Effect with the zero value of its declared type.
-// Embed it in a handler and override only the methods you care about.
-type EffectDefaults struct{}
-
-var _ EffectHandler = EffectDefaults{}
-
-func (EffectDefaults) HandleResolve(context.Context, *Resolve) (string, error) {
-	var zero string
-	return zero, nil
-}
-
-func (EffectDefaults) HandleSend(context.Context, *Send) (string, error) {
-	var zero string
-	return zero, nil
-}
-
-// EffectFuncs is a EffectHandler made of functions, one per operation, for handlers
-// written inline. A nil function answers with the zero value of its declared type.
-type EffectFuncs struct {
-	Resolve func(ctx context.Context, op *Resolve) (string, error)
-	Send    func(ctx context.Context, op *Send) (string, error)
-}
-
-var _ EffectHandler = EffectFuncs{}
-
-func (fs EffectFuncs) HandleResolve(ctx context.Context, op *Resolve) (string, error) {
-	if fs.Resolve == nil {
-		var zero string
-		return zero, nil
-	}
-	return fs.Resolve(ctx, op)
-}
-
-func (fs EffectFuncs) HandleSend(ctx context.Context, op *Send) (string, error) {
-	if fs.Send == nil {
-		var zero string
-		return zero, nil
-	}
-	return fs.Send(ctx, op)
 }
 
 func init() {

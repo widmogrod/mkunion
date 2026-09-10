@@ -223,7 +223,7 @@ func TestPart4_crashAtEveryStepThenResume(t *testing.T) {
 			// Second life: replay the facts, then continue live. Same key prefix, so
 			// step 3 is still "run-1/3" even when it is replayed. Replay is a handler
 			// of its own, so this goes through Run and Wrap, the pieces under Interpret.
-			second := effect.Wrap(effect.Replay(facts, MyEffHandlerFunc(live)), effect.StepKeys[MyEff]("run-1"))
+			second := effect.Wrap(effect.Replay(facts, HandlerOf(live)), effect.StepKeys[MyEff]("run-1"))
 			got, err := effect.Run(context.Background(), second, program)
 
 			require.NoError(t, err)

@@ -8,7 +8,7 @@
 // Middleware sees every operation of every program, in order, as data: Trace,
 // Record and Replay, Retry, StepKeys, Guard, Spans, fault injection, Chaos.
 //
-// Op is any type, usually a mkunion union with the `handler` option, so that
+// Op is any type, usually a mkunion union whose variants embed f.Returns, so that
 // operations and handlers are typed per variant. This package does not know
 // any particular union; example/welcome is the walkthrough, and
 // example/compose shows two unions from two packages in one program.

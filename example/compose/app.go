@@ -1,7 +1,7 @@
 // Package compose is an application that uses three effect packages, clock,
 // mailer and billing, in one program with one handler and one trace.
 //
-// There is no glue. Every operation generated with the `handler` option is an
+// There is no glue. Every union variant that embeds f.Returns is an
 // effect.Op, so programs from every package are the same type as this one,
 // and a handler is any value that has every package's Handle methods. The one
 // line this package adds, Handlers, asks the compiler to check that.

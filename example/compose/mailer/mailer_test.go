@@ -11,16 +11,22 @@ import (
 
 // --8<-- [start:alone]
 
+// fake answers both operations of this package. Two methods, nothing generated.
+type fake struct{}
+
+func (fake) HandleResolve(_ context.Context, op *Resolve) (string, error) {
+	return op.Name + "@example.com", nil
+}
+func (fake) HandleSend(context.Context, *Send) (string, error) { return "receipt-1", nil }
+
+var _ EffectHandler = fake{} // the compiler checks that every operation is answered
+
 // The package is tested on its own, with no application around it.
 func TestNotify_resolvesThenSends(t *testing.T) {
 	program := Notify("ada", "hi")
 
 	var trace []effect.Op
-	fake := EffectFuncs{
-		Resolve: func(_ context.Context, op *Resolve) (string, error) { return op.Name + "@example.com", nil },
-		Send:    func(context.Context, *Send) (string, error) { return "receipt-1", nil },
-	}
-	got, err := effect.Interpret(context.Background(), program, fake, effect.Trace(&trace))
+	got, err := effect.Interpret(context.Background(), program, fake{}, effect.Trace(&trace))
 
 	require.NoError(t, err)
 	assert.Equal(t, "receipt-1", got)

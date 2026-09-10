@@ -7,10 +7,9 @@ import (
 
 func init() {
 	shared.TypeRegistryStore[CountUsers]("github.com/widmogrod/mkunion/example/query.CountUsers")
+	shared.TypeRegistryStore[DeleteUser]("github.com/widmogrod/mkunion/example/query.DeleteUser")
 	shared.TypeRegistryStore[FindUsers]("github.com/widmogrod/mkunion/example/query.FindUsers")
 	shared.TypeRegistryStore[GetUser]("github.com/widmogrod/mkunion/example/query.GetUser")
-	shared.TypeRegistryStore[QueryOf[*User]]("github.com/widmogrod/mkunion/example/query.QueryOf[*github.com/widmogrod/mkunion/example/query.User]")
-	shared.TypeRegistryStore[QueryOf[[]User]]("github.com/widmogrod/mkunion/example/query.QueryOf[[]github.com/widmogrod/mkunion/example/query.User]")
-	shared.TypeRegistryStore[QueryOf[int]]("github.com/widmogrod/mkunion/example/query.QueryOf[int]")
+	shared.TypeRegistryStore[InMemory]("github.com/widmogrod/mkunion/example/query.InMemory")
 	shared.TypeRegistryStore[User]("github.com/widmogrod/mkunion/example/query.User")
 }

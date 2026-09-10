@@ -4,12 +4,9 @@ package clock
 import (
 	"github.com/widmogrod/mkunion/x/effect"
 	"github.com/widmogrod/mkunion/x/shared"
-	"time"
 )
 
 func init() {
-	shared.TypeRegistryStore[EffectOf[effect.Unit]]("github.com/widmogrod/mkunion/example/compose/clock.EffectOf[github.com/widmogrod/mkunion/x/effect.Unit]")
-	shared.TypeRegistryStore[EffectOf[time.Time]]("github.com/widmogrod/mkunion/example/compose/clock.EffectOf[time.Time]")
 	shared.TypeRegistryStore[Now]("github.com/widmogrod/mkunion/example/compose/clock.Now")
 	shared.TypeRegistryStore[Sleep]("github.com/widmogrod/mkunion/example/compose/clock.Sleep")
 	shared.TypeRegistryStore[effect.Bind[effect.Op, effect.Unit]]("github.com/widmogrod/mkunion/x/effect.Bind[github.com/widmogrod/mkunion/x/effect.Op,github.com/widmogrod/mkunion/x/effect.Unit]")

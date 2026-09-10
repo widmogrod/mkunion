@@ -15,15 +15,5 @@ func onlyCountShape() shape.Shape {
 		Name:          "onlyCount",
 		PkgName:       "query",
 		PkgImportName: "github.com/widmogrod/mkunion/example/query",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "QueryDefaults",
-				Type: &shape.RefName{
-					Name:          "QueryDefaults",
-					PkgName:       "query",
-					PkgImportName: "github.com/widmogrod/mkunion/example/query",
-				},
-			},
-		},
 	}
 }

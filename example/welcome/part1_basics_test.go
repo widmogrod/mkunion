@@ -2,6 +2,7 @@ package welcome
 
 import (
 	"context"
+	"github.com/widmogrod/mkunion/f"
 	"github.com/widmogrod/mkunion/x/effect"
 	"strconv"
 	"testing"
@@ -97,7 +98,7 @@ func TestPart1_attemptHandlesAnErrorInPlace(t *testing.T) {
 
 // --8<-- [start:clock-only]
 
-// clockOnly overrides one method; Defaults supplies the other four.
+// clockOnly overrides one method; Defaults supplies the other five.
 type clockOnly struct {
 	Defaults
 	at time.Time
@@ -152,16 +153,26 @@ func TestPart1_fxDoInfersTheAnswerType(t *testing.T) {
 
 // --8<-- [start:inline-handler]
 
-func TestPart1_aHandlerCanBeThreeClosures(t *testing.T) {
+func TestPart1_aHandlerCanBeClosures(t *testing.T) {
 	ctx := context.Background()
 	program := Greet("name.txt")
 
+	// HandleMyEff is the function form of a handler: one arm per operation,
+	// and every arm must be there. No struct, no method set, no defaults.
 	var logged []string
-	got, err := Interpret(ctx, program, MyEffFuncs{
-		ReadFile: func(context.Context, *ReadFile) ([]byte, error) { return []byte("Ada"), nil },
-		Now:      func(context.Context, *Now) (time.Time, error) { return noon, nil },
-		Log:      func(_ context.Context, op *Log) (Unit, error) { logged = append(logged, op.Msg); return Unit{}, nil },
-	})
+	handler := func(ctx context.Context, op MyEff) (any, error) {
+		return HandleMyEff(ctx, op,
+			func(_ context.Context, op *Log) (Unit, error) { logged = append(logged, op.Msg); return Unit{}, nil },
+			func(context.Context, *Now) (time.Time, error) { return noon, nil },
+			func(context.Context, *ReadFile) ([]byte, error) { return []byte("Ada"), nil },
+			func(context.Context, *Random) (int, error) { return 0, nil },
+			func(context.Context, *Send) (string, error) { return "receipt-0", nil },
+			func(context.Context, *Charge) (f.Result[Receipt, ChargeError], error) {
+				return f.MkOk[ChargeError](Receipt{ID: "charge-0"}), nil
+			},
+		)
+	}
+	got, err := effect.Run(ctx, handler, program)
 
 	require.NoError(t, err)
 	assert.Equal(t, "Hello Ada, it is 12:00PM", got)

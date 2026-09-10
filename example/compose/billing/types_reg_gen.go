@@ -9,7 +9,6 @@ import (
 
 func init() {
 	shared.TypeRegistryStore[Charge]("github.com/widmogrod/mkunion/example/compose/billing.Charge")
-	shared.TypeRegistryStore[EffectOf[Outcome]]("github.com/widmogrod/mkunion/example/compose/billing.EffectOf[github.com/widmogrod/mkunion/example/compose/billing.Outcome]")
 	shared.TypeRegistryStore[InvalidAmount]("github.com/widmogrod/mkunion/example/compose/billing.InvalidAmount")
 	shared.TypeRegistryStore[OutOfCredits]("github.com/widmogrod/mkunion/example/compose/billing.OutOfCredits")
 	shared.TypeRegistryStore[QuotaExceeded]("github.com/widmogrod/mkunion/example/compose/billing.QuotaExceeded")

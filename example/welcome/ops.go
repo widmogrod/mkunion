@@ -14,13 +14,12 @@ type Unit struct{}
 
 // MyEff is the set of operations our programs may ask for.
 //
-// Each variant embeds f.Returns[R] to declare the type of its answer. The
-// `handler` option makes mkunion generate the typed layer from it:
-// MyEffHandler (one method per operation), MyEffOf[R] (an MyEff that
-// answers with R), MyEffHandlerFunc (the adapter Run uses) and
-// MyEffDefaults (zero answers, for tests). See ops_union_gen.go.
+// Each variant embeds f.Returns[R] to declare the type of its answer. That
+// marker alone makes mkunion generate the typed layer from it: one handler
+// interface per operation, MyEffHandler for all of them, HandleMyEff (one
+// typed arm per operation) and Perform on every variant. See ops_union_gen.go.
 //
-//go:tag mkunion:"MyEff,handler"
+//go:tag mkunion:"MyEff"
 type (
 	// Log writes a line somewhere.
 	Log struct {
@@ -75,6 +74,14 @@ type (
 // --8<-- [end:charge-error]
 
 // --8<-- [start:typed-layer]
+
+// MyEffOf is an MyEff that answers with R. Ret is promoted from the
+// operation's embedded f.Returns[R], so every operation satisfies exactly one
+// instantiation and the compiler infers R from the operation.
+type MyEffOf[R any] interface {
+	MyEff
+	Ret() R
+}
 
 // Perform asks for one operation as a program. R is inferred from the
 // operation's f.Returns, so `Perform(&Now{})` is an Eff[MyEff, time.Time].

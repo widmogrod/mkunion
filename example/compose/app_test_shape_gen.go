@@ -6,54 +6,16 @@ import (
 )
 
 func init() {
-	shape.Register(billingFuncsShape())
-	shape.Register(clockFuncsShape())
-	shape.Register(mailFuncsShape())
+	shape.Register(onlyClockShape())
 	shape.Register(worldShape())
 }
 
 //shape:shape
-func billingFuncsShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "billingFuncs",
+func onlyClockShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "onlyClock",
 		PkgName:       "compose",
 		PkgImportName: "github.com/widmogrod/mkunion/example/compose",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "EffectFuncs",
-			PkgName:       "billing",
-			PkgImportName: "github.com/widmogrod/mkunion/example/compose/billing",
-		},
-	}
-}
-
-//shape:shape
-func clockFuncsShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "clockFuncs",
-		PkgName:       "compose",
-		PkgImportName: "github.com/widmogrod/mkunion/example/compose",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "EffectFuncs",
-			PkgName:       "clock",
-			PkgImportName: "github.com/widmogrod/mkunion/example/compose/clock",
-		},
-	}
-}
-
-//shape:shape
-func mailFuncsShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "mailFuncs",
-		PkgName:       "compose",
-		PkgImportName: "github.com/widmogrod/mkunion/example/compose",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "EffectFuncs",
-			PkgName:       "mailer",
-			PkgImportName: "github.com/widmogrod/mkunion/example/compose/mailer",
-		},
 	}
 }
 
@@ -63,19 +25,5 @@ func worldShape() shape.Shape {
 		Name:          "world",
 		PkgName:       "compose",
 		PkgImportName: "github.com/widmogrod/mkunion/example/compose",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "clockFuncs",
-				Type: &shape.Any{},
-			},
-			{
-				Name: "mailFuncs",
-				Type: &shape.Any{},
-			},
-			{
-				Name: "billingFuncs",
-				Type: &shape.Any{},
-			},
-		},
 	}
 }

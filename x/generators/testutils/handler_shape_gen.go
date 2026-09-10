@@ -10,6 +10,7 @@ func init() {
 	shape.Register(GetUserShape())
 	shape.Register(LastSeenShape())
 	shape.Register(QueryShape())
+	shape.Register(TouchShape())
 	shape.Register(UserShape())
 }
 
@@ -24,6 +25,7 @@ func QueryShape() shape.Shape {
 			GetUserShape(),
 			CountShape(),
 			LastSeenShape(),
+			TouchShape(),
 		},
 	}
 }
@@ -115,6 +117,25 @@ func LastSeenShape() shape.Shape {
 					},
 				},
 			},
+			{
+				Name: "ID",
+				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+			},
+		},
+		Tags: map[string]shape.Tag{
+			"mkunion": {
+				Value: "Query",
+			},
+		},
+	}
+}
+
+func TouchShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "Touch",
+		PkgName:       "testutils",
+		PkgImportName: "github.com/widmogrod/mkunion/x/generators/testutils",
+		Fields: []*shape.FieldLike{
 			{
 				Name: "ID",
 				Type: &shape.PrimitiveLike{Kind: &shape.StringLike{}},

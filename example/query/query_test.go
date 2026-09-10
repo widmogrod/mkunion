@@ -10,54 +10,69 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var directory = InMemory{Users: []User{{ID: "1", Name: "Ada"}, {ID: "2", Name: "Alan"}, {ID: "3", Name: "Grace"}}}
+func directory() *InMemory {
+	return &InMemory{Users: []User{{ID: "1", Name: "Ada"}, {ID: "2", Name: "Alan"}, {ID: "3", Name: "Grace"}}}
+}
 
 // --8<-- [start:typed-answers]
 
 func TestAsk_answersWithTheTypeEachQueryDeclares(t *testing.T) {
 	ctx := context.Background()
+	h := directory()
 
-	user, err := Ask(ctx, directory, &GetUser{ID: "1"}) // user is *User, no cast
+	user, err := Ask(ctx, h, &GetUser{ID: "1"}) // user is *User, no cast
 	require.NoError(t, err)
 	assert.Equal(t, &User{ID: "1", Name: "Ada"}, user)
 
-	found, err := Ask(ctx, directory, &FindUsers{Prefix: "A"}) // found is []User
+	found, err := Ask(ctx, h, &FindUsers{Prefix: "A"}) // found is []User
 	require.NoError(t, err)
 	assert.Equal(t, []User{{ID: "1", Name: "Ada"}, {ID: "2", Name: "Alan"}}, found)
 
-	count, err := Ask(ctx, directory, &CountUsers{}) // count is int
+	count, err := Ask(ctx, h, &CountUsers{}) // count is int
 	require.NoError(t, err)
 	assert.Equal(t, 3, count)
+
+	// DeleteUser has no f.Returns, so it has no Perform and Ask cannot take it.
+	// It is handled directly, with an error only.
+	require.NoError(t, h.HandleDeleteUser(ctx, &DeleteUser{ID: "2"}))
+	count, err = Ask(ctx, h, &CountUsers{})
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
 }
 
 // --8<-- [end:typed-answers]
 
 // --8<-- [start:test-handlers]
 
-// onlyCount is a test handler: it embeds the generated QueryDefaults, so it
-// only has to answer the one query the test cares about.
-type onlyCount struct{ QueryDefaults }
+// onlyCount is a test handler with one method. It is a QueryCountUsersHandler,
+// not a QueryHandler: the compiler will not let Ask take it, because Ask
+// wants every question answered. Perform asks only for the method it needs.
+type onlyCount struct{}
 
 func (onlyCount) HandleCountUsers(context.Context, *CountUsers) (int, error) { return 42, nil }
 
 func TestHandlers_forTests(t *testing.T) {
 	ctx := context.Background()
 
-	count, err := Ask(ctx, onlyCount{}, &CountUsers{})
+	answer, err := (&CountUsers{}).Perform(ctx, onlyCount{})
 	require.NoError(t, err)
-	assert.Equal(t, 42, count)
+	assert.Equal(t, 42, answer)
 
-	user, err := Ask(ctx, onlyCount{}, &GetUser{ID: "1"})
-	require.NoError(t, err)
-	assert.Nil(t, user, "QueryDefaults answers with the zero value")
+	_, err = (&GetUser{ID: "1"}).Perform(ctx, onlyCount{})
+	assert.EqualError(t, err, "query: handler query.onlyCount does not implement QueryGetUserHandler",
+		"a partial handler fails at the first question it cannot answer, by name")
 
-	// QueryFuncs is the same idea as closures: fill in what matters, leave the rest nil.
+	// HandleQuery is the function form: one typed arm per question, all of
+	// them required. Closures make an inline handler with no struct at all.
 	down := errors.New("directory down")
-	flaky := QueryFuncs{
-		GetUser: func(context.Context, *GetUser) (*User, error) { return nil, down },
-	}
-	_, err = Ask(ctx, flaky, &GetUser{ID: "1"})
+	answer, err = HandleQuery(ctx, &GetUser{ID: "1"},
+		func(context.Context, *GetUser) (*User, error) { return nil, down },
+		func(context.Context, *FindUsers) ([]User, error) { return nil, nil },
+		func(context.Context, *CountUsers) (int, error) { return 0, nil },
+		func(context.Context, *DeleteUser) error { return nil },
+	)
 	assert.ErrorIs(t, err, down)
+	assert.Nil(t, answer)
 }
 
 // --8<-- [end:test-handlers]
@@ -65,14 +80,15 @@ func TestHandlers_forTests(t *testing.T) {
 // --8<-- [start:over-the-wire]
 
 // A query is data, so it can arrive as JSON. The union's generated JSON
-// decodes it into the right variant, and QueryHandlerFunc dispatches it.
-// This is a query endpoint in five lines.
+// decodes it into the right variant, and HandleQuery dispatches it to the
+// handler's methods. This is a query endpoint in a few lines.
 func serve(h QueryHandler, request []byte) ([]byte, error) {
 	q, err := QueryFromJSON(request)
 	if err != nil {
 		return nil, err
 	}
-	answer, err := QueryHandlerFunc(h)(context.Background(), q)
+	answer, err := HandleQuery(context.Background(), q,
+		h.HandleGetUser, h.HandleFindUsers, h.HandleCountUsers, h.HandleDeleteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -80,16 +96,22 @@ func serve(h QueryHandler, request []byte) ([]byte, error) {
 }
 
 func TestQueries_overTheWire(t *testing.T) {
-	answer, err := serve(directory, []byte(`{"$type":"query.FindUsers","query.FindUsers":{"Prefix":"G"}}`))
+	h := directory()
+
+	answer, err := serve(h, []byte(`{"$type":"query.FindUsers","query.FindUsers":{"Prefix":"G"}}`))
 	require.NoError(t, err)
 	assert.JSONEq(t, `[{"ID":"3","Name":"Grace"}]`, string(answer))
 
-	answer, err = serve(directory, []byte(`{"$type":"query.CountUsers","query.CountUsers":{}}`))
+	answer, err = serve(h, []byte(`{"$type":"query.DeleteUser","query.DeleteUser":{"ID":"3"}}`))
 	require.NoError(t, err)
-	assert.Equal(t, `3`, string(answer))
+	assert.Equal(t, `null`, string(answer), "a question with no answer type answers with nothing")
 
-	_, err = serve(directory, []byte(`{"$type":"query.DeleteUser","query.DeleteUser":{}}`))
-	assert.ErrorContains(t, err, "unknown type: query.DeleteUser", "a query the union does not have is refused before any handler runs")
+	answer, err = serve(h, []byte(`{"$type":"query.CountUsers","query.CountUsers":{}}`))
+	require.NoError(t, err)
+	assert.Equal(t, `2`, string(answer))
+
+	_, err = serve(h, []byte(`{"$type":"query.DropUsers","query.DropUsers":{}}`))
+	assert.ErrorContains(t, err, "unknown type: query.DropUsers", "a query the union does not have is refused before any handler runs")
 }
 
 // --8<-- [end:over-the-wire]

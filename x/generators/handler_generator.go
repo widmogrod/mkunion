@@ -7,29 +7,32 @@ import (
 	"github.com/widmogrod/mkunion/x/shape"
 )
 
-// HandlerGenerator emits a typed handler for a union whose variants declare
-// their answer type with an embedded f.Returns[R]. It is enabled with the
-// `handler` union option: //go:tag mkunion:"Query,handler".
+// HandlerGenerator emits a typed handler for a union in which at least one
+// variant declares its answer type with an embedded f.Returns[R]. There is no
+// tag option: the marker is the switch.
 //
-// For a union Query with variants GetUser{f.Returns[*User]} and Count{f.Returns[int]}
-// it generates:
+// For a union Query with variants GetUser{f.Returns[*User]}, Count{f.Returns[int]}
+// and Touch{} (no marker) it generates:
 //
-//	type QueryHandler interface {            // one typed method per variant
-//		HandleGetUser(ctx context.Context, op *GetUser) (*User, error)
-//		HandleCount(ctx context.Context, op *Count) (int, error)
-//	}
-//	type QueryOf[R any] interface {          // a Query that answers with R
-//		Query
-//		HandleQuery(ctx context.Context, h QueryHandler) (R, error)
-//	}
-//	func (r *GetUser) HandleQuery(...) (*User, error)   // *GetUser is a QueryOf[*User]
-//	func QueryHandlerFunc(h QueryHandler) func(ctx context.Context, op Query) (any, error)
-//	type QueryDefaults struct{}              // zero answers, embed and override
-//	type QueryFuncs struct{ GetUser func(...); Count func(...) }   // inline handlers
+//	type QueryGetUserHandler interface { HandleGetUser(ctx, op *GetUser) (*User, error) }
+//	type QueryCountHandler   interface { HandleCount(ctx, op *Count) (int, error) }
+//	type QueryTouchHandler   interface { HandleTouch(ctx, op *Touch) error }
+//	type QueryHandler interface { QueryGetUserHandler; QueryCountHandler; QueryTouchHandler }
 //
-// Go interfaces cannot carry generic methods, so the per-variant answer type
-// lives on QueryOf[R] and in the handler's method signatures. Adding a variant
-// breaks every QueryHandler at compile time, which is the point.
+//	func HandleQuery(ctx, op Query, onGetUser func(...) (*User, error), onCount ..., onTouch ...) (any, error)
+//
+//	func (r *GetUser) Perform(ctx context.Context, h any) (any, error)   // only variants with f.Returns
+//	func (r *Count) Perform(ctx context.Context, h any) (any, error)
+//
+// One interface per variant lets a handler be assembled from parts, and lets
+// Perform ask only for the method it needs. QueryHandler is the whole union:
+// adding a variant breaks every QueryHandler at compile time. HandleQuery is
+// the function form, exhaustive like MatchQueryR2, with each arm typed by the
+// variant's f.Returns; the answer comes back untyped because the arms do not
+// share a type. A variant without f.Returns answers with an error only, and
+// gets no Perform: it is handled, but it is not an operation (see x/effect.Op).
+//
+// Nothing generated has a default. A handler is complete or it does not compile.
 type HandlerGenerator struct {
 	union   *shape.UnionLike
 	pkgUsed PkgMap
@@ -43,15 +46,24 @@ func NewHandlerGenerator(union *shape.UnionLike) *HandlerGenerator {
 }
 
 // handlerVariant is one union variant with its declared answer type.
+// answer is empty when the variant does not embed f.Returns.
 type handlerVariant struct {
 	name   string // GetUser
 	typ    string // GetUser, as written in this package
-	answer string // *User, as written in this package
+	answer string // *User, as written in this package; "" for none
+}
+
+// results is the method's result list: "(R, error)" or "error".
+func (v handlerVariant) results() string {
+	if v.answer == "" {
+		return "error"
+	}
+	return fmt.Sprintf("(%s, error)", v.answer)
 }
 
 func (g *HandlerGenerator) variants() ([]handlerVariant, error) {
 	if len(g.union.TypeParams) > 0 {
-		return nil, fmt.Errorf("union %s has type parameters; the handler option needs a union without them, because Go interfaces cannot carry generic methods", g.union.Name)
+		return nil, fmt.Errorf("union %s has type parameters; a union with f.Returns must not have them, because Go interfaces cannot carry generic methods", g.union.Name)
 	}
 
 	root := shape.WithRootPkgName(shape.ToGoPkgName(g.union))
@@ -59,34 +71,28 @@ func (g *HandlerGenerator) variants() ([]handlerVariant, error) {
 	for _, v := range g.union.Variant {
 		st, ok := v.(*shape.StructLike)
 		if !ok {
-			return nil, fmt.Errorf("union %s: variant %s is not a struct; the handler option needs struct variants that embed f.Returns[R]", g.union.Name, shape.ToGoTypeName(v))
+			return nil, fmt.Errorf("union %s: variant %s is not a struct; a union with f.Returns needs struct variants", g.union.Name, shape.ToGoTypeName(v))
 		}
 
-		var answer shape.Shape
+		hv := handlerVariant{
+			name: TemplateHelperShapeVariantToName(v),
+			typ:  shape.ToGoTypeName(v, root),
+		}
 		for _, field := range st.Fields {
 			if r, ok := shape.ReturnsOf(field); ok {
-				answer = r
+				g.pkgUsed = MergePkgMaps(g.pkgUsed, shape.ExtractPkgImportNames(r))
+				hv.answer = shape.ToGoTypeName(r, root)
 				break
 			}
 		}
-		if answer == nil {
-			return nil, fmt.Errorf("union %s: variant %s does not embed f.Returns[R]; every variant must declare its answer type", g.union.Name, st.Name)
-		}
-
-		g.pkgUsed = MergePkgMaps(g.pkgUsed, shape.ExtractPkgImportNames(answer))
-
-		result = append(result, handlerVariant{
-			name:   TemplateHelperShapeVariantToName(v),
-			typ:    shape.ToGoTypeName(v, root),
-			answer: shape.ToGoTypeName(answer, root),
-		})
+		result = append(result, hv)
 	}
 
 	return result, nil
 }
 
-// ExtractImports lists the packages the generated code names: context and
-// the packages of every answer type. Call it after Generate.
+// ExtractImports lists the packages the generated code names: context, fmt
+// and the packages of every answer type. Call it after Generate.
 func (g *HandlerGenerator) ExtractImports() PkgMap {
 	pkgMap := PkgMap{}
 	pkgMap = MergePkgMaps(pkgMap, g.pkgUsed)
@@ -103,85 +109,60 @@ func (g *HandlerGenerator) Generate() ([]byte, error) {
 	name := g.union.Name
 	out := &bytes.Buffer{}
 
-	fmt.Fprintf(out, "// %sHandler answers every %s with the type it declares in f.Returns.\n", name, name)
-	fmt.Fprintf(out, "// Adding a variant to %s breaks every %sHandler at compile time.\n", name, name)
-	fmt.Fprintf(out, "type %sHandler interface {\n", name)
+	fmt.Fprintf(out, "// One handler interface per %s variant, so a handler can be assembled from\n", name)
+	fmt.Fprintf(out, "// parts. A variant with f.Returns answers with that type; one without answers\n")
+	fmt.Fprintf(out, "// with an error only.\n")
+	fmt.Fprintf(out, "type (\n")
 	for _, v := range variants {
-		fmt.Fprintf(out, "\tHandle%s(ctx context.Context, op *%s) (%s, error)\n", v.name, v.typ, v.answer)
-	}
-	fmt.Fprintf(out, "}\n\n")
-
-	fmt.Fprintf(out, "// %sOf is a %s that answers with R.\n", name, name)
-	fmt.Fprintf(out, "type %sOf[R any] interface {\n", name)
-	fmt.Fprintf(out, "\t%s\n", name)
-	fmt.Fprintf(out, "\tHandle%s(ctx context.Context, h %sHandler) (R, error)\n", name, name)
-	fmt.Fprintf(out, "}\n\n")
-
-	fmt.Fprintf(out, "var (\n")
-	for _, v := range variants {
-		fmt.Fprintf(out, "\t_ %sOf[%s] = (*%s)(nil)\n", name, v.answer, v.typ)
+		fmt.Fprintf(out, "\t%s%sHandler interface {\n", name, v.name)
+		fmt.Fprintf(out, "\t\tHandle%s(ctx context.Context, op *%s) %s\n", v.name, v.typ, v.results())
+		fmt.Fprintf(out, "\t}\n")
 	}
 	fmt.Fprintf(out, ")\n\n")
 
+	fmt.Fprintf(out, "// %sHandler handles every %s. Adding a variant to %s breaks every\n", name, name, name)
+	fmt.Fprintf(out, "// %sHandler at compile time.\n", name)
+	fmt.Fprintf(out, "type %sHandler interface {\n", name)
 	for _, v := range variants {
-		fmt.Fprintf(out, "func (r *%s) Handle%s(ctx context.Context, h %sHandler) (%s, error) {\n", v.typ, name, name, v.answer)
-		fmt.Fprintf(out, "\treturn h.Handle%s(ctx, r)\n", v.name)
-		fmt.Fprintf(out, "}\n\n")
+		fmt.Fprintf(out, "\t%s%sHandler\n", name, v.name)
 	}
+	fmt.Fprintf(out, "}\n\n")
 
-	fmt.Fprintf(out, "// Perform and Answer let a variant be performed by any handler value that has\n")
-	fmt.Fprintf(out, "// this union's Handle methods, so operations from several unions can share one\n")
-	fmt.Fprintf(out, "// program and one handler (see x/effect: Op, OpOf, Fx). Answer keeps the type.\n")
+	fmt.Fprintf(out, "// Handle%s hands op to the arm for its variant. Each arm is typed by the\n", name)
+	fmt.Fprintf(out, "// variant's f.Returns; the answer comes back untyped because the arms do not\n")
+	fmt.Fprintf(out, "// share a type. Exhaustive: every arm must be given.\n")
+	fmt.Fprintf(out, "func Handle%s(\n", name)
+	fmt.Fprintf(out, "\tctx context.Context,\n")
+	fmt.Fprintf(out, "\top %s,\n", name)
 	for _, v := range variants {
-		fmt.Fprintf(out, "func (r *%s) Answer(ctx context.Context, h any) (%s, error) {\n", v.typ, v.answer)
-		fmt.Fprintf(out, "\ttyped, ok := h.(%sHandler)\n", name)
+		fmt.Fprintf(out, "\ton%s func(ctx context.Context, op *%s) %s,\n", v.name, v.typ, v.results())
+	}
+	fmt.Fprintf(out, ") (any, error) {\n")
+	fmt.Fprintf(out, "\treturn %s(op,\n", MatchUnionFuncName(g.union, 2))
+	for _, v := range variants {
+		if v.answer == "" {
+			fmt.Fprintf(out, "\t\tfunc(x *%s) (any, error) { return nil, on%s(ctx, x) },\n", v.typ, v.name)
+		} else {
+			fmt.Fprintf(out, "\t\tfunc(x *%s) (any, error) { return on%s(ctx, x) },\n", v.typ, v.name)
+		}
+	}
+	fmt.Fprintf(out, "\t)\n")
+	fmt.Fprintf(out, "}\n\n")
+
+	fmt.Fprintf(out, "// Perform lets a variant with f.Returns be performed by any handler value that\n")
+	fmt.Fprintf(out, "// has its Handle method, so operations from several unions can share one\n")
+	fmt.Fprintf(out, "// program and one handler (see x/effect: Op, OpOf, Fx). The answer's static\n")
+	fmt.Fprintf(out, "// type is carried by f.Returns.Ret, not by Perform.\n")
+	for _, v := range variants {
+		if v.answer == "" {
+			continue
+		}
+		fmt.Fprintf(out, "func (r *%s) Perform(ctx context.Context, h any) (any, error) {\n", v.typ)
+		fmt.Fprintf(out, "\ttyped, ok := h.(%s%sHandler)\n", name, v.name)
 		fmt.Fprintf(out, "\tif !ok {\n")
-		fmt.Fprintf(out, "\t\tvar zero %s\n", v.answer)
-		fmt.Fprintf(out, "\t\treturn zero, fmt.Errorf(\"%s: handler %%T does not implement %s\", h)\n", shape.ToGoPkgName(g.union), name+"Handler")
+		fmt.Fprintf(out, "\t\treturn nil, fmt.Errorf(\"%s: handler %%T does not implement %s%sHandler\", h)\n", shape.ToGoPkgName(g.union), name, v.name)
 		fmt.Fprintf(out, "\t}\n")
 		fmt.Fprintf(out, "\treturn typed.Handle%s(ctx, r)\n", v.name)
-		fmt.Fprintf(out, "}\n\n")
-		fmt.Fprintf(out, "func (r *%s) Perform(ctx context.Context, h any) (any, error) { return r.Answer(ctx, h) }\n\n", v.typ)
-	}
-
-	fmt.Fprintf(out, "// %sHandlerFunc adapts a typed %sHandler to a plain function over the union.\n", name, name)
-	fmt.Fprintf(out, "// The answer is the type the variant declares; only its static type is lost.\n")
-	fmt.Fprintf(out, "func %sHandlerFunc(h %sHandler) func(ctx context.Context, op %s) (any, error) {\n", name, name, name)
-	fmt.Fprintf(out, "\treturn func(ctx context.Context, op %s) (any, error) {\n", name)
-	fmt.Fprintf(out, "\t\treturn %s(op,\n", MatchUnionFuncName(g.union, 2))
-	for _, v := range variants {
-		fmt.Fprintf(out, "\t\t\tfunc(x *%s) (any, error) { return x.Handle%s(ctx, h) },\n", v.typ, name)
-	}
-	fmt.Fprintf(out, "\t\t)\n")
-	fmt.Fprintf(out, "\t}\n")
-	fmt.Fprintf(out, "}\n\n")
-
-	fmt.Fprintf(out, "// %sDefaults answers every %s with the zero value of its declared type.\n", name, name)
-	fmt.Fprintf(out, "// Embed it in a handler and override only the methods you care about.\n")
-	fmt.Fprintf(out, "type %sDefaults struct{}\n\n", name)
-	fmt.Fprintf(out, "var _ %sHandler = %sDefaults{}\n\n", name, name)
-	for _, v := range variants {
-		fmt.Fprintf(out, "func (%sDefaults) Handle%s(context.Context, *%s) (%s, error) {\n", name, v.name, v.typ, v.answer)
-		fmt.Fprintf(out, "\tvar zero %s\n", v.answer)
-		fmt.Fprintf(out, "\treturn zero, nil\n")
-		fmt.Fprintf(out, "}\n\n")
-	}
-
-	fmt.Fprintf(out, "// %sFuncs is a %sHandler made of functions, one per operation, for handlers\n", name, name)
-	fmt.Fprintf(out, "// written inline. A nil function answers with the zero value of its declared type.\n")
-	fmt.Fprintf(out, "type %sFuncs struct {\n", name)
-	for _, v := range variants {
-		fmt.Fprintf(out, "\t%s func(ctx context.Context, op *%s) (%s, error)\n", v.name, v.typ, v.answer)
-	}
-	fmt.Fprintf(out, "}\n\n")
-	fmt.Fprintf(out, "var _ %sHandler = %sFuncs{}\n\n", name, name)
-	for _, v := range variants {
-		fmt.Fprintf(out, "func (fs %sFuncs) Handle%s(ctx context.Context, op *%s) (%s, error) {\n", name, v.name, v.typ, v.answer)
-		fmt.Fprintf(out, "\tif fs.%s == nil {\n", v.name)
-		fmt.Fprintf(out, "\t\tvar zero %s\n", v.answer)
-		fmt.Fprintf(out, "\t\treturn zero, nil\n")
-		fmt.Fprintf(out, "\t}\n")
-		fmt.Fprintf(out, "\treturn fs.%s(ctx, op)\n", v.name)
 		fmt.Fprintf(out, "}\n\n")
 	}
 

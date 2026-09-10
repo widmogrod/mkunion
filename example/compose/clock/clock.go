@@ -18,7 +18,7 @@ import (
 
 // Effect is what this package can ask for.
 //
-//go:tag mkunion:"Effect,handler"
+//go:tag mkunion:"Effect"
 type (
 	// Now asks for the current time.
 	Now struct{ f.Returns[time.Time] }

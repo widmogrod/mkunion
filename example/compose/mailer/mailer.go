@@ -14,7 +14,7 @@ import (
 
 // Effect is what this package can ask for.
 //
-//go:tag mkunion:"Effect,handler"
+//go:tag mkunion:"Effect"
 type (
 	// Resolve asks for the address behind a name.
 	Resolve struct {

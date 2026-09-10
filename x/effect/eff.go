@@ -15,7 +15,7 @@ import (
 //
 // Op is the union of operations the program may ask for (see MyEff in ops.go).
 // The continuation in Bind receives the handler's answer as `any`; the typed
-// layer a union generates (the `handler` option) hides that cast from user code.
+// layer a union generates from its f.Returns labels hides that cast from user code.
 //
 //go:tag mkunion:"Eff[Op, A],noserde"
 type (
@@ -72,8 +72,8 @@ func Throw[Op, A any](err error) Eff[Op, A] {
 }
 
 // PerformAs asks the handler to perform op and expects an answer of type R.
-// A wrong R becomes an error in Run. Prefer a typed Perform built on XOf[R],
-// which ties R to the operation at compile time (see example/welcome/ops.go).
+// A wrong R becomes an error in Run. Prefer Perform over OpOf[R],
+// which ties R to the operation at compile time through f.Returns.
 func PerformAs[Op, R any](op Op) Eff[Op, R] {
 	return &Bind[Op, R]{
 		Op: op,

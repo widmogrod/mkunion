@@ -40,3 +40,26 @@ type Query struct {
 	assert.Equal(t, "example", ExtractPkgImportNames(query)["example"][len("github.com/widmogrod/mkunion/"):], "sanity: own package is listed")
 	assert.NotContains(t, ExtractPkgImportNames(query), "f", "the phantom's package is not imported")
 }
+
+func TestUnionDeclaresReturns(t *testing.T) {
+	inferred, err := InferFromFileWithContentBody(`package example
+
+import "github.com/widmogrod/mkunion/f"
+
+//go:tag mkunion:"Query"
+type (
+	GetUser struct{ f.Returns[int] }
+	Touch   struct{ ID string }
+)
+
+//go:tag mkunion:"Plain"
+type (
+	Leaf   struct{ Value int }
+	Branch struct{ Left, Right Plain }
+)
+`, "github.com/widmogrod/mkunion/example")
+	require.NoError(t, err)
+
+	assert.True(t, UnionDeclaresReturns(inferred.RetrieveUnion("Query")), "one variant with f.Returns is enough")
+	assert.False(t, UnionDeclaresReturns(inferred.RetrieveUnion("Plain")), "no variant embeds f.Returns")
+}

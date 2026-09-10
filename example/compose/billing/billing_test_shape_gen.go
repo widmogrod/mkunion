@@ -7,7 +7,6 @@ import (
 
 func init() {
 	shape.Register(bankShape())
-	shape.Register(clockFuncsShape())
 }
 
 //shape:shape
@@ -16,34 +15,5 @@ func bankShape() shape.Shape {
 		Name:          "bank",
 		PkgName:       "billing",
 		PkgImportName: "github.com/widmogrod/mkunion/example/compose/billing",
-		Fields: []*shape.FieldLike{
-			{
-				Name: "EffectFuncs",
-				Type: &shape.RefName{
-					Name:          "EffectFuncs",
-					PkgName:       "billing",
-					PkgImportName: "github.com/widmogrod/mkunion/example/compose/billing",
-				},
-			},
-			{
-				Name: "clockFuncs",
-				Type: &shape.Any{},
-			},
-		},
-	}
-}
-
-//shape:shape
-func clockFuncsShape() shape.Shape {
-	return &shape.AliasLike{
-		Name:          "clockFuncs",
-		PkgName:       "billing",
-		PkgImportName: "github.com/widmogrod/mkunion/example/compose/billing",
-		IsAlias:       true,
-		Type: &shape.RefName{
-			Name:          "EffectFuncs",
-			PkgName:       "clock",
-			PkgImportName: "github.com/widmogrod/mkunion/example/compose/clock",
-		},
 	}
 }
