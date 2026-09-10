@@ -1,0 +1,506 @@
+---
+title: Effects and unions
+---
+# Effects: programs as data, with mkunion
+
+This document will show how to build a small effect system in Go with `mkunion`, using the example of a Welcome Mail service.
+You will learn:
+
+- how to describe what a program **may do** as a union of operations, and write the program as plain Go
+- how the same program runs against the **real world** in production and against a **fake** in tests
+- how to **record a run**, replay it with no I/O, and resume it after a crash
+- how to keep a **business refusal** ("out of credits") apart from an **infrastructure failure** ("connection reset"), so only the second is ever retried
+- how packages that each own their operations are **used together** in one program, with one handler and one trace
+
+Each part builds on the one before. Part 1 is enough to write and test a program. Read the rest when a real problem asks for it.
+
+Side note: if you want to go straight to the final code, go to [example/welcome/](https://github.com/widmogrod/mkunion/tree/main/example/welcome). `doc.go` lists the files in reading order, and every part has a test file that shows the behaviour with real data. The reusable core lives in [x/effect/](https://github.com/widmogrod/mkunion/tree/main/x/effect).
+
+## Working example
+
+The Welcome Mail service does one small job: read a customer's name from a file, mail them a greeting with the current time, and log the receipt.
+
+Four things can happen in that job. We will call them **operations**:
+
+- `ReadFile` - read the content of a file
+- `Now` - ask for the current time
+- `Send` - deliver a message. This one is dangerous: send it twice and the customer gets two mails
+- `Log` - write a line somewhere
+
+The idea this whole document builds on fits in two sentences. A program **asks** for these operations; it never performs them. Something else, a **handler**, performs them: the file system and the mail server in production, a map in a test, a tape in a replay.
+
+We start with a program that only greets, `Greet`, and add the mail in Part 3.
+
+## Part 1: the basics
+
+### Operations are a union
+
+Each operation is a struct in a `type (...)` block tagged with `mkunion`, exactly like a state or a command in the [state machine](./state_machine.md) example.
+
+```go title="example/welcome/ops.go"
+--8<-- "example/welcome/ops.go:ops-def"
+```
+
+**Notice** the embedded `f.Returns[...]` in every operation. It has no fields and no methods. It is a label that says what type of answer the operation gets back: `ReadFile` answers with `[]byte`, `Now` with `time.Time`, `Log` with `Unit`, the empty struct, because there is nothing to return. The compiler reads the label, so later `fx.Do(&Now{})` is a `time.Time` without you spelling it out.
+
+**Notice** there is no option in the tag. The labels are the switch: `mkunion` sees `f.Returns` and generates, from those labels, one interface per operation and the one interface a handler must implement:
+
+```go title="example/welcome/ops_union_gen.go (generated)"
+type (
+	MyEffLogHandler    interface { HandleLog(ctx context.Context, op *Log) (Unit, error) }
+	MyEffNowHandler    interface { HandleNow(ctx context.Context, op *Now) (time.Time, error) }
+	// ... one per operation
+)
+
+type MyEffHandler interface {
+	MyEffLogHandler
+	MyEffNowHandler
+	MyEffReadFileHandler
+	MyEffRandomHandler
+	MyEffSendHandler
+	MyEffChargeHandler
+}
+```
+
+One method per operation, typed by its label. Add an operation to the union and every handler stops compiling until it handles the new one. (`Random` and `Charge` are two more operations the later parts use.)
+
+### Programs are plain Go
+
+A program is a function that gets a handle, `Fx`, and calls it. It reads like any Go code:
+
+```go title="example/welcome/program.go"
+--8<-- "example/welcome/program.go:greet"
+```
+
+There is one thing to keep in mind. Calling `Greet("name.txt")` performs nothing. It returns a `Program[string]`, a value. The body runs later, when you hand the value to `Interpret` together with a handler.
+
+### Handlers give the program meaning
+
+For production there is `Live`. It talks to a file system, a clock and a mail server:
+
+```go title="example/welcome/handlers.go"
+--8<-- "example/welcome/handlers.go:live"
+```
+
+(`HandleSend` passes a `key` along. Ignore it until Part 4.)
+
+For tests there is `Fake`. It answers from fixed data and remembers what was logged and sent:
+
+```go title="example/welcome/handlers.go"
+--8<-- "example/welcome/handlers.go:fake"
+```
+
+### Interpret it
+
+Two steps, on two lines. Build the program. Then interpret it with a handler:
+
+```go title="example/welcome/part1_basics_test.go"
+--8<-- "example/welcome/part1_basics_test.go:run-fake"
+```
+
+**Notice** the shape of the test. `program := Greet("name.txt")` is a value; the fake did not exist when it was built. `Interpret` is where it runs. Swap `fake` for `live` and the same program writes a real log line.
+
+**Notice** `Trace(&trace)`. With dependency injection, building and running are one line and nothing sits between them. Here something can. `Trace` is middleware: it sees every operation on its way to the handler and writes it down. Parts 3 to 5 put a lot more in that gap.
+
+That is all of Part 1. You can stop here and have a program that runs against the world in production and against a map in tests, with a trace of what it did.
+
+### Three testing habits
+
+They pay off from the first test.
+
+First, assert on the **trace**, as the test above does. An output test says what came out. A trace test says what the program did to get there.
+
+Second, override one method at a time. `Defaults` is a hand-written handler with harmless answers, every one of them spelled out in `handlers.go`. Embed it and override only what the test cares about. The compiler still checks that the result is a complete handler:
+
+```go title="example/welcome/part1_basics_test.go"
+--8<-- "example/welcome/part1_basics_test.go:clock-only"
+```
+
+Third, when a handler is closures, write closures. `HandleMyEff` is generated: the function form of a handler, one typed arm per operation, all of them required, so nothing is answered by accident:
+
+```go title="example/welcome/part1_basics_test.go"
+--8<-- "example/welcome/part1_basics_test.go:inline-handler"
+```
+
+### Errors, and loops
+
+`fx.ReadFile` stops the body when the read fails, and the program fails with that error. When the body knows what to do instead, `fx.Attempt` hands it the error:
+
+```go title="example/welcome/program.go"
+--8<-- "example/welcome/program.go:greet-or-guest"
+```
+
+Loops are loops. A program that performs a million operations takes a million steps in the interpreter, not a million stack frames:
+
+```go title="example/welcome/program.go"
+--8<-- "example/welcome/program.go:roll"
+```
+
+## Part 2: under the hood
+
+You can use everything in Part 1 without this part. Read it when you want to know why this is not just dependency injection.
+
+### The typed layer
+
+`Fx` is small. Its convenience methods are one line each on top of a generic `Do`:
+
+```go title="example/welcome/program.go"
+--8<-- "example/welcome/program.go:fx-api"
+```
+
+`Do` takes a `MyEffOf[R]`, two lines in `ops.go`: an `MyEff` with a `Ret() R` method. That method comes from the embedded `f.Returns[R]`, so `*Now` satisfies `MyEffOf[time.Time]` and nothing else, and the compiler infers `R`. Go interfaces cannot carry generic methods, so this is how "each variant has its own answer type" is spelled in Go: on the variant, through its label, and in the handler's method signatures. `Interpret` feeds the handler's methods to the generated `HandleMyEff`, which is exhaustive:
+
+```go title="example/welcome/program.go"
+--8<-- "example/welcome/program.go:interpret"
+```
+
+### A program is a union too
+
+`Program[A]` is a short name for `effect.Eff[MyEff, A]`, and `Eff` is itself a generic union:
+
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:eff-def"
+```
+
+A program is either finished (`Pure` with a value, `Fail` with an error), or it asks for one operation and says what to do with the answer (`Bind`), or it is built on demand (`Suspend`). That is the whole data model.
+
+`Then` glues two programs together. It is a pattern match over the variants, so a new variant cannot be forgotten:
+
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:then"
+```
+
+With `Perform` and `Then` you can build a program by hand. This is what `Fx` builds for you:
+
+```go title="example/welcome/part2_under_the_hood_test.go"
+--8<-- "example/welcome/part2_under_the_hood_test.go:greet-then"
+```
+
+The tests run both versions of `Greet` and assert the same trace and the same errors. Two ways to write it, one result.
+
+| Style | Write it when | Trade |
+|---|---|---|
+| `Prog` + `Fx` | Business logic. It reads like Go. | Needs a coroutine per run. |
+| `Perform` + `Then` | Small reusable pieces, and combinators such as `Map` (Part 6 has more). | Nests one level per step. |
+
+### Run is a loop
+
+At the bottom, a handler is one function: it gets an operation and returns the answer. `Run` feeds it the program, one node at a time:
+
+```go title="x/effect/eff.go"
+--8<-- "x/effect/eff.go:run"
+```
+
+**Notice** that `Run` never recurses. That is why a million-step program does not grow the stack. And notice that an error goes to the continuation the same way an answer does. That is how a plain Go body gets to unwind, and how `Attempt` gets to see the error.
+
+### Proc is a coroutine
+
+How does a plain Go body become `Bind` nodes, one at a time? With `iter.Pull`, which turns a function into a coroutine that can pause and resume.
+
+```mermaid
+sequenceDiagram
+    participant Run
+    participant Body as Body (coroutine)
+    participant Handler
+    Run->>Body: resume
+    Body->>Run: yield &ReadFile{Path} (a Bind)
+    Run->>Handler: ReadFile
+    Handler-->>Run: []byte("Ada")
+    Run->>Body: resume with answer
+    Body->>Run: yield &Now{}
+    Run->>Handler: Now
+    Handler-->>Run: noon
+    Run->>Body: resume with answer
+    Body-->>Run: return "Hello Ada" (a Pure)
+```
+
+```go title="x/effect/proc.go"
+--8<-- "x/effect/proc.go:proc"
+```
+
+Every `fx.Do` pauses the body and hands the operation out as a `Bind`. `Run` asks the handler, and the answer resumes the body. On error, `Do` unwinds the body and the coroutine is released. The body does not start before `Run`, because `Proc` returns a `Suspend`; Part 1 has a test for that.
+
+## Part 3: testing with tapes
+
+Now the mail. `Notify` is `Greet` plus a `Send`, and `Send` must never happen twice. Every test from here on uses it.
+
+```go title="example/welcome/program.go"
+--8<-- "example/welcome/program.go:notify"
+```
+
+### Record once, replay forever
+
+Every operation and every answer is data, so a run can be written down. `Record` writes the tape. `Replay` answers from it, and checks that the program still asks for the same things:
+
+```go title="x/effect/recording.go"
+--8<-- "x/effect/recording.go:recording"
+```
+
+```go title="example/welcome/part3_testing_test.go"
+--8<-- "example/welcome/part3_testing_test.go:record-replay"
+```
+
+A tape is a golden test you did not have to write, and it guards against drift: a program that asks for a different file fails with "replay mismatch at step 1".
+
+### A tape is JSON
+
+The union has JSON, generated by `mkunion`, so a tape has JSON too. Answers are decoded into the type each operation declared:
+
+```go title="example/welcome/recording_json.go"
+--8<-- "example/welcome/recording_json.go:tape-json"
+```
+
+The test shows the exact JSON and replays from it alone. The same union exports to TypeScript with `mkunion shape-export`, so a browser can read or build a tape.
+
+## Part 4: failure is normal
+
+A handler is a function. So middleware is a function that takes a handler and returns a handler. It wraps the handler once and sees every operation of every program. Every tool in this part is such a function, and `Interpret` takes them in a list, outermost first.
+
+### Retry is a policy per operation, not one number
+
+Reading a file may be retried. Sending a mail may not, unless you can prove it is safe. `RetryWith` asks a policy for each operation. A `RetryBudget` caps retries across the whole run, and sleep is injected so a test asserts the backoff instead of waiting for it.
+
+```go title="x/effect/middleware.go"
+--8<-- "x/effect/middleware.go:retry"
+```
+
+The policy is an exhaustive match, so the compiler asks "may this be retried?" for every new operation:
+
+```go title="example/welcome/part4_failures_test.go"
+--8<-- "example/welcome/part4_failures_test.go:strict-policy"
+```
+
+**Notice** that middleware order is semantics. `Record(&tape), Retry(3)` writes one committed answer per step. `Retry(3), Record(&tape)` writes every attempt, failures included. Only the first tape replays to success. The test shows both tapes side by side.
+
+### A refusal is an answer, not a failure
+
+"Out of budget" and "connection reset" are not the same kind of thing, and one `error` mixes them up. A bank that refuses a charge did its job. A line to the bank that dropped did not. Retry must see the second and never the first.
+
+The answer type keeps them apart. `Charge` answers with a `Result`: a `Receipt`, or a `ChargeError` that says why:
+
+```go title="example/welcome/ops.go"
+--8<-- "example/welcome/ops.go:charge-error"
+```
+
+The program matches on the answer, exhaustively, so a new refusal is a compile error in every program that charges:
+
+```go title="example/welcome/program.go"
+--8<-- "example/welcome/program.go:pay"
+```
+
+A refusal is a value, so no retry policy can ever retry it. A broken line is a Go error, so the policy gets its say. The test in `part4_failures_test.go` shows both, and shows a refusal keeping its variant through a tape.
+
+The rule that falls out, and that the rest of this document follows: **a business outcome is a value in the answer type; an infrastructure failure is a Go error.**
+
+### Fault tools
+
+The tests need faults that happen on purpose. Each one is a small wrapper:
+
+```go title="x/effect/middleware.go"
+--8<-- "x/effect/middleware.go:faults"
+```
+
+`FailEvery` refuses before performing. `LoseAnswerAt` is the nasty one: it performs, then reports an error anyway. `CrashAfter` is a process that dies. `Chaos` rolls dice from a seed.
+
+### At-least-once, and idempotency keys
+
+The nasty fault is not "the call failed". It is "the mail server delivered, then the answer was lost". A retry sends the mail again. `LoseAnswerAt` injects exactly that fault, and the test shows two identical mails in the mailbox.
+
+The fix comes from the run itself. `StepKeys` gives every step a stable key, `run-1/3`. The handler passes it to the mail server as an idempotency key. All retries of one step share the key, and on resume a replayed step keeps its number, so step 3 is still `run-1/3`.
+
+```go title="x/effect/middleware.go"
+--8<-- "x/effect/middleware.go:step-keys"
+```
+
+```go title="example/welcome/handlers.go"
+--8<-- "example/welcome/handlers.go:mailbox"
+```
+
+With keys the mailbox holds one mail, and the retry receives the receipt of the first delivery. This is how durable workflow engines make activities safe.
+
+### Crash at every step, then resume
+
+`Replay(tape, live)` answers the recorded steps from the tape and hands everything after them to the live handler. That is resume after a crash. And because the tape is finite, every crash point can be searched: crash after step 0, 1, 2 and 3, resume each time, and assert the same receipt and exactly one mail.
+
+```go title="example/welcome/part4_failures_test.go"
+--8<-- "example/welcome/part4_failures_test.go:crash-resume"
+```
+
+**Notice** the choice the test points out: `Log` has no key, so it is at-least-once. Whether that is fine is a decision per operation, and the union makes you take it.
+
+### Seeded chaos
+
+`Chaos` injects refusals and lost answers at random from a seed. The test runs five hundred worlds. Without keys, chaos finds double delivery in dozens of seeds. With keys, every world is exactly-once or a clean failure, and a failing world replays from its seed alone. That is deterministic simulation testing in a unit test.
+
+## Part 5: seeing what happened
+
+A trace of typed operations can do three things log lines cannot.
+
+### Diff two runs
+
+The test has a "version two" of `Notify` that adds a config read and moves the clock read. The output is identical, so an output test passes. `DiffTraces` shows the change:
+
+```
++ *welcome.ReadFile{"Path":"config.txt"}
++ *welcome.Now{}
+  *welcome.ReadFile{"Path":"name.txt"}
+- *welcome.Now{}
+  *welcome.Send{"To":"ada@example.com","Msg":"Hello Ada, it is 12:00PM"}
+  *welcome.Log{"Msg":"sent receipt-1"}
+```
+
+### Enforce a policy
+
+`Guard` refuses operations before they run. Authorization and dry-run are the same function: an exhaustive match, so a new operation has to be classified.
+
+```go title="x/effect/observe.go"
+--8<-- "x/effect/observe.go:guard"
+```
+
+### Feed your tracing backend
+
+`Spans` emits one span per operation, with start, end, attributes and error, from one place. With dependency injection you would instrument each client.
+
+```go title="x/effect/observe.go"
+--8<-- "x/effect/observe.go:spans"
+```
+
+## Part 6: many packages, one program
+
+So far one package owned the union. Real code has libraries. A `clock` package should not know about mail. A `mailer` package should not know about time. Each should own its operations, ship programs built from them, and be tested alone. An application should use them together in one program, with one handler and one trace, and write no glue for it.
+
+The Welcome Mail service used its own union everywhere, and got exhaustive policies over it in return. This part gives that up for something one union cannot give: programs that cross package boundaries.
+
+### A package owns its operations
+
+```go title="example/compose/clock/clock.go"
+--8<-- "example/compose/clock/clock.go:ops"
+```
+
+```go title="example/compose/mailer/mailer.go"
+--8<-- "example/compose/mailer/mailer.go:ops"
+```
+
+**Notice** the type of `WaitUntil` and `Notify`: `effect.Eff[effect.Op, ...]`, not `Eff[clock.Effect, ...]`. `effect.Op` is one interface that every operation with an `f.Returns` label satisfies. That is what lets two packages share a program. The package still tests alone, with a two-method fake:
+
+```go title="example/compose/mailer/mailer_test.go"
+--8<-- "example/compose/mailer/mailer_test.go:alone"
+```
+
+### The application
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:remind"
+```
+
+**Notice** what is not there. No application union, no adapters. `fx.Run` runs a program a package shipped; `fx.Do` performs one operation as a struct. `effect.Fx` is the same handle as `welcome.Fx`, without the convenience methods. The rest of `app.go` is one interface:
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:handlers"
+```
+
+A handler for three packages is a value that has all three packages' methods. `Handlers` is where the compiler checks that.
+
+### One handler, one trace, one middleware
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:world"
+```
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:one-trace"
+```
+
+**Notice** the trace: five operations from two packages, in the order the body asked, as one list. The second test puts one `Retry` around both packages; the third shows a failure in `mailer` stopping the body before the last `clock` step. Nothing in Parts 3 to 5 changes; the tape, the keys, the chaos and the diff work over `effect.Op` the way they worked over `MyEff`.
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:as-is"
+```
+
+### How one `Op` type covers every union
+
+```go title="x/effect/op.go"
+--8<-- "x/effect/op.go:op"
+```
+
+`mkunion` generates `Perform` on every variant that has an `f.Returns` label. `Perform` checks that the handler value has that one variant's `Handle` method, and calls it. The answer's type is carried by the label's `Ret() R`, which is how `effect.OpOf[R]` infers `R`. That is the whole trick, and it is why `Handlers` above is needed: without it, a missing package is found at the first operation of that package instead of at compile time, with an error that names the handler and the method.
+
+### Business refusals, for real
+
+Part 4 had one refusal. A third package, `billing`, has four, and they are different problems:
+
+```go title="example/compose/billing/billing.go"
+--8<-- "example/compose/billing/billing.go:ops"
+```
+
+Validation: the request is wrong, and the same request again is wrong again. Rate limit: wait a little. Quota: wait until a time. Credits: only money helps. A single `error` would make them look the same. A union keeps them apart, and the compiler asks every program what to do with each.
+
+### Programs from primitives
+
+`billing` ships a program that handles the one refusal it can handle on its own, "too fast", by waiting as long as the bank asks and trying again. It is built from `Then`, `Return` and a match, with no body, and it composes `clock.Sleep` with its own `Charge`:
+
+```go title="example/compose/billing/billing.go"
+--8<-- "example/compose/billing/billing.go:patience"
+```
+
+A program is a value, so it is tested like one, alone, with a scripted bank:
+
+```go title="example/compose/billing/billing_test.go"
+--8<-- "example/compose/billing/billing_test.go:patience-test"
+```
+
+**Notice** the last case. A connection reset is a Go error. The program never sees it; `Retry` around it does, and the trace shows two charges with no sleep between them. Patience and `Retry` are two different things, and the types keep them apart.
+
+### The application decides the rest
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:paid"
+```
+
+Three kinds of decision in one body. The library already handled "too fast". The application handles "quota" its own way: wait for the reset, once. Everything else is given up as a typed error that a caller can still match on. The test states every case, with the trace each one leaves:
+
+```go title="example/compose/app_test.go"
+--8<-- "example/compose/app_test.go:paid-test"
+```
+
+And a finished program is still a value, so a fallback goes around it without opening it. `Catch` is `Then` for the failure side; `OrElse` is `Catch` that drops the error:
+
+```go title="x/effect/combinators.go"
+--8<-- "x/effect/combinators.go:catch"
+```
+
+```go title="example/compose/app.go"
+--8<-- "example/compose/app.go:recomposed"
+```
+
+Two styles, and both are values. A body, with `fx.Do` and `fx.Run`, reads as plain Go and suits the application's own logic. Primitives, with `Then`, `Map`, `Catch` and `Return`, need no body and suit the small reusable pieces a package ships: a wait, a fallback, a retry with a rule. `fx.Run` lets a body use the second inside the first.
+
+### What this trades away
+
+An exhaustive match over the application's operations. A retry policy or a dry-run guard over `effect.Op` is a type switch with a default, not a `MatchXR1` that breaks when a package adds an operation. Per package, the match is still exhaustive.
+
+When an application needs that exhaustive match, it can declare its own union with one variant per package, and carry programs across with `effect.Lift` and `effect.Embed`. That is the strict model. It costs a wrapper union, a router and one `Fx` method per package. Start with `effect.Op`, and move only when a compile-time check over the whole application is worth that.
+
+## When to use this, and when not
+
+The `Fx` surface looks like interfaces and structs, because it is. The difference is under the surface. With dependency injection, `fx.ReadFile(path)` runs a method and the call is gone. With effects, it builds a value and that value passes through one door, `Run`, in order, as data. Everything in Parts 3 to 6 follows from that one door.
+
+When a program is "call three services and return" and you only need swap-for-tests, plain dependency injection is enough, and cheaper. Effects earn their cost when you need the tape, the resume, the same middleware on every call, or a trace you can diff: workflow engines, sagas, simulation testing, audit logs, dry-run modes. If you never need those, keep Part 1 and the interfaces. Nothing in it has to change.
+
+## Conclusion
+
+A union of operations, a handler per environment, and one `Run` loop are enough to turn ordinary Go into programs you can trace, replay, resume and audit. The compiler keeps every handler, policy and decoder honest when the union grows. Start with Part 1 and add the rest when a real problem asks for it.
+
+??? note "Notes for contributors"
+
+    - **Go 1.27 generic methods** make `fx.Do(&Now{})` possible: a method with its own type parameter, with `R` inferred from the operation. Interfaces still cannot carry generic methods, so `Eff` cannot have a `Then` method, and the `Bind` chain stays `any` inside, with `MyEffOf[R]` and `effect.OpOf[R]` keeping it typed at the edges.
+    - **The typed layer is generated** from the `f.Returns` labels alone, with no tag option (`x/generators/handler_generator.go`): one interface per variant, one for the union, the exhaustive `HandleX` function, and `Perform` on labelled variants. Nothing generated has a default. Still by hand: `MyEffOf[R]`, `HandlerOf` and the `Fx` convenience methods in `welcome`, and the two exhaustive matches in `recording_json.go` that pick a JSON codec per answer.
+    - **Extensible effects are not expressible** in Go's type system. Part 6 gets most of the way with one `Op` interface plus an intersection interface for the handler; `Lift` and `Embed` in `x/effect/compose.go` are the strict alternative.
+    - **Generator bugs fixed on the way.** The type registry mistook type parameters of generic methods, and inside slices and maps, for package types; ignored `noserde` on `Eff`; and dropped imports named only in a type argument. All have tests. One remains: the registry reads its own previous output back in (see the note in `x/shape/fromfile.go`).
+
+## Next steps
+
+- **[State Machines](./state_machine.md)** - the other way this repository turns behaviour into data
+- **[Typed handlers](./typed_handler.md)** - `f.Returns` on its own, with no effect system around it
+- **[Generic Unions](./generic_union.md)** - the mechanics `Eff[Op, A]` builds on
+- **[Custom Pattern Matching](./custom_pattern_matching.md)** - the other tag-driven generator in this repository

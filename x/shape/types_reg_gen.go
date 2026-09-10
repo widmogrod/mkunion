@@ -47,6 +47,7 @@ func init() {
 	shared.TypeRegistryStore[ast.CallExpr]("go/ast.CallExpr")
 	shared.TypeRegistryStore[ast.CommentGroup]("go/ast.CommentGroup")
 	shared.TypeRegistryStore[ast.CompositeLit]("go/ast.CompositeLit")
+	shared.TypeRegistryStore[ast.Field]("go/ast.Field")
 	shared.TypeRegistryStore[ast.FieldList]("go/ast.FieldList")
 	shared.TypeRegistryStore[ast.File]("go/ast.File")
 	shared.TypeRegistryStore[ast.FuncDecl]("go/ast.FuncDecl")

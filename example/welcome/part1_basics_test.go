@@ -1,0 +1,186 @@
+package welcome
+
+import (
+	"context"
+	"github.com/widmogrod/mkunion/f"
+	"github.com/widmogrod/mkunion/x/effect"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// Part 1: the basics.
+//
+// A program is plain Go against Fx. It performs nothing until Interpret gives
+// it a handler. The same program runs against Fake in tests and Live in production.
+
+// --8<-- [start:run-fake]
+
+func TestPart1_sameProgramFakeHandler(t *testing.T) {
+	ctx := context.Background()
+	program := Greet("name.txt") // a value; nothing has run yet
+
+	fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada\n"}}
+	var trace []MyEff
+	got, err := Interpret(ctx, program, fake, effect.Trace(&trace))
+
+	require.NoError(t, err)
+	assert.Equal(t, "Hello Ada, it is 12:00PM", got)
+	assert.Equal(t, []string{"Hello Ada, it is 12:00PM"}, fake.Logs, "the Fake remembers what was logged")
+	assert.Equal(t, []MyEff{
+		&ReadFile{Path: "name.txt"},
+		&Now{},
+		&Log{Msg: "Hello Ada, it is 12:00PM"},
+	}, trace, "every operation, in order, as data")
+}
+
+// --8<-- [end:run-fake]
+
+func TestPart1_sameProgramLiveHandler(t *testing.T) {
+	program := Greet("name.txt")
+
+	live, out, _ := newWorld()
+	got, err := Interpret(context.Background(), program, live)
+
+	require.NoError(t, err)
+	assert.Equal(t, "Hello Ada, it is 12:00PM", got)
+	assert.Equal(t, "Hello Ada, it is 12:00PM\n", out.String(), "Live wrote the log line for real")
+}
+
+func TestPart1_buildingAProgramPerformsNothing(t *testing.T) {
+	fake := &Fake{Clock: noon, Files: map[string]string{"name.txt": "Ada"}}
+
+	prog := Greet("name.txt")
+
+	assert.Empty(t, fake.Logs, "nothing ran yet")
+	_, err := Interpret(context.Background(), prog, fake)
+	require.NoError(t, err)
+	assert.Len(t, fake.Logs, 1, "now it did")
+}
+
+func TestPart1_handlerErrorStopsTheProgram(t *testing.T) {
+	program := Greet("missing.txt")
+
+	fake := &Fake{Clock: noon} // no files
+	var trace []MyEff
+	_, err := Interpret(context.Background(), program, fake, effect.Trace(&trace))
+
+	require.ErrorContains(t, err, `no file "missing.txt"`)
+	assert.Equal(t, []MyEff{&ReadFile{Path: "missing.txt"}}, trace, "nothing after the failing operation runs")
+	assert.Empty(t, fake.Logs)
+}
+
+func TestPart1_cancelledContextStopsBeforeTheNextOperation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	program := Greet("name.txt")
+
+	var trace []MyEff
+	_, err := Interpret(ctx, program, &Fake{}, effect.Trace(&trace))
+
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Empty(t, trace)
+}
+
+func TestPart1_attemptHandlesAnErrorInPlace(t *testing.T) {
+	program := GreetOrGuest("missing.txt")
+
+	fake := &Fake{} // no files: ReadFile fails, the body carries on
+	got, err := Interpret(context.Background(), program, fake)
+
+	require.NoError(t, err)
+	assert.Equal(t, "Hello guest", got)
+	assert.Equal(t, []string{"Hello guest"}, fake.Logs)
+}
+
+// --8<-- [start:clock-only]
+
+// clockOnly overrides one method; Defaults supplies the other five.
+type clockOnly struct {
+	Defaults
+	at time.Time
+}
+
+func (c clockOnly) HandleNow(context.Context, *Now) (time.Time, error) { return c.at, nil }
+
+// --8<-- [end:clock-only]
+
+func TestPart1_defaultsLetATestOverrideOneMethod(t *testing.T) {
+	prog := Prog(func(fx Fx) (string, error) {
+		fx.Log("ignored by Defaults")
+		return fx.Now().Format(time.Kitchen) + " and rolled " + strconv.Itoa(fx.Random(6)), nil
+	})
+
+	got, err := Interpret(context.Background(), prog, clockOnly{at: noon})
+
+	require.NoError(t, err)
+	assert.Equal(t, "12:00PM and rolled 0", got)
+
+	_, err = Interpret(context.Background(), Greet("name.txt"), clockOnly{})
+	assert.EqualError(t, err, `defaults: no file "name.txt"`, "Defaults refuses reads, so a test cannot depend on one by accident")
+}
+
+func TestPart1_aLoopIsALoop(t *testing.T) {
+	const rolls = 1_000_000
+	program := RollUntil(6, rolls) // one value, interpreted twice below
+
+	_, err := Interpret(context.Background(), program, &Fake{Rolls: []int{0}})
+	require.ErrorContains(t, err, "no 6 in 1000000 rolls", "a million operations, no stack growth")
+
+	got, err := Interpret(context.Background(), program, &Fake{Rolls: []int{0, 0, 5}})
+	require.NoError(t, err)
+	assert.Equal(t, 3, got, "the third roll was a six")
+}
+
+func TestPart1_aFakeSaysWhenItHasNoAnswer(t *testing.T) {
+	_, err := Interpret(context.Background(), RollUntil(6, 1), &Fake{})
+	assert.EqualError(t, err, "fake: no rolls configured")
+}
+
+func TestPart1_fxDoInfersTheAnswerType(t *testing.T) {
+	prog := Prog(func(fx Fx) (time.Time, error) {
+		return fx.Do(&Now{}), nil // no type annotation: R comes from Now's f.Returns
+	})
+
+	got, err := Interpret(context.Background(), prog, &Fake{Clock: noon})
+
+	require.NoError(t, err)
+	assert.Equal(t, noon, got)
+}
+
+// --8<-- [start:inline-handler]
+
+func TestPart1_aHandlerCanBeClosures(t *testing.T) {
+	ctx := context.Background()
+	program := Greet("name.txt")
+
+	// HandleMyEff is the function form of a handler: one arm per operation,
+	// and every arm must be there. No struct, no method set, no defaults.
+	var logged []string
+	handler := func(ctx context.Context, op MyEff) (any, error) {
+		return HandleMyEff(ctx, op,
+			func(_ context.Context, op *Log) (Unit, error) { logged = append(logged, op.Msg); return Unit{}, nil },
+			func(context.Context, *Now) (time.Time, error) { return noon, nil },
+			func(context.Context, *ReadFile) ([]byte, error) { return []byte("Ada"), nil },
+			func(context.Context, *Random) (int, error) { return 0, nil },
+			func(context.Context, *Send) (string, error) { return "receipt-0", nil },
+			func(context.Context, *Charge) (f.Result[Receipt, ChargeError], error) {
+				return f.MkOk[ChargeError](Receipt{ID: "charge-0"}), nil
+			},
+		)
+	}
+	got, err := effect.Run(ctx, handler, program)
+
+	require.NoError(t, err)
+	assert.Equal(t, "Hello Ada, it is 12:00PM", got)
+	assert.Equal(t, []string{"Hello Ada, it is 12:00PM"}, logged)
+}
+
+// --8<-- [end:inline-handler]
+
+// Program[A] is an alias, not a new type: the assignment below is checked by
+// the compiler, so there is nothing left to test at run time.
+var _ effect.Eff[MyEff, string] = Program[string](nil)

@@ -174,6 +174,9 @@ func (g *SerdeJSONTagged) GenerateVarCasting(x shape.Shape) (string, error) {
 // json:"-" skips the field, json:"name" renames it, and the omitempty option
 // drops the field when its value is empty.
 func fieldJSONInfo(field *shape.FieldLike) (name string, skip bool, omitEmpty bool) {
+	if shape.IsPhantomField(field) {
+		return "", true, false
+	}
 	name = shape.TagGetValue(field.Tags, "json", field.Name)
 	if name == "-" {
 		return "", true, false

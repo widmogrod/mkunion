@@ -2,7 +2,7 @@
 
 ### Install mkunion
 
-Add mkunion as a tool dependency of your module (needs Go 1.24 or newer):
+Add mkunion as a tool dependency of your module (needs Go 1.27 or newer):
 ```bash
 go get -tool github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
 ```
@@ -14,7 +14,7 @@ No `go install`, no `PATH` changes.
 
 ??? note "Using an older Go toolchain"
 
-    On Go older than 1.24, install the binary instead and drop the `go tool` prefix
+    On Go older than 1.27, install the binary instead and drop the `go tool` prefix
     from every command below:
     ```bash
     go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
@@ -54,6 +54,14 @@ And MkUnion uses it heavily to offer a way of adding new behavior to Go types.
   ```go
   //go:tag mkunion:",no-type-registry"
   package example
+  ```
+- `f.Returns[R]` embedded in a variant - declares the variant's answer type. A union with at least one such variant also gets a typed handler: one interface per variant, `QueryHandler` for the whole union, and an exhaustive `HandleQuery` function with one typed arm per variant. No tag option is needed. See [Typed handlers](./examples/typed_handler.md).
+  ```go
+  //go:tag mkunion:"Query"
+  type (
+      GetUser struct{ f.Returns[*User]; ID string }
+      Count   struct{ f.Returns[int] }
+  )
   ```
 - `go:tag mkmatch` - generate custom pattern matching function from interface definition
   ```go title="example/shape.go"
@@ -162,4 +170,5 @@ You can read more about it in the [Marshaling union in JSON](./examples/json.md)
 
 - **[Union and generic types](./examples/generic_union.md)** - Learn about generic unions
 - **[Custom Pattern Matching](./examples/custom_pattern_matching.md)** - Learn about custom pattern matching
+- **[Typed handlers](./examples/typed_handler.md)** - Learn about unions where each variant declares its own answer type
 - **[Marshaling union in JSON](./examples/json.md)** - Learn about marshaling and unmarshalling of union types in JSON
