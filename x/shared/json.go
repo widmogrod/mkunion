@@ -90,6 +90,15 @@ func JSONUnmarshal[A any](data []byte) (A, error) {
 	key := FullTypeName(reflect.TypeOf(new(A)))
 	fromTo, ok := registerJSONMarshaller.Load(key)
 	if !ok {
+		// null is always a valid zero value, even for unregistered interfaces
+		if data == nil || bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+			return destinationType, nil
+		}
+
+		if isUnregisterableInterface[A]() {
+			return destinationType, fmt.Errorf("shared.JSONUnmarshal: type %q is an interface with no registered marshaller; import the package that registers it (generated init in *_union_gen.go) or check //go:tag mkunion:\",no-type-registry\"", key)
+		}
+
 		err := json.Unmarshal(data, &destinationType)
 		if err != nil {
 			return destinationType, fmt.Errorf("shared.JSONUnmarshal: use native fallback; %w", err)
@@ -165,6 +174,14 @@ func JSONMarshal[A any](in A) ([]byte, error) {
 	key := FullTypeName(reflect.TypeOf(new(A)))
 	fromTo, ok := registerJSONMarshaller.Load(key)
 	if !ok {
+		// Marshalling an interface value without a registered marshaller
+		// would silently produce JSON without the $type discriminator,
+		// and such data can never be unmarshalled back into the interface.
+		// Fail loudly instead of corrupting data at rest.
+		if isUnregisterableInterface[A]() {
+			return nil, fmt.Errorf("shared.JSONMarshal: type %q is an interface with no registered marshaller; marshalling would drop the $type discriminator and the data could not be read back; import the package that registers it (generated init in *_union_gen.go) or check //go:tag mkunion:\",no-type-registry\"", key)
+		}
+
 		date, err := json.Marshal(x)
 		if err != nil {
 			return nil, fmt.Errorf("shared.JSONMarshal: in fallback; %w", err)
@@ -179,6 +196,15 @@ func JSONMarshal[A any](in A) ([]byte, error) {
 	}
 
 	return out, nil
+}
+
+// isUnregisterableInterface reports whether A is a non-empty interface type
+// (like a union visitor interface). Such types cannot round-trip through
+// plain encoding/json - they need a registered marshaller that writes the
+// $type discriminator.
+func isUnregisterableInterface[A any]() bool {
+	t := reflect.TypeOf(new(A)).Elem()
+	return t.Kind() == reflect.Interface && t.NumMethod() > 0
 }
 
 func JSONIsNativePath(x any) bool {
