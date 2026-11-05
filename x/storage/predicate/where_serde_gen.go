@@ -9,6 +9,110 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
+// WhereOpt holds a union: serde generated so encoding/json keeps $type.
+var (
+	_ json.Unmarshaler = (*WhereOpt)(nil)
+	_ json.Marshaler   = (*WhereOpt)(nil)
+)
+
+func (r *WhereOpt) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return []byte(`null`), nil
+	}
+	return r._marshalJSONWhereOpt(*r)
+}
+func (r *WhereOpt) _marshalJSONWhereOpt(x WhereOpt) ([]byte, error) {
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
+	var err error
+	var fieldAllowExtraParams []byte
+	fieldAllowExtraParams, err = r._marshalJSONbool(x.AllowExtraParams)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: WhereOpt._marshalJSONWhereOpt: field name AllowExtraParams; %w", err)
+	}
+	if len(fieldAllowExtraParams) == 0 {
+		fieldAllowExtraParams = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"AllowExtraParams\":")
+	buf.Write(fieldAllowExtraParams)
+	var fieldWithShapeDef []byte
+	fieldWithShapeDef, err = r._marshalJSONshape_Shape(x.WithShapeDef)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: WhereOpt._marshalJSONWhereOpt: field name WithShapeDef; %w", err)
+	}
+	if len(fieldWithShapeDef) == 0 {
+		fieldWithShapeDef = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"WithShapeDef\":")
+	buf.Write(fieldWithShapeDef)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+func (r *WhereOpt) _marshalJSONbool(x bool) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: WhereOpt._marshalJSONbool:; %w", err)
+	}
+	return result, nil
+}
+func (r *WhereOpt) _marshalJSONshape_Shape(x shape.Shape) ([]byte, error) {
+	result, err := shared.JSONMarshal[shape.Shape](x)
+	if err != nil {
+		return nil, fmt.Errorf("predicate: WhereOpt._marshalJSONshape_Shape:; %w", err)
+	}
+	return result, nil
+}
+func (r *WhereOpt) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONWhereOpt(data)
+	if err != nil {
+		return fmt.Errorf("predicate: WhereOpt.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *WhereOpt) _unmarshalJSONWhereOpt(data []byte) (WhereOpt, error) {
+	result := WhereOpt{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("predicate: WhereOpt._unmarshalJSONWhereOpt: native struct unwrap; %w", err)
+	}
+	if fieldAllowExtraParams, ok := partial["AllowExtraParams"]; ok {
+		result.AllowExtraParams, err = r._unmarshalJSONbool(fieldAllowExtraParams)
+		if err != nil {
+			return result, fmt.Errorf("predicate: WhereOpt._unmarshalJSONWhereOpt: field AllowExtraParams; %w", err)
+		}
+	}
+	if fieldWithShapeDef, ok := partial["WithShapeDef"]; ok {
+		result.WithShapeDef, err = r._unmarshalJSONshape_Shape(fieldWithShapeDef)
+		if err != nil {
+			return result, fmt.Errorf("predicate: WhereOpt._unmarshalJSONWhereOpt: field WithShapeDef; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *WhereOpt) _unmarshalJSONbool(data []byte) (bool, error) {
+	var result bool
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("predicate: WhereOpt._unmarshalJSONbool: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *WhereOpt) _unmarshalJSONshape_Shape(data []byte) (shape.Shape, error) {
+	result, err := shared.JSONUnmarshal[shape.Shape](data)
+	if err != nil {
+		return result, fmt.Errorf("predicate: WhereOpt._unmarshalJSONshape_Shape: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
 var (
 	_ json.Unmarshaler = (*WherePredicates)(nil)
 	_ json.Marshaler   = (*WherePredicates)(nil)
@@ -16,7 +120,7 @@ var (
 
 func (r *WherePredicates) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONWherePredicates(*r)
 }

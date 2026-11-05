@@ -36,7 +36,7 @@ var (
 
 func (r *ListOf2[T1,T2]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(` + "`null`" + `), nil
 	}
 	return r._marshalJSONListOf2Lb_T1CommaT2_bL(*r)
 }
@@ -389,7 +389,7 @@ func (r *ListOf2[T1,T2]) _unmarshalJSONPtrListOfLb_T2_bL(data []byte) (*ListOf[T
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONListOfLb_T2_bL(data)
@@ -476,7 +476,7 @@ var (
 
 func (r *Ka) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(` + "`null`" + `), nil
 	}
 	return r._marshalJSONKa(*r)
 }
@@ -624,7 +624,7 @@ var (
 
 func (r *P) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(` + "`null`" + `), nil
 	}
 	return r._marshalJSONP(*r)
 }

@@ -214,7 +214,7 @@ func (g *SerdeJSONTagged) GenerateMarshalJSON(x shape.Shape) (string, error) {
 	result := &strings.Builder{}
 	result.WriteString(fmt.Sprintf("func (r *%s) MarshalJSON() ([]byte, error) {\n", g.rootTypeName()))
 	result.WriteString(fmt.Sprintf("\tif r == nil {\n"))
-	result.WriteString(fmt.Sprintf("\t\treturn nil, nil\n"))
+	result.WriteString(fmt.Sprintf("\t\treturn []byte(`null`), nil\n"))
 	result.WriteString(fmt.Sprintf("\t}\n"))
 	result.WriteString(fmt.Sprintf("\treturn r.%s(*r)\n", g.methodNameWithPrefix(x, marshalJSONMethodPrefix)))
 	result.WriteString("}\n")
@@ -612,7 +612,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 			body.WriteString(fmt.Sprintf("if len(data) == 0 {\n"))
 			body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
 			body.WriteString(fmt.Sprintf("}\n"))
-			body.WriteString(fmt.Sprintf("if string(data[:4]) == \"null\" {\n"))
+			body.WriteString(fmt.Sprintf("if len(data) >= 4 && string(data[:4]) == \"null\" {\n"))
 			body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
 			body.WriteString(fmt.Sprintf("}\n"))
 			body.WriteString(fmt.Sprintf("result, err := r.%s(data)\n", g.methodNameWithPrefix(y.Type, unmarshalJSONMethodPrefix)))
@@ -781,7 +781,7 @@ func (g *SerdeJSONTagged) GenerateUnmarshalJSONMethods(x shape.Shape) (string, e
 				body.WriteString(fmt.Sprintf("if len(data) == 0 {\n"))
 				body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
 				body.WriteString(fmt.Sprintf("}\n"))
-				body.WriteString(fmt.Sprintf("if string(data[:4]) == \"null\" {\n"))
+				body.WriteString(fmt.Sprintf("if len(data) >= 4 && string(data[:4]) == \"null\" {\n"))
 				body.WriteString(fmt.Sprintf("\treturn nil, nil\n"))
 				body.WriteString(fmt.Sprintf("}\n"))
 

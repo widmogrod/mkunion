@@ -16,7 +16,7 @@ var (
 
 func (r *Item) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONItem(*r)
 }
@@ -206,7 +206,7 @@ func (r *Item) _unmarshalJSONPtrWindow(data []byte) (*Window, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONWindow(data)
@@ -237,7 +237,7 @@ var (
 
 func (r *ItemGroupedByKey) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONItemGroupedByKey(*r)
 }
@@ -371,7 +371,7 @@ var (
 
 func (r *ItemGroupedByWindow) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONItemGroupedByWindow(*r)
 }
@@ -501,7 +501,7 @@ func (r *ItemGroupedByWindow) _unmarshalJSONPtrschema_List(data []byte) (*schema
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONschema_List(data)
@@ -521,7 +521,7 @@ func (r *ItemGroupedByWindow) _unmarshalJSONPtrWindow(data []byte) (*Window, err
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONWindow(data)

@@ -98,10 +98,10 @@ type SearchCMDUnionJSON struct {
 }
 
 func SearchCMDFromJSON(x []byte) (SearchCMD, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data SearchCMDUnionJSON
@@ -110,10 +110,17 @@ func SearchCMDFromJSON(x []byte) (SearchCMD, error) {
 		return nil, fmt.Errorf("search.SearchCMDFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "search.Term":
+		if data.Term == nil || string(data.Term) == "null" {
+			return new(Term), nil
+		}
 		return TermFromJSON(data.Term)
 	case "search.Fulltext":
+		if data.Fulltext == nil || string(data.Fulltext) == "null" {
+			return new(Fulltext), nil
+		}
 		return FulltextFromJSON(data.Fulltext)
 	}
 
@@ -122,7 +129,10 @@ func SearchCMDFromJSON(x []byte) (SearchCMD, error) {
 	} else if data.Fulltext != nil {
 		return FulltextFromJSON(data.Fulltext)
 	}
-	return nil, fmt.Errorf("search.SearchCMDFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("search.SearchCMDFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("search.SearchCMDFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func SearchCMDToJSON(x SearchCMD) ([]byte, error) {
@@ -132,6 +142,9 @@ func SearchCMDToJSON(x SearchCMD) ([]byte, error) {
 	return MatchSearchCMDR2(
 		x,
 		func(y *Term) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := TermToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("search.SearchCMDToJSON: %w", err)
@@ -142,6 +155,9 @@ func SearchCMDToJSON(x SearchCMD) ([]byte, error) {
 			})
 		},
 		func(y *Fulltext) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := FulltextToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("search.SearchCMDToJSON: %w", err)
@@ -174,7 +190,7 @@ var (
 
 func (r *Term) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONTerm(*r)
 }
@@ -257,7 +273,7 @@ var (
 
 func (r *Fulltext) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFulltext(*r)
 }

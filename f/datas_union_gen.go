@@ -98,10 +98,10 @@ type EitherUnionJSON[A any, B any] struct {
 }
 
 func EitherFromJSON[A any, B any](x []byte) (Either[A, B], error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data EitherUnionJSON[A, B]
@@ -110,10 +110,17 @@ func EitherFromJSON[A any, B any](x []byte) (Either[A, B], error) {
 		return nil, fmt.Errorf("f.EitherFromJSON[A,B]: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "f.Left":
+		if data.Left == nil || string(data.Left) == "null" {
+			return new(Left[A, B]), nil
+		}
 		return LeftFromJSON[A, B](data.Left)
 	case "f.Right":
+		if data.Right == nil || string(data.Right) == "null" {
+			return new(Right[A, B]), nil
+		}
 		return RightFromJSON[A, B](data.Right)
 	}
 
@@ -122,7 +129,10 @@ func EitherFromJSON[A any, B any](x []byte) (Either[A, B], error) {
 	} else if data.Right != nil {
 		return RightFromJSON[A, B](data.Right)
 	}
-	return nil, fmt.Errorf("f.EitherFromJSON[A,B]: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("f.EitherFromJSON[A,B]: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("f.EitherFromJSON[A,B]: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func EitherToJSON[A any, B any](x Either[A, B]) ([]byte, error) {
@@ -132,6 +142,9 @@ func EitherToJSON[A any, B any](x Either[A, B]) ([]byte, error) {
 	return MatchEitherR2(
 		x,
 		func(y *Left[A, B]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := LeftToJSON[A, B](y)
 			if err != nil {
 				return nil, fmt.Errorf("f.EitherToJSON[A,B]: %w", err)
@@ -142,6 +155,9 @@ func EitherToJSON[A any, B any](x Either[A, B]) ([]byte, error) {
 			})
 		},
 		func(y *Right[A, B]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := RightToJSON[A, B](y)
 			if err != nil {
 				return nil, fmt.Errorf("f.EitherToJSON[A,B]: %w", err)
@@ -174,7 +190,7 @@ var (
 
 func (r *Left[A, B]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONLeftLb_ACommaB_bL(*r)
 }
@@ -256,7 +272,7 @@ var (
 
 func (r *Right[A, B]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRightLb_ACommaB_bL(*r)
 }
@@ -408,10 +424,10 @@ type OptionUnionJSON[A any] struct {
 }
 
 func OptionFromJSON[A any](x []byte) (Option[A], error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data OptionUnionJSON[A]
@@ -420,10 +436,17 @@ func OptionFromJSON[A any](x []byte) (Option[A], error) {
 		return nil, fmt.Errorf("f.OptionFromJSON[A]: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "f.None":
+		if data.None == nil || string(data.None) == "null" {
+			return new(None[A]), nil
+		}
 		return NoneFromJSON[A](data.None)
 	case "f.Some":
+		if data.Some == nil || string(data.Some) == "null" {
+			return new(Some[A]), nil
+		}
 		return SomeFromJSON[A](data.Some)
 	}
 
@@ -432,7 +455,10 @@ func OptionFromJSON[A any](x []byte) (Option[A], error) {
 	} else if data.Some != nil {
 		return SomeFromJSON[A](data.Some)
 	}
-	return nil, fmt.Errorf("f.OptionFromJSON[A]: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("f.OptionFromJSON[A]: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("f.OptionFromJSON[A]: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func OptionToJSON[A any](x Option[A]) ([]byte, error) {
@@ -442,6 +468,9 @@ func OptionToJSON[A any](x Option[A]) ([]byte, error) {
 	return MatchOptionR2(
 		x,
 		func(y *None[A]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NoneToJSON[A](y)
 			if err != nil {
 				return nil, fmt.Errorf("f.OptionToJSON[A]: %w", err)
@@ -452,6 +481,9 @@ func OptionToJSON[A any](x Option[A]) ([]byte, error) {
 			})
 		},
 		func(y *Some[A]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SomeToJSON[A](y)
 			if err != nil {
 				return nil, fmt.Errorf("f.OptionToJSON[A]: %w", err)
@@ -484,7 +516,7 @@ var (
 
 func (r *None[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNoneLb_A_bL(*r)
 }
@@ -529,7 +561,7 @@ var (
 
 func (r *Some[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSomeLb_A_bL(*r)
 }
@@ -681,10 +713,10 @@ type ResultUnionJSON[A any, E any] struct {
 }
 
 func ResultFromJSON[A any, E any](x []byte) (Result[A, E], error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ResultUnionJSON[A, E]
@@ -693,10 +725,17 @@ func ResultFromJSON[A any, E any](x []byte) (Result[A, E], error) {
 		return nil, fmt.Errorf("f.ResultFromJSON[A,E]: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "f.Ok":
+		if data.Ok == nil || string(data.Ok) == "null" {
+			return new(Ok[A, E]), nil
+		}
 		return OkFromJSON[A, E](data.Ok)
 	case "f.Err":
+		if data.Err == nil || string(data.Err) == "null" {
+			return new(Err[A, E]), nil
+		}
 		return ErrFromJSON[A, E](data.Err)
 	}
 
@@ -705,7 +744,10 @@ func ResultFromJSON[A any, E any](x []byte) (Result[A, E], error) {
 	} else if data.Err != nil {
 		return ErrFromJSON[A, E](data.Err)
 	}
-	return nil, fmt.Errorf("f.ResultFromJSON[A,E]: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("f.ResultFromJSON[A,E]: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("f.ResultFromJSON[A,E]: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ResultToJSON[A any, E any](x Result[A, E]) ([]byte, error) {
@@ -715,6 +757,9 @@ func ResultToJSON[A any, E any](x Result[A, E]) ([]byte, error) {
 	return MatchResultR2(
 		x,
 		func(y *Ok[A, E]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OkToJSON[A, E](y)
 			if err != nil {
 				return nil, fmt.Errorf("f.ResultToJSON[A,E]: %w", err)
@@ -725,6 +770,9 @@ func ResultToJSON[A any, E any](x Result[A, E]) ([]byte, error) {
 			})
 		},
 		func(y *Err[A, E]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ErrToJSON[A, E](y)
 			if err != nil {
 				return nil, fmt.Errorf("f.ResultToJSON[A,E]: %w", err)
@@ -757,7 +805,7 @@ var (
 
 func (r *Ok[A, E]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOkLb_ACommaE_bL(*r)
 }
@@ -839,7 +887,7 @@ var (
 
 func (r *Err[A, E]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONErrLb_ACommaE_bL(*r)
 }

@@ -515,6 +515,128 @@ func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
 	return result
 }
 
+// RetrieveStructsHoldingUnion returns the plain structs of the file that hold a
+// union value in a field: directly, behind a pointer, in a slice or array, in a
+// map value or key, or through an alias. Union variants are not included (they
+// get serde with their union), and neither are structs that carry a serde tag
+// (those are the user's call). encoding/json cannot keep the $type of a union
+// field, so mkunion generates serde for these structs as if they were tagged
+// serde:"json".
+func (f *InferredInfo) RetrieveStructsHoldingUnion() []*StructLike {
+	var result []*StructLike
+	for _, structShape := range f.RetrieveStructs() {
+		if _, tagged := Tags(structShape)["serde"]; tagged {
+			continue
+		}
+		if f.structHoldsUnion(structShape, map[string]bool{}) {
+			result = append(result, structShape)
+		}
+	}
+
+	return result
+}
+
+// RetrieveAliasesHoldingUnion returns the named non-struct types of the file
+// that hold a union, such as `type Steps []State` or `type ByName map[string]State`.
+// The same exclusions as RetrieveStructsHoldingUnion apply: union variants,
+// types with a serde tag, and `type X = Y` aliases (which have no methods of
+// their own) are left out.
+func (f *InferredInfo) RetrieveAliasesHoldingUnion() []*AliasLike {
+	var result []*AliasLike
+	for _, x := range f.RetrieveShapes() {
+		alias, ok := x.(*AliasLike)
+		if !ok || IsWeekAlias(alias) || RetrieveVariantTypeRef(alias) != nil {
+			continue
+		}
+		if _, tagged := Tags(alias)["serde"]; tagged {
+			continue
+		}
+		if f.holdsUnion(alias.Type, map[string]bool{alias.Name: true}) {
+			result = append(result, alias)
+		}
+	}
+
+	return result
+}
+
+// structHoldsUnion reports whether a data field of the struct holds a union.
+// Phantom fields (an embedded f.Returns[R]) carry no data and are skipped.
+func (f *InferredInfo) structHoldsUnion(x *StructLike, seen map[string]bool) bool {
+	for _, field := range x.Fields {
+		if IsPhantomField(field) {
+			continue
+		}
+		if f.holdsUnion(field.Type, seen) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// holdsUnion reports whether a value of the shape holds a union anywhere
+// encoding/json would reach on its own: directly, behind a pointer, in a list,
+// in a map key or value, through an alias, or in an inline struct. seen holds
+// the names of the aliases already entered, so a recursive type ends the walk.
+func (f *InferredInfo) holdsUnion(x Shape, seen map[string]bool) bool {
+	switch y := x.(type) {
+	case *UnionLike:
+		return true
+	case *RefName:
+		return f.refHoldsUnion(y, seen)
+	case *PointerLike:
+		return f.holdsUnion(y.Type, seen)
+	case *ListLike:
+		return f.holdsUnion(y.Element, seen)
+	case *MapLike:
+		return f.holdsUnion(y.Key, seen) || f.holdsUnion(y.Val, seen)
+	case *AliasLike:
+		return f.holdsUnion(y.Type, seen)
+	case *StructLike:
+		return f.structHoldsUnion(y, seen)
+	default:
+		// *Any, *PrimitiveLike
+		return false
+	}
+}
+
+// refHoldsUnion resolves a type reference just far enough to tell whether it
+// is, or wraps, a union. A reference to a named struct or to a union variant
+// stops the walk: those types get their own JSON methods, which encoding/json
+// honours. A reference the file does not declare is looked up on disk through
+// the DefaultIndex, so a union declared in a sibling file of the package, or in
+// another package, is found too. A reference that does not resolve holds nothing.
+func (f *InferredInfo) refHoldsUnion(ref *RefName, seen map[string]bool) bool {
+	if ref.PkgImportName == f.pkgImportName {
+		if f.RetrieveUnion(ref.Name) != nil {
+			return true
+		}
+		if declared, ok := f.shapes[ref.Name]; ok {
+			alias, isAlias := declared.(*AliasLike)
+			if !isAlias || RetrieveVariantTypeRef(alias) != nil {
+				return false
+			}
+			if seen[ref.Name] {
+				return false
+			}
+			seen[ref.Name] = true
+			return f.holdsUnion(alias.Type, seen)
+		}
+	}
+
+	if ref.PkgImportName == "" {
+		// a type parameter or a builtin: nothing to look up
+		return false
+	}
+
+	found, ok := LookupShapeOnDisk(ref)
+	if !ok {
+		return false
+	}
+
+	return IsUnion(found)
+}
+
 // removeTypeParams removes type parameters from a given string, returning the base name.
 // Examples: "Option[A]" -> "Option", "Result[T, E]" -> "Result"
 func removeTypeParams(name string) string {

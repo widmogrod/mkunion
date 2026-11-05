@@ -3,9 +3,19 @@ package shared
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
+)
+
+var (
+	// ErrNoType is what a generated XFromJSON returns when the object has no
+	// $type field and no key named after a variant.
+	ErrNoType = errors.New("no $type field")
+	// ErrUnknownType is what a generated XFromJSON returns when $type names a
+	// variant the union does not have; the message ends with that name.
+	ErrUnknownType = errors.New("unknown type")
 )
 
 var (

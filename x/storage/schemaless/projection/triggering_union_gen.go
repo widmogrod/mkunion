@@ -156,10 +156,10 @@ type TriggerDescriptionUnionJSON struct {
 }
 
 func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data TriggerDescriptionUnionJSON
@@ -168,16 +168,32 @@ func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
 		return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "projection.AtPeriod":
+		if data.AtPeriod == nil || string(data.AtPeriod) == "null" {
+			return new(AtPeriod), nil
+		}
 		return AtPeriodFromJSON(data.AtPeriod)
 	case "projection.AtWindowItemSize":
+		if data.AtWindowItemSize == nil || string(data.AtWindowItemSize) == "null" {
+			return new(AtWindowItemSize), nil
+		}
 		return AtWindowItemSizeFromJSON(data.AtWindowItemSize)
 	case "projection.AtWatermark":
+		if data.AtWatermark == nil || string(data.AtWatermark) == "null" {
+			return new(AtWatermark), nil
+		}
 		return AtWatermarkFromJSON(data.AtWatermark)
 	case "projection.AnyOf":
+		if data.AnyOf == nil || string(data.AnyOf) == "null" {
+			return new(AnyOf), nil
+		}
 		return AnyOfFromJSON(data.AnyOf)
 	case "projection.AllOf":
+		if data.AllOf == nil || string(data.AllOf) == "null" {
+			return new(AllOf), nil
+		}
 		return AllOfFromJSON(data.AllOf)
 	}
 
@@ -192,7 +208,10 @@ func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
 	} else if data.AllOf != nil {
 		return AllOfFromJSON(data.AllOf)
 	}
-	return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
@@ -202,6 +221,9 @@ func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 	return MatchTriggerDescriptionR2(
 		x,
 		func(y *AtPeriod) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AtPeriodToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
@@ -212,6 +234,9 @@ func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 			})
 		},
 		func(y *AtWindowItemSize) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AtWindowItemSizeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
@@ -222,6 +247,9 @@ func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 			})
 		},
 		func(y *AtWatermark) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AtWatermarkToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
@@ -232,6 +260,9 @@ func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 			})
 		},
 		func(y *AnyOf) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AnyOfToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
@@ -242,6 +273,9 @@ func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 			})
 		},
 		func(y *AllOf) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AllOfToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
@@ -274,7 +308,7 @@ var (
 
 func (r *AtPeriod) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAtPeriod(*r)
 }
@@ -356,7 +390,7 @@ var (
 
 func (r *AtWindowItemSize) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAtWindowItemSize(*r)
 }
@@ -439,7 +473,7 @@ var (
 
 func (r *AtWatermark) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAtWatermark(*r)
 }
@@ -522,7 +556,7 @@ var (
 
 func (r *AnyOf) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAnyOf(*r)
 }
@@ -635,7 +669,7 @@ var (
 
 func (r *AllOf) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAllOf(*r)
 }
@@ -837,10 +871,10 @@ type TriggerTypeUnionJSON struct {
 }
 
 func TriggerTypeFromJSON(x []byte) (TriggerType, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data TriggerTypeUnionJSON
@@ -849,12 +883,22 @@ func TriggerTypeFromJSON(x []byte) (TriggerType, error) {
 		return nil, fmt.Errorf("projection.TriggerTypeFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "projection.AtPeriod1":
+		if data.AtPeriod1 == nil || string(data.AtPeriod1) == "null" {
+			return new(AtPeriod1), nil
+		}
 		return AtPeriod1FromJSON(data.AtPeriod1)
 	case "projection.AtWindowItemSize1":
+		if data.AtWindowItemSize1 == nil || string(data.AtWindowItemSize1) == "null" {
+			return new(AtWindowItemSize1), nil
+		}
 		return AtWindowItemSize1FromJSON(data.AtWindowItemSize1)
 	case "projection.AtWatermark1":
+		if data.AtWatermark1 == nil || string(data.AtWatermark1) == "null" {
+			return new(AtWatermark1), nil
+		}
 		return AtWatermark1FromJSON(data.AtWatermark1)
 	}
 
@@ -865,7 +909,10 @@ func TriggerTypeFromJSON(x []byte) (TriggerType, error) {
 	} else if data.AtWatermark1 != nil {
 		return AtWatermark1FromJSON(data.AtWatermark1)
 	}
-	return nil, fmt.Errorf("projection.TriggerTypeFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("projection.TriggerTypeFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("projection.TriggerTypeFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func TriggerTypeToJSON(x TriggerType) ([]byte, error) {
@@ -875,6 +922,9 @@ func TriggerTypeToJSON(x TriggerType) ([]byte, error) {
 	return MatchTriggerTypeR2(
 		x,
 		func(y *AtPeriod1) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AtPeriod1ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerTypeToJSON: %w", err)
@@ -885,6 +935,9 @@ func TriggerTypeToJSON(x TriggerType) ([]byte, error) {
 			})
 		},
 		func(y *AtWindowItemSize1) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AtWindowItemSize1ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerTypeToJSON: %w", err)
@@ -895,6 +948,9 @@ func TriggerTypeToJSON(x TriggerType) ([]byte, error) {
 			})
 		},
 		func(y *AtWatermark1) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AtWatermark1ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerTypeToJSON: %w", err)
@@ -1070,10 +1126,10 @@ type WindowFlushModeUnionJSON struct {
 }
 
 func WindowFlushModeFromJSON(x []byte) (WindowFlushMode, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data WindowFlushModeUnionJSON
@@ -1082,12 +1138,22 @@ func WindowFlushModeFromJSON(x []byte) (WindowFlushMode, error) {
 		return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "projection.Accumulate":
+		if data.Accumulate == nil || string(data.Accumulate) == "null" {
+			return new(Accumulate), nil
+		}
 		return AccumulateFromJSON(data.Accumulate)
 	case "projection.Discard":
+		if data.Discard == nil || string(data.Discard) == "null" {
+			return new(Discard), nil
+		}
 		return DiscardFromJSON(data.Discard)
 	case "projection.AccumulatingAndRetracting":
+		if data.AccumulatingAndRetracting == nil || string(data.AccumulatingAndRetracting) == "null" {
+			return new(AccumulatingAndRetracting), nil
+		}
 		return AccumulatingAndRetractingFromJSON(data.AccumulatingAndRetracting)
 	}
 
@@ -1098,7 +1164,10 @@ func WindowFlushModeFromJSON(x []byte) (WindowFlushMode, error) {
 	} else if data.AccumulatingAndRetracting != nil {
 		return AccumulatingAndRetractingFromJSON(data.AccumulatingAndRetracting)
 	}
-	return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("projection.WindowFlushModeFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func WindowFlushModeToJSON(x WindowFlushMode) ([]byte, error) {
@@ -1108,6 +1177,9 @@ func WindowFlushModeToJSON(x WindowFlushMode) ([]byte, error) {
 	return MatchWindowFlushModeR2(
 		x,
 		func(y *Accumulate) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AccumulateToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.WindowFlushModeToJSON: %w", err)
@@ -1118,6 +1190,9 @@ func WindowFlushModeToJSON(x WindowFlushMode) ([]byte, error) {
 			})
 		},
 		func(y *Discard) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DiscardToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.WindowFlushModeToJSON: %w", err)
@@ -1128,6 +1203,9 @@ func WindowFlushModeToJSON(x WindowFlushMode) ([]byte, error) {
 			})
 		},
 		func(y *AccumulatingAndRetracting) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AccumulatingAndRetractingToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.WindowFlushModeToJSON: %w", err)
@@ -1160,7 +1238,7 @@ var (
 
 func (r *Accumulate) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAccumulate(*r)
 }
@@ -1242,7 +1320,7 @@ var (
 
 func (r *Discard) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDiscard(*r)
 }
@@ -1287,7 +1365,7 @@ var (
 
 func (r *AccumulatingAndRetracting) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAccumulatingAndRetracting(*r)
 }

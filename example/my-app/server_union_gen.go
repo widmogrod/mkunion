@@ -82,10 +82,10 @@ type ChatCMDUnionJSON struct {
 }
 
 func ChatCMDFromJSON(x []byte) (ChatCMD, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ChatCMDUnionJSON
@@ -94,15 +94,22 @@ func ChatCMDFromJSON(x []byte) (ChatCMD, error) {
 		return nil, fmt.Errorf("main.ChatCMDFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "main.UserMessage":
+		if data.UserMessage == nil || string(data.UserMessage) == "null" {
+			return new(UserMessage), nil
+		}
 		return UserMessageFromJSON(data.UserMessage)
 	}
 
 	if data.UserMessage != nil {
 		return UserMessageFromJSON(data.UserMessage)
 	}
-	return nil, fmt.Errorf("main.ChatCMDFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("main.ChatCMDFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("main.ChatCMDFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ChatCMDToJSON(x ChatCMD) ([]byte, error) {
@@ -112,6 +119,9 @@ func ChatCMDToJSON(x ChatCMD) ([]byte, error) {
 	return MatchChatCMDR2(
 		x,
 		func(y *UserMessage) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UserMessageToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("main.ChatCMDToJSON: %w", err)
@@ -144,7 +154,7 @@ var (
 
 func (r *UserMessage) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUserMessage(*r)
 }
@@ -314,10 +324,10 @@ type ChatResultUnionJSON struct {
 }
 
 func ChatResultFromJSON(x []byte) (ChatResult, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ChatResultUnionJSON
@@ -326,12 +336,22 @@ func ChatResultFromJSON(x []byte) (ChatResult, error) {
 		return nil, fmt.Errorf("main.ChatResultFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "main.SystemResponse":
+		if data.SystemResponse == nil || string(data.SystemResponse) == "null" {
+			return new(SystemResponse), nil
+		}
 		return SystemResponseFromJSON(data.SystemResponse)
 	case "main.UserResponse":
+		if data.UserResponse == nil || string(data.UserResponse) == "null" {
+			return new(UserResponse), nil
+		}
 		return UserResponseFromJSON(data.UserResponse)
 	case "main.ChatResponses":
+		if data.ChatResponses == nil || string(data.ChatResponses) == "null" {
+			return new(ChatResponses), nil
+		}
 		return ChatResponsesFromJSON(data.ChatResponses)
 	}
 
@@ -342,7 +362,10 @@ func ChatResultFromJSON(x []byte) (ChatResult, error) {
 	} else if data.ChatResponses != nil {
 		return ChatResponsesFromJSON(data.ChatResponses)
 	}
-	return nil, fmt.Errorf("main.ChatResultFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("main.ChatResultFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("main.ChatResultFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ChatResultToJSON(x ChatResult) ([]byte, error) {
@@ -352,6 +375,9 @@ func ChatResultToJSON(x ChatResult) ([]byte, error) {
 	return MatchChatResultR2(
 		x,
 		func(y *SystemResponse) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SystemResponseToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("main.ChatResultToJSON: %w", err)
@@ -362,6 +388,9 @@ func ChatResultToJSON(x ChatResult) ([]byte, error) {
 			})
 		},
 		func(y *UserResponse) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UserResponseToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("main.ChatResultToJSON: %w", err)
@@ -372,6 +401,9 @@ func ChatResultToJSON(x ChatResult) ([]byte, error) {
 			})
 		},
 		func(y *ChatResponses) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ChatResponsesToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("main.ChatResultToJSON: %w", err)
@@ -404,7 +436,7 @@ var (
 
 func (r *SystemResponse) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSystemResponse(*r)
 }
@@ -551,7 +583,7 @@ var (
 
 func (r *UserResponse) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUserResponse(*r)
 }
@@ -634,7 +666,7 @@ var (
 
 func (r *ChatResponses) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONChatResponses(*r)
 }

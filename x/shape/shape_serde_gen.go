@@ -8,6 +8,247 @@ import (
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
+// FieldLike holds a union: serde generated so encoding/json keeps $type.
+var (
+	_ json.Unmarshaler = (*FieldLike)(nil)
+	_ json.Marshaler   = (*FieldLike)(nil)
+)
+
+func (r *FieldLike) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return []byte(`null`), nil
+	}
+	return r._marshalJSONFieldLike(*r)
+}
+func (r *FieldLike) _marshalJSONFieldLike(x FieldLike) ([]byte, error) {
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
+	var err error
+	var fieldName []byte
+	fieldName, err = r._marshalJSONstring(x.Name)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONFieldLike: field name Name; %w", err)
+	}
+	if len(fieldName) == 0 {
+		fieldName = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Name\":")
+	buf.Write(fieldName)
+	var fieldType []byte
+	fieldType, err = r._marshalJSONShape(x.Type)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONFieldLike: field name Type; %w", err)
+	}
+	if len(fieldType) == 0 {
+		fieldType = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Type\":")
+	buf.Write(fieldType)
+	var fieldDesc []byte
+	fieldDesc, err = r._marshalJSONPtrstring(x.Desc)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONFieldLike: field name Desc; %w", err)
+	}
+	if len(fieldDesc) == 0 {
+		fieldDesc = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Desc\":")
+	buf.Write(fieldDesc)
+	var fieldGuard []byte
+	fieldGuard, err = r._marshalJSONGuard(x.Guard)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONFieldLike: field name Guard; %w", err)
+	}
+	if len(fieldGuard) == 0 {
+		fieldGuard = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Guard\":")
+	buf.Write(fieldGuard)
+	var fieldTags []byte
+	fieldTags, err = r._marshalJSONmapLb_string_bLTag(x.Tags)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONFieldLike: field name Tags; %w", err)
+	}
+	if len(fieldTags) == 0 {
+		fieldTags = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Tags\":")
+	buf.Write(fieldTags)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+func (r *FieldLike) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) _marshalJSONShape(x Shape) ([]byte, error) {
+	result, err := shared.JSONMarshal[Shape](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONShape:; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) _marshalJSONPtrstring(x *string) ([]byte, error) {
+	if x == nil {
+		return nil, nil
+	}
+	return r._marshalJSONstring(*x)
+}
+func (r *FieldLike) _marshalJSONGuard(x Guard) ([]byte, error) {
+	result, err := shared.JSONMarshal[Guard](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONGuard:; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) _marshalJSONmapLb_string_bLTag(x map[string]Tag) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	for k, v := range x {
+		key := string(k)
+		value, err := r._marshalJSONTag(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: FieldLike._marshalJSONmapLb_string_bLTag: value; %w", err)
+		}
+		partial[string(key)] = value
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONmapLb_string_bLTag:; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) _marshalJSONTag(x Tag) ([]byte, error) {
+	result, err := shared.JSONMarshal[Tag](x)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._marshalJSONTag:; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONFieldLike(data)
+	if err != nil {
+		return fmt.Errorf("shape: FieldLike.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *FieldLike) _unmarshalJSONFieldLike(data []byte) (FieldLike, error) {
+	result := FieldLike{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("shape: FieldLike._unmarshalJSONFieldLike: native struct unwrap; %w", err)
+	}
+	if fieldName, ok := partial["Name"]; ok {
+		result.Name, err = r._unmarshalJSONstring(fieldName)
+		if err != nil {
+			return result, fmt.Errorf("shape: FieldLike._unmarshalJSONFieldLike: field Name; %w", err)
+		}
+	}
+	if fieldType, ok := partial["Type"]; ok {
+		result.Type, err = r._unmarshalJSONShape(fieldType)
+		if err != nil {
+			return result, fmt.Errorf("shape: FieldLike._unmarshalJSONFieldLike: field Type; %w", err)
+		}
+	}
+	if fieldDesc, ok := partial["Desc"]; ok {
+		result.Desc, err = r._unmarshalJSONPtrstring(fieldDesc)
+		if err != nil {
+			return result, fmt.Errorf("shape: FieldLike._unmarshalJSONFieldLike: field Desc; %w", err)
+		}
+	}
+	if fieldGuard, ok := partial["Guard"]; ok {
+		result.Guard, err = r._unmarshalJSONGuard(fieldGuard)
+		if err != nil {
+			return result, fmt.Errorf("shape: FieldLike._unmarshalJSONFieldLike: field Guard; %w", err)
+		}
+	}
+	if fieldTags, ok := partial["Tags"]; ok {
+		result.Tags, err = r._unmarshalJSONmapLb_string_bLTag(fieldTags)
+		if err != nil {
+			return result, fmt.Errorf("shape: FieldLike._unmarshalJSONFieldLike: field Tags; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *FieldLike) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("shape: FieldLike._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) _unmarshalJSONShape(data []byte) (Shape, error) {
+	result, err := shared.JSONUnmarshal[Shape](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: FieldLike._unmarshalJSONShape: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) _unmarshalJSONPtrstring(data []byte) (*string, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if len(data) >= 4 && string(data[:4]) == "null" {
+		return nil, nil
+	}
+	result, err := r._unmarshalJSONstring(data)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._unmarshalJSONPtrstring: pointer; %w", err)
+	}
+	return &result, nil
+}
+func (r *FieldLike) _unmarshalJSONGuard(data []byte) (Guard, error) {
+	result, err := shared.JSONUnmarshal[Guard](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: FieldLike._unmarshalJSONGuard: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *FieldLike) _unmarshalJSONmapLb_string_bLTag(data []byte) (map[string]Tag, error) {
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return nil, fmt.Errorf("shape: FieldLike._unmarshalJSONmapLb_string_bLTag: native map unwrap; %w", err)
+	}
+	result := make(map[string]Tag)
+	for k, v := range partial {
+		key := string(k)
+		value, err := r._unmarshalJSONTag(v)
+		if err != nil {
+			return nil, fmt.Errorf("shape: FieldLike._unmarshalJSONmapLb_string_bLTag: value; %w", err)
+		}
+		result[key] = value
+	}
+	return result, nil
+}
+func (r *FieldLike) _unmarshalJSONTag(data []byte) (Tag, error) {
+	result, err := shared.JSONUnmarshal[Tag](data)
+	if err != nil {
+		return result, fmt.Errorf("shape: FieldLike._unmarshalJSONTag: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
 var (
 	_ json.Unmarshaler = (*TypeParam)(nil)
 	_ json.Marshaler   = (*TypeParam)(nil)
@@ -15,7 +256,7 @@ var (
 
 func (r *TypeParam) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONTypeParam(*r)
 }

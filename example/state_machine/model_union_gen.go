@@ -149,10 +149,10 @@ type CommandUnionJSON struct {
 }
 
 func CommandFromJSON(x []byte) (Command, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data CommandUnionJSON
@@ -161,16 +161,32 @@ func CommandFromJSON(x []byte) (Command, error) {
 		return nil, fmt.Errorf("state_machine.CommandFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "state_machine.CreateOrderCMD":
+		if data.CreateOrderCMD == nil || string(data.CreateOrderCMD) == "null" {
+			return new(CreateOrderCMD), nil
+		}
 		return CreateOrderCMDFromJSON(data.CreateOrderCMD)
 	case "state_machine.StartProcessingCMD":
+		if data.StartProcessingCMD == nil || string(data.StartProcessingCMD) == "null" {
+			return new(StartProcessingCMD), nil
+		}
 		return StartProcessingCMDFromJSON(data.StartProcessingCMD)
 	case "state_machine.CompleteOrderCMD":
+		if data.CompleteOrderCMD == nil || string(data.CompleteOrderCMD) == "null" {
+			return new(CompleteOrderCMD), nil
+		}
 		return CompleteOrderCMDFromJSON(data.CompleteOrderCMD)
 	case "state_machine.CancelOrderCMD":
+		if data.CancelOrderCMD == nil || string(data.CancelOrderCMD) == "null" {
+			return new(CancelOrderCMD), nil
+		}
 		return CancelOrderCMDFromJSON(data.CancelOrderCMD)
 	case "state_machine.ConfirmOrderCMD":
+		if data.ConfirmOrderCMD == nil || string(data.ConfirmOrderCMD) == "null" {
+			return new(ConfirmOrderCMD), nil
+		}
 		return ConfirmOrderCMDFromJSON(data.ConfirmOrderCMD)
 	}
 
@@ -185,7 +201,10 @@ func CommandFromJSON(x []byte) (Command, error) {
 	} else if data.ConfirmOrderCMD != nil {
 		return ConfirmOrderCMDFromJSON(data.ConfirmOrderCMD)
 	}
-	return nil, fmt.Errorf("state_machine.CommandFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("state_machine.CommandFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("state_machine.CommandFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func CommandToJSON(x Command) ([]byte, error) {
@@ -195,6 +214,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 	return MatchCommandR2(
 		x,
 		func(y *CreateOrderCMD) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CreateOrderCMDToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.CommandToJSON: %w", err)
@@ -205,6 +227,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *StartProcessingCMD) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := StartProcessingCMDToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.CommandToJSON: %w", err)
@@ -215,6 +240,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *CompleteOrderCMD) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CompleteOrderCMDToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.CommandToJSON: %w", err)
@@ -225,6 +253,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *CancelOrderCMD) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CancelOrderCMDToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.CommandToJSON: %w", err)
@@ -235,6 +266,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *ConfirmOrderCMD) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ConfirmOrderCMDToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.CommandToJSON: %w", err)
@@ -267,7 +301,7 @@ var (
 
 func (r *CreateOrderCMD) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCreateOrderCMD(*r)
 }
@@ -414,7 +448,7 @@ var (
 
 func (r *StartProcessingCMD) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONStartProcessingCMD(*r)
 }
@@ -497,7 +531,7 @@ var (
 
 func (r *CompleteOrderCMD) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCompleteOrderCMD(*r)
 }
@@ -580,7 +614,7 @@ var (
 
 func (r *CancelOrderCMD) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCancelOrderCMD(*r)
 }
@@ -663,7 +697,7 @@ var (
 
 func (r *ConfirmOrderCMD) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONConfirmOrderCMD(*r)
 }
@@ -812,10 +846,10 @@ type StateUnionJSON struct {
 }
 
 func StateFromJSON(x []byte) (State, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data StateUnionJSON
@@ -824,14 +858,27 @@ func StateFromJSON(x []byte) (State, error) {
 		return nil, fmt.Errorf("state_machine.StateFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "state_machine.OrderPending":
+		if data.OrderPending == nil || string(data.OrderPending) == "null" {
+			return new(OrderPending), nil
+		}
 		return OrderPendingFromJSON(data.OrderPending)
 	case "state_machine.OrderProcessing":
+		if data.OrderProcessing == nil || string(data.OrderProcessing) == "null" {
+			return new(OrderProcessing), nil
+		}
 		return OrderProcessingFromJSON(data.OrderProcessing)
 	case "state_machine.OrderCompleted":
+		if data.OrderCompleted == nil || string(data.OrderCompleted) == "null" {
+			return new(OrderCompleted), nil
+		}
 		return OrderCompletedFromJSON(data.OrderCompleted)
 	case "state_machine.OrderCancelled":
+		if data.OrderCancelled == nil || string(data.OrderCancelled) == "null" {
+			return new(OrderCancelled), nil
+		}
 		return OrderCancelledFromJSON(data.OrderCancelled)
 	}
 
@@ -844,7 +891,10 @@ func StateFromJSON(x []byte) (State, error) {
 	} else if data.OrderCancelled != nil {
 		return OrderCancelledFromJSON(data.OrderCancelled)
 	}
-	return nil, fmt.Errorf("state_machine.StateFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("state_machine.StateFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("state_machine.StateFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func StateToJSON(x State) ([]byte, error) {
@@ -854,6 +904,9 @@ func StateToJSON(x State) ([]byte, error) {
 	return MatchStateR2(
 		x,
 		func(y *OrderPending) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OrderPendingToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.StateToJSON: %w", err)
@@ -864,6 +917,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *OrderProcessing) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OrderProcessingToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.StateToJSON: %w", err)
@@ -874,6 +930,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *OrderCompleted) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OrderCompletedToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.StateToJSON: %w", err)
@@ -884,6 +943,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *OrderCancelled) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OrderCancelledToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("state_machine.StateToJSON: %w", err)
@@ -916,7 +978,7 @@ var (
 
 func (r *OrderPending) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOrderPending(*r)
 }
@@ -1063,7 +1125,7 @@ var (
 
 func (r *OrderProcessing) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOrderProcessing(*r)
 }
@@ -1229,7 +1291,7 @@ var (
 
 func (r *OrderCompleted) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOrderCompleted(*r)
 }
@@ -1410,7 +1472,7 @@ var (
 
 func (r *OrderCancelled) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOrderCancelled(*r)
 }

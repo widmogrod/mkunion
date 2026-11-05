@@ -116,10 +116,10 @@ type BindableUnionJSON struct {
 }
 
 func BindableFromJSON(x []byte) (Bindable, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data BindableUnionJSON
@@ -128,12 +128,22 @@ func BindableFromJSON(x []byte) (Bindable, error) {
 		return nil, fmt.Errorf("predicate.BindableFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "predicate.BindValue":
+		if data.BindValue == nil || string(data.BindValue) == "null" {
+			return new(BindValue), nil
+		}
 		return BindValueFromJSON(data.BindValue)
 	case "predicate.Literal":
+		if data.Literal == nil || string(data.Literal) == "null" {
+			return new(Literal), nil
+		}
 		return LiteralFromJSON(data.Literal)
 	case "predicate.Locatable":
+		if data.Locatable == nil || string(data.Locatable) == "null" {
+			return new(Locatable), nil
+		}
 		return LocatableFromJSON(data.Locatable)
 	}
 
@@ -144,7 +154,10 @@ func BindableFromJSON(x []byte) (Bindable, error) {
 	} else if data.Locatable != nil {
 		return LocatableFromJSON(data.Locatable)
 	}
-	return nil, fmt.Errorf("predicate.BindableFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("predicate.BindableFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("predicate.BindableFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func BindableToJSON(x Bindable) ([]byte, error) {
@@ -154,6 +167,9 @@ func BindableToJSON(x Bindable) ([]byte, error) {
 	return MatchBindableR2(
 		x,
 		func(y *BindValue) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := BindValueToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("predicate.BindableToJSON: %w", err)
@@ -164,6 +180,9 @@ func BindableToJSON(x Bindable) ([]byte, error) {
 			})
 		},
 		func(y *Literal) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := LiteralToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("predicate.BindableToJSON: %w", err)
@@ -174,6 +193,9 @@ func BindableToJSON(x Bindable) ([]byte, error) {
 			})
 		},
 		func(y *Locatable) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := LocatableToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("predicate.BindableToJSON: %w", err)
@@ -206,7 +228,7 @@ var (
 
 func (r *BindValue) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONBindValue(*r)
 }
@@ -288,7 +310,7 @@ var (
 
 func (r *Literal) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONLiteral(*r)
 }
@@ -370,7 +392,7 @@ var (
 
 func (r *Locatable) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONLocatable(*r)
 }
@@ -557,10 +579,10 @@ type PredicateUnionJSON struct {
 }
 
 func PredicateFromJSON(x []byte) (Predicate, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data PredicateUnionJSON
@@ -569,14 +591,27 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 		return nil, fmt.Errorf("predicate.PredicateFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "predicate.And":
+		if data.And == nil || string(data.And) == "null" {
+			return new(And), nil
+		}
 		return AndFromJSON(data.And)
 	case "predicate.Or":
+		if data.Or == nil || string(data.Or) == "null" {
+			return new(Or), nil
+		}
 		return OrFromJSON(data.Or)
 	case "predicate.Not":
+		if data.Not == nil || string(data.Not) == "null" {
+			return new(Not), nil
+		}
 		return NotFromJSON(data.Not)
 	case "predicate.Compare":
+		if data.Compare == nil || string(data.Compare) == "null" {
+			return new(Compare), nil
+		}
 		return CompareFromJSON(data.Compare)
 	}
 
@@ -589,7 +624,10 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 	} else if data.Compare != nil {
 		return CompareFromJSON(data.Compare)
 	}
-	return nil, fmt.Errorf("predicate.PredicateFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("predicate.PredicateFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("predicate.PredicateFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func PredicateToJSON(x Predicate) ([]byte, error) {
@@ -599,6 +637,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 	return MatchPredicateR2(
 		x,
 		func(y *And) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AndToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
@@ -609,6 +650,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 			})
 		},
 		func(y *Or) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OrToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
@@ -619,6 +663,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 			})
 		},
 		func(y *Not) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NotToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
@@ -629,6 +676,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 			})
 		},
 		func(y *Compare) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CompareToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("predicate.PredicateToJSON: %w", err)
@@ -661,7 +711,7 @@ var (
 
 func (r *And) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAnd(*r)
 }
@@ -774,7 +824,7 @@ var (
 
 func (r *Or) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOr(*r)
 }
@@ -887,7 +937,7 @@ var (
 
 func (r *Not) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNot(*r)
 }
@@ -969,7 +1019,7 @@ var (
 
 func (r *Compare) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCompare(*r)
 }

@@ -15,7 +15,7 @@ var (
 
 func (r *ParamBinds) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONParamBinds(*r)
 }

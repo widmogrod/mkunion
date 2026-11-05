@@ -14,7 +14,7 @@ var (
 
 func (r *OmitFields) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOmitFields(*r)
 }
@@ -310,7 +310,7 @@ func (r *OmitFields) _unmarshalJSONPtrint64(data []byte) (*int64, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONint64(data)

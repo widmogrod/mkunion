@@ -167,10 +167,10 @@ type CommandUnionJSON struct {
 }
 
 func CommandFromJSON(x []byte) (Command, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data CommandUnionJSON
@@ -179,18 +179,37 @@ func CommandFromJSON(x []byte) (Command, error) {
 		return nil, fmt.Errorf("workflow.CommandFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "workflow.Run":
+		if data.Run == nil || string(data.Run) == "null" {
+			return new(Run), nil
+		}
 		return RunFromJSON(data.Run)
 	case "workflow.Callback":
+		if data.Callback == nil || string(data.Callback) == "null" {
+			return new(Callback), nil
+		}
 		return CallbackFromJSON(data.Callback)
 	case "workflow.TryRecover":
+		if data.TryRecover == nil || string(data.TryRecover) == "null" {
+			return new(TryRecover), nil
+		}
 		return TryRecoverFromJSON(data.TryRecover)
 	case "workflow.StopSchedule":
+		if data.StopSchedule == nil || string(data.StopSchedule) == "null" {
+			return new(StopSchedule), nil
+		}
 		return StopScheduleFromJSON(data.StopSchedule)
 	case "workflow.ResumeSchedule":
+		if data.ResumeSchedule == nil || string(data.ResumeSchedule) == "null" {
+			return new(ResumeSchedule), nil
+		}
 		return ResumeScheduleFromJSON(data.ResumeSchedule)
 	case "workflow.ExpireAsync":
+		if data.ExpireAsync == nil || string(data.ExpireAsync) == "null" {
+			return new(ExpireAsync), nil
+		}
 		return ExpireAsyncFromJSON(data.ExpireAsync)
 	}
 
@@ -207,7 +226,10 @@ func CommandFromJSON(x []byte) (Command, error) {
 	} else if data.ExpireAsync != nil {
 		return ExpireAsyncFromJSON(data.ExpireAsync)
 	}
-	return nil, fmt.Errorf("workflow.CommandFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("workflow.CommandFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("workflow.CommandFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func CommandToJSON(x Command) ([]byte, error) {
@@ -217,6 +239,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 	return MatchCommandR2(
 		x,
 		func(y *Run) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := RunToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
@@ -227,6 +252,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *Callback) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CallbackToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
@@ -237,6 +265,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *TryRecover) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := TryRecoverToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
@@ -247,6 +278,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *StopSchedule) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := StopScheduleToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
@@ -257,6 +291,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *ResumeSchedule) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ResumeScheduleToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
@@ -267,6 +304,9 @@ func CommandToJSON(x Command) ([]byte, error) {
 			})
 		},
 		func(y *ExpireAsync) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ExpireAsyncToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.CommandToJSON: %w", err)
@@ -299,7 +339,7 @@ var (
 
 func (r *Run) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRun(*r)
 }
@@ -447,7 +487,7 @@ var (
 
 func (r *Callback) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCallback(*r)
 }
@@ -563,7 +603,7 @@ var (
 
 func (r *TryRecover) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONTryRecover(*r)
 }
@@ -645,7 +685,7 @@ var (
 
 func (r *StopSchedule) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONStopSchedule(*r)
 }
@@ -727,7 +767,7 @@ var (
 
 func (r *ResumeSchedule) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONResumeSchedule(*r)
 }
@@ -809,7 +849,7 @@ var (
 
 func (r *ExpireAsync) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONExpireAsync(*r)
 }
@@ -995,10 +1035,10 @@ type ExprUnionJSON struct {
 }
 
 func ExprFromJSON(x []byte) (Expr, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ExprUnionJSON
@@ -1007,14 +1047,27 @@ func ExprFromJSON(x []byte) (Expr, error) {
 		return nil, fmt.Errorf("workflow.ExprFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "workflow.End":
+		if data.End == nil || string(data.End) == "null" {
+			return new(End), nil
+		}
 		return EndFromJSON(data.End)
 	case "workflow.Assign":
+		if data.Assign == nil || string(data.Assign) == "null" {
+			return new(Assign), nil
+		}
 		return AssignFromJSON(data.Assign)
 	case "workflow.Apply":
+		if data.Apply == nil || string(data.Apply) == "null" {
+			return new(Apply), nil
+		}
 		return ApplyFromJSON(data.Apply)
 	case "workflow.Choose":
+		if data.Choose == nil || string(data.Choose) == "null" {
+			return new(Choose), nil
+		}
 		return ChooseFromJSON(data.Choose)
 	}
 
@@ -1027,7 +1080,10 @@ func ExprFromJSON(x []byte) (Expr, error) {
 	} else if data.Choose != nil {
 		return ChooseFromJSON(data.Choose)
 	}
-	return nil, fmt.Errorf("workflow.ExprFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("workflow.ExprFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("workflow.ExprFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ExprToJSON(x Expr) ([]byte, error) {
@@ -1037,6 +1093,9 @@ func ExprToJSON(x Expr) ([]byte, error) {
 	return MatchExprR2(
 		x,
 		func(y *End) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := EndToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
@@ -1047,6 +1106,9 @@ func ExprToJSON(x Expr) ([]byte, error) {
 			})
 		},
 		func(y *Assign) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AssignToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
@@ -1057,6 +1119,9 @@ func ExprToJSON(x Expr) ([]byte, error) {
 			})
 		},
 		func(y *Apply) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ApplyToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
@@ -1067,6 +1132,9 @@ func ExprToJSON(x Expr) ([]byte, error) {
 			})
 		},
 		func(y *Choose) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ChooseToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.ExprToJSON: %w", err)
@@ -1099,7 +1167,7 @@ var (
 
 func (r *End) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONEnd(*r)
 }
@@ -1214,7 +1282,7 @@ var (
 
 func (r *Assign) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAssign(*r)
 }
@@ -1382,7 +1450,7 @@ var (
 
 func (r *Apply) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONApply(*r)
 }
@@ -1577,7 +1645,7 @@ func (r *Apply) _unmarshalJSONPtrApplyAwaitOptions(data []byte) (*ApplyAwaitOpti
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONApplyAwaitOptions(data)
@@ -1614,7 +1682,7 @@ var (
 
 func (r *Choose) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONChoose(*r)
 }
@@ -1916,10 +1984,10 @@ type PredicateUnionJSON struct {
 }
 
 func PredicateFromJSON(x []byte) (Predicate, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data PredicateUnionJSON
@@ -1928,14 +1996,27 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 		return nil, fmt.Errorf("workflow.PredicateFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "workflow.And":
+		if data.And == nil || string(data.And) == "null" {
+			return new(And), nil
+		}
 		return AndFromJSON(data.And)
 	case "workflow.Or":
+		if data.Or == nil || string(data.Or) == "null" {
+			return new(Or), nil
+		}
 		return OrFromJSON(data.Or)
 	case "workflow.Not":
+		if data.Not == nil || string(data.Not) == "null" {
+			return new(Not), nil
+		}
 		return NotFromJSON(data.Not)
 	case "workflow.Compare":
+		if data.Compare == nil || string(data.Compare) == "null" {
+			return new(Compare), nil
+		}
 		return CompareFromJSON(data.Compare)
 	}
 
@@ -1948,7 +2029,10 @@ func PredicateFromJSON(x []byte) (Predicate, error) {
 	} else if data.Compare != nil {
 		return CompareFromJSON(data.Compare)
 	}
-	return nil, fmt.Errorf("workflow.PredicateFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("workflow.PredicateFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("workflow.PredicateFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func PredicateToJSON(x Predicate) ([]byte, error) {
@@ -1958,6 +2042,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 	return MatchPredicateR2(
 		x,
 		func(y *And) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AndToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
@@ -1968,6 +2055,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 			})
 		},
 		func(y *Or) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OrToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
@@ -1978,6 +2068,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 			})
 		},
 		func(y *Not) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NotToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
@@ -1988,6 +2081,9 @@ func PredicateToJSON(x Predicate) ([]byte, error) {
 			})
 		},
 		func(y *Compare) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CompareToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.PredicateToJSON: %w", err)
@@ -2020,7 +2116,7 @@ var (
 
 func (r *And) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAnd(*r)
 }
@@ -2133,7 +2229,7 @@ var (
 
 func (r *Or) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOr(*r)
 }
@@ -2246,7 +2342,7 @@ var (
 
 func (r *Not) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNot(*r)
 }
@@ -2328,7 +2424,7 @@ var (
 
 func (r *Compare) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCompare(*r)
 }
@@ -2533,10 +2629,10 @@ type ReshaperUnionJSON struct {
 }
 
 func ReshaperFromJSON(x []byte) (Reshaper, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ReshaperUnionJSON
@@ -2545,10 +2641,17 @@ func ReshaperFromJSON(x []byte) (Reshaper, error) {
 		return nil, fmt.Errorf("workflow.ReshaperFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "workflow.GetValue":
+		if data.GetValue == nil || string(data.GetValue) == "null" {
+			return new(GetValue), nil
+		}
 		return GetValueFromJSON(data.GetValue)
 	case "workflow.SetValue":
+		if data.SetValue == nil || string(data.SetValue) == "null" {
+			return new(SetValue), nil
+		}
 		return SetValueFromJSON(data.SetValue)
 	}
 
@@ -2557,7 +2660,10 @@ func ReshaperFromJSON(x []byte) (Reshaper, error) {
 	} else if data.SetValue != nil {
 		return SetValueFromJSON(data.SetValue)
 	}
-	return nil, fmt.Errorf("workflow.ReshaperFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("workflow.ReshaperFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("workflow.ReshaperFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ReshaperToJSON(x Reshaper) ([]byte, error) {
@@ -2567,6 +2673,9 @@ func ReshaperToJSON(x Reshaper) ([]byte, error) {
 	return MatchReshaperR2(
 		x,
 		func(y *GetValue) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := GetValueToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.ReshaperToJSON: %w", err)
@@ -2577,6 +2686,9 @@ func ReshaperToJSON(x Reshaper) ([]byte, error) {
 			})
 		},
 		func(y *SetValue) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SetValueToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.ReshaperToJSON: %w", err)
@@ -2609,7 +2721,7 @@ var (
 
 func (r *GetValue) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONGetValue(*r)
 }
@@ -2692,7 +2804,7 @@ var (
 
 func (r *SetValue) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSetValue(*r)
 }
@@ -2844,10 +2956,10 @@ type RunOptionUnionJSON struct {
 }
 
 func RunOptionFromJSON(x []byte) (RunOption, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data RunOptionUnionJSON
@@ -2856,10 +2968,17 @@ func RunOptionFromJSON(x []byte) (RunOption, error) {
 		return nil, fmt.Errorf("workflow.RunOptionFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "workflow.ScheduleRun":
+		if data.ScheduleRun == nil || string(data.ScheduleRun) == "null" {
+			return new(ScheduleRun), nil
+		}
 		return ScheduleRunFromJSON(data.ScheduleRun)
 	case "workflow.DelayRun":
+		if data.DelayRun == nil || string(data.DelayRun) == "null" {
+			return new(DelayRun), nil
+		}
 		return DelayRunFromJSON(data.DelayRun)
 	}
 
@@ -2868,7 +2987,10 @@ func RunOptionFromJSON(x []byte) (RunOption, error) {
 	} else if data.DelayRun != nil {
 		return DelayRunFromJSON(data.DelayRun)
 	}
-	return nil, fmt.Errorf("workflow.RunOptionFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("workflow.RunOptionFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("workflow.RunOptionFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func RunOptionToJSON(x RunOption) ([]byte, error) {
@@ -2878,6 +3000,9 @@ func RunOptionToJSON(x RunOption) ([]byte, error) {
 	return MatchRunOptionR2(
 		x,
 		func(y *ScheduleRun) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ScheduleRunToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.RunOptionToJSON: %w", err)
@@ -2888,6 +3013,9 @@ func RunOptionToJSON(x RunOption) ([]byte, error) {
 			})
 		},
 		func(y *DelayRun) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DelayRunToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.RunOptionToJSON: %w", err)
@@ -2920,7 +3048,7 @@ var (
 
 func (r *ScheduleRun) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONScheduleRun(*r)
 }
@@ -3022,7 +3150,7 @@ var (
 
 func (r *DelayRun) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDelayRun(*r)
 }
@@ -3243,10 +3371,10 @@ type StateUnionJSON struct {
 }
 
 func StateFromJSON(x []byte) (State, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data StateUnionJSON
@@ -3255,18 +3383,37 @@ func StateFromJSON(x []byte) (State, error) {
 		return nil, fmt.Errorf("workflow.StateFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "workflow.NextOperation":
+		if data.NextOperation == nil || string(data.NextOperation) == "null" {
+			return new(NextOperation), nil
+		}
 		return NextOperationFromJSON(data.NextOperation)
 	case "workflow.Done":
+		if data.Done == nil || string(data.Done) == "null" {
+			return new(Done), nil
+		}
 		return DoneFromJSON(data.Done)
 	case "workflow.Error":
+		if data.Error == nil || string(data.Error) == "null" {
+			return new(Error), nil
+		}
 		return ErrorFromJSON(data.Error)
 	case "workflow.Await":
+		if data.Await == nil || string(data.Await) == "null" {
+			return new(Await), nil
+		}
 		return AwaitFromJSON(data.Await)
 	case "workflow.Scheduled":
+		if data.Scheduled == nil || string(data.Scheduled) == "null" {
+			return new(Scheduled), nil
+		}
 		return ScheduledFromJSON(data.Scheduled)
 	case "workflow.ScheduleStopped":
+		if data.ScheduleStopped == nil || string(data.ScheduleStopped) == "null" {
+			return new(ScheduleStopped), nil
+		}
 		return ScheduleStoppedFromJSON(data.ScheduleStopped)
 	}
 
@@ -3283,7 +3430,10 @@ func StateFromJSON(x []byte) (State, error) {
 	} else if data.ScheduleStopped != nil {
 		return ScheduleStoppedFromJSON(data.ScheduleStopped)
 	}
-	return nil, fmt.Errorf("workflow.StateFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("workflow.StateFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("workflow.StateFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func StateToJSON(x State) ([]byte, error) {
@@ -3293,6 +3443,9 @@ func StateToJSON(x State) ([]byte, error) {
 	return MatchStateR2(
 		x,
 		func(y *NextOperation) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NextOperationToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
@@ -3303,6 +3456,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *Done) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DoneToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
@@ -3313,6 +3469,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *Error) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ErrorToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
@@ -3323,6 +3482,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *Await) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AwaitToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
@@ -3333,6 +3495,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *Scheduled) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ScheduledToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
@@ -3343,6 +3508,9 @@ func StateToJSON(x State) ([]byte, error) {
 			})
 		},
 		func(y *ScheduleStopped) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ScheduleStoppedToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.StateToJSON: %w", err)
@@ -3375,7 +3543,7 @@ var (
 
 func (r *NextOperation) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNextOperation(*r)
 }
@@ -3490,7 +3658,7 @@ var (
 
 func (r *Done) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDone(*r)
 }
@@ -3605,7 +3773,7 @@ var (
 
 func (r *Error) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONError(*r)
 }
@@ -3774,7 +3942,7 @@ var (
 
 func (r *Await) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAwait(*r)
 }
@@ -3924,7 +4092,7 @@ var (
 
 func (r *Scheduled) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONScheduled(*r)
 }
@@ -4040,7 +4208,7 @@ var (
 
 func (r *ScheduleStopped) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONScheduleStopped(*r)
 }
@@ -4192,10 +4360,10 @@ type WorkflowUnionJSON struct {
 }
 
 func WorkflowFromJSON(x []byte) (Workflow, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data WorkflowUnionJSON
@@ -4204,10 +4372,17 @@ func WorkflowFromJSON(x []byte) (Workflow, error) {
 		return nil, fmt.Errorf("workflow.WorkflowFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "workflow.Flow":
+		if data.Flow == nil || string(data.Flow) == "null" {
+			return new(Flow), nil
+		}
 		return FlowFromJSON(data.Flow)
 	case "workflow.FlowRef":
+		if data.FlowRef == nil || string(data.FlowRef) == "null" {
+			return new(FlowRef), nil
+		}
 		return FlowRefFromJSON(data.FlowRef)
 	}
 
@@ -4216,7 +4391,10 @@ func WorkflowFromJSON(x []byte) (Workflow, error) {
 	} else if data.FlowRef != nil {
 		return FlowRefFromJSON(data.FlowRef)
 	}
-	return nil, fmt.Errorf("workflow.WorkflowFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("workflow.WorkflowFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("workflow.WorkflowFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func WorkflowToJSON(x Workflow) ([]byte, error) {
@@ -4226,6 +4404,9 @@ func WorkflowToJSON(x Workflow) ([]byte, error) {
 	return MatchWorkflowR2(
 		x,
 		func(y *Flow) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := FlowToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.WorkflowToJSON: %w", err)
@@ -4236,6 +4417,9 @@ func WorkflowToJSON(x Workflow) ([]byte, error) {
 			})
 		},
 		func(y *FlowRef) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := FlowRefToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("workflow.WorkflowToJSON: %w", err)
@@ -4268,7 +4452,7 @@ var (
 
 func (r *Flow) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFlow(*r)
 }
@@ -4434,7 +4618,7 @@ var (
 
 func (r *FlowRef) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFlowRef(*r)
 }

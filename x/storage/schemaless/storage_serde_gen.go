@@ -15,7 +15,7 @@ var (
 
 func (r *PageResult[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONPageResultLb_A_bL(*r)
 }
@@ -162,7 +162,7 @@ func (r *PageResult[A]) _unmarshalJSONPtrFindingRecordsLb_A_bL(data []byte) (*Fi
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONFindingRecordsLb_A_bL(data)
@@ -186,7 +186,7 @@ var (
 
 func (r *Record[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRecordLb_A_bL(*r)
 }
@@ -342,7 +342,7 @@ var (
 
 func (r *SortField) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSortField(*r)
 }

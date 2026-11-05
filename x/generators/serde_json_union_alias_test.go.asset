@@ -19,10 +19,10 @@ type ForestUnionJSON struct {
 }
 
 func ForestFromJSON(x []byte) (Forest, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ForestUnionJSON
@@ -31,10 +31,17 @@ func ForestFromJSON(x []byte) (Forest, error) {
 		return nil, fmt.Errorf("testutils.ForestFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "testutils.Tree2":
+		if data.Tree2 == nil || string(data.Tree2) == "null" {
+			return new(Tree2), nil
+		}
 		return Tree2FromJSON(data.Tree2)
 	case "testutils.Leaf2":
+		if data.Leaf2 == nil || string(data.Leaf2) == "null" {
+			return new(Leaf2), nil
+		}
 		return Leaf2FromJSON(data.Leaf2)
 	}
 
@@ -43,7 +50,10 @@ func ForestFromJSON(x []byte) (Forest, error) {
 	} else if data.Leaf2 != nil {
 		return Leaf2FromJSON(data.Leaf2)
 	}
-	return nil, fmt.Errorf("testutils.ForestFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("testutils.ForestFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("testutils.ForestFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ForestToJSON(x Forest) ([]byte, error) {
@@ -53,6 +63,9 @@ func ForestToJSON(x Forest) ([]byte, error) {
 	return MatchForestR2(
 		x,
 		func (y *Tree2) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Tree2ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.ForestToJSON: %w", err)
@@ -63,6 +76,9 @@ func ForestToJSON(x Forest) ([]byte, error) {
 			})
 		},
 		func (y *Leaf2) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Leaf2ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.ForestToJSON: %w", err)

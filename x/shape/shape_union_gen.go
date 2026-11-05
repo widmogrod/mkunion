@@ -115,10 +115,10 @@ type GuardUnionJSON struct {
 }
 
 func GuardFromJSON(x []byte) (Guard, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data GuardUnionJSON
@@ -127,12 +127,22 @@ func GuardFromJSON(x []byte) (Guard, error) {
 		return nil, fmt.Errorf("shape.GuardFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "shape.Enum":
+		if data.Enum == nil || string(data.Enum) == "null" {
+			return new(Enum), nil
+		}
 		return EnumFromJSON(data.Enum)
 	case "shape.Required":
+		if data.Required == nil || string(data.Required) == "null" {
+			return new(Required), nil
+		}
 		return RequiredFromJSON(data.Required)
 	case "shape.AndGuard":
+		if data.AndGuard == nil || string(data.AndGuard) == "null" {
+			return new(AndGuard), nil
+		}
 		return AndGuardFromJSON(data.AndGuard)
 	}
 
@@ -143,7 +153,10 @@ func GuardFromJSON(x []byte) (Guard, error) {
 	} else if data.AndGuard != nil {
 		return AndGuardFromJSON(data.AndGuard)
 	}
-	return nil, fmt.Errorf("shape.GuardFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("shape.GuardFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("shape.GuardFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func GuardToJSON(x Guard) ([]byte, error) {
@@ -153,6 +166,9 @@ func GuardToJSON(x Guard) ([]byte, error) {
 	return MatchGuardR2(
 		x,
 		func(y *Enum) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := EnumToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.GuardToJSON: %w", err)
@@ -163,6 +179,9 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			})
 		},
 		func(y *Required) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := RequiredToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.GuardToJSON: %w", err)
@@ -173,6 +192,9 @@ func GuardToJSON(x Guard) ([]byte, error) {
 			})
 		},
 		func(y *AndGuard) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AndGuardToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.GuardToJSON: %w", err)
@@ -205,7 +227,7 @@ var (
 
 func (r *Enum) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONEnum(*r)
 }
@@ -319,7 +341,7 @@ var (
 
 func (r *Required) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRequired(*r)
 }
@@ -364,7 +386,7 @@ var (
 
 func (r *AndGuard) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAndGuard(*r)
 }
@@ -717,10 +739,10 @@ type NumberKindUnionJSON struct {
 }
 
 func NumberKindFromJSON(x []byte) (NumberKind, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data NumberKindUnionJSON
@@ -729,30 +751,67 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 		return nil, fmt.Errorf("shape.NumberKindFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "shape.UInt":
+		if data.UInt == nil || string(data.UInt) == "null" {
+			return new(UInt), nil
+		}
 		return UIntFromJSON(data.UInt)
 	case "shape.UInt8":
+		if data.UInt8 == nil || string(data.UInt8) == "null" {
+			return new(UInt8), nil
+		}
 		return UInt8FromJSON(data.UInt8)
 	case "shape.UInt16":
+		if data.UInt16 == nil || string(data.UInt16) == "null" {
+			return new(UInt16), nil
+		}
 		return UInt16FromJSON(data.UInt16)
 	case "shape.UInt32":
+		if data.UInt32 == nil || string(data.UInt32) == "null" {
+			return new(UInt32), nil
+		}
 		return UInt32FromJSON(data.UInt32)
 	case "shape.UInt64":
+		if data.UInt64 == nil || string(data.UInt64) == "null" {
+			return new(UInt64), nil
+		}
 		return UInt64FromJSON(data.UInt64)
 	case "shape.Int":
+		if data.Int == nil || string(data.Int) == "null" {
+			return new(Int), nil
+		}
 		return IntFromJSON(data.Int)
 	case "shape.Int8":
+		if data.Int8 == nil || string(data.Int8) == "null" {
+			return new(Int8), nil
+		}
 		return Int8FromJSON(data.Int8)
 	case "shape.Int16":
+		if data.Int16 == nil || string(data.Int16) == "null" {
+			return new(Int16), nil
+		}
 		return Int16FromJSON(data.Int16)
 	case "shape.Int32":
+		if data.Int32 == nil || string(data.Int32) == "null" {
+			return new(Int32), nil
+		}
 		return Int32FromJSON(data.Int32)
 	case "shape.Int64":
+		if data.Int64 == nil || string(data.Int64) == "null" {
+			return new(Int64), nil
+		}
 		return Int64FromJSON(data.Int64)
 	case "shape.Float32":
+		if data.Float32 == nil || string(data.Float32) == "null" {
+			return new(Float32), nil
+		}
 		return Float32FromJSON(data.Float32)
 	case "shape.Float64":
+		if data.Float64 == nil || string(data.Float64) == "null" {
+			return new(Float64), nil
+		}
 		return Float64FromJSON(data.Float64)
 	}
 
@@ -781,7 +840,10 @@ func NumberKindFromJSON(x []byte) (NumberKind, error) {
 	} else if data.Float64 != nil {
 		return Float64FromJSON(data.Float64)
 	}
-	return nil, fmt.Errorf("shape.NumberKindFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("shape.NumberKindFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("shape.NumberKindFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func NumberKindToJSON(x NumberKind) ([]byte, error) {
@@ -791,6 +853,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 	return MatchNumberKindR2(
 		x,
 		func(y *UInt) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UIntToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -801,6 +866,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *UInt8) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UInt8ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -811,6 +879,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *UInt16) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UInt16ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -821,6 +892,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *UInt32) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UInt32ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -831,6 +905,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *UInt64) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UInt64ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -841,6 +918,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *Int) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := IntToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -851,6 +931,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *Int8) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Int8ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -861,6 +944,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *Int16) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Int16ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -871,6 +957,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *Int32) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Int32ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -881,6 +970,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *Int64) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Int64ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -891,6 +983,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *Float32) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Float32ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -901,6 +996,9 @@ func NumberKindToJSON(x NumberKind) ([]byte, error) {
 			})
 		},
 		func(y *Float64) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := Float64ToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.NumberKindToJSON: %w", err)
@@ -933,7 +1031,7 @@ var (
 
 func (r *UInt) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUInt(*r)
 }
@@ -978,7 +1076,7 @@ var (
 
 func (r *UInt8) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUInt8(*r)
 }
@@ -1023,7 +1121,7 @@ var (
 
 func (r *UInt16) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUInt16(*r)
 }
@@ -1068,7 +1166,7 @@ var (
 
 func (r *UInt32) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUInt32(*r)
 }
@@ -1113,7 +1211,7 @@ var (
 
 func (r *UInt64) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUInt64(*r)
 }
@@ -1158,7 +1256,7 @@ var (
 
 func (r *Int) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONInt(*r)
 }
@@ -1203,7 +1301,7 @@ var (
 
 func (r *Int8) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONInt8(*r)
 }
@@ -1248,7 +1346,7 @@ var (
 
 func (r *Int16) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONInt16(*r)
 }
@@ -1293,7 +1391,7 @@ var (
 
 func (r *Int32) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONInt32(*r)
 }
@@ -1338,7 +1436,7 @@ var (
 
 func (r *Int64) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONInt64(*r)
 }
@@ -1383,7 +1481,7 @@ var (
 
 func (r *Float32) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFloat32(*r)
 }
@@ -1428,7 +1526,7 @@ var (
 
 func (r *Float64) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFloat64(*r)
 }
@@ -1560,10 +1658,10 @@ type PrimitiveKindUnionJSON struct {
 }
 
 func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data PrimitiveKindUnionJSON
@@ -1572,12 +1670,22 @@ func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
 		return nil, fmt.Errorf("shape.PrimitiveKindFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "shape.BooleanLike":
+		if data.BooleanLike == nil || string(data.BooleanLike) == "null" {
+			return new(BooleanLike), nil
+		}
 		return BooleanLikeFromJSON(data.BooleanLike)
 	case "shape.StringLike":
+		if data.StringLike == nil || string(data.StringLike) == "null" {
+			return new(StringLike), nil
+		}
 		return StringLikeFromJSON(data.StringLike)
 	case "shape.NumberLike":
+		if data.NumberLike == nil || string(data.NumberLike) == "null" {
+			return new(NumberLike), nil
+		}
 		return NumberLikeFromJSON(data.NumberLike)
 	}
 
@@ -1588,7 +1696,10 @@ func PrimitiveKindFromJSON(x []byte) (PrimitiveKind, error) {
 	} else if data.NumberLike != nil {
 		return NumberLikeFromJSON(data.NumberLike)
 	}
-	return nil, fmt.Errorf("shape.PrimitiveKindFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("shape.PrimitiveKindFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("shape.PrimitiveKindFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
@@ -1598,6 +1709,9 @@ func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 	return MatchPrimitiveKindR2(
 		x,
 		func(y *BooleanLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := BooleanLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.PrimitiveKindToJSON: %w", err)
@@ -1608,6 +1722,9 @@ func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 			})
 		},
 		func(y *StringLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := StringLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.PrimitiveKindToJSON: %w", err)
@@ -1618,6 +1735,9 @@ func PrimitiveKindToJSON(x PrimitiveKind) ([]byte, error) {
 			})
 		},
 		func(y *NumberLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NumberLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.PrimitiveKindToJSON: %w", err)
@@ -1650,7 +1770,7 @@ var (
 
 func (r *BooleanLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONBooleanLike(*r)
 }
@@ -1695,7 +1815,7 @@ var (
 
 func (r *StringLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONStringLike(*r)
 }
@@ -1740,7 +1860,7 @@ var (
 
 func (r *NumberLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNumberLike(*r)
 }
@@ -2011,10 +2131,10 @@ type ShapeUnionJSON struct {
 }
 
 func ShapeFromJSON(x []byte) (Shape, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ShapeUnionJSON
@@ -2023,24 +2143,52 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 		return nil, fmt.Errorf("shape.ShapeFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "shape.Any":
+		if data.Any == nil || string(data.Any) == "null" {
+			return new(Any), nil
+		}
 		return AnyFromJSON(data.Any)
 	case "shape.RefName":
+		if data.RefName == nil || string(data.RefName) == "null" {
+			return new(RefName), nil
+		}
 		return RefNameFromJSON(data.RefName)
 	case "shape.PointerLike":
+		if data.PointerLike == nil || string(data.PointerLike) == "null" {
+			return new(PointerLike), nil
+		}
 		return PointerLikeFromJSON(data.PointerLike)
 	case "shape.AliasLike":
+		if data.AliasLike == nil || string(data.AliasLike) == "null" {
+			return new(AliasLike), nil
+		}
 		return AliasLikeFromJSON(data.AliasLike)
 	case "shape.PrimitiveLike":
+		if data.PrimitiveLike == nil || string(data.PrimitiveLike) == "null" {
+			return new(PrimitiveLike), nil
+		}
 		return PrimitiveLikeFromJSON(data.PrimitiveLike)
 	case "shape.ListLike":
+		if data.ListLike == nil || string(data.ListLike) == "null" {
+			return new(ListLike), nil
+		}
 		return ListLikeFromJSON(data.ListLike)
 	case "shape.MapLike":
+		if data.MapLike == nil || string(data.MapLike) == "null" {
+			return new(MapLike), nil
+		}
 		return MapLikeFromJSON(data.MapLike)
 	case "shape.StructLike":
+		if data.StructLike == nil || string(data.StructLike) == "null" {
+			return new(StructLike), nil
+		}
 		return StructLikeFromJSON(data.StructLike)
 	case "shape.UnionLike":
+		if data.UnionLike == nil || string(data.UnionLike) == "null" {
+			return new(UnionLike), nil
+		}
 		return UnionLikeFromJSON(data.UnionLike)
 	}
 
@@ -2063,7 +2211,10 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 	} else if data.UnionLike != nil {
 		return UnionLikeFromJSON(data.UnionLike)
 	}
-	return nil, fmt.Errorf("shape.ShapeFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("shape.ShapeFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("shape.ShapeFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ShapeToJSON(x Shape) ([]byte, error) {
@@ -2073,6 +2224,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 	return MatchShapeR2(
 		x,
 		func(y *Any) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AnyToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2083,6 +2237,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *RefName) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := RefNameToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2093,6 +2250,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *PointerLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := PointerLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2103,6 +2263,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *AliasLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AliasLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2113,6 +2276,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *PrimitiveLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := PrimitiveLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2123,6 +2289,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *ListLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ListLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2133,6 +2302,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *MapLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := MapLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2143,6 +2315,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *StructLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := StructLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2153,6 +2328,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *UnionLike) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := UnionLikeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("shape.ShapeToJSON: %w", err)
@@ -2185,7 +2363,7 @@ var (
 
 func (r *Any) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAny(*r)
 }
@@ -2230,7 +2408,7 @@ var (
 
 func (r *RefName) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRefName(*r)
 }
@@ -2415,7 +2593,7 @@ var (
 
 func (r *PointerLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONPointerLike(*r)
 }
@@ -2497,7 +2675,7 @@ var (
 
 func (r *AliasLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAliasLike(*r)
 }
@@ -2815,7 +2993,7 @@ var (
 
 func (r *PrimitiveLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONPrimitiveLike(*r)
 }
@@ -2897,7 +3075,7 @@ var (
 
 func (r *ListLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONListLike(*r)
 }
@@ -2994,7 +3172,7 @@ func (r *ListLike) _unmarshalJSONPtrint(data []byte) (*int, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONint(data)
@@ -3032,7 +3210,7 @@ var (
 
 func (r *MapLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONMapLike(*r)
 }
@@ -3133,7 +3311,7 @@ var (
 
 func (r *StructLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONStructLike(*r)
 }
@@ -3406,7 +3584,7 @@ func (r *StructLike) _unmarshalJSONPtrFieldLike(data []byte) (*FieldLike, error)
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONFieldLike(data)
@@ -3467,7 +3645,7 @@ var (
 
 func (r *UnionLike) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONUnionLike(*r)
 }

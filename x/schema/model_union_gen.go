@@ -182,10 +182,10 @@ type SchemaUnionJSON struct {
 }
 
 func SchemaFromJSON(x []byte) (Schema, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data SchemaUnionJSON
@@ -194,20 +194,42 @@ func SchemaFromJSON(x []byte) (Schema, error) {
 		return nil, fmt.Errorf("schema.SchemaFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "schema.None":
+		if data.None == nil || string(data.None) == "null" {
+			return new(None), nil
+		}
 		return NoneFromJSON(data.None)
 	case "schema.Bool":
+		if data.Bool == nil || string(data.Bool) == "null" {
+			return new(Bool), nil
+		}
 		return BoolFromJSON(data.Bool)
 	case "schema.Number":
+		if data.Number == nil || string(data.Number) == "null" {
+			return new(Number), nil
+		}
 		return NumberFromJSON(data.Number)
 	case "schema.String":
+		if data.String == nil || string(data.String) == "null" {
+			return new(String), nil
+		}
 		return StringFromJSON(data.String)
 	case "schema.Binary":
+		if data.Binary == nil || string(data.Binary) == "null" {
+			return new(Binary), nil
+		}
 		return BinaryFromJSON(data.Binary)
 	case "schema.List":
+		if data.List == nil || string(data.List) == "null" {
+			return new(List), nil
+		}
 		return ListFromJSON(data.List)
 	case "schema.Map":
+		if data.Map == nil || string(data.Map) == "null" {
+			return new(Map), nil
+		}
 		return MapFromJSON(data.Map)
 	}
 
@@ -226,7 +248,10 @@ func SchemaFromJSON(x []byte) (Schema, error) {
 	} else if data.Map != nil {
 		return MapFromJSON(data.Map)
 	}
-	return nil, fmt.Errorf("schema.SchemaFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("schema.SchemaFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("schema.SchemaFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func SchemaToJSON(x Schema) ([]byte, error) {
@@ -236,6 +261,9 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 	return MatchSchemaR2(
 		x,
 		func(y *None) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NoneToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
@@ -246,6 +274,9 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 			})
 		},
 		func(y *Bool) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := BoolToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
@@ -256,6 +287,9 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 			})
 		},
 		func(y *Number) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NumberToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
@@ -266,6 +300,9 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 			})
 		},
 		func(y *String) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := StringToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
@@ -276,6 +313,9 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 			})
 		},
 		func(y *Binary) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := BinaryToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
@@ -286,6 +326,9 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 			})
 		},
 		func(y *List) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ListToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
@@ -296,6 +339,9 @@ func SchemaToJSON(x Schema) ([]byte, error) {
 			})
 		},
 		func(y *Map) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := MapToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("schema.SchemaToJSON: %w", err)
@@ -328,7 +374,7 @@ var (
 
 func (r *None) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNone(*r)
 }
@@ -373,7 +419,7 @@ var (
 
 func (r *Bool) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONBool(*r)
 }
@@ -433,7 +479,7 @@ var (
 
 func (r *Number) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNumber(*r)
 }
@@ -493,7 +539,7 @@ var (
 
 func (r *String) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONString(*r)
 }
@@ -553,7 +599,7 @@ var (
 
 func (r *Binary) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONBinary(*r)
 }
@@ -613,7 +659,7 @@ var (
 
 func (r *List) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONList(*r)
 }
@@ -703,7 +749,7 @@ var (
 
 func (r *Map) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONMap(*r)
 }
