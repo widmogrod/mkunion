@@ -122,10 +122,10 @@ type WindowDescriptionUnionJSON struct {
 }
 
 func WindowDescriptionFromJSON(x []byte) (WindowDescription, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data WindowDescriptionUnionJSON
@@ -134,12 +134,22 @@ func WindowDescriptionFromJSON(x []byte) (WindowDescription, error) {
 		return nil, fmt.Errorf("projection.WindowDescriptionFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "projection.SessionWindow":
+		if data.SessionWindow == nil || string(data.SessionWindow) == "null" {
+			return new(SessionWindow), nil
+		}
 		return SessionWindowFromJSON(data.SessionWindow)
 	case "projection.SlidingWindow":
+		if data.SlidingWindow == nil || string(data.SlidingWindow) == "null" {
+			return new(SlidingWindow), nil
+		}
 		return SlidingWindowFromJSON(data.SlidingWindow)
 	case "projection.FixedWindow":
+		if data.FixedWindow == nil || string(data.FixedWindow) == "null" {
+			return new(FixedWindow), nil
+		}
 		return FixedWindowFromJSON(data.FixedWindow)
 	}
 
@@ -150,7 +160,10 @@ func WindowDescriptionFromJSON(x []byte) (WindowDescription, error) {
 	} else if data.FixedWindow != nil {
 		return FixedWindowFromJSON(data.FixedWindow)
 	}
-	return nil, fmt.Errorf("projection.WindowDescriptionFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("projection.WindowDescriptionFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("projection.WindowDescriptionFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func WindowDescriptionToJSON(x WindowDescription) ([]byte, error) {
@@ -160,6 +173,9 @@ func WindowDescriptionToJSON(x WindowDescription) ([]byte, error) {
 	return MatchWindowDescriptionR2(
 		x,
 		func(y *SessionWindow) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SessionWindowToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.WindowDescriptionToJSON: %w", err)
@@ -170,6 +186,9 @@ func WindowDescriptionToJSON(x WindowDescription) ([]byte, error) {
 			})
 		},
 		func(y *SlidingWindow) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SlidingWindowToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.WindowDescriptionToJSON: %w", err)
@@ -180,6 +199,9 @@ func WindowDescriptionToJSON(x WindowDescription) ([]byte, error) {
 			})
 		},
 		func(y *FixedWindow) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := FixedWindowToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.WindowDescriptionToJSON: %w", err)
@@ -212,7 +234,7 @@ var (
 
 func (r *SessionWindow) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSessionWindow(*r)
 }
@@ -294,7 +316,7 @@ var (
 
 func (r *SlidingWindow) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSlidingWindow(*r)
 }
@@ -395,7 +417,7 @@ var (
 
 func (r *FixedWindow) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFixedWindow(*r)
 }

@@ -522,6 +522,10 @@ func ExtractPkgImportNames(x Shape) map[string]string {
 			}
 
 			for _, y := range x.Fields {
+				if IsPhantomField(y) {
+					// a phantom carries no data, so generated code never names its type
+					continue
+				}
 				result = joinMaps(result, ExtractPkgImportNames(y.Type))
 			}
 
@@ -600,6 +604,11 @@ func ExtractPkgImportNamesForTypeInitialisation(x Shape) map[string]string {
 			result := make(map[string]string)
 			if x.PkgName != "" && x.PkgImportName != "" {
 				result[x.PkgName] = x.PkgImportName
+			}
+
+			// an instantiated struct names its type arguments: f.Ok[time.Time, E]
+			for _, y := range x.TypeParams {
+				result = joinMaps(result, ExtractPkgImportNames(y.Type))
 			}
 
 			return result

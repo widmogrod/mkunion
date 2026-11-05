@@ -16,7 +16,7 @@ var (
 
 func (r *ApplyAwaitOptions) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONApplyAwaitOptions(*r)
 }
@@ -86,7 +86,7 @@ var (
 
 func (r *BaseState) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONBaseState(*r)
 }
@@ -381,6 +381,262 @@ func (r *BaseState) _unmarshalJSONRunOption(data []byte) (RunOption, error) {
 	return result, nil
 }
 
+// Execution holds a union: serde generated so encoding/json keeps $type.
+var (
+	_ json.Unmarshaler = (*Execution)(nil)
+	_ json.Marshaler   = (*Execution)(nil)
+)
+
+func (r *Execution) MarshalJSON() ([]byte, error) {
+	if r == nil {
+		return []byte(`null`), nil
+	}
+	return r._marshalJSONExecution(*r)
+}
+func (r *Execution) _marshalJSONExecution(x Execution) ([]byte, error) {
+	buf := bytes.Buffer{}
+	buf.WriteByte('{')
+	var err error
+	var fieldFlowID []byte
+	fieldFlowID, err = r._marshalJSONFlowID(x.FlowID)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONExecution: field name FlowID; %w", err)
+	}
+	if len(fieldFlowID) == 0 {
+		fieldFlowID = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"FlowID\":")
+	buf.Write(fieldFlowID)
+	var fieldStatus []byte
+	fieldStatus, err = r._marshalJSONState(x.Status)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONExecution: field name Status; %w", err)
+	}
+	if len(fieldStatus) == 0 {
+		fieldStatus = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Status\":")
+	buf.Write(fieldStatus)
+	var fieldLocation []byte
+	fieldLocation, err = r._marshalJSONstring(x.Location)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONExecution: field name Location; %w", err)
+	}
+	if len(fieldLocation) == 0 {
+		fieldLocation = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Location\":")
+	buf.Write(fieldLocation)
+	var fieldStartTime []byte
+	fieldStartTime, err = r._marshalJSONint64(x.StartTime)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONExecution: field name StartTime; %w", err)
+	}
+	if len(fieldStartTime) == 0 {
+		fieldStartTime = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"StartTime\":")
+	buf.Write(fieldStartTime)
+	var fieldEndTime []byte
+	fieldEndTime, err = r._marshalJSONint64(x.EndTime)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONExecution: field name EndTime; %w", err)
+	}
+	if len(fieldEndTime) == 0 {
+		fieldEndTime = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"EndTime\":")
+	buf.Write(fieldEndTime)
+	var fieldVariables []byte
+	fieldVariables, err = r._marshalJSONmapLb_string_bLschema_Schema(x.Variables)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONExecution: field name Variables; %w", err)
+	}
+	if len(fieldVariables) == 0 {
+		fieldVariables = []byte("null")
+	}
+	if buf.Len() > 1 {
+		buf.WriteByte(',')
+	}
+	buf.WriteString("\"Variables\":")
+	buf.Write(fieldVariables)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+func (r *Execution) _marshalJSONFlowID(x FlowID) ([]byte, error) {
+	result, err := shared.JSONMarshal[FlowID](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONFlowID:; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _marshalJSONState(x State) ([]byte, error) {
+	result, err := shared.JSONMarshal[State](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONState:; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _marshalJSONstring(x string) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONstring:; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _marshalJSONint64(x int64) ([]byte, error) {
+	result, err := json.Marshal(x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONint64:; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _marshalJSONmapLb_string_bLschema_Schema(x map[string]schema.Schema) ([]byte, error) {
+	partial := make(map[string]json.RawMessage)
+	for k, v := range x {
+		key := string(k)
+		value, err := r._marshalJSONschema_Schema(v)
+		if err != nil {
+			return nil, fmt.Errorf("workflow: Execution._marshalJSONmapLb_string_bLschema_Schema: value; %w", err)
+		}
+		partial[string(key)] = value
+	}
+	result, err := json.Marshal(partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONmapLb_string_bLschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _marshalJSONschema_Schema(x schema.Schema) ([]byte, error) {
+	result, err := shared.JSONMarshal[schema.Schema](x)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._marshalJSONschema_Schema:; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) UnmarshalJSON(data []byte) error {
+	result, err := r._unmarshalJSONExecution(data)
+	if err != nil {
+		return fmt.Errorf("workflow: Execution.UnmarshalJSON: %w", err)
+	}
+	*r = result
+	return nil
+}
+func (r *Execution) _unmarshalJSONExecution(data []byte) (Execution, error) {
+	result := Execution{}
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Execution._unmarshalJSONExecution: native struct unwrap; %w", err)
+	}
+	if fieldFlowID, ok := partial["FlowID"]; ok {
+		result.FlowID, err = r._unmarshalJSONFlowID(fieldFlowID)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Execution._unmarshalJSONExecution: field FlowID; %w", err)
+		}
+	}
+	if fieldStatus, ok := partial["Status"]; ok {
+		result.Status, err = r._unmarshalJSONState(fieldStatus)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Execution._unmarshalJSONExecution: field Status; %w", err)
+		}
+	}
+	if fieldLocation, ok := partial["Location"]; ok {
+		result.Location, err = r._unmarshalJSONstring(fieldLocation)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Execution._unmarshalJSONExecution: field Location; %w", err)
+		}
+	}
+	if fieldStartTime, ok := partial["StartTime"]; ok {
+		result.StartTime, err = r._unmarshalJSONint64(fieldStartTime)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Execution._unmarshalJSONExecution: field StartTime; %w", err)
+		}
+	}
+	if fieldEndTime, ok := partial["EndTime"]; ok {
+		result.EndTime, err = r._unmarshalJSONint64(fieldEndTime)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Execution._unmarshalJSONExecution: field EndTime; %w", err)
+		}
+	}
+	if fieldVariables, ok := partial["Variables"]; ok {
+		result.Variables, err = r._unmarshalJSONmapLb_string_bLschema_Schema(fieldVariables)
+		if err != nil {
+			return result, fmt.Errorf("workflow: Execution._unmarshalJSONExecution: field Variables; %w", err)
+		}
+	}
+	return result, nil
+}
+func (r *Execution) _unmarshalJSONFlowID(data []byte) (FlowID, error) {
+	result, err := shared.JSONUnmarshal[FlowID](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Execution._unmarshalJSONFlowID: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _unmarshalJSONState(data []byte) (State, error) {
+	result, err := shared.JSONUnmarshal[State](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Execution._unmarshalJSONState: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _unmarshalJSONstring(data []byte) (string, error) {
+	var result string
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Execution._unmarshalJSONstring: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _unmarshalJSONint64(data []byte) (int64, error) {
+	var result int64
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Execution._unmarshalJSONint64: native primitive unwrap; %w", err)
+	}
+	return result, nil
+}
+func (r *Execution) _unmarshalJSONmapLb_string_bLschema_Schema(data []byte) (map[string]schema.Schema, error) {
+	var partial map[string]json.RawMessage
+	err := json.Unmarshal(data, &partial)
+	if err != nil {
+		return nil, fmt.Errorf("workflow: Execution._unmarshalJSONmapLb_string_bLschema_Schema: native map unwrap; %w", err)
+	}
+	result := make(map[string]schema.Schema)
+	for k, v := range partial {
+		key := string(k)
+		value, err := r._unmarshalJSONschema_Schema(v)
+		if err != nil {
+			return nil, fmt.Errorf("workflow: Execution._unmarshalJSONmapLb_string_bLschema_Schema: value; %w", err)
+		}
+		result[key] = value
+	}
+	return result, nil
+}
+func (r *Execution) _unmarshalJSONschema_Schema(data []byte) (schema.Schema, error) {
+	result, err := shared.JSONUnmarshal[schema.Schema](data)
+	if err != nil {
+		return result, fmt.Errorf("workflow: Execution._unmarshalJSONschema_Schema: native ref unwrap; %w", err)
+	}
+	return result, nil
+}
+
 var (
 	_ json.Unmarshaler = (*ResumeOptions)(nil)
 	_ json.Marshaler   = (*ResumeOptions)(nil)
@@ -388,7 +644,7 @@ var (
 
 func (r *ResumeOptions) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONResumeOptions(*r)
 }

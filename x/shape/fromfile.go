@@ -515,6 +515,128 @@ func (f *InferredInfo) RetrieveShapesTaggedAs(tagName string) []Shape {
 	return result
 }
 
+// RetrieveStructsHoldingUnion returns the plain structs of the file that hold a
+// union value in a field: directly, behind a pointer, in a slice or array, in a
+// map value or key, or through an alias. Union variants are not included (they
+// get serde with their union), and neither are structs that carry a serde tag
+// (those are the user's call). encoding/json cannot keep the $type of a union
+// field, so mkunion generates serde for these structs as if they were tagged
+// serde:"json".
+func (f *InferredInfo) RetrieveStructsHoldingUnion() []*StructLike {
+	var result []*StructLike
+	for _, structShape := range f.RetrieveStructs() {
+		if _, tagged := Tags(structShape)["serde"]; tagged {
+			continue
+		}
+		if f.structHoldsUnion(structShape, map[string]bool{}) {
+			result = append(result, structShape)
+		}
+	}
+
+	return result
+}
+
+// RetrieveAliasesHoldingUnion returns the named non-struct types of the file
+// that hold a union, such as `type Steps []State` or `type ByName map[string]State`.
+// The same exclusions as RetrieveStructsHoldingUnion apply: union variants,
+// types with a serde tag, and `type X = Y` aliases (which have no methods of
+// their own) are left out.
+func (f *InferredInfo) RetrieveAliasesHoldingUnion() []*AliasLike {
+	var result []*AliasLike
+	for _, x := range f.RetrieveShapes() {
+		alias, ok := x.(*AliasLike)
+		if !ok || IsWeekAlias(alias) || RetrieveVariantTypeRef(alias) != nil {
+			continue
+		}
+		if _, tagged := Tags(alias)["serde"]; tagged {
+			continue
+		}
+		if f.holdsUnion(alias.Type, map[string]bool{alias.Name: true}) {
+			result = append(result, alias)
+		}
+	}
+
+	return result
+}
+
+// structHoldsUnion reports whether a data field of the struct holds a union.
+// Phantom fields (an embedded f.Returns[R]) carry no data and are skipped.
+func (f *InferredInfo) structHoldsUnion(x *StructLike, seen map[string]bool) bool {
+	for _, field := range x.Fields {
+		if IsPhantomField(field) {
+			continue
+		}
+		if f.holdsUnion(field.Type, seen) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// holdsUnion reports whether a value of the shape holds a union anywhere
+// encoding/json would reach on its own: directly, behind a pointer, in a list,
+// in a map key or value, through an alias, or in an inline struct. seen holds
+// the names of the aliases already entered, so a recursive type ends the walk.
+func (f *InferredInfo) holdsUnion(x Shape, seen map[string]bool) bool {
+	switch y := x.(type) {
+	case *UnionLike:
+		return true
+	case *RefName:
+		return f.refHoldsUnion(y, seen)
+	case *PointerLike:
+		return f.holdsUnion(y.Type, seen)
+	case *ListLike:
+		return f.holdsUnion(y.Element, seen)
+	case *MapLike:
+		return f.holdsUnion(y.Key, seen) || f.holdsUnion(y.Val, seen)
+	case *AliasLike:
+		return f.holdsUnion(y.Type, seen)
+	case *StructLike:
+		return f.structHoldsUnion(y, seen)
+	default:
+		// *Any, *PrimitiveLike
+		return false
+	}
+}
+
+// refHoldsUnion resolves a type reference just far enough to tell whether it
+// is, or wraps, a union. A reference to a named struct or to a union variant
+// stops the walk: those types get their own JSON methods, which encoding/json
+// honours. A reference the file does not declare is looked up on disk through
+// the DefaultIndex, so a union declared in a sibling file of the package, or in
+// another package, is found too. A reference that does not resolve holds nothing.
+func (f *InferredInfo) refHoldsUnion(ref *RefName, seen map[string]bool) bool {
+	if ref.PkgImportName == f.pkgImportName {
+		if f.RetrieveUnion(ref.Name) != nil {
+			return true
+		}
+		if declared, ok := f.shapes[ref.Name]; ok {
+			alias, isAlias := declared.(*AliasLike)
+			if !isAlias || RetrieveVariantTypeRef(alias) != nil {
+				return false
+			}
+			if seen[ref.Name] {
+				return false
+			}
+			seen[ref.Name] = true
+			return f.holdsUnion(alias.Type, seen)
+		}
+	}
+
+	if ref.PkgImportName == "" {
+		// a type parameter or a builtin: nothing to look up
+		return false
+	}
+
+	found, ok := LookupShapeOnDisk(ref)
+	if !ok {
+		return false
+	}
+
+	return IsUnion(found)
+}
+
 // removeTypeParams removes type parameters from a given string, returning the base name.
 // Examples: "Option[A]" -> "Option", "Result[T, E]" -> "Result"
 func removeTypeParams(name string) string {
@@ -828,7 +950,6 @@ func (f *InferredInfo) visitTypeSpec(t *ast.TypeSpec) ast.Visitor {
 
 // visitStructType infers struct fields of the current type.
 func (f *InferredInfo) visitStructType(t *ast.StructType) ast.Visitor {
-	opt := f.optionAST()
 	if !t.Struct.IsValid() {
 		return f
 	}
@@ -841,19 +962,19 @@ func (f *InferredInfo) visitStructType(t *ast.StructType) ast.Visitor {
 
 	for _, field := range t.Fields.List {
 		// this happens when field is embedded in struct
-		// something like `type A struct { B }`
+		// something like `type A struct { B }`, `type A struct { pkg.B[T] }`
 		if len(field.Names) == 0 {
-			switch typ := field.Type.(type) {
-			case *ast.Ident:
-				structShape.Fields = append(structShape.Fields, &FieldLike{
-					Name: typ.Name,
-					Type: FromAST(typ, opt...),
-				})
-				break
-			default:
-				log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", typ)
+			name, ok := embeddedFieldName(field.Type)
+			if !ok {
+				log.Warnf("shape.InferFromFile: unknown ast type embedded in struct: %T\n", field.Type)
 				continue
 			}
+
+			structShape.Fields = append(structShape.Fields, &FieldLike{
+				Name: name,
+				Type: CleanTypeThatAreOvershadowByTypeParam(f.fieldTypeFromAST(field.Type, name), structShape.TypeParams),
+				Tags: ExtractTags(fieldTag(field)),
+			})
 		}
 
 		for _, fieldName := range field.Names {
@@ -861,38 +982,10 @@ func (f *InferredInfo) visitStructType(t *ast.StructType) ast.Visitor {
 				continue
 			}
 
-			var typ Shape
-			switch ttt := field.Type.(type) {
-			// selectors in struct, means that we are using type from other package
-			case *ast.SelectorExpr:
-				typ = f.selectExrToShape(ttt)
-			// this is reference to other struct in the same package or other package
-			case *ast.StarExpr:
-				if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
-					typ = f.selectExrToShape(selector)
-					typ = &PointerLike{
-						Type: typ,
-					}
-				} else {
-					typ = FromAST(ttt, opt...)
-				}
-
-			case *ast.IndexExpr, *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
-				typ = FromAST(ttt, opt...)
-
-			default:
-				log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName.Name, ttt)
-				typ = &Any{}
-			}
-
+			typ := f.fieldTypeFromAST(field.Type, fieldName.Name)
 			typ = CleanTypeThatAreOvershadowByTypeParam(typ, structShape.TypeParams)
 
-			tag := ""
-			if field.Tag != nil {
-				tag = field.Tag.Value
-			}
-
-			tags := ExtractTags(tag)
+			tags := ExtractTags(fieldTag(field))
 			desc := TagsToDesc(tags)
 			guard := TagsToGuard(tags)
 
@@ -909,6 +1002,55 @@ func (f *InferredInfo) visitStructType(t *ast.StructType) ast.Visitor {
 	f.shapes[f.currentType] = structShape
 	log.Infof("shape.InferFromFile: struct %s: %s\n", f.currentType, ToStr(structShape))
 	return f
+}
+
+// fieldTag returns the raw struct tag of a field, or "" when it has none.
+func fieldTag(field *ast.Field) string {
+	if field.Tag == nil {
+		return ""
+	}
+	return field.Tag.Value
+}
+
+// embeddedFieldName returns the name Go gives an embedded field: the type name
+// without package, pointer or type arguments. `pkg.B[T]` and `*B` are both "B".
+func embeddedFieldName(expr ast.Expr) (string, bool) {
+	switch x := expr.(type) {
+	case *ast.Ident:
+		return x.Name, true
+	case *ast.SelectorExpr:
+		return x.Sel.Name, true
+	case *ast.StarExpr:
+		return embeddedFieldName(x.X)
+	case *ast.IndexExpr:
+		return embeddedFieldName(x.X)
+	case *ast.IndexListExpr:
+		return embeddedFieldName(x.X)
+	}
+	return "", false
+}
+
+// fieldTypeFromAST resolves the type of a struct field. Types from other
+// packages go through selectExrToShape so their import path is recorded.
+func (f *InferredInfo) fieldTypeFromAST(expr ast.Expr, fieldName string) Shape {
+	opt := f.optionAST()
+	switch ttt := expr.(type) {
+	// selectors in struct, means that we are using type from other package
+	case *ast.SelectorExpr:
+		return f.selectExrToShape(ttt)
+	// this is reference to other struct in the same package or other package
+	case *ast.StarExpr:
+		if selector, ok := ttt.X.(*ast.SelectorExpr); ok {
+			return &PointerLike{Type: f.selectExrToShape(selector)}
+		}
+		return FromAST(ttt, opt...)
+
+	case *ast.IndexExpr, *ast.IndexListExpr, *ast.Ident, *ast.ArrayType, *ast.MapType, *ast.StructType:
+		return FromAST(ttt, opt...)
+	}
+
+	log.Warnf("shape.InferFromFile: unknown ast type in  %s.%s: %T\n", f.currentType, fieldName, expr)
+	return &Any{}
 }
 
 func CleanTypeThatAreOvershadowByTypeParam(typ Shape, params []TypeParam) Shape {
@@ -1251,6 +1393,12 @@ func NewIndexTypeInDir(dir string) (*IndexedTypeWalker, error) {
 				return nil
 			}
 
+			// NOTE: types_reg_gen.go, the output of this index, is read back
+			// in. That keeps a mistake alive across runs (delete the file to
+			// clear it), but it is also what keeps instantiations that only
+			// test files use in the registry, since _test.go is skipped above.
+			// Skipping it needs those tests to register their own types first.
+
 			f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 			if err != nil {
 				return fmt.Errorf("could not parse file %s; %w", path, err)
@@ -1482,13 +1630,14 @@ func (walker *IndexedTypeWalker) visitFuncDecl(t *ast.FuncDecl) ast.Visitor {
 	fun := t.Type
 
 	prev := walker.filterGenericTypes
+	// A method may have its own type parameters (Go 1.27 generic methods) on
+	// top of the receiver's. Neither set names a real type.
+	walker.filterGenericTypes = walker.typeParamNames(fun.TypeParams)
 	if t.Recv != nil {
-		walker.filterGenericTypes = walker.guessParamNamesReceiver(t.Recv)
+		walker.filterGenericTypes = append(walker.filterGenericTypes, walker.guessParamNamesReceiver(t.Recv)...)
 		for _, param := range t.Recv.List {
 			walker.registerIndexedShape(param.Type)
 		}
-	} else {
-		walker.filterGenericTypes = walker.typeParamNames(fun.TypeParams)
 	}
 
 	if fun.TypeParams != nil {
@@ -1658,6 +1807,38 @@ func (walker *IndexedTypeWalker) guessParamNamesReceiver(x *ast.FieldList) []str
 	return result
 }
 
+// mentionsTypeParam reports whether a shape names one of the type parameters
+// in scope anywhere inside it: Box[T], *[]T, map[string]T, func's T.
+func mentionsTypeParam(x Shape, names []string) bool {
+	if len(names) == 0 || x == nil {
+		return false
+	}
+	return MatchShapeR1(
+		x,
+		func(*Any) bool { return false },
+		func(y *RefName) bool {
+			for _, name := range names {
+				if y.Name == name {
+					return true
+				}
+			}
+			for _, idx := range y.Indexed {
+				if mentionsTypeParam(idx, names) {
+					return true
+				}
+			}
+			return false
+		},
+		func(y *PointerLike) bool { return mentionsTypeParam(y.Type, names) },
+		func(y *AliasLike) bool { return mentionsTypeParam(y.Type, names) },
+		func(*PrimitiveLike) bool { return false },
+		func(y *ListLike) bool { return mentionsTypeParam(y.Element, names) },
+		func(y *MapLike) bool { return mentionsTypeParam(y.Key, names) || mentionsTypeParam(y.Val, names) },
+		func(*StructLike) bool { return false },
+		func(*UnionLike) bool { return false },
+	)
+}
+
 func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 	switch arg.(type) {
 	case *ast.IndexExpr, *ast.IndexListExpr, *ast.StarExpr:
@@ -1674,30 +1855,9 @@ func (walker *IndexedTypeWalker) registerIndexedShape(arg ast.Node) {
 			indexed = ptr.Type
 		}
 
-		if len(walker.filterGenericTypes) > 0 {
-			indexedName := Name(indexed)
-			for _, name := range walker.filterGenericTypes {
-				if name == indexedName {
-					// we extracted type parameter, not interested in it
-					return
-				}
-
-				typeParams := ExtractIndexedTypes(indexed)
-				for {
-					if len(typeParams) == 0 {
-						break
-					}
-
-					tp := typeParams[0]
-					typeParams = typeParams[1:]
-					if Name(tp) == name {
-						// we extracted type parameter, not interested in it
-						return
-					}
-
-					typeParams = append(typeParams, ExtractIndexedTypes(tp)...)
-				}
-			}
+		if mentionsTypeParam(indexed, walker.filterGenericTypes) {
+			// a type parameter is not a type; nothing to register
+			return
 		}
 
 		name := ToGoTypeName(indexed,

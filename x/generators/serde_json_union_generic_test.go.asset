@@ -20,10 +20,10 @@ type RecordUnionJSON[A any] struct {
 }
 
 func RecordFromJSON[A any](x []byte) (Record[A], error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data RecordUnionJSON[A]
@@ -32,10 +32,17 @@ func RecordFromJSON[A any](x []byte) (Record[A], error) {
 		return nil, fmt.Errorf("testutils.RecordFromJSON[A]: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "testutils.Item":
+		if data.Item == nil || string(data.Item) == "null" {
+			return new(Item[A]), nil
+		}
 		return ItemFromJSON[A](data.Item)
 	case "testutils.Other":
+		if data.Other == nil || string(data.Other) == "null" {
+			return new(Other[A]), nil
+		}
 		return OtherFromJSON[A](data.Other)
 	}
 
@@ -44,7 +51,10 @@ func RecordFromJSON[A any](x []byte) (Record[A], error) {
 	} else if data.Other != nil {
 		return OtherFromJSON[A](data.Other)
 	}
-	return nil, fmt.Errorf("testutils.RecordFromJSON[A]: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("testutils.RecordFromJSON[A]: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("testutils.RecordFromJSON[A]: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func RecordToJSON[A any](x Record[A]) ([]byte, error) {
@@ -54,6 +64,9 @@ func RecordToJSON[A any](x Record[A]) ([]byte, error) {
 	return MatchRecordR2(
 		x,
 		func (y *Item[A]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ItemToJSON[A](y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.RecordToJSON[A]: %w", err)
@@ -64,6 +77,9 @@ func RecordToJSON[A any](x Record[A]) ([]byte, error) {
 			})
 		},
 		func (y *Other[A]) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OtherToJSON[A](y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.RecordToJSON[A]: %w", err)
@@ -96,7 +112,7 @@ var (
 
 func (r *Item[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONItemLb_A_bL(*r)
 }
@@ -212,7 +228,7 @@ var (
 
 func (r *Other[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOtherLb_A_bL(*r)
 }

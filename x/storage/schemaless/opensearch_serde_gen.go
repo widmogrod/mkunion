@@ -15,7 +15,7 @@ var (
 
 func (r *OpenSearchSearchResult[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOpenSearchSearchResultLb_A_bL(*r)
 }
@@ -84,7 +84,7 @@ var (
 
 func (r *OpenSearchSearchResultHit[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOpenSearchSearchResultHitLb_A_bL(*r)
 }
@@ -218,7 +218,7 @@ var (
 
 func (r *OpenSearchSearchResultHits[A]) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOpenSearchSearchResultHitsLb_A_bL(*r)
 }

@@ -34,15 +34,16 @@ go tool mkunion -i example/shape.go
 
 ## `mkunion shape-export`
 
-Exports Go types as TypeScript definitions for [end-to-end type safety](examples/type_script.md):
+Exports Go types as [TypeScript](examples/type_script.md) or [Swift](examples/swift.md) definitions, for end-to-end type safety:
 
 ```
 go tool mkunion shape-export --language typescript --output-dir ./output -i file.go
+go tool mkunion shape-export --language swift -o ../App/Sources/Api api.go
 ```
 
-- `--lang`, `--language` - output language (default: `typescript`)
+- `--lang`, `--language` - output language: `typescript` (default) or `swift`
 - `-o`, `--output-dir` - directory to write exported types to
-- `-i`, `--input-go-file` - Go file(s) to export; falls back to `$GOFILE`
+- `-i`, `--input-go-file` - Go file(s) to export; positional arguments work too; falls back to `$GOFILE`
 - `-v`, `--verbose` - debug-level logging
 
 ## `mkunion clean`

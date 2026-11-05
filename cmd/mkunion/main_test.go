@@ -107,3 +107,26 @@ func TestShapeExport(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, entries, "typescript files must be exported")
 }
+
+func TestShapeExportSwift(t *testing.T) {
+	sourcePath := writeVehicleModule(t)
+	outDir := filepath.Join(t.TempDir(), "swift")
+
+	// the file comes as a positional argument, not only through -i
+	require.NoError(t, runCLI(t, "shape-export", "--language", "swift", "-o", outDir, sourcePath))
+
+	content, err := os.ReadFile(filepath.Join(outDir, "Vehicle.swift"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "public enum Vehicle {")
+	assert.Contains(t, string(content), "public enum Vehicle: Codable, Hashable, Sendable {")
+	assert.Contains(t, string(content), "case car(Car)")
+	assert.FileExists(t, filepath.Join(outDir, "MkunionJSON.swift"))
+}
+
+func TestShapeExportUnknownLanguage(t *testing.T) {
+	sourcePath := writeVehicleModule(t)
+
+	err := runCLI(t, "shape-export", "--language", "rust", "-o", t.TempDir(), sourcePath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `unknown language "rust"`)
+}

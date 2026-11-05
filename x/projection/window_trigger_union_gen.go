@@ -82,10 +82,10 @@ type TriggerDescriptionUnionJSON struct {
 }
 
 func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data TriggerDescriptionUnionJSON
@@ -94,15 +94,22 @@ func TriggerDescriptionFromJSON(x []byte) (TriggerDescription, error) {
 		return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "projection.AtWatermark":
+		if data.AtWatermark == nil || string(data.AtWatermark) == "null" {
+			return new(AtWatermark), nil
+		}
 		return AtWatermarkFromJSON(data.AtWatermark)
 	}
 
 	if data.AtWatermark != nil {
 		return AtWatermarkFromJSON(data.AtWatermark)
 	}
-	return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("projection.TriggerDescriptionFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
@@ -112,6 +119,9 @@ func TriggerDescriptionToJSON(x TriggerDescription) ([]byte, error) {
 	return MatchTriggerDescriptionR2(
 		x,
 		func(y *AtWatermark) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := AtWatermarkToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.TriggerDescriptionToJSON: %w", err)
@@ -144,7 +154,7 @@ var (
 
 func (r *AtWatermark) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONAtWatermark(*r)
 }

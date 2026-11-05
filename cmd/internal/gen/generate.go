@@ -145,6 +145,16 @@ func generateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		}
 		shapesContents.Write(contents)
 
+		if shape.UnionDeclaresReturns(union) {
+			genHandler := generators.NewHandlerGenerator(union)
+			contents, err = genHandler.Generate()
+			if err != nil {
+				return shapesContents, fmt.Errorf("failed to generate handler for %s: %w", shape.ToGoTypeName(union), err)
+			}
+			shapesContents.Write(contents)
+			pkgMap = generators.MergePkgMaps(pkgMap, genHandler.ExtractImports())
+		}
+
 		if shape.TagHasOption(union.Tags, "mkunion", "noserde") {
 			continue
 		}
@@ -176,9 +186,45 @@ func generateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 	return contents, nil
 }
 
+// serdeShapes returns, in inferred.RetrieveShapes order, the shapes that get
+// JSON serde: those tagged serde with any value but "-" (the opt-out for a
+// hand-written MarshalJSON), and the plain structs that hold a union value in a
+// field, and the named lists and maps of a union, which encoding/json alone
+// would strip of its $type. The names of the
+// second kind come back in holdsUnion so the output can say why they are there.
+func serdeShapes(inferred *shape.InferredInfo) (shapes []shape.Shape, holdsUnion map[string]bool) {
+	holdsUnion = map[string]bool{}
+	// A type declared in a _test.go file exists only in the test build, and the
+	// generated file is not a test file, so it would not compile: tag such a
+	// type by hand if its serde matters.
+	if !strings.HasSuffix(inferred.FileName(), "_test.go") {
+		for _, x := range inferred.RetrieveStructsHoldingUnion() {
+			holdsUnion[x.Name] = true
+		}
+		for _, x := range inferred.RetrieveAliasesHoldingUnion() {
+			holdsUnion[x.Name] = true
+		}
+	}
+
+	for _, x := range inferred.RetrieveShapes() {
+		tags := shape.Tags(x)
+		if _, tagged := tags["serde"]; tagged {
+			if shape.TagGetValue(tags, "serde", "") != "-" {
+				shapes = append(shapes, x)
+			}
+			continue
+		}
+		if holdsUnion[shape.Name(x)] {
+			shapes = append(shapes, x)
+		}
+	}
+
+	return shapes, holdsUnion
+}
+
 func generateSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 	shapesContents := bytes.Buffer{}
-	shapes := inferred.RetrieveShapesTaggedAs("serde")
+	shapes, holdsUnion := serdeShapes(inferred)
 	if len(shapes) == 0 {
 		return shapesContents, nil
 	}
@@ -196,6 +242,9 @@ func generateSerde(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		contents, err := genSerde.Generate()
 		if err != nil {
 			return shapesContents, fmt.Errorf("gen.generateSerde: failed to generate json serde for %s: %w", shape.ToGoTypeName(x), err)
+		}
+		if holdsUnion[shape.Name(x)] {
+			shapesContents.WriteString(fmt.Sprintf("// %s holds a union: serde generated so encoding/json keeps $type.\n", shape.Name(x)))
 		}
 		shapesContents.WriteString(contents)
 

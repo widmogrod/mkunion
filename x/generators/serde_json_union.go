@@ -317,10 +317,10 @@ func (g *SerdeJSONUnion) GenerateUnionFromFunc(union *shape.UnionLike) ([]byte, 
 		g.constructionf(union, "%sFromJSON"),
 		g.parametrisedf(union, "%s"),
 	))
-	body.WriteString(fmt.Sprintf("\tif x == nil || len(x) == 0 {\n"))
+	body.WriteString(fmt.Sprintf("\tif len(x) == 0 {\n"))
 	body.WriteString(fmt.Sprintf("\t\treturn nil, nil\n"))
 	body.WriteString(fmt.Sprintf("\t}\n"))
-	body.WriteString(fmt.Sprintf("\tif string(x[:4]) == \"null\" {\n"))
+	body.WriteString(fmt.Sprintf("\tif len(x) >= 4 && string(x[:4]) == \"null\" {\n"))
 	body.WriteString(fmt.Sprintf("\t\treturn nil, nil\n"))
 	body.WriteString(fmt.Sprintf("\t}\n"))
 	body.WriteString(fmt.Sprintf("\tvar data %s\n", g.parametrisedf(union, "%sUnionJSON")))
@@ -328,9 +328,13 @@ func (g *SerdeJSONUnion) GenerateUnionFromFunc(union *shape.UnionLike) ([]byte, 
 	body.WriteString(fmt.Sprintf("\tif err != nil {\n"))
 	body.WriteString(fmt.Sprintf("\t\treturn nil, fmt.Errorf(\"%s %%w\", err)\n", errorContext))
 	body.WriteString(fmt.Sprintf("\t}\n\n"))
+	body.WriteString(fmt.Sprintf("\t// $type picks the variant; a missing or null payload is its zero value.\n"))
 	body.WriteString(fmt.Sprintf("\tswitch data.Type {\n"))
 	for _, variant := range union.Variant {
 		body.WriteString(fmt.Sprintf("\tcase %q:\n", g.JSONVariantName(variant)))
+		body.WriteString(fmt.Sprintf("\t\tif data.%s == nil || string(data.%s) == \"null\" {\n", g.VariantName(variant), g.VariantName(variant)))
+		body.WriteString(fmt.Sprintf("\t\t\treturn new(%s), nil\n", g.parametrisedf(variant, "%s")))
+		body.WriteString(fmt.Sprintf("\t\t}\n"))
 		body.WriteString(fmt.Sprintf("\t\treturn %s(data.%s)\n",
 			g.FuncNameFromJSON(variant),
 			g.VariantName(variant),
@@ -354,7 +358,10 @@ func (g *SerdeJSONUnion) GenerateUnionFromFunc(union *shape.UnionLike) ([]byte, 
 	}
 	body.WriteString(fmt.Sprintf("\n"))
 
-	body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s unknown type: %%s\", data.Type)\n", errorContext))
+	body.WriteString(fmt.Sprintf("\tif data.Type == \"\" {\n"))
+	body.WriteString(fmt.Sprintf("\t\treturn nil, fmt.Errorf(\"%s %%w\", shared.ErrNoType)\n", errorContext))
+	body.WriteString(fmt.Sprintf("\t}\n"))
+	body.WriteString(fmt.Sprintf("\treturn nil, fmt.Errorf(\"%s %%w: %%s\", shared.ErrUnknownType, data.Type)\n", errorContext))
 	body.WriteString(fmt.Sprintf("}\n\n"))
 
 	return body.Bytes(), nil
@@ -378,6 +385,9 @@ func (g *SerdeJSONUnion) GenerateUnionToFunc(union *shape.UnionLike) ([]byte, er
 
 	for _, variant := range union.Variant {
 		body.WriteString(fmt.Sprintf("\t\tfunc (y *%s) ([]byte, error) {\n", g.parametrisedf(variant, "%s")))
+		body.WriteString(fmt.Sprintf("\t\t\tif y == nil {\n"))
+		body.WriteString(fmt.Sprintf("\t\t\t\treturn []byte(`null`), nil\n"))
+		body.WriteString(fmt.Sprintf("\t\t\t}\n"))
 		body.WriteString(fmt.Sprintf("\t\t\tbody, err := %s(y)\n", g.FuncNameToSON(variant)))
 		body.WriteString(fmt.Sprintf("\t\t\tif err != nil {\n"))
 		body.WriteString(fmt.Sprintf("\t\t\t\treturn nil, fmt.Errorf(\"%s %%w\", err)\n", errorContext))

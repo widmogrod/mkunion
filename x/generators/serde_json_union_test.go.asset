@@ -31,10 +31,10 @@ type TreeUnionJSON struct {
 }
 
 func TreeFromJSON(x []byte) (Tree, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data TreeUnionJSON
@@ -43,20 +43,42 @@ func TreeFromJSON(x []byte) (Tree, error) {
 		return nil, fmt.Errorf("testutils.TreeFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "testutils.Branch":
+		if data.Branch == nil || string(data.Branch) == "null" {
+			return new(Branch), nil
+		}
 		return BranchFromJSON(data.Branch)
 	case "testutils.Leaf":
+		if data.Leaf == nil || string(data.Leaf) == "null" {
+			return new(Leaf), nil
+		}
 		return LeafFromJSON(data.Leaf)
 	case "testutils.K":
+		if data.K == nil || string(data.K) == "null" {
+			return new(K), nil
+		}
 		return KFromJSON(data.K)
 	case "testutils.P":
+		if data.P == nil || string(data.P) == "null" {
+			return new(P), nil
+		}
 		return PFromJSON(data.P)
 	case "testutils.Ma":
+		if data.Ma == nil || string(data.Ma) == "null" {
+			return new(Ma), nil
+		}
 		return MaFromJSON(data.Ma)
 	case "testutils.La":
+		if data.La == nil || string(data.La) == "null" {
+			return new(La), nil
+		}
 		return LaFromJSON(data.La)
 	case "testutils.Ka":
+		if data.Ka == nil || string(data.Ka) == "null" {
+			return new(Ka), nil
+		}
 		return KaFromJSON(data.Ka)
 	}
 
@@ -75,7 +97,10 @@ func TreeFromJSON(x []byte) (Tree, error) {
 	} else if data.Ka != nil {
 		return KaFromJSON(data.Ka)
 	}
-	return nil, fmt.Errorf("testutils.TreeFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("testutils.TreeFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("testutils.TreeFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func TreeToJSON(x Tree) ([]byte, error) {
@@ -85,6 +110,9 @@ func TreeToJSON(x Tree) ([]byte, error) {
 	return MatchTreeR2(
 		x,
 		func (y *Branch) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := BranchToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
@@ -95,6 +123,9 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			})
 		},
 		func (y *Leaf) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := LeafToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
@@ -105,6 +136,9 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			})
 		},
 		func (y *K) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := KToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
@@ -115,6 +149,9 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			})
 		},
 		func (y *P) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := PToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
@@ -125,6 +162,9 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			})
 		},
 		func (y *Ma) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := MaToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
@@ -135,6 +175,9 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			})
 		},
 		func (y *La) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := LaToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
@@ -145,6 +188,9 @@ func TreeToJSON(x Tree) ([]byte, error) {
 			})
 		},
 		func (y *Ka) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := KaToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.TreeToJSON: %w", err)
@@ -177,7 +223,7 @@ var (
 
 func (r *Branch) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONBranch(*r)
 }
@@ -489,7 +535,7 @@ func (r *Branch) _unmarshalJSONPtrListOfLb_Tree_bL(data []byte) (*ListOf[Tree], 
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONListOfLb_Tree_bL(data)
@@ -509,7 +555,7 @@ func (r *Branch) _unmarshalJSONPtrLeaf(data []byte) (*Leaf, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONLeaf(data)
@@ -545,7 +591,7 @@ func (r *Branch) _unmarshalJSONPtrint64(data []byte) (*int64, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONint64(data)
@@ -583,7 +629,7 @@ var (
 
 func (r *Leaf) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONLeaf(*r)
 }
@@ -666,7 +712,7 @@ var (
 
 func (r *K) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONK(*r)
 }
@@ -726,7 +772,7 @@ var (
 
 func (r *P) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONP(*r)
 }
@@ -785,7 +831,7 @@ var (
 
 func (r *Ma) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONMa(*r)
 }
@@ -892,7 +938,7 @@ var (
 
 func (r *La) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONLa(*r)
 }
@@ -982,7 +1028,7 @@ var (
 
 func (r *Ka) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONKa(*r)
 }

@@ -81,6 +81,38 @@ There are a few things that you can notice in this example:
 - It's not shown in this example, but you can also reference types and union types from other packages, and serialization will work as expected.
 
 
+## Rules the generated code follows
+
+The generated `XFromJSON`, `XToJSON`, `MarshalJSON` and `UnmarshalJSON` keep to
+a few rules. They are the same rules `encoding/json` uses, so a value can move
+between the two without changing the JSON on the wire.
+
+- **A nil value is `null`.** A nil union, a nil variant pointer held in a union
+  (`var t Tree = (*Leaf)(nil)`), and `(*Leaf)(nil).MarshalJSON()` all encode as
+  `null`. `null` decodes to a nil union.
+- **`$type` picks the variant.** When `$type` is set, the payload key is read
+  for the fields. A missing payload key, or a `null` payload, is the zero value
+  of that variant: `{"$type":"example.Leaf"}` decodes to `&Leaf{}`. Without
+  `$type`, the first key that names a variant is used.
+- **Errors say what is wrong, and can be matched.** No `$type` and no variant
+  key is `shared.ErrNoType`. A `$type` the union does not have is
+  `shared.ErrUnknownType`, with the name at the end of the message. Both come
+  wrapped, so use `errors.Is`.
+- **A type that holds a union gets serde without a tag.** `encoding/json`
+  cannot keep the `$type` of a union-typed value, so when a plain struct has
+  such a field (directly, behind a pointer, in a slice, array or map, or through
+  a named type), or a named list or map holds the union (`type Steps []State`),
+  mkunion generates its `MarshalJSON` and `UnmarshalJSON` as if it were tagged
+  `//go:tag serde:"json"`. The generated file says so in a comment above the
+  type. The union may live in another file or package. To keep your own
+  hand-written methods instead, tag the type `//go:tag serde:"-"`. A type that
+  holds no union is left to `encoding/json`, as before.
+- **The methods are on the pointer.** `json.Marshal(&user)` and any value
+  reached through a pointer, slice or map use them; `json.Marshal(user)` on a
+  bare value does not, and a union field inside loses its `$type`. Pass a
+  pointer, or use `shared.JSONMarshal[User](user)`, which does.
+
+
 ## Struct fields and `json` tags
 
 Generated serialization follows the same rules as the standard library `encoding/json`:

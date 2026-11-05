@@ -69,7 +69,8 @@ func GenerateTypeRegistry(inferred *shape.IndexedTypeWalker, lookupShape func(*s
 				continue
 			}
 			some = shape.IndexWith(some, ref)
-			if shape.IsUnion(some) {
+			if union, ok := some.(*shape.UnionLike); ok && !shape.TagHasOption(union.Tags, "mkunion", "noserde") {
+				// a noserde union has no FromJSON/ToJSON to register
 				contents.WriteString(fmt.Sprintf("\t%s\n", StrRegisterUnionFuncName(packageName, some)))
 			}
 		}

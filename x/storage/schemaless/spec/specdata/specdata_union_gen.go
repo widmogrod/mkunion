@@ -98,10 +98,10 @@ type EngineUnionJSON struct {
 }
 
 func EngineFromJSON(x []byte) (Engine, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data EngineUnionJSON
@@ -110,10 +110,17 @@ func EngineFromJSON(x []byte) (Engine, error) {
 		return nil, fmt.Errorf("specdata.EngineFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "specdata.Petrol":
+		if data.Petrol == nil || string(data.Petrol) == "null" {
+			return new(Petrol), nil
+		}
 		return PetrolFromJSON(data.Petrol)
 	case "specdata.Electric":
+		if data.Electric == nil || string(data.Electric) == "null" {
+			return new(Electric), nil
+		}
 		return ElectricFromJSON(data.Electric)
 	}
 
@@ -122,7 +129,10 @@ func EngineFromJSON(x []byte) (Engine, error) {
 	} else if data.Electric != nil {
 		return ElectricFromJSON(data.Electric)
 	}
-	return nil, fmt.Errorf("specdata.EngineFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("specdata.EngineFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("specdata.EngineFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func EngineToJSON(x Engine) ([]byte, error) {
@@ -132,6 +142,9 @@ func EngineToJSON(x Engine) ([]byte, error) {
 	return MatchEngineR2(
 		x,
 		func(y *Petrol) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := PetrolToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("specdata.EngineToJSON: %w", err)
@@ -142,6 +155,9 @@ func EngineToJSON(x Engine) ([]byte, error) {
 			})
 		},
 		func(y *Electric) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ElectricToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("specdata.EngineToJSON: %w", err)
@@ -174,7 +190,7 @@ var (
 
 func (r *Petrol) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONPetrol(*r)
 }
@@ -291,7 +307,7 @@ var (
 
 func (r *Electric) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONElectric(*r)
 }

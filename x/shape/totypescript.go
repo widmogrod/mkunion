@@ -176,6 +176,9 @@ func ToTypeScript(x Shape, option *TypeScriptOptions) string {
 			if len(x.Fields) > 0 {
 				_, _ = fmt.Fprintf(result, "\n")
 				for _, field := range x.Fields {
+					if IsPhantomField(field) {
+						continue
+					}
 					if IsPointer(field.Type) || !IsRequired(field.Guard) {
 						_, _ = fmt.Fprintf(result, "\t%s?: %s,\n", field.Name, ToTypeScript(field.Type, option))
 					} else {

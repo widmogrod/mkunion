@@ -14,7 +14,7 @@ var (
 
 func (r *Game) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONGame(*r)
 }
@@ -187,7 +187,7 @@ var (
 
 func (r *SessionsStats) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSessionsStats(*r)
 }

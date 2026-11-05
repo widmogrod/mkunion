@@ -48,6 +48,9 @@ func toJsonSchema(s Shape, definitions map[string]string, depth int, desc *strin
 		func(x *StructLike) string {
 			var properties []string
 			for _, field := range x.Fields {
+				if IsPhantomField(field) {
+					continue
+				}
 				properties = append(properties, `"`+field.Name+`": `+toJsonSchema(field.Type, definitions, depth+1, field.Desc))
 			}
 

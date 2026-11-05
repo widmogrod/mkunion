@@ -103,10 +103,10 @@ type SnapshotStateUnionJSON struct {
 }
 
 func SnapshotStateFromJSON(x []byte) (SnapshotState, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data SnapshotStateUnionJSON
@@ -115,10 +115,17 @@ func SnapshotStateFromJSON(x []byte) (SnapshotState, error) {
 		return nil, fmt.Errorf("projection.SnapshotStateFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "projection.PullPushContextState":
+		if data.PullPushContextState == nil || string(data.PullPushContextState) == "null" {
+			return new(PullPushContextState), nil
+		}
 		return PullPushContextStateFromJSON(data.PullPushContextState)
 	case "projection.JoinContextState":
+		if data.JoinContextState == nil || string(data.JoinContextState) == "null" {
+			return new(JoinContextState), nil
+		}
 		return JoinContextStateFromJSON(data.JoinContextState)
 	}
 
@@ -127,7 +134,10 @@ func SnapshotStateFromJSON(x []byte) (SnapshotState, error) {
 	} else if data.JoinContextState != nil {
 		return JoinContextStateFromJSON(data.JoinContextState)
 	}
-	return nil, fmt.Errorf("projection.SnapshotStateFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("projection.SnapshotStateFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("projection.SnapshotStateFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func SnapshotStateToJSON(x SnapshotState) ([]byte, error) {
@@ -137,6 +147,9 @@ func SnapshotStateToJSON(x SnapshotState) ([]byte, error) {
 	return MatchSnapshotStateR2(
 		x,
 		func(y *PullPushContextState) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := PullPushContextStateToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.SnapshotStateToJSON: %w", err)
@@ -147,6 +160,9 @@ func SnapshotStateToJSON(x SnapshotState) ([]byte, error) {
 			})
 		},
 		func(y *JoinContextState) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := JoinContextStateToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.SnapshotStateToJSON: %w", err)
@@ -179,7 +195,7 @@ var (
 
 func (r *PullPushContextState) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONPullPushContextState(*r)
 }
@@ -320,7 +336,7 @@ func (r *PullPushContextState) _unmarshalJSONPtrstream_Offset(data []byte) (*str
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONstream_Offset(data)
@@ -340,7 +356,7 @@ func (r *PullPushContextState) _unmarshalJSONPtrstream_EventTime(data []byte) (*
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONstream_EventTime(data)
@@ -384,7 +400,7 @@ var (
 
 func (r *JoinContextState) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONJoinContextState(*r)
 }
@@ -583,7 +599,7 @@ func (r *JoinContextState) _unmarshalJSONPtrstream_Offset(data []byte) (*stream.
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONstream_Offset(data)

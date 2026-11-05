@@ -102,4 +102,47 @@ func TestGenerate(t *testing.T) {
 		_, err := Generate([]string{"/path/that/does/not/exist.go"}, false)
 		assert.Error(t, err)
 	})
+
+	t.Run("struct_holding_union_gets_serde", func(t *testing.T) {
+		sourcePath := writeVehicleModule(t)
+		dir := filepath.Dir(sourcePath)
+
+		source := vehicleSource + `
+// Garage has no serde tag; it holds the union, so serde is generated for it.
+type Garage struct {
+	Parked []Vehicle
+}
+
+// Fleet is a named list of the union; it gets serde too.
+type Fleet []Vehicle
+
+// Plain holds no union: encoding/json is enough.
+type Plain struct {
+	Name string
+}
+
+// Custom holds the union but opts out of generated serde.
+//
+//go:tag serde:"-"
+type Custom struct {
+	One Vehicle
+}
+`
+		require.NoError(t, os.WriteFile(sourcePath, []byte(source), 0644))
+
+		savedFiles, err := Generate([]string{sourcePath}, true)
+		require.NoError(t, err)
+
+		serdePath := filepath.Join(dir, "vehicle_serde_gen.go")
+		assert.Contains(t, savedFiles, serdePath)
+
+		content, err := os.ReadFile(serdePath)
+		require.NoError(t, err)
+		serde := string(content)
+		assert.Contains(t, serde, "// Garage holds a union: serde generated so encoding/json keeps $type.")
+		assert.Contains(t, serde, "func (r *Garage) MarshalJSON")
+		assert.Contains(t, serde, "func (r *Fleet) MarshalJSON")
+		assert.NotContains(t, serde, "func (r *Plain) MarshalJSON")
+		assert.NotContains(t, serde, "func (r *Custom) MarshalJSON")
+	})
 }

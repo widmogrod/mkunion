@@ -16,7 +16,7 @@ var (
 
 func (r *FunctionInput) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFunctionInput(*r)
 }
@@ -169,7 +169,7 @@ var (
 
 func (r *FunctionOutput) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFunctionOutput(*r)
 }

@@ -19,7 +19,7 @@ mkunion is a Go code generation tool that implements strongly typed union types 
 # `go tool` builds them from this checkout - nothing to install, nothing on PATH.
 go tool mkunion --help
 
-# Add mkunion to another module (Go 1.24+)
+# Add mkunion to another module (Go 1.27+)
 go get -tool github.com/widmogrod/mkunion/cmd/mkunion@latest
 ```
 
@@ -198,7 +198,7 @@ suite.SelfDocumentStateDiagram(t, "filename.go")
 
 ## Important Notes
 
-- Go version: 1.23.0 with toolchain 1.24.3
+- Go version: 1.27 (the module uses generic methods, so older toolchains cannot build it)
 - Always run `go tool mkunion watch -g ./...` to generate new files including go:generate tag
 - The type registry can be disabled with `//go:tag mkunion:",no-type-registry"`
 - When running tests that use AWS services, ensure the development environment is bootstrapped

@@ -115,10 +115,10 @@ type ShapeUnionJSON struct {
 }
 
 func ShapeFromJSON(x []byte) (Shape, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ShapeUnionJSON
@@ -127,12 +127,22 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 		return nil, fmt.Errorf("example.ShapeFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "example.Circle":
+		if data.Circle == nil || string(data.Circle) == "null" {
+			return new(Circle), nil
+		}
 		return CircleFromJSON(data.Circle)
 	case "example.Rectangle":
+		if data.Rectangle == nil || string(data.Rectangle) == "null" {
+			return new(Rectangle), nil
+		}
 		return RectangleFromJSON(data.Rectangle)
 	case "example.Square":
+		if data.Square == nil || string(data.Square) == "null" {
+			return new(Square), nil
+		}
 		return SquareFromJSON(data.Square)
 	}
 
@@ -143,7 +153,10 @@ func ShapeFromJSON(x []byte) (Shape, error) {
 	} else if data.Square != nil {
 		return SquareFromJSON(data.Square)
 	}
-	return nil, fmt.Errorf("example.ShapeFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("example.ShapeFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("example.ShapeFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ShapeToJSON(x Shape) ([]byte, error) {
@@ -153,6 +166,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 	return MatchShapeR2(
 		x,
 		func(y *Circle) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CircleToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("example.ShapeToJSON: %w", err)
@@ -163,6 +179,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *Rectangle) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := RectangleToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("example.ShapeToJSON: %w", err)
@@ -173,6 +192,9 @@ func ShapeToJSON(x Shape) ([]byte, error) {
 			})
 		},
 		func(y *Square) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SquareToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("example.ShapeToJSON: %w", err)
@@ -205,7 +227,7 @@ var (
 
 func (r *Circle) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCircle(*r)
 }
@@ -288,7 +310,7 @@ var (
 
 func (r *Rectangle) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRectangle(*r)
 }
@@ -390,7 +412,7 @@ var (
 
 func (r *Square) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSquare(*r)
 }

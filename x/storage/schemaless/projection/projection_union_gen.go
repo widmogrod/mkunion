@@ -132,10 +132,10 @@ type NodeUnionJSON struct {
 }
 
 func NodeFromJSON(x []byte) (Node, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data NodeUnionJSON
@@ -144,14 +144,27 @@ func NodeFromJSON(x []byte) (Node, error) {
 		return nil, fmt.Errorf("projection.NodeFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "projection.DoWindow":
+		if data.DoWindow == nil || string(data.DoWindow) == "null" {
+			return new(DoWindow), nil
+		}
 		return DoWindowFromJSON(data.DoWindow)
 	case "projection.DoMap":
+		if data.DoMap == nil || string(data.DoMap) == "null" {
+			return new(DoMap), nil
+		}
 		return DoMapFromJSON(data.DoMap)
 	case "projection.DoLoad":
+		if data.DoLoad == nil || string(data.DoLoad) == "null" {
+			return new(DoLoad), nil
+		}
 		return DoLoadFromJSON(data.DoLoad)
 	case "projection.DoJoin":
+		if data.DoJoin == nil || string(data.DoJoin) == "null" {
+			return new(DoJoin), nil
+		}
 		return DoJoinFromJSON(data.DoJoin)
 	}
 
@@ -164,7 +177,10 @@ func NodeFromJSON(x []byte) (Node, error) {
 	} else if data.DoJoin != nil {
 		return DoJoinFromJSON(data.DoJoin)
 	}
-	return nil, fmt.Errorf("projection.NodeFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("projection.NodeFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("projection.NodeFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func NodeToJSON(x Node) ([]byte, error) {
@@ -174,6 +190,9 @@ func NodeToJSON(x Node) ([]byte, error) {
 	return MatchNodeR2(
 		x,
 		func(y *DoWindow) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DoWindowToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
@@ -184,6 +203,9 @@ func NodeToJSON(x Node) ([]byte, error) {
 			})
 		},
 		func(y *DoMap) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DoMapToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
@@ -194,6 +216,9 @@ func NodeToJSON(x Node) ([]byte, error) {
 			})
 		},
 		func(y *DoLoad) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DoLoadToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
@@ -204,6 +229,9 @@ func NodeToJSON(x Node) ([]byte, error) {
 			})
 		},
 		func(y *DoJoin) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DoJoinToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("projection.NodeToJSON: %w", err)
@@ -236,7 +264,7 @@ var (
 
 func (r *DoWindow) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDoWindow(*r)
 }
@@ -326,7 +354,7 @@ func (r *DoWindow) _unmarshalJSONPtrDefaultContext(data []byte) (*DefaultContext
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONDefaultContext(data)
@@ -370,7 +398,7 @@ var (
 
 func (r *DoMap) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDoMap(*r)
 }
@@ -486,7 +514,7 @@ func (r *DoMap) _unmarshalJSONPtrDefaultContext(data []byte) (*DefaultContext, e
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONDefaultContext(data)
@@ -537,7 +565,7 @@ var (
 
 func (r *DoLoad) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDoLoad(*r)
 }
@@ -627,7 +655,7 @@ func (r *DoLoad) _unmarshalJSONPtrDefaultContext(data []byte) (*DefaultContext, 
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONDefaultContext(data)
@@ -671,7 +699,7 @@ var (
 
 func (r *DoJoin) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDoJoin(*r)
 }
@@ -776,7 +804,7 @@ func (r *DoJoin) _unmarshalJSONPtrDefaultContext(data []byte) (*DefaultContext, 
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONDefaultContext(data)

@@ -110,8 +110,8 @@ func argToPaths(x string) ([]string, error) {
 					return nil
 				}
 
-				// if is hidden directory, skip
-				if strings.HasPrefix(d.Name(), ".") {
+				// skip hidden and underscore directories, like the go tool does for ./...
+				if path != dir && (strings.HasPrefix(d.Name(), ".") || strings.HasPrefix(d.Name(), "_")) {
 					return filepath.SkipDir
 				}
 

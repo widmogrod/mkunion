@@ -98,10 +98,10 @@ type PullCMDUnionJSON struct {
 }
 
 func PullCMDFromJSON(x []byte) (PullCMD, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data PullCMDUnionJSON
@@ -110,10 +110,17 @@ func PullCMDFromJSON(x []byte) (PullCMD, error) {
 		return nil, fmt.Errorf("stream.PullCMDFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "stream.FromBeginning":
+		if data.FromBeginning == nil || string(data.FromBeginning) == "null" {
+			return new(FromBeginning), nil
+		}
 		return FromBeginningFromJSON(data.FromBeginning)
 	case "stream.FromOffset":
+		if data.FromOffset == nil || string(data.FromOffset) == "null" {
+			return new(FromOffset), nil
+		}
 		return FromOffsetFromJSON(data.FromOffset)
 	}
 
@@ -122,7 +129,10 @@ func PullCMDFromJSON(x []byte) (PullCMD, error) {
 	} else if data.FromOffset != nil {
 		return FromOffsetFromJSON(data.FromOffset)
 	}
-	return nil, fmt.Errorf("stream.PullCMDFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("stream.PullCMDFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("stream.PullCMDFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func PullCMDToJSON(x PullCMD) ([]byte, error) {
@@ -132,6 +142,9 @@ func PullCMDToJSON(x PullCMD) ([]byte, error) {
 	return MatchPullCMDR2(
 		x,
 		func(y *FromBeginning) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := FromBeginningToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("stream.PullCMDToJSON: %w", err)
@@ -142,6 +155,9 @@ func PullCMDToJSON(x PullCMD) ([]byte, error) {
 			})
 		},
 		func(y *FromOffset) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := FromOffsetToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("stream.PullCMDToJSON: %w", err)
@@ -174,7 +190,7 @@ var (
 
 func (r *FromBeginning) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFromBeginning(*r)
 }
@@ -256,7 +272,7 @@ var (
 
 func (r *FromOffset) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFromOffset(*r)
 }
@@ -353,7 +369,7 @@ func (r *FromOffset) _unmarshalJSONPtrOffset(data []byte) (*Offset, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if string(data[:4]) == "null" {
+	if len(data) >= 4 && string(data[:4]) == "null" {
 		return nil, nil
 	}
 	result, err := r._unmarshalJSONOffset(data)

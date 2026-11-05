@@ -3,7 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/widmogrod/mkunion)](https://goreportcard.com/report/github.com/widmogrod/mkunion)
 [![codecov](https://codecov.io/gh/widmogrod/mkunion/branch/main/graph/badge.svg?token=3Z3Z3Z3Z3Z)](https://codecov.io/gh/widmogrod/mkunion)
 
-Add mkunion as a tool dependency of your module (needs Go 1.24 or newer):
+Add mkunion as a tool dependency of your module (needs Go 1.27 or newer):
 
 ```bash
 go get -tool github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1
@@ -17,7 +17,7 @@ This writes a `tool` line into your `go.mod`, so the version is pinned together 
 the rest of your dependencies. Everyone on your team and your CI then run the same
 mkunion, and generated files stay stable. No `go install`, no `PATH` changes.
 
-<sub>On Go older than 1.24, run `go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1` instead and drop the `go tool` prefix from the commands.</sub>
+<sub>On Go older than 1.27, run `go install github.com/widmogrod/mkunion/cmd/mkunion@v1.26.1` instead and drop the `go tool` prefix from the commands.</sub>
 
 ## About
 Strongly typed **union type** in golang that supports generics*.

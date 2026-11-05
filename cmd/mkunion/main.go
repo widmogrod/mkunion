@@ -55,14 +55,15 @@ func newApp(ctx context.Context) *cli.App {
 		Commands: []*cli.Command{
 			{
 				Name:        "shape-export",
-				Usage:       "Export Go types to other languages (TypeScript)",
-				Description: "Generate typescript types from golang types, and enable end-to-end type safety.",
+				Usage:       "Export Go types to other languages (TypeScript, Swift)",
+				ArgsUsage:   " [file.go ...]",
+				Description: "Generate TypeScript or Swift types from Go types, and enable end-to-end type safety.\nFiles come from -i, positional arguments, or GOFILE under go generate:\n\n   mkunion shape-export --language swift -o ../Sources/Api api.go",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "language",
-						Aliases:     []string{"lang"},
-						Usage:       "output language",
-						DefaultText: "typescript",
+						Name:    "language",
+						Aliases: []string{"lang"},
+						Usage:   "output language: typescript or swift",
+						Value:   "typescript",
 					},
 					&cli.StringFlag{
 						Name:    "output-dir",
@@ -152,12 +153,13 @@ func setLogLevel(c *cli.Context, defaultLevel log.Level) {
 	}
 }
 
-// sourcePathsOrExit resolves the input files from flags or GOFILE, and shows
-// the command help when neither is provided.
+// sourcePathsOrExit resolves the input files from -i flags, positional
+// arguments or GOFILE, and shows the command help when there are none.
 func sourcePathsOrExit(c *cli.Context) []string {
-	sourcePaths := gen.SourcePathsOrGOFILE(c.StringSlice("input-go-file"))
+	inputs := append(c.StringSlice("input-go-file"), c.Args().Slice()...)
+	sourcePaths := gen.SourcePathsOrGOFILE(inputs)
 	if len(sourcePaths) == 0 {
-		cli.ShowAppHelpAndExit(c, 1)
+		cli.ShowSubcommandHelpAndExit(c, 1)
 	}
 	return sourcePaths
 }
@@ -184,7 +186,19 @@ func shapeExportAction(c *cli.Context) error {
 
 	sourcePaths := sourcePathsOrExit(c)
 
-	tsr := shape.NewTypeScriptRenderer()
+	var renderer interface {
+		AddShape(shape.Shape)
+		WriteToDir(string) error
+	}
+	switch lang := c.String("language"); lang {
+	case "typescript", "ts":
+		renderer = shape.NewTypeScriptRenderer()
+	case "swift":
+		renderer = shape.NewSwiftRenderer()
+	default:
+		return fmt.Errorf("shape-export: unknown language %q; use typescript or swift", lang)
+	}
+
 	for _, sourcePath := range sourcePaths {
 		inferred, err := shape.InferFromFile(sourcePath)
 		if err != nil {
@@ -192,11 +206,11 @@ func shapeExportAction(c *cli.Context) error {
 		}
 
 		for _, x := range inferred.RetrieveShapes() {
-			tsr.AddShape(x)
+			renderer.AddShape(x)
 		}
 	}
 
-	err := tsr.WriteToDir(c.String("output-dir"))
+	err := renderer.WriteToDir(c.String("output-dir"))
 	if err != nil {
 		return fmt.Errorf("failed to write to dir %s: %w", c.String("output-dir"), err)
 	}
