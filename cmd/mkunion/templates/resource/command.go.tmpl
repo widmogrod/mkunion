@@ -1,0 +1,17 @@
+package {{.Resource}}
+
+import "github.com/widmogrod/mkunion/f"
+
+// {{.Type}}Command is every order a client can give about {{.Resource}}s. It
+// works like {{.Type}}Query (query.go): a variant embeds f.Returns[*A] for a
+// variant A of {{.Type}}Answer, and go generate derives the rest.
+//
+//go:tag mkunion:"{{.Type}}Command,answers={{.Type}}Answer"
+type (
+	// Create{{.Type}} makes a new {{.Resource}} and answers it. An empty title
+	// answers Error{Code: ErrInvalid}.
+	Create{{.Type}} struct {
+		f.Returns[*{{.Type}}]
+		Title string `json:"title"`
+	}
+)

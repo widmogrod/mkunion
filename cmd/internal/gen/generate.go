@@ -24,6 +24,10 @@ func Generate(sourcePaths []string, typeRegistry bool) ([]string, error) {
 	// so a shape referenced from many files is generated only once per run
 	generatedShapes := map[string]bool{}
 
+	// unions of every file in a package directory, read once per directory,
+	// so a union with answers= finds its answer union in a sibling file
+	siblingUnions := map[string][]*shape.UnionLike{}
+
 	for _, sourcePath := range sourcePaths {
 		inferred, err := shape.InferFromFile(sourcePath)
 		if err != nil {
@@ -38,7 +42,11 @@ func Generate(sourcePaths []string, typeRegistry bool) ([]string, error) {
 			infix    string
 			generate func(*shape.InferredInfo) (bytes.Buffer, error)
 		}{
-			{"union_gen", generateUnions},
+			{"union_gen", func(inferred *shape.InferredInfo) (bytes.Buffer, error) {
+				return generateUnions(inferred, func() ([]*shape.UnionLike, error) {
+					return unionsInDir(path.Dir(sourcePath), siblingUnions)
+				})
+			}},
 			{"serde_gen", generateSerde},
 			{"shape_gen", func(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 				return generateShape(inferred, generatedShapes)
@@ -121,7 +129,36 @@ func GenerateTypeRegistryForDir(uniqueDirs []string) ([]string, error) {
 	return savedFiles, nil
 }
 
-func generateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
+// unionsInDir lists the unions declared in the non-generated, non-test Go
+// files of dir, so a handler union can answer with a union from a sibling file
+// of its package. Results are cached per directory for the run.
+func unionsInDir(dir string, cache map[string][]*shape.UnionLike) ([]*shape.UnionLike, error) {
+	if unions, ok := cache[dir]; ok {
+		return unions, nil
+	}
+	files, err := GoFilesFromDirs([]string{dir})
+	if err != nil {
+		return nil, err
+	}
+	var unions []*shape.UnionLike
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		inferred, err := shape.InferFromFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("gen.unionsInDir: %s: %w", file, err)
+		}
+		unions = append(unions, inferred.RetrieveUnions()...)
+	}
+	cache[dir] = unions
+	return unions, nil
+}
+
+// generateUnions writes the union, handler and serde code for the unions of
+// one file. siblings lists the unions of the whole package, read only when a
+// union declares f.Returns, because that is when an answer union is looked up.
+func generateUnions(inferred *shape.InferredInfo, siblings func() ([]*shape.UnionLike, error)) (bytes.Buffer, error) {
 	shapesContents := bytes.Buffer{}
 	unions := inferred.RetrieveUnions()
 	if len(unions) == 0 {
@@ -146,7 +183,11 @@ func generateUnions(inferred *shape.InferredInfo) (bytes.Buffer, error) {
 		shapesContents.Write(contents)
 
 		if shape.UnionDeclaresReturns(union) {
-			genHandler := generators.NewHandlerGenerator(union)
+			packageUnions, err := siblings()
+			if err != nil {
+				return shapesContents, err
+			}
+			genHandler := generators.NewHandlerGenerator(union).WithUnions(packageUnions)
 			contents, err = genHandler.Generate()
 			if err != nil {
 				return shapesContents, fmt.Errorf("failed to generate handler for %s: %w", shape.ToGoTypeName(union), err)

@@ -146,3 +146,55 @@ type Custom struct {
 		assert.NotContains(t, serde, "func (r *Custom) MarshalJSON")
 	})
 }
+
+// TestGenerate_answerUnionInSiblingFile is the api layout: the request union
+// in query.go names its answer union with answers=, and that union lives in
+// answer.go of the same package. DispatchX and NewXClient are generated for
+// query.go whether answer.go is given to Generate or not.
+func TestGenerate_answerUnionInSiblingFile(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/todo\n\ngo 1.21\n"), 0644))
+	query := filepath.Join(dir, "query.go")
+	require.NoError(t, os.WriteFile(query, []byte(`package task
+
+import "github.com/widmogrod/mkunion/f"
+
+//go:tag mkunion:"TaskQuery,answers=TaskAnswer"
+type (
+	GetTask struct {
+		f.Returns[*Task]
+		ID string
+	}
+)
+`), 0644))
+	answer := filepath.Join(dir, "answer.go")
+	require.NoError(t, os.WriteFile(answer, []byte(`package task
+
+//go:tag mkunion:"TaskAnswer"
+type (
+	Task  struct{ ID string }
+	Error struct{ Code string }
+)
+`), 0644))
+
+	for name, paths := range map[string][]string{
+		"both files":     {query, answer},
+		"query.go alone": {query},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := Generate(paths, false)
+			require.NoError(t, err)
+			content, err := os.ReadFile(filepath.Join(dir, "query_union_gen.go"))
+			require.NoError(t, err)
+			assert.Contains(t, string(content), "func DispatchTaskQuery(ctx context.Context, h TaskQueryHandler, op TaskQuery) (TaskAnswer, error) {")
+			assert.Contains(t, string(content), "func NewTaskQueryClient(send func(ctx context.Context, op TaskQuery) (TaskAnswer, error)) TaskQueryHandler {")
+		})
+	}
+
+	t.Run("a missing answer union names the package", func(t *testing.T) {
+		require.NoError(t, os.Remove(answer))
+		_, err := Generate([]string{query}, false)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "answers=TaskAnswer names no union in package task")
+	})
+}

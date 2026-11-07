@@ -1,0 +1,50 @@
+package {{.Resource}}
+
+import "fmt"
+
+//go:generate go tool mkunion watch -g -G .
+
+// {{.Type}}Answer is everything a {{.Resource}} query or command can answer
+// with. Every f.Returns[*A] in query.go and command.go must name a variant
+// of this union; go generate refuses anything else. Error is the answer when
+// a request cannot be served for an application reason (see Refuse). A body
+// that is not a request at all gets HTTP 400 with the same Error shape.
+//
+// Lists live in a struct ({{.Type}}List{Items}), never bare, so they keep
+// their $type on the wire.
+//
+//go:tag mkunion:"{{.Type}}Answer"
+type (
+	{{.Type}} struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+		Done  bool   `json:"done"`
+	}
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+)
+
+// Error makes *Error a Go error, so a client that gets it in place of the
+// answer it asked for can errors.As to it.
+func (e *Error) Error() string { return e.Code + ": " + e.Message }
+
+// Error codes. A client switches on Code and shows Message. Add one constant
+// per refusal the handlers make.
+const (
+	ErrBadRequest = "bad_request" // the body did not decode to a request
+	ErrNotFound   = "not_found"
+	ErrInvalid    = "invalid"
+	ErrInternal   = "internal" // a Go error that was not a refusal
+)
+
+// Refuse is how a handler says no:
+//
+//	return nil, Refuse(ErrNotFound, "{{.Resource}} %q is unknown", op.ID)
+//
+// The client receives Error{Code, Message} as the answer. Any other error a
+// handler returns reaches the client as Error{Code: ErrInternal}.
+func Refuse(code, format string, args ...any) error {
+	return &Error{Code: code, Message: fmt.Sprintf(format, args...)}
+}

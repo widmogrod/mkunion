@@ -1,0 +1,44 @@
+package {{.Resource}}
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/widmogrod/mkunion/x/rpc"
+)
+
+func newHandler() *Handler { return &Handler{Store: NewMemoryStore()} }
+
+func TestCreateThenGet(t *testing.T) {
+	h := newHandler()
+	ctx := context.Background()
+	created, err := h.HandleCreate{{.Type}}(ctx, &Create{{.Type}}{Title: "first"})
+	if err != nil || created.ID == "" || created.Title != "first" {
+		t.Fatalf("create = %+v, %v", created, err)
+	}
+	got, err := h.HandleGet{{.Type}}(ctx, &Get{{.Type}}{ID: created.ID})
+	if err != nil || got.Title != "first" {
+		t.Fatalf("get = %+v, %v", got, err)
+	}
+}
+
+func TestUnknownIDIsRefused(t *testing.T) {
+	_, err := newHandler().HandleGet{{.Type}}(context.Background(), &Get{{.Type}}{ID: "missing"})
+	var refused *Error
+	if !errors.As(err, &refused) || refused.Code != ErrNotFound {
+		t.Fatalf("want Error{%s}, got %v", ErrNotFound, err)
+	}
+}
+
+// TestRefusalReachesTheClient goes through the wire shape without HTTP: the
+// generated client on the endpoint's Send. api/server_test.go does the same
+// over HTTP.
+func TestRefusalReachesTheClient(t *testing.T) {
+	client := New{{.Type}}QueryClient(QueryEndpoint(newHandler()).Send)
+	_, err := rpc.Call(context.Background(), client, &Get{{.Type}}{ID: "missing"})
+	var refused *Error
+	if !errors.As(err, &refused) || refused.Code != ErrNotFound {
+		t.Fatalf("want Error{%s} through the client, got %v", ErrNotFound, err)
+	}
+}

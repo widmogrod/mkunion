@@ -1,0 +1,47 @@
+package {{.Resource}}
+
+import (
+	"context"
+	"errors"
+
+	"github.com/widmogrod/mkunion/x/rpc"
+)
+
+// QueryEndpoint serves {{.Type}}Query with h: api/server.go mounts it, a test
+// calls its Send. CommandEndpoint is the same for {{.Type}}Command. Nothing
+// here changes when variants are added; edit it only to change how errors
+// become answers.
+func QueryEndpoint(h {{.Type}}QueryHandler) *rpc.Endpoint[{{.Type}}Query, {{.Type}}Answer] {
+	return &rpc.Endpoint[{{.Type}}Query, {{.Type}}Answer]{
+		Dispatch: func(ctx context.Context, op {{.Type}}Query) ({{.Type}}Answer, error) {
+			return Dispatch{{.Type}}Query(ctx, h, op)
+		},
+		DecodeError: decodeError,
+		Error:       errorAnswer,
+	}
+}
+
+func CommandEndpoint(h {{.Type}}CommandHandler) *rpc.Endpoint[{{.Type}}Command, {{.Type}}Answer] {
+	return &rpc.Endpoint[{{.Type}}Command, {{.Type}}Answer]{
+		Dispatch: func(ctx context.Context, op {{.Type}}Command) ({{.Type}}Answer, error) {
+			return Dispatch{{.Type}}Command(ctx, h, op)
+		},
+		DecodeError: decodeError,
+		Error:       errorAnswer,
+	}
+}
+
+// decodeError answers a body that did not decode to a request.
+func decodeError(err error) {{.Type}}Answer {
+	return &Error{Code: ErrBadRequest, Message: err.Error()}
+}
+
+// errorAnswer turns a handler's error into the Error the client sees: a
+// refusal as it is, any other error as ErrInternal.
+func errorAnswer(err error) {{.Type}}Answer {
+	var refused *Error
+	if errors.As(err, &refused) {
+		return refused
+	}
+	return &Error{Code: ErrInternal, Message: err.Error()}
+}

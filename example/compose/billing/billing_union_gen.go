@@ -134,10 +134,10 @@ type ChargeErrorUnionJSON struct {
 }
 
 func ChargeErrorFromJSON(x []byte) (ChargeError, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ChargeErrorUnionJSON
@@ -146,14 +146,27 @@ func ChargeErrorFromJSON(x []byte) (ChargeError, error) {
 		return nil, fmt.Errorf("billing.ChargeErrorFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "billing.InvalidAmount":
+		if data.InvalidAmount == nil || string(data.InvalidAmount) == "null" {
+			return new(InvalidAmount), nil
+		}
 		return InvalidAmountFromJSON(data.InvalidAmount)
 	case "billing.RateLimited":
+		if data.RateLimited == nil || string(data.RateLimited) == "null" {
+			return new(RateLimited), nil
+		}
 		return RateLimitedFromJSON(data.RateLimited)
 	case "billing.QuotaExceeded":
+		if data.QuotaExceeded == nil || string(data.QuotaExceeded) == "null" {
+			return new(QuotaExceeded), nil
+		}
 		return QuotaExceededFromJSON(data.QuotaExceeded)
 	case "billing.OutOfCredits":
+		if data.OutOfCredits == nil || string(data.OutOfCredits) == "null" {
+			return new(OutOfCredits), nil
+		}
 		return OutOfCreditsFromJSON(data.OutOfCredits)
 	}
 
@@ -166,7 +179,10 @@ func ChargeErrorFromJSON(x []byte) (ChargeError, error) {
 	} else if data.OutOfCredits != nil {
 		return OutOfCreditsFromJSON(data.OutOfCredits)
 	}
-	return nil, fmt.Errorf("billing.ChargeErrorFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("billing.ChargeErrorFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("billing.ChargeErrorFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
@@ -176,6 +192,9 @@ func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
 	return MatchChargeErrorR2(
 		x,
 		func(y *InvalidAmount) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := InvalidAmountToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("billing.ChargeErrorToJSON: %w", err)
@@ -186,6 +205,9 @@ func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
 			})
 		},
 		func(y *RateLimited) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := RateLimitedToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("billing.ChargeErrorToJSON: %w", err)
@@ -196,6 +218,9 @@ func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
 			})
 		},
 		func(y *QuotaExceeded) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := QuotaExceededToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("billing.ChargeErrorToJSON: %w", err)
@@ -206,6 +231,9 @@ func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
 			})
 		},
 		func(y *OutOfCredits) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OutOfCreditsToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("billing.ChargeErrorToJSON: %w", err)
@@ -238,7 +266,7 @@ var (
 
 func (r *InvalidAmount) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONInvalidAmount(*r)
 }
@@ -321,7 +349,7 @@ var (
 
 func (r *RateLimited) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRateLimited(*r)
 }
@@ -403,7 +431,7 @@ var (
 
 func (r *QuotaExceeded) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONQuotaExceeded(*r)
 }
@@ -485,7 +513,7 @@ var (
 
 func (r *OutOfCredits) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOutOfCredits(*r)
 }
@@ -639,6 +667,24 @@ func HandleEffect(
 	)
 }
 
+// NewEffectHandler builds a EffectHandler from one function per variant: the arms
+// of HandleEffect as a value. Exhaustive: every arm must be given. Use it where a
+// handler is a value, such as effect.Interpret, or a field of a struct that
+// embeds the handlers of several packages.
+func NewEffectHandler(
+	onCharge func(ctx context.Context, op *Charge) (Outcome, error),
+) EffectHandler {
+	return &effectHandlerFuncs{onCharge: onCharge}
+}
+
+type effectHandlerFuncs struct {
+	onCharge func(ctx context.Context, op *Charge) (Outcome, error)
+}
+
+func (h *effectHandlerFuncs) HandleCharge(ctx context.Context, op *Charge) (Outcome, error) {
+	return h.onCharge(ctx, op)
+}
+
 // Perform lets a variant with f.Returns be performed by any handler value that
 // has its Handle method, so operations from several unions can share one
 // program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
@@ -649,6 +695,20 @@ func (r *Charge) Perform(ctx context.Context, h any) (any, error) {
 		return nil, fmt.Errorf("billing: handler %T does not implement EffectChargeHandler", h)
 	}
 	return typed.HandleCharge(ctx, r)
+}
+
+// AroundEffect decorates every method of next with around. around gets the
+// operation as the Effect union and a call that runs it on next, and returns the
+// answer untyped; AroundEffect casts it back to the variant's declared type. One
+// function wraps all variants: logging, metrics, deadlines.
+func AroundEffect(next EffectHandler, around func(ctx context.Context, op Effect, call func(ctx context.Context) (any, error)) (any, error)) EffectHandler {
+	return NewEffectHandler(
+		func(ctx context.Context, op *Charge) (Outcome, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleCharge(ctx, op) })
+			answer, _ := out.(Outcome)
+			return answer, err
+		},
+	)
 }
 
 func init() {
@@ -662,10 +722,10 @@ type EffectUnionJSON struct {
 }
 
 func EffectFromJSON(x []byte) (Effect, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data EffectUnionJSON
@@ -674,15 +734,22 @@ func EffectFromJSON(x []byte) (Effect, error) {
 		return nil, fmt.Errorf("billing.EffectFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "billing.Charge":
+		if data.Charge == nil || string(data.Charge) == "null" {
+			return new(Charge), nil
+		}
 		return ChargeFromJSON(data.Charge)
 	}
 
 	if data.Charge != nil {
 		return ChargeFromJSON(data.Charge)
 	}
-	return nil, fmt.Errorf("billing.EffectFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("billing.EffectFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("billing.EffectFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func EffectToJSON(x Effect) ([]byte, error) {
@@ -692,6 +759,9 @@ func EffectToJSON(x Effect) ([]byte, error) {
 	return MatchEffectR2(
 		x,
 		func(y *Charge) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ChargeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("billing.EffectToJSON: %w", err)
@@ -724,7 +794,7 @@ var (
 
 func (r *Charge) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCharge(*r)
 }

@@ -1,0 +1,21 @@
+package {{.Resource}}
+
+import "github.com/widmogrod/mkunion/f"
+
+// {{.Type}}Query is every question a client can ask about {{.Resource}}s. Each
+// variant embeds f.Returns[*A], where A is a variant of {{.Type}}Answer
+// (answer.go); that is the whole contract. go generate derives the handler
+// method, the JSON, the dispatch and the clients from it.
+//
+// To add a query: add a variant here, run `go generate ./...`, then implement
+// the Handle<Variant> method the compiler asks for in handler.go.
+//
+//go:tag mkunion:"{{.Type}}Query,answers={{.Type}}Answer"
+type (
+	// Get{{.Type}} asks for one {{.Resource}} by ID. An unknown ID answers
+	// Error{Code: ErrNotFound}.
+	Get{{.Type}} struct {
+		f.Returns[*{{.Type}}]
+		ID string `json:"id"`
+	}
+)

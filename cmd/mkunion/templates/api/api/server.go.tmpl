@@ -1,0 +1,102 @@
+// Package api is the HTTP face of {{.Module}}. Every resource package under
+// api/resource/<name> is mounted at POST /v1/<name>/query and
+// POST /v1/<name>/command; the body is one request variant in mkunion's JSON
+// form {"$type": "<name>.GetX", "<name>.GetX": {...}} and the answer is one
+// variant of the resource's Answer union. One bearer token guards every
+// route. GET /v1 lists the requests this server accepts.
+package api
+
+import (
+	"crypto/subtle"
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"github.com/widmogrod/mkunion/x/rpc"
+	"github.com/widmogrod/mkunion/x/shape"
+
+	"{{.Module}}/api/resource/{{.Resource}}"
+)
+
+// Config is what the server needs besides its resources.
+type Config struct {
+	// Token is required as "Authorization: Bearer <Token>" on every route;
+	// "" means open.
+	Token string
+}
+
+// Deps is one handler per resource. cmd/server/main.go builds the real
+// ones; tests build in-memory ones.
+type Deps struct {
+	{{.Type}} *{{.Resource}}.Handler
+}
+
+// New is the composition root: one mount line per request union, in a
+// hand-written list so what is served is visible here. A resource package
+// that is not mounted is not served, and TestEveryResourceIsMounted says so.
+func New(cfg Config, deps Deps) http.Handler {
+	s := newServer(cfg.Token)
+
+	// Resources, one block each, sorted by name.
+	mount(s, "{{.Resource}}/query", {{.Resource}}.QueryEndpoint(deps.{{.Type}}))
+	mount(s, "{{.Resource}}/command", {{.Resource}}.CommandEndpoint(deps.{{.Type}}))
+
+	s.mux.Handle("GET /v1", s.auth(http.HandlerFunc(s.catalogue)))
+	return s.mux
+}
+
+type server struct {
+	mux   *http.ServeMux
+	token string
+	// accepts maps a route ("task/query") to the $type names it takes.
+	accepts map[string][]string
+}
+
+func newServer(token string) *server {
+	return &server{mux: http.NewServeMux(), token: token, accepts: map[string][]string{}}
+}
+
+// mount serves one request union at POST /v1/<route> behind auth and records
+// its variants for the catalogue.
+func mount[Req, Res any](s *server, route string, ep *rpc.Endpoint[Req, Res]) {
+	s.mux.Handle("POST /v1/"+route, s.auth(ep))
+	s.accepts[route] = variants[Req]()
+}
+
+// variants lists the $type names of a union, read from the shape mkunion
+// generated for it, so the catalogue cannot drift from the code.
+func variants[Union any]() []string {
+	s, _ := shape.LookupShapeReflectAndIndex[Union]()
+	u, ok := s.(*shape.UnionLike)
+	if !ok {
+		return nil
+	}
+	names := make([]string, 0, len(u.Variant))
+	for _, v := range u.Variant {
+		if st, ok := v.(*shape.StructLike); ok {
+			names = append(names, st.PkgName+"."+st.Name)
+		}
+	}
+	return names
+}
+
+// auth is the bearer-token check. It answers plain text 401, not a resource's
+// Error, because it runs before any resource is chosen.
+func (s *server) auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.token != "" {
+			got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+			if subtle.ConstantTimeCompare([]byte(got), []byte(s.token)) != 1 {
+				http.Error(w, "unauthorized: bad or missing bearer token", http.StatusUnauthorized)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// catalogue is GET /v1: {"accepts": {"{{.Resource}}/query": ["{{.Resource}}.Get{{.Type}}"], ...}}.
+func (s *server) catalogue(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"accepts": s.accepts})
+}

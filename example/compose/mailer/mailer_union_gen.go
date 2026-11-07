@@ -121,6 +121,30 @@ func HandleEffect(
 	)
 }
 
+// NewEffectHandler builds a EffectHandler from one function per variant: the arms
+// of HandleEffect as a value. Exhaustive: every arm must be given. Use it where a
+// handler is a value, such as effect.Interpret, or a field of a struct that
+// embeds the handlers of several packages.
+func NewEffectHandler(
+	onResolve func(ctx context.Context, op *Resolve) (string, error),
+	onSend func(ctx context.Context, op *Send) (string, error),
+) EffectHandler {
+	return &effectHandlerFuncs{onResolve: onResolve, onSend: onSend}
+}
+
+type effectHandlerFuncs struct {
+	onResolve func(ctx context.Context, op *Resolve) (string, error)
+	onSend    func(ctx context.Context, op *Send) (string, error)
+}
+
+func (h *effectHandlerFuncs) HandleResolve(ctx context.Context, op *Resolve) (string, error) {
+	return h.onResolve(ctx, op)
+}
+
+func (h *effectHandlerFuncs) HandleSend(ctx context.Context, op *Send) (string, error) {
+	return h.onSend(ctx, op)
+}
+
 // Perform lets a variant with f.Returns be performed by any handler value that
 // has its Handle method, so operations from several unions can share one
 // program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
@@ -141,6 +165,25 @@ func (r *Send) Perform(ctx context.Context, h any) (any, error) {
 	return typed.HandleSend(ctx, r)
 }
 
+// AroundEffect decorates every method of next with around. around gets the
+// operation as the Effect union and a call that runs it on next, and returns the
+// answer untyped; AroundEffect casts it back to the variant's declared type. One
+// function wraps all variants: logging, metrics, deadlines.
+func AroundEffect(next EffectHandler, around func(ctx context.Context, op Effect, call func(ctx context.Context) (any, error)) (any, error)) EffectHandler {
+	return NewEffectHandler(
+		func(ctx context.Context, op *Resolve) (string, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleResolve(ctx, op) })
+			answer, _ := out.(string)
+			return answer, err
+		},
+		func(ctx context.Context, op *Send) (string, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleSend(ctx, op) })
+			answer, _ := out.(string)
+			return answer, err
+		},
+	)
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/compose/mailer.Effect", EffectFromJSON, EffectToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/compose/mailer.Resolve", ResolveFromJSON, ResolveToJSON)
@@ -154,10 +197,10 @@ type EffectUnionJSON struct {
 }
 
 func EffectFromJSON(x []byte) (Effect, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data EffectUnionJSON
@@ -166,10 +209,17 @@ func EffectFromJSON(x []byte) (Effect, error) {
 		return nil, fmt.Errorf("mailer.EffectFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "mailer.Resolve":
+		if data.Resolve == nil || string(data.Resolve) == "null" {
+			return new(Resolve), nil
+		}
 		return ResolveFromJSON(data.Resolve)
 	case "mailer.Send":
+		if data.Send == nil || string(data.Send) == "null" {
+			return new(Send), nil
+		}
 		return SendFromJSON(data.Send)
 	}
 
@@ -178,7 +228,10 @@ func EffectFromJSON(x []byte) (Effect, error) {
 	} else if data.Send != nil {
 		return SendFromJSON(data.Send)
 	}
-	return nil, fmt.Errorf("mailer.EffectFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("mailer.EffectFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("mailer.EffectFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func EffectToJSON(x Effect) ([]byte, error) {
@@ -188,6 +241,9 @@ func EffectToJSON(x Effect) ([]byte, error) {
 	return MatchEffectR2(
 		x,
 		func(y *Resolve) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ResolveToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("mailer.EffectToJSON: %w", err)
@@ -198,6 +254,9 @@ func EffectToJSON(x Effect) ([]byte, error) {
 			})
 		},
 		func(y *Send) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SendToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("mailer.EffectToJSON: %w", err)
@@ -230,7 +289,7 @@ var (
 
 func (r *Resolve) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONResolve(*r)
 }
@@ -313,7 +372,7 @@ var (
 
 func (r *Send) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSend(*r)
 }

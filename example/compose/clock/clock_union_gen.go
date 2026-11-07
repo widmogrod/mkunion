@@ -123,6 +123,30 @@ func HandleEffect(
 	)
 }
 
+// NewEffectHandler builds a EffectHandler from one function per variant: the arms
+// of HandleEffect as a value. Exhaustive: every arm must be given. Use it where a
+// handler is a value, such as effect.Interpret, or a field of a struct that
+// embeds the handlers of several packages.
+func NewEffectHandler(
+	onNow func(ctx context.Context, op *Now) (time.Time, error),
+	onSleep func(ctx context.Context, op *Sleep) (effect.Unit, error),
+) EffectHandler {
+	return &effectHandlerFuncs{onNow: onNow, onSleep: onSleep}
+}
+
+type effectHandlerFuncs struct {
+	onNow   func(ctx context.Context, op *Now) (time.Time, error)
+	onSleep func(ctx context.Context, op *Sleep) (effect.Unit, error)
+}
+
+func (h *effectHandlerFuncs) HandleNow(ctx context.Context, op *Now) (time.Time, error) {
+	return h.onNow(ctx, op)
+}
+
+func (h *effectHandlerFuncs) HandleSleep(ctx context.Context, op *Sleep) (effect.Unit, error) {
+	return h.onSleep(ctx, op)
+}
+
 // Perform lets a variant with f.Returns be performed by any handler value that
 // has its Handle method, so operations from several unions can share one
 // program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
@@ -143,6 +167,25 @@ func (r *Sleep) Perform(ctx context.Context, h any) (any, error) {
 	return typed.HandleSleep(ctx, r)
 }
 
+// AroundEffect decorates every method of next with around. around gets the
+// operation as the Effect union and a call that runs it on next, and returns the
+// answer untyped; AroundEffect casts it back to the variant's declared type. One
+// function wraps all variants: logging, metrics, deadlines.
+func AroundEffect(next EffectHandler, around func(ctx context.Context, op Effect, call func(ctx context.Context) (any, error)) (any, error)) EffectHandler {
+	return NewEffectHandler(
+		func(ctx context.Context, op *Now) (time.Time, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleNow(ctx, op) })
+			answer, _ := out.(time.Time)
+			return answer, err
+		},
+		func(ctx context.Context, op *Sleep) (effect.Unit, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleSleep(ctx, op) })
+			answer, _ := out.(effect.Unit)
+			return answer, err
+		},
+	)
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/compose/clock.Effect", EffectFromJSON, EffectToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/compose/clock.Now", NowFromJSON, NowToJSON)
@@ -156,10 +199,10 @@ type EffectUnionJSON struct {
 }
 
 func EffectFromJSON(x []byte) (Effect, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data EffectUnionJSON
@@ -168,10 +211,17 @@ func EffectFromJSON(x []byte) (Effect, error) {
 		return nil, fmt.Errorf("clock.EffectFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "clock.Now":
+		if data.Now == nil || string(data.Now) == "null" {
+			return new(Now), nil
+		}
 		return NowFromJSON(data.Now)
 	case "clock.Sleep":
+		if data.Sleep == nil || string(data.Sleep) == "null" {
+			return new(Sleep), nil
+		}
 		return SleepFromJSON(data.Sleep)
 	}
 
@@ -180,7 +230,10 @@ func EffectFromJSON(x []byte) (Effect, error) {
 	} else if data.Sleep != nil {
 		return SleepFromJSON(data.Sleep)
 	}
-	return nil, fmt.Errorf("clock.EffectFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("clock.EffectFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("clock.EffectFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func EffectToJSON(x Effect) ([]byte, error) {
@@ -190,6 +243,9 @@ func EffectToJSON(x Effect) ([]byte, error) {
 	return MatchEffectR2(
 		x,
 		func(y *Now) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NowToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("clock.EffectToJSON: %w", err)
@@ -200,6 +256,9 @@ func EffectToJSON(x Effect) ([]byte, error) {
 			})
 		},
 		func(y *Sleep) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SleepToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("clock.EffectToJSON: %w", err)
@@ -232,7 +291,7 @@ var (
 
 func (r *Now) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNow(*r)
 }
@@ -277,7 +336,7 @@ var (
 
 func (r *Sleep) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSleep(*r)
 }

@@ -8,6 +8,7 @@ import (
 )
 
 func init() {
+	shared.TypeRegistryStore[any]("any")
 	shared.TypeRegistryStore[Charge]("github.com/widmogrod/mkunion/example/compose/billing.Charge")
 	shared.TypeRegistryStore[InvalidAmount]("github.com/widmogrod/mkunion/example/compose/billing.InvalidAmount")
 	shared.TypeRegistryStore[OutOfCredits]("github.com/widmogrod/mkunion/example/compose/billing.OutOfCredits")

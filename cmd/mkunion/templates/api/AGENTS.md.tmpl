@@ -1,0 +1,137 @@
+# Working on this API
+
+This module is an HTTP API built on [mkunion](https://github.com/widmogrod/mkunion)
+unions. You define shapes (queries, commands, answers) as Go types and write
+handler bodies; `go generate` derives the handler interfaces, JSON, dispatch
+and clients. Nothing generated has a default: a handler is complete or it
+does not compile.
+
+## The loop
+
+    go generate ./... && go test ./... -race
+
+Run it after every change to a `//go:tag mkunion` type block. `go generate`
+prints "generated: ..." lines; that is normal. Never edit `*_gen.go` files:
+they are rewritten every run.
+
+## Layout
+
+    api/server.go                  composition root: hand-written list of mounts, auth, GET /v1 catalogue
+    api/server_test.go             clients over HTTP and in-process; TestEveryResourceIsMounted
+    api/resource/<r>/query.go      <R>Query union: one variant per question           (edit)
+    api/resource/<r>/command.go    <R>Command union: one variant per order            (edit)
+    api/resource/<r>/answer.go     <R>Answer union: answer types + Error; codes; Refuse (edit)
+    api/resource/<r>/handler.go    Handler: one HandleX method per variant            (edit)
+    api/resource/<r>/store.go      in-memory store; swap for a real one               (edit)
+    api/resource/<r>/handler_test.go                                                  (edit)
+    api/resource/<r>/endpoint.go   glue: QueryEndpoint/CommandEndpoint, error mapping (leave)
+    api/resource/<r>/*_gen.go      generated                                          (never)
+    cmd/server/main.go             flags, builds Deps, ListenAndServe
+
+Routes: `POST /v1/<r>/query`, `POST /v1/<r>/command`, `GET /v1` (catalogue).
+A request on the wire is `{"$type":"<r>.GetX","<r>.GetX":{...}}`; the answer
+is one `<R>Answer` variant in the same form. HTTP 200 for every answer,
+`Error` included; 400 when the body is not a request; 401 for a bad token.
+
+## Add a query (or a command)
+
+1. In `query.go` (`command.go` for a command) add a variant to the tagged
+   `type (...)` block:
+
+       ListTasks struct{ f.Returns[*TaskList] }
+
+   `f.Returns[*A]` names the answer. `A` must be a variant of the resource's
+   Answer union in `answer.go`. If it is new, add it there in the same step:
+
+       TaskList struct {
+           Items []Task `json:"items"`
+       }
+
+   Field names on the wire come from `json` tags; always write them. Lists
+   live inside a struct, never bare.
+2. `go generate ./...`
+3. `go test ./...` now fails with
+   `*Handler does not implement TaskQueryHandler (missing method HandleListTasks)`.
+   Add the method to `handler.go`, signature exactly as the generated
+   `TaskQueryHandler` interface in `query_union_gen.go` says:
+
+       func (h *Handler) HandleListTasks(ctx context.Context, op *ListTasks) (*TaskList, error)
+
+4. Add a test in `handler_test.go`. Run the loop.
+
+## Refuse a request
+
+A handler says no by returning a refusal in place of the answer:
+
+    return nil, Refuse(ErrNotFound, "task %q is unknown", op.ID)
+
+The client receives `Error{Code, Message}` as the answer (HTTP 200). Codes are
+constants in `answer.go`; add one per new kind of refusal. Any other Go error
+a handler returns reaches the client as `Error{Code: ErrInternal}`.
+
+In a test, `errors.As(err, &refused)` with `var refused *Error` works both
+on the handler method and through a client.
+
+## Add a field
+
+Add it to the struct with a `json` tag and run the loop. Clients ignore
+unknown fields, so adding is safe; renaming or removing breaks old clients.
+
+## Add a resource
+
+    go tool mkunion init resource --name project
+
+writes `api/resource/project/` with `GetProject`, `CreateProject`, `Project`,
+`Error` and tests, and prints what to paste. Then:
+
+1. `api/server.go`: add `Project *project.Handler` to `Deps` and the two
+   mount lines to `New`. Until you do, `TestEveryResourceIsMounted` fails
+   with `resource "project" has no route`.
+2. `cmd/server/main.go`: build the handler in `Deps`.
+3. Run the loop.
+
+A resource with no commands: delete `command.go`, `CommandEndpoint` in
+`endpoint.go`, the `_ ...CommandHandler` line and the `HandleX` methods in
+`handler.go`, the tests in `handler_test.go` that call them, and the
+`.../command` mount line. Then run
+
+    go tool mkunion clean ./api/resource/project
+
+before the loop: generated files are never removed for you, and the stale
+`command_*_gen.go` and `types_reg_gen.go` would fail with
+`undefined: CreateProject` / `undefined: ProjectCommand`. Same for a
+resource with no queries, and whenever a file with a `//go:tag` block is
+deleted or renamed.
+
+## Messages and what they mean
+
+| you see | it means |
+|---|---|
+| `missing method HandleX` | add `HandleX` to `handler.go` |
+| `undefined: TaskQueryHandler`, `undefined: DispatchTaskQuery` | `go generate` has not run, or failed: run it and read its output |
+| `variant X answers with *Y, which is not a variant of TaskAnswer` | `Y` must be declared in the `TaskAnswer` block in `answer.go` |
+| `variant X has no f.Returns` | every query and command embeds `f.Returns[*A]` |
+| `answers=TaskAnswer names no union in package task` | the Answer union tag in `answer.go` was renamed or removed |
+| `resource "x" has no route` (test) | mount it in `api/server.go` |
+| `wrong type for method HandleX` | the signature must match the generated interface exactly; copy it from `*_union_gen.go` |
+
+## Test
+
+Handler methods are plain functions: call them. To see what a client sees
+without HTTP, build the generated client on the endpoint's `Send`:
+
+    client := NewTaskQueryClient(QueryEndpoint(h).Send)
+    task, err := rpc.Call(ctx, client, &GetTask{ID: id})   // task is *Task
+
+`api/server_test.go` runs the same assertions over HTTP and in-process.
+
+## Run
+
+    go run ./cmd/server -addr 127.0.0.1:8080 -token secret
+    curl -s localhost:8080/v1 -H 'Authorization: Bearer secret'
+    curl -s -X POST localhost:8080/v1/task/command -H 'Authorization: Bearer secret' \
+      -d '{"$type":"task.CreateTask","task.CreateTask":{"title":"first"}}'
+
+## Export the contract
+
+    go tool mkunion shape-export --language swift -o <dir> api/resource/*/query.go api/resource/*/command.go api/resource/*/answer.go
