@@ -1,0 +1,13 @@
+# The loop: regenerate, vet, test. `make` alone runs it.
+.PHONY: check gen test run
+
+check: gen test
+
+gen:
+	go generate ./...
+
+test:
+	go vet ./... && go test ./... -race
+
+run:
+	go run ./cmd/server -addr 127.0.0.1:8080

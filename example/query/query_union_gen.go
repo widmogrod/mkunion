@@ -163,6 +163,42 @@ func HandleQuery(
 	)
 }
 
+// NewQueryHandler builds a QueryHandler from one function per variant: the arms
+// of HandleQuery as a value. Exhaustive: every arm must be given. Use it where a
+// handler is a value, such as effect.Interpret, or a field of a struct that
+// embeds the handlers of several packages.
+func NewQueryHandler(
+	onGetUser func(ctx context.Context, op *GetUser) (*User, error),
+	onFindUsers func(ctx context.Context, op *FindUsers) ([]User, error),
+	onCountUsers func(ctx context.Context, op *CountUsers) (int, error),
+	onDeleteUser func(ctx context.Context, op *DeleteUser) error,
+) QueryHandler {
+	return &queryHandlerFuncs{onGetUser: onGetUser, onFindUsers: onFindUsers, onCountUsers: onCountUsers, onDeleteUser: onDeleteUser}
+}
+
+type queryHandlerFuncs struct {
+	onGetUser    func(ctx context.Context, op *GetUser) (*User, error)
+	onFindUsers  func(ctx context.Context, op *FindUsers) ([]User, error)
+	onCountUsers func(ctx context.Context, op *CountUsers) (int, error)
+	onDeleteUser func(ctx context.Context, op *DeleteUser) error
+}
+
+func (h *queryHandlerFuncs) HandleGetUser(ctx context.Context, op *GetUser) (*User, error) {
+	return h.onGetUser(ctx, op)
+}
+
+func (h *queryHandlerFuncs) HandleFindUsers(ctx context.Context, op *FindUsers) ([]User, error) {
+	return h.onFindUsers(ctx, op)
+}
+
+func (h *queryHandlerFuncs) HandleCountUsers(ctx context.Context, op *CountUsers) (int, error) {
+	return h.onCountUsers(ctx, op)
+}
+
+func (h *queryHandlerFuncs) HandleDeleteUser(ctx context.Context, op *DeleteUser) error {
+	return h.onDeleteUser(ctx, op)
+}
+
 // Perform lets a variant with f.Returns be performed by any handler value that
 // has its Handle method, so operations from several unions can share one
 // program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
@@ -191,6 +227,34 @@ func (r *CountUsers) Perform(ctx context.Context, h any) (any, error) {
 	return typed.HandleCountUsers(ctx, r)
 }
 
+// AroundQuery decorates every method of next with around. around gets the
+// operation as the Query union and a call that runs it on next, and returns the
+// answer untyped; AroundQuery casts it back to the variant's declared type. One
+// function wraps all variants: logging, metrics, deadlines.
+func AroundQuery(next QueryHandler, around func(ctx context.Context, op Query, call func(ctx context.Context) (any, error)) (any, error)) QueryHandler {
+	return NewQueryHandler(
+		func(ctx context.Context, op *GetUser) (*User, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleGetUser(ctx, op) })
+			answer, _ := out.(*User)
+			return answer, err
+		},
+		func(ctx context.Context, op *FindUsers) ([]User, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleFindUsers(ctx, op) })
+			answer, _ := out.([]User)
+			return answer, err
+		},
+		func(ctx context.Context, op *CountUsers) (int, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleCountUsers(ctx, op) })
+			answer, _ := out.(int)
+			return answer, err
+		},
+		func(ctx context.Context, op *DeleteUser) error {
+			_, err := around(ctx, op, func(ctx context.Context) (any, error) { return nil, next.HandleDeleteUser(ctx, op) })
+			return err
+		},
+	)
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.CountUsers", CountUsersFromJSON, CountUsersToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.DeleteUser", DeleteUserFromJSON, DeleteUserToJSON)
@@ -208,10 +272,10 @@ type QueryUnionJSON struct {
 }
 
 func QueryFromJSON(x []byte) (Query, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data QueryUnionJSON
@@ -220,14 +284,27 @@ func QueryFromJSON(x []byte) (Query, error) {
 		return nil, fmt.Errorf("query.QueryFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "query.GetUser":
+		if data.GetUser == nil || string(data.GetUser) == "null" {
+			return new(GetUser), nil
+		}
 		return GetUserFromJSON(data.GetUser)
 	case "query.FindUsers":
+		if data.FindUsers == nil || string(data.FindUsers) == "null" {
+			return new(FindUsers), nil
+		}
 		return FindUsersFromJSON(data.FindUsers)
 	case "query.CountUsers":
+		if data.CountUsers == nil || string(data.CountUsers) == "null" {
+			return new(CountUsers), nil
+		}
 		return CountUsersFromJSON(data.CountUsers)
 	case "query.DeleteUser":
+		if data.DeleteUser == nil || string(data.DeleteUser) == "null" {
+			return new(DeleteUser), nil
+		}
 		return DeleteUserFromJSON(data.DeleteUser)
 	}
 
@@ -240,7 +317,10 @@ func QueryFromJSON(x []byte) (Query, error) {
 	} else if data.DeleteUser != nil {
 		return DeleteUserFromJSON(data.DeleteUser)
 	}
-	return nil, fmt.Errorf("query.QueryFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("query.QueryFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("query.QueryFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func QueryToJSON(x Query) ([]byte, error) {
@@ -250,6 +330,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 	return MatchQueryR2(
 		x,
 		func(y *GetUser) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := GetUserToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("query.QueryToJSON: %w", err)
@@ -260,6 +343,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 			})
 		},
 		func(y *FindUsers) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := FindUsersToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("query.QueryToJSON: %w", err)
@@ -270,6 +356,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 			})
 		},
 		func(y *CountUsers) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CountUsersToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("query.QueryToJSON: %w", err)
@@ -280,6 +369,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 			})
 		},
 		func(y *DeleteUser) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := DeleteUserToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("query.QueryToJSON: %w", err)
@@ -312,7 +404,7 @@ var (
 
 func (r *GetUser) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONGetUser(*r)
 }
@@ -395,7 +487,7 @@ var (
 
 func (r *FindUsers) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONFindUsers(*r)
 }
@@ -478,7 +570,7 @@ var (
 
 func (r *CountUsers) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCountUsers(*r)
 }
@@ -523,7 +615,7 @@ var (
 
 func (r *DeleteUser) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONDeleteUser(*r)
 }

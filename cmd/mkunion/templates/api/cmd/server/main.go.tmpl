@@ -1,0 +1,33 @@
+// Command server serves the API:
+//
+//	go run ./cmd/server -addr 127.0.0.1:8080 -token secret
+package main
+
+import (
+	"flag"
+	"log"
+	"net/http"
+	"time"
+
+	"{{.Module}}/api"
+	"{{.Module}}/api/resource/{{.Resource}}"
+)
+
+func main() {
+	addr := flag.String("addr", "127.0.0.1:8080", "address to listen on")
+	token := flag.String("token", "", "bearer token every request must carry; empty means open")
+	flag.Parse()
+
+	// Deps: one handler per resource, with its real storage.
+	deps := api.Deps{
+		{{.Type}}: &{{.Resource}}.Handler{Store: {{.Resource}}.NewMemoryStore()},
+	}
+
+	srv := &http.Server{
+		Addr:              *addr,
+		Handler:           api.New(api.Config{Token: *token}, deps),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	log.Printf("listening on http://%s", *addr)
+	log.Fatal(srv.ListenAndServe())
+}

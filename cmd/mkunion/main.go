@@ -123,6 +123,7 @@ func newApp(ctx context.Context) *cli.App {
 				},
 				Action: cleanAction,
 			},
+			initCommand(),
 		},
 	}
 }

@@ -164,6 +164,42 @@ func HandleQuery(
 	)
 }
 
+// NewQueryHandler builds a QueryHandler from one function per variant: the arms
+// of HandleQuery as a value. Exhaustive: every arm must be given. Use it where a
+// handler is a value, such as effect.Interpret, or a field of a struct that
+// embeds the handlers of several packages.
+func NewQueryHandler(
+	onGetUser func(ctx context.Context, op *GetUser) (*User, error),
+	onCount func(ctx context.Context, op *Count) (int, error),
+	onLastSeen func(ctx context.Context, op *LastSeen) (time.Time, error),
+	onTouch func(ctx context.Context, op *Touch) error,
+) QueryHandler {
+	return &queryHandlerFuncs{onGetUser: onGetUser, onCount: onCount, onLastSeen: onLastSeen, onTouch: onTouch}
+}
+
+type queryHandlerFuncs struct {
+	onGetUser  func(ctx context.Context, op *GetUser) (*User, error)
+	onCount    func(ctx context.Context, op *Count) (int, error)
+	onLastSeen func(ctx context.Context, op *LastSeen) (time.Time, error)
+	onTouch    func(ctx context.Context, op *Touch) error
+}
+
+func (h *queryHandlerFuncs) HandleGetUser(ctx context.Context, op *GetUser) (*User, error) {
+	return h.onGetUser(ctx, op)
+}
+
+func (h *queryHandlerFuncs) HandleCount(ctx context.Context, op *Count) (int, error) {
+	return h.onCount(ctx, op)
+}
+
+func (h *queryHandlerFuncs) HandleLastSeen(ctx context.Context, op *LastSeen) (time.Time, error) {
+	return h.onLastSeen(ctx, op)
+}
+
+func (h *queryHandlerFuncs) HandleTouch(ctx context.Context, op *Touch) error {
+	return h.onTouch(ctx, op)
+}
+
 // Perform lets a variant with f.Returns be performed by any handler value that
 // has its Handle method, so operations from several unions can share one
 // program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
@@ -192,6 +228,34 @@ func (r *LastSeen) Perform(ctx context.Context, h any) (any, error) {
 	return typed.HandleLastSeen(ctx, r)
 }
 
+// AroundQuery decorates every method of next with around. around gets the
+// operation as the Query union and a call that runs it on next, and returns the
+// answer untyped; AroundQuery casts it back to the variant's declared type. One
+// function wraps all variants: logging, metrics, deadlines.
+func AroundQuery(next QueryHandler, around func(ctx context.Context, op Query, call func(ctx context.Context) (any, error)) (any, error)) QueryHandler {
+	return NewQueryHandler(
+		func(ctx context.Context, op *GetUser) (*User, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleGetUser(ctx, op) })
+			answer, _ := out.(*User)
+			return answer, err
+		},
+		func(ctx context.Context, op *Count) (int, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleCount(ctx, op) })
+			answer, _ := out.(int)
+			return answer, err
+		},
+		func(ctx context.Context, op *LastSeen) (time.Time, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleLastSeen(ctx, op) })
+			answer, _ := out.(time.Time)
+			return answer, err
+		},
+		func(ctx context.Context, op *Touch) error {
+			_, err := around(ctx, op, func(ctx context.Context) (any, error) { return nil, next.HandleTouch(ctx, op) })
+			return err
+		},
+	)
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.Count", CountFromJSON, CountToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/x/generators/testutils.GetUser", GetUserFromJSON, GetUserToJSON)
@@ -209,10 +273,10 @@ type QueryUnionJSON struct {
 }
 
 func QueryFromJSON(x []byte) (Query, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data QueryUnionJSON
@@ -221,14 +285,27 @@ func QueryFromJSON(x []byte) (Query, error) {
 		return nil, fmt.Errorf("testutils.QueryFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "testutils.GetUser":
+		if data.GetUser == nil || string(data.GetUser) == "null" {
+			return new(GetUser), nil
+		}
 		return GetUserFromJSON(data.GetUser)
 	case "testutils.Count":
+		if data.Count == nil || string(data.Count) == "null" {
+			return new(Count), nil
+		}
 		return CountFromJSON(data.Count)
 	case "testutils.LastSeen":
+		if data.LastSeen == nil || string(data.LastSeen) == "null" {
+			return new(LastSeen), nil
+		}
 		return LastSeenFromJSON(data.LastSeen)
 	case "testutils.Touch":
+		if data.Touch == nil || string(data.Touch) == "null" {
+			return new(Touch), nil
+		}
 		return TouchFromJSON(data.Touch)
 	}
 
@@ -241,7 +318,10 @@ func QueryFromJSON(x []byte) (Query, error) {
 	} else if data.Touch != nil {
 		return TouchFromJSON(data.Touch)
 	}
-	return nil, fmt.Errorf("testutils.QueryFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("testutils.QueryFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("testutils.QueryFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func QueryToJSON(x Query) ([]byte, error) {
@@ -251,6 +331,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 	return MatchQueryR2(
 		x,
 		func(y *GetUser) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := GetUserToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.QueryToJSON: %w", err)
@@ -261,6 +344,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 			})
 		},
 		func(y *Count) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := CountToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.QueryToJSON: %w", err)
@@ -271,6 +357,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 			})
 		},
 		func(y *LastSeen) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := LastSeenToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.QueryToJSON: %w", err)
@@ -281,6 +370,9 @@ func QueryToJSON(x Query) ([]byte, error) {
 			})
 		},
 		func(y *Touch) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := TouchToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("testutils.QueryToJSON: %w", err)
@@ -313,7 +405,7 @@ var (
 
 func (r *GetUser) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONGetUser(*r)
 }
@@ -396,7 +488,7 @@ var (
 
 func (r *Count) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCount(*r)
 }
@@ -441,7 +533,7 @@ var (
 
 func (r *LastSeen) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONLastSeen(*r)
 }
@@ -524,7 +616,7 @@ var (
 
 func (r *Touch) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONTouch(*r)
 }

@@ -6,6 +6,7 @@ import (
 )
 
 func init() {
+	shared.TypeRegistryStore[any]("any")
 	shared.TypeRegistryStore[CountUsers]("github.com/widmogrod/mkunion/example/query.CountUsers")
 	shared.TypeRegistryStore[DeleteUser]("github.com/widmogrod/mkunion/example/query.DeleteUser")
 	shared.TypeRegistryStore[FindUsers]("github.com/widmogrod/mkunion/example/query.FindUsers")

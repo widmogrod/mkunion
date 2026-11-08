@@ -1,0 +1,30 @@
+package {{.Resource}}
+
+import "context"
+
+// Handler answers every {{.Type}}Query and {{.Type}}Command. It implements the
+// generated {{.Type}}QueryHandler and {{.Type}}CommandHandler, so a new variant
+// is a compile error here ("missing method HandleX") until HandleX exists.
+type Handler struct {
+	Store *MemoryStore
+}
+
+var (
+	_ {{.Type}}QueryHandler   = (*Handler)(nil)
+	_ {{.Type}}CommandHandler = (*Handler)(nil)
+)
+
+func (h *Handler) HandleGet{{.Type}}(ctx context.Context, op *Get{{.Type}}) (*{{.Type}}, error) {
+	item, ok := h.Store.Get(op.ID)
+	if !ok {
+		return nil, Refuse(ErrNotFound, "{{.Resource}} %q is unknown", op.ID)
+	}
+	return item, nil
+}
+
+func (h *Handler) HandleCreate{{.Type}}(ctx context.Context, op *Create{{.Type}}) (*{{.Type}}, error) {
+	if op.Title == "" {
+		return nil, Refuse(ErrInvalid, "title is empty")
+	}
+	return h.Store.Put({{.Type}}{Title: op.Title}), nil
+}

@@ -35,6 +35,7 @@ func init() {
 	shared.TypeRegistryStore[Required]("github.com/widmogrod/mkunion/x/shape.Required")
 	shared.TypeRegistryStore[StringLike]("github.com/widmogrod/mkunion/x/shape.StringLike")
 	shared.TypeRegistryStore[StructLike]("github.com/widmogrod/mkunion/x/shape.StructLike")
+	shared.TypeRegistryStore[SwiftRenderer]("github.com/widmogrod/mkunion/x/shape.SwiftRenderer")
 	shared.TypeRegistryStore[TypeParam]("github.com/widmogrod/mkunion/x/shape.TypeParam")
 	shared.TypeRegistryStore[TypeScriptOptions]("github.com/widmogrod/mkunion/x/shape.TypeScriptOptions")
 	shared.TypeRegistryStore[TypeScriptRenderer]("github.com/widmogrod/mkunion/x/shape.TypeScriptRenderer")

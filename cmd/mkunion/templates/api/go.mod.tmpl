@@ -1,0 +1,9 @@
+module {{.Module}}
+
+go 1.27
+{{if .MkunionVersion}}
+require github.com/widmogrod/mkunion {{.MkunionVersion}}
+{{end}}{{if .MkunionReplace}}
+replace github.com/widmogrod/mkunion => {{.MkunionReplace}}
+{{end}}
+tool github.com/widmogrod/mkunion/cmd/mkunion

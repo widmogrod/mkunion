@@ -101,10 +101,10 @@ type ChargeErrorUnionJSON struct {
 }
 
 func ChargeErrorFromJSON(x []byte) (ChargeError, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data ChargeErrorUnionJSON
@@ -113,10 +113,17 @@ func ChargeErrorFromJSON(x []byte) (ChargeError, error) {
 		return nil, fmt.Errorf("welcome.ChargeErrorFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "welcome.OutOfBudget":
+		if data.OutOfBudget == nil || string(data.OutOfBudget) == "null" {
+			return new(OutOfBudget), nil
+		}
 		return OutOfBudgetFromJSON(data.OutOfBudget)
 	case "welcome.QuotaExceeded":
+		if data.QuotaExceeded == nil || string(data.QuotaExceeded) == "null" {
+			return new(QuotaExceeded), nil
+		}
 		return QuotaExceededFromJSON(data.QuotaExceeded)
 	}
 
@@ -125,7 +132,10 @@ func ChargeErrorFromJSON(x []byte) (ChargeError, error) {
 	} else if data.QuotaExceeded != nil {
 		return QuotaExceededFromJSON(data.QuotaExceeded)
 	}
-	return nil, fmt.Errorf("welcome.ChargeErrorFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("welcome.ChargeErrorFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("welcome.ChargeErrorFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
@@ -135,6 +145,9 @@ func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
 	return MatchChargeErrorR2(
 		x,
 		func(y *OutOfBudget) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := OutOfBudgetToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.ChargeErrorToJSON: %w", err)
@@ -145,6 +158,9 @@ func ChargeErrorToJSON(x ChargeError) ([]byte, error) {
 			})
 		},
 		func(y *QuotaExceeded) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := QuotaExceededToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.ChargeErrorToJSON: %w", err)
@@ -177,7 +193,7 @@ var (
 
 func (r *OutOfBudget) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONOutOfBudget(*r)
 }
@@ -260,7 +276,7 @@ var (
 
 func (r *QuotaExceeded) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONQuotaExceeded(*r)
 }
@@ -518,6 +534,54 @@ func HandleMyEff(
 	)
 }
 
+// NewMyEffHandler builds a MyEffHandler from one function per variant: the arms
+// of HandleMyEff as a value. Exhaustive: every arm must be given. Use it where a
+// handler is a value, such as effect.Interpret, or a field of a struct that
+// embeds the handlers of several packages.
+func NewMyEffHandler(
+	onLog func(ctx context.Context, op *Log) (Unit, error),
+	onNow func(ctx context.Context, op *Now) (time.Time, error),
+	onReadFile func(ctx context.Context, op *ReadFile) ([]uint8, error),
+	onRandom func(ctx context.Context, op *Random) (int, error),
+	onSend func(ctx context.Context, op *Send) (string, error),
+	onCharge func(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error),
+) MyEffHandler {
+	return &myEffHandlerFuncs{onLog: onLog, onNow: onNow, onReadFile: onReadFile, onRandom: onRandom, onSend: onSend, onCharge: onCharge}
+}
+
+type myEffHandlerFuncs struct {
+	onLog      func(ctx context.Context, op *Log) (Unit, error)
+	onNow      func(ctx context.Context, op *Now) (time.Time, error)
+	onReadFile func(ctx context.Context, op *ReadFile) ([]uint8, error)
+	onRandom   func(ctx context.Context, op *Random) (int, error)
+	onSend     func(ctx context.Context, op *Send) (string, error)
+	onCharge   func(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error)
+}
+
+func (h *myEffHandlerFuncs) HandleLog(ctx context.Context, op *Log) (Unit, error) {
+	return h.onLog(ctx, op)
+}
+
+func (h *myEffHandlerFuncs) HandleNow(ctx context.Context, op *Now) (time.Time, error) {
+	return h.onNow(ctx, op)
+}
+
+func (h *myEffHandlerFuncs) HandleReadFile(ctx context.Context, op *ReadFile) ([]uint8, error) {
+	return h.onReadFile(ctx, op)
+}
+
+func (h *myEffHandlerFuncs) HandleRandom(ctx context.Context, op *Random) (int, error) {
+	return h.onRandom(ctx, op)
+}
+
+func (h *myEffHandlerFuncs) HandleSend(ctx context.Context, op *Send) (string, error) {
+	return h.onSend(ctx, op)
+}
+
+func (h *myEffHandlerFuncs) HandleCharge(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error) {
+	return h.onCharge(ctx, op)
+}
+
 // Perform lets a variant with f.Returns be performed by any handler value that
 // has its Handle method, so operations from several unions can share one
 // program and one handler (see x/effect: Op, OpOf, Fx). The answer's static
@@ -570,6 +634,45 @@ func (r *Charge) Perform(ctx context.Context, h any) (any, error) {
 	return typed.HandleCharge(ctx, r)
 }
 
+// AroundMyEff decorates every method of next with around. around gets the
+// operation as the MyEff union and a call that runs it on next, and returns the
+// answer untyped; AroundMyEff casts it back to the variant's declared type. One
+// function wraps all variants: logging, metrics, deadlines.
+func AroundMyEff(next MyEffHandler, around func(ctx context.Context, op MyEff, call func(ctx context.Context) (any, error)) (any, error)) MyEffHandler {
+	return NewMyEffHandler(
+		func(ctx context.Context, op *Log) (Unit, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleLog(ctx, op) })
+			answer, _ := out.(Unit)
+			return answer, err
+		},
+		func(ctx context.Context, op *Now) (time.Time, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleNow(ctx, op) })
+			answer, _ := out.(time.Time)
+			return answer, err
+		},
+		func(ctx context.Context, op *ReadFile) ([]uint8, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleReadFile(ctx, op) })
+			answer, _ := out.([]uint8)
+			return answer, err
+		},
+		func(ctx context.Context, op *Random) (int, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleRandom(ctx, op) })
+			answer, _ := out.(int)
+			return answer, err
+		},
+		func(ctx context.Context, op *Send) (string, error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleSend(ctx, op) })
+			answer, _ := out.(string)
+			return answer, err
+		},
+		func(ctx context.Context, op *Charge) (f.Result[Receipt, ChargeError], error) {
+			out, err := around(ctx, op, func(ctx context.Context) (any, error) { return next.HandleCharge(ctx, op) })
+			answer, _ := out.(f.Result[Receipt, ChargeError])
+			return answer, err
+		},
+	)
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/welcome.Charge", ChargeFromJSON, ChargeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/welcome.Log", LogFromJSON, LogToJSON)
@@ -591,10 +694,10 @@ type MyEffUnionJSON struct {
 }
 
 func MyEffFromJSON(x []byte) (MyEff, error) {
-	if x == nil || len(x) == 0 {
+	if len(x) == 0 {
 		return nil, nil
 	}
-	if string(x[:4]) == "null" {
+	if len(x) >= 4 && string(x[:4]) == "null" {
 		return nil, nil
 	}
 	var data MyEffUnionJSON
@@ -603,18 +706,37 @@ func MyEffFromJSON(x []byte) (MyEff, error) {
 		return nil, fmt.Errorf("welcome.MyEffFromJSON: %w", err)
 	}
 
+	// $type picks the variant; a missing or null payload is its zero value.
 	switch data.Type {
 	case "welcome.Log":
+		if data.Log == nil || string(data.Log) == "null" {
+			return new(Log), nil
+		}
 		return LogFromJSON(data.Log)
 	case "welcome.Now":
+		if data.Now == nil || string(data.Now) == "null" {
+			return new(Now), nil
+		}
 		return NowFromJSON(data.Now)
 	case "welcome.ReadFile":
+		if data.ReadFile == nil || string(data.ReadFile) == "null" {
+			return new(ReadFile), nil
+		}
 		return ReadFileFromJSON(data.ReadFile)
 	case "welcome.Random":
+		if data.Random == nil || string(data.Random) == "null" {
+			return new(Random), nil
+		}
 		return RandomFromJSON(data.Random)
 	case "welcome.Send":
+		if data.Send == nil || string(data.Send) == "null" {
+			return new(Send), nil
+		}
 		return SendFromJSON(data.Send)
 	case "welcome.Charge":
+		if data.Charge == nil || string(data.Charge) == "null" {
+			return new(Charge), nil
+		}
 		return ChargeFromJSON(data.Charge)
 	}
 
@@ -631,7 +753,10 @@ func MyEffFromJSON(x []byte) (MyEff, error) {
 	} else if data.Charge != nil {
 		return ChargeFromJSON(data.Charge)
 	}
-	return nil, fmt.Errorf("welcome.MyEffFromJSON: unknown type: %s", data.Type)
+	if data.Type == "" {
+		return nil, fmt.Errorf("welcome.MyEffFromJSON: %w", shared.ErrNoType)
+	}
+	return nil, fmt.Errorf("welcome.MyEffFromJSON: %w: %s", shared.ErrUnknownType, data.Type)
 }
 
 func MyEffToJSON(x MyEff) ([]byte, error) {
@@ -641,6 +766,9 @@ func MyEffToJSON(x MyEff) ([]byte, error) {
 	return MatchMyEffR2(
 		x,
 		func(y *Log) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := LogToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.MyEffToJSON: %w", err)
@@ -651,6 +779,9 @@ func MyEffToJSON(x MyEff) ([]byte, error) {
 			})
 		},
 		func(y *Now) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := NowToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.MyEffToJSON: %w", err)
@@ -661,6 +792,9 @@ func MyEffToJSON(x MyEff) ([]byte, error) {
 			})
 		},
 		func(y *ReadFile) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ReadFileToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.MyEffToJSON: %w", err)
@@ -671,6 +805,9 @@ func MyEffToJSON(x MyEff) ([]byte, error) {
 			})
 		},
 		func(y *Random) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := RandomToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.MyEffToJSON: %w", err)
@@ -681,6 +818,9 @@ func MyEffToJSON(x MyEff) ([]byte, error) {
 			})
 		},
 		func(y *Send) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := SendToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.MyEffToJSON: %w", err)
@@ -691,6 +831,9 @@ func MyEffToJSON(x MyEff) ([]byte, error) {
 			})
 		},
 		func(y *Charge) ([]byte, error) {
+			if y == nil {
+				return []byte(`null`), nil
+			}
 			body, err := ChargeToJSON(y)
 			if err != nil {
 				return nil, fmt.Errorf("welcome.MyEffToJSON: %w", err)
@@ -723,7 +866,7 @@ var (
 
 func (r *Log) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONLog(*r)
 }
@@ -806,7 +949,7 @@ var (
 
 func (r *Now) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONNow(*r)
 }
@@ -851,7 +994,7 @@ var (
 
 func (r *ReadFile) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONReadFile(*r)
 }
@@ -934,7 +1077,7 @@ var (
 
 func (r *Random) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONRandom(*r)
 }
@@ -1017,7 +1160,7 @@ var (
 
 func (r *Send) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONSend(*r)
 }
@@ -1119,7 +1262,7 @@ var (
 
 func (r *Charge) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		return nil, nil
+		return []byte(`null`), nil
 	}
 	return r._marshalJSONCharge(*r)
 }

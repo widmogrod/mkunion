@@ -7,6 +7,7 @@ import (
 )
 
 func init() {
+	shared.TypeRegistryStore[any]("any")
 	shared.TypeRegistryStore[Resolve]("github.com/widmogrod/mkunion/example/compose/mailer.Resolve")
 	shared.TypeRegistryStore[Send]("github.com/widmogrod/mkunion/example/compose/mailer.Send")
 	shared.TypeRegistryStore[effect.Bind[effect.Op, string]]("github.com/widmogrod/mkunion/x/effect.Bind[github.com/widmogrod/mkunion/x/effect.Op,string]")

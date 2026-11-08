@@ -1,0 +1,56 @@
+package {{.Resource}}
+
+import (
+	"strconv"
+	"sync"
+)
+
+// MemoryStore keeps {{.Resource}}s in memory, oldest first. It is the
+// scaffold's storage; put a real one behind the same methods.
+type MemoryStore struct {
+	mu    sync.Mutex
+	items []{{.Type}}
+}
+
+func NewMemoryStore() *MemoryStore { return &MemoryStore{} }
+
+// Put stores item under a new ID and returns it.
+func (s *MemoryStore) Put(item {{.Type}}) *{{.Type}} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	item.ID = strconv.Itoa(len(s.items) + 1)
+	s.items = append(s.items, item)
+	return &item
+}
+
+// Get returns the item with id, or false.
+func (s *MemoryStore) Get(id string) (*{{.Type}}, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, item := range s.items {
+		if item.ID == id {
+			return &item, true
+		}
+	}
+	return nil, false
+}
+
+// List returns every item, oldest first.
+func (s *MemoryStore) List() []{{.Type}} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]{{.Type}}(nil), s.items...)
+}
+
+// Update replaces the item with item.ID; false when there is none.
+func (s *MemoryStore) Update(item {{.Type}}) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.items {
+		if s.items[i].ID == item.ID {
+			s.items[i] = item
+			return true
+		}
+	}
+	return false
+}
