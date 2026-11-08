@@ -187,74 +187,102 @@ func (g *HandlerGenerator) answerUnion(variants []handlerVariant) (*shape.UnionL
 		}
 	}
 	if named != "" {
-		var answers *shape.UnionLike
-		for _, u := range g.siblings {
-			if u.Name == named && u.PkgImportName == g.union.PkgImportName {
-				answers = u
-			}
-		}
-		if answers == nil {
-			return nil, fmt.Errorf("union %s: answers=%s names no union in package %s; the answer union must be declared in the same package", g.union.Name, named, shape.ToGoPkgName(g.union))
-		}
-		for _, v := range variants {
-			if v.shape == nil {
-				return nil, fmt.Errorf("union %s: variant %s has no f.Returns, but answers=%s needs every variant to answer with a %s", g.union.Name, v.name, named, named)
-			}
-			if v.result != nil {
-				if !isVariantOf(v.result.ok, answers) {
-					return nil, fmt.Errorf("union %s: variant %s answers with %s, whose Ok type %s is not a variant of %s", g.union.Name, v.name, v.answer, v.result.okTyp, named)
-				}
-				refusal := g.sibling(v.result.refuse)
-				if refusal == nil {
-					return nil, fmt.Errorf("union %s: variant %s refuses with %s, which is not a union of this file", g.union.Name, v.name, v.result.refuseTyp)
-				}
-				if bad := variantNotIn(refusal, answers); bad != "" {
-					return nil, fmt.Errorf("union %s: variant %s refuses with %s, whose variant %s is not a variant of %s", g.union.Name, v.name, v.result.refuseTyp, bad, named)
-				}
-				continue
-			}
-			if u := g.sibling(v.shape); u != nil {
-				if bad := variantNotIn(u, answers); bad != "" {
-					return nil, fmt.Errorf("union %s: variant %s answers with %s, whose variant %s is not a variant of %s", g.union.Name, v.name, v.answer, bad, named)
-				}
-				continue
-			}
-			if !isVariantOf(v.shape, answers) {
-				return nil, fmt.Errorf("union %s: variant %s answers with %s, which is not a variant of %s", g.union.Name, v.name, v.answer, named)
-			}
-		}
-		return answers, nil
+		return g.namedAnswerUnion(named, variants)
 	}
+	return g.inferAnswerUnion(variants), nil
+}
+
+// namedAnswerUnion is the answers= union, after checking that every variant
+// answers with one of its variants.
+func (g *HandlerGenerator) namedAnswerUnion(named string, variants []handlerVariant) (*shape.UnionLike, error) {
+	var answers *shape.UnionLike
+	for _, u := range g.siblings {
+		if u.Name == named && u.PkgImportName == g.union.PkgImportName {
+			answers = u
+		}
+	}
+	if answers == nil {
+		return nil, fmt.Errorf("union %s: answers=%s names no union in package %s; the answer union must be declared in the same package", g.union.Name, named, shape.ToGoPkgName(g.union))
+	}
+	for _, v := range variants {
+		if err := g.checkAnswer(v, answers, named); err != nil {
+			return nil, err
+		}
+	}
+	return answers, nil
+}
+
+// checkAnswer is the error when v does not answer with a variant of answers:
+// a plain *V must be a variant, a union answer must have only variants of
+// answers as leaves, and an f.Result must hold both.
+func (g *HandlerGenerator) checkAnswer(v handlerVariant, answers *shape.UnionLike, named string) error {
+	if v.shape == nil {
+		return fmt.Errorf("union %s: variant %s has no f.Returns, but answers=%s needs every variant to answer with a %s", g.union.Name, v.name, named, named)
+	}
+	if v.result != nil {
+		if !isVariantOf(v.result.ok, answers) {
+			return fmt.Errorf("union %s: variant %s answers with %s, whose Ok type %s is not a variant of %s", g.union.Name, v.name, v.answer, v.result.okTyp, named)
+		}
+		refusal := g.sibling(v.result.refuse)
+		if refusal == nil {
+			return fmt.Errorf("union %s: variant %s refuses with %s, which is not a union of this file", g.union.Name, v.name, v.result.refuseTyp)
+		}
+		if bad := variantNotIn(refusal, answers); bad != "" {
+			return fmt.Errorf("union %s: variant %s refuses with %s, whose variant %s is not a variant of %s", g.union.Name, v.name, v.result.refuseTyp, bad, named)
+		}
+		return nil
+	}
+	if u := g.sibling(v.shape); u != nil {
+		if bad := variantNotIn(u, answers); bad != "" {
+			return fmt.Errorf("union %s: variant %s answers with %s, whose variant %s is not a variant of %s", g.union.Name, v.name, v.answer, bad, named)
+		}
+		return nil
+	}
+	if !isVariantOf(v.shape, answers) {
+		return fmt.Errorf("union %s: variant %s answers with %s, which is not a variant of %s", g.union.Name, v.name, v.answer, named)
+	}
+	return nil
+}
+
+// inferAnswerUnion is the one sibling union every variant answers into, or
+// nil when a variant has no answer or the variants do not agree.
+func (g *HandlerGenerator) inferAnswerUnion(variants []handlerVariant) *shape.UnionLike {
 	var found *shape.UnionLike
 	for _, v := range variants {
 		if v.shape == nil {
-			return nil, nil
+			return nil
 		}
-		var owner *shape.UnionLike
-		for _, u := range g.siblings {
-			if u == g.union {
-				continue
-			}
-			switch {
-			case v.result != nil:
-				refusal := g.sibling(v.result.refuse)
-				if isVariantOf(v.result.ok, u) && refusal != nil && refusal != u && variantNotIn(refusal, u) == "" {
-					owner = u
-				}
-			case g.sibling(v.shape) != nil:
-				if a := g.sibling(v.shape); a != u && variantNotIn(a, u) == "" {
-					owner = u
-				}
-			case isVariantOf(v.shape, u):
-				owner = u
-			}
-		}
+		owner := g.ownerOf(v)
 		if owner == nil || (found != nil && found != owner) {
-			return nil, nil
+			return nil
 		}
 		found = owner
 	}
-	return found, nil
+	return found
+}
+
+// ownerOf is the sibling union v answers into, or nil.
+func (g *HandlerGenerator) ownerOf(v handlerVariant) *shape.UnionLike {
+	var owner *shape.UnionLike
+	for _, u := range g.siblings {
+		if u == g.union {
+			continue
+		}
+		switch {
+		case v.result != nil:
+			refusal := g.sibling(v.result.refuse)
+			if isVariantOf(v.result.ok, u) && refusal != nil && refusal != u && variantNotIn(refusal, u) == "" {
+				owner = u
+			}
+		case g.sibling(v.shape) != nil:
+			if a := g.sibling(v.shape); a != u && variantNotIn(a, u) == "" {
+				owner = u
+			}
+		case isVariantOf(v.shape, u):
+			owner = u
+		}
+	}
+	return owner
 }
 
 // isVariantOf reports whether answer is *V for a variant V of u.
