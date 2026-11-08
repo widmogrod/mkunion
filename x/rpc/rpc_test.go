@@ -74,7 +74,7 @@ func TestClientOverHTTPAndClientOverSendAreTheSameClient(t *testing.T) {
 	})
 }
 
-func post(t *testing.T, h http.Handler, body string) (int, string, string) {
+func postTo(t *testing.T, h http.Handler, body string) (int, string, string) {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1", strings.NewReader(body)))
@@ -110,7 +110,7 @@ func TestEndpointStatusRule(t *testing.T) {
 	}
 	for _, c := range cases {
 		decodeErrs = nil
-		status, ct, body := post(t, ep, c.body)
+		status, ct, body := postTo(t, ep, c.body)
 		assert.Equal(t, c.status, status, c.body)
 		assert.Equal(t, "application/json", ct, c.body)
 		assert.Contains(t, body, c.want, c.body)
@@ -126,7 +126,7 @@ func TestEndpointStatusRule(t *testing.T) {
 func TestEndpointWithoutErrorAnswersFiveHundred(t *testing.T) {
 	ep := endpoint(desk{})
 	ep.Error = nil
-	status, _, body := post(t, ep, `{"$type":"testutils.Fetch","testutils.Fetch":{"URL":"nope"}}`)
+	status, _, body := postTo(t, ep, `{"$type":"testutils.Fetch","testutils.Fetch":{"URL":"nope"}}`)
 	assert.Equal(t, 500, status)
 	assert.Equal(t, "no such page\n", body)
 }

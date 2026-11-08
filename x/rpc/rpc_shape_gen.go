@@ -7,7 +7,11 @@ import (
 
 func init() {
 	shape.Register(EndpointShape())
+	shape.Register(KindShape())
 	shape.Register(StatusErrorShape())
+	shape.Register(recorderShape())
+	shape.Register(replayCacheShape())
+	shape.Register(requestKeyShape())
 }
 
 //shape:shape
@@ -47,6 +51,38 @@ func EndpointShape() shape.Shape {
 					},
 				},
 			},
+			{
+				Name: "Kind",
+				Type: &shape.RefName{
+					Name:          "Kind",
+					PkgName:       "rpc",
+					PkgImportName: "github.com/widmogrod/mkunion/x/rpc",
+				},
+			},
+			{
+				Name: "Names",
+				Type: &shape.ListLike{
+					Element: &shape.PrimitiveLike{Kind: &shape.StringLike{}},
+				},
+			},
+			{
+				Name: "ByName",
+				Type: &shape.Any{},
+			},
+		},
+	}
+}
+
+//shape:shape
+func KindShape() shape.Shape {
+	return &shape.AliasLike{
+		Name:          "Kind",
+		PkgName:       "rpc",
+		PkgImportName: "github.com/widmogrod/mkunion/x/rpc",
+		Type: &shape.PrimitiveLike{
+			Kind: &shape.NumberLike{
+				Kind: &shape.Int{},
+			},
 		},
 	}
 }
@@ -77,5 +113,32 @@ func StatusErrorShape() shape.Shape {
 				},
 			},
 		},
+	}
+}
+
+//shape:shape
+func recorderShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "recorder",
+		PkgName:       "rpc",
+		PkgImportName: "github.com/widmogrod/mkunion/x/rpc",
+	}
+}
+
+//shape:shape
+func replayCacheShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "replayCache",
+		PkgName:       "rpc",
+		PkgImportName: "github.com/widmogrod/mkunion/x/rpc",
+	}
+}
+
+//shape:shape
+func requestKeyShape() shape.Shape {
+	return &shape.StructLike{
+		Name:          "requestKey",
+		PkgName:       "rpc",
+		PkgImportName: "github.com/widmogrod/mkunion/x/rpc",
 	}
 }

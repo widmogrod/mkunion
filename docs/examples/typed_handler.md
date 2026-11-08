@@ -122,5 +122,6 @@ A union with `f.Returns` must not have type parameters; `mkunion` says so if it 
 ## Next steps
 
 - **[Effects and unions](./effect_system.md)** - programs as data, built on typed handlers
+- **[Typed handlers over HTTP](./rpc.md)** - `x/rpc`: Endpoint, Mount, Kind and Call for a union with `f.Returns`
 - **[Marshaling union in JSON](./json.md)** - the JSON the query endpoint above relies on
 - **[TypeScript](./type_script.md)** - the same union on the client

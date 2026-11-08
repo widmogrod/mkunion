@@ -155,6 +155,29 @@ func AroundQuery(next QueryHandler, around func(ctx context.Context, op Query, c
 	)
 }
 
+// QueryNames lists the $type name of every Query variant, in declaration order:
+// what a server accepts, and the routes of a per-variant transport.
+func QueryNames() []string {
+	return []string{"testutils.GetUser", "testutils.Count", "testutils.LastSeen", "testutils.Touch"}
+}
+
+// NewQueryByName returns the zero value of the variant whose $type name is name,
+// with or without the package prefix ("testutils.GetUser" or "GetUser"), and false for
+// a name that is not a Query. A transport decodes a bare payload into it.
+func NewQueryByName(name string) (Query, bool) {
+	switch name {
+	case "testutils.GetUser", "GetUser":
+		return &GetUser{}, true
+	case "testutils.Count", "Count":
+		return &Count{}, true
+	case "testutils.LastSeen", "LastSeen":
+		return &LastSeen{}, true
+	case "testutils.Touch", "Touch":
+		return &Touch{}, true
+	}
+	return nil, false
+}
+
 `, string(result))
 
 	assert.Equal(t, PkgMap{"context": "context", "fmt": "fmt", "time": "time"}, g.ExtractImports(),

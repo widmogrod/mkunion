@@ -184,6 +184,25 @@ func AroundInquiry(next InquiryHandler, around func(ctx context.Context, op Inqu
 	)
 }
 
+// InquiryNames lists the $type name of every Inquiry variant, in declaration order:
+// what a server accepts, and the routes of a per-variant transport.
+func InquiryNames() []string {
+	return []string{"testutils.Ping", "testutils.Fetch"}
+}
+
+// NewInquiryByName returns the zero value of the variant whose $type name is name,
+// with or without the package prefix ("testutils.Ping" or "Ping"), and false for
+// a name that is not a Inquiry. A transport decodes a bare payload into it.
+func NewInquiryByName(name string) (Inquiry, bool) {
+	switch name {
+	case "testutils.Ping", "Ping":
+		return &Ping{}, true
+	case "testutils.Fetch", "Fetch":
+		return &Fetch{}, true
+	}
+	return nil, false
+}
+
 // DispatchInquiry runs op on h and returns the answer as a Reply: every Inquiry
 // variant answers with a Reply variant, so the arms share one type. It is the
 // server side of the Inquiry contract; NewInquiryClient is the client side.
@@ -598,6 +617,23 @@ func AroundProbe(next ProbeHandler, around func(ctx context.Context, op Probe, c
 			return answer, err
 		},
 	)
+}
+
+// ProbeNames lists the $type name of every Probe variant, in declaration order:
+// what a server accepts, and the routes of a per-variant transport.
+func ProbeNames() []string {
+	return []string{"testutils.ReadTemp"}
+}
+
+// NewProbeByName returns the zero value of the variant whose $type name is name,
+// with or without the package prefix ("testutils.ReadTemp" or "ReadTemp"), and false for
+// a name that is not a Probe. A transport decodes a bare payload into it.
+func NewProbeByName(name string) (Probe, bool) {
+	switch name {
+	case "testutils.ReadTemp", "ReadTemp":
+		return &ReadTemp{}, true
+	}
+	return nil, false
 }
 
 // DispatchProbe runs op on h and returns the answer as a Reading: every Probe

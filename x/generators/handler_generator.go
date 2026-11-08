@@ -35,9 +35,11 @@ import (
 // that take a handler value. A variant without f.Returns answers with an error only, and
 // gets no Perform: it is handled, but it is not an operation (see x/effect.Op).
 //
-// Every handler union also gets a decorator:
+// Every handler union also gets a decorator and a name table:
 //
 //	func AroundQuery(next QueryHandler, around func(ctx, op Query, call func(ctx) (any, error)) (any, error)) QueryHandler
+//	func QueryNames() []string                       // "query.GetUser", ... in declaration order
+//	func NewQueryByName(name string) (Query, bool)   // the zero *GetUser for "query.GetUser" or "GetUser"
 //
 // When every variant answers with a variant of one other union of the same
 // package, Reply, the union is an RPC contract and three more things are
@@ -303,6 +305,7 @@ func (g *HandlerGenerator) Generate() ([]byte, error) {
 	}
 
 	g.generateAround(out, variants)
+	g.generateByName(out, variants)
 
 	answers, err := g.answerUnion(variants)
 	if err != nil {
@@ -338,6 +341,39 @@ func (g *HandlerGenerator) generateAround(out *bytes.Buffer, variants []handlerV
 		fmt.Fprintf(out, "\t\t},\n")
 	}
 	fmt.Fprintf(out, "\t)\n")
+	fmt.Fprintf(out, "}\n\n")
+}
+
+// generateByName emits XNames and NewXByName: the variants' $type names in
+// declaration order, and the zero value of the variant with a given name, for
+// a transport that picks the variant from a URL rather than from the body
+// (see x/rpc.Mount), and for a server's catalogue of what it accepts.
+func (g *HandlerGenerator) generateByName(out *bytes.Buffer, variants []handlerVariant) {
+	name := g.union.Name
+	pkg := shape.ToGoPkgName(g.union)
+	fmt.Fprintf(out, "// %sNames lists the $type name of every %s variant, in declaration order:\n", name, name)
+	fmt.Fprintf(out, "// what a server accepts, and the routes of a per-variant transport.\n")
+	fmt.Fprintf(out, "func %sNames() []string {\n", name)
+	fmt.Fprintf(out, "\treturn []string{")
+	for i, v := range variants {
+		if i > 0 {
+			fmt.Fprintf(out, ", ")
+		}
+		fmt.Fprintf(out, "%q", pkg+"."+v.name)
+	}
+	fmt.Fprintf(out, "}\n")
+	fmt.Fprintf(out, "}\n\n")
+	fmt.Fprintf(out, "// New%sByName returns the zero value of the variant whose $type name is name,\n", name)
+	fmt.Fprintf(out, "// with or without the package prefix (%q or %q), and false for\n", pkg+"."+variants[0].name, variants[0].name)
+	fmt.Fprintf(out, "// a name that is not a %s. A transport decodes a bare payload into it.\n", name)
+	fmt.Fprintf(out, "func New%sByName(name string) (%s, bool) {\n", name, name)
+	fmt.Fprintf(out, "\tswitch name {\n")
+	for _, v := range variants {
+		fmt.Fprintf(out, "\tcase %q, %q:\n", pkg+"."+v.name, v.name)
+		fmt.Fprintf(out, "\t\treturn &%s{}, true\n", v.typ)
+	}
+	fmt.Fprintf(out, "\t}\n")
+	fmt.Fprintf(out, "\treturn nil, false\n")
 	fmt.Fprintf(out, "}\n\n")
 }
 
