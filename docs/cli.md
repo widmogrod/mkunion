@@ -46,6 +46,21 @@ go tool mkunion shape-export --language swift -o ../App/Sources/Api api.go
 - `-i`, `--input-go-file` - Go file(s) to export; positional arguments work too; falls back to `$GOFILE`
 - `-v`, `--verbose` - debug-level logging
 
+## `mkunion shape-snapshot` and `mkunion breaking`
+
+Checks an API for changes that break its clients, against a snapshot taken at the last release
+([Breaking-change check](examples/breaking.md)):
+
+```
+go tool mkunion shape-snapshot -o shapes.json api.go     # at release
+go tool mkunion breaking --against shapes.json api.go    # in CI; exits 1 on a breaking change
+```
+
+- `-o`, `--output` - file the snapshot is written to (default: `shapes.json`)
+- `--against` - snapshot to compare the current shapes with
+- `-i`, `--input-go-file` - Go file(s) to snapshot or check; positional arguments work too; falls back to `$GOFILE`
+- `-v`, `--verbose` - debug-level logging
+
 ## `mkunion clean`
 
 Removes all mkunion-generated files, giving you a clean slate before regeneration:

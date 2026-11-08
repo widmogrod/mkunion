@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v2"
 )
 
 const vehicleSource = `package vehicle
@@ -129,4 +130,69 @@ func TestShapeExportUnknownLanguage(t *testing.T) {
 	err := runCLI(t, "shape-export", "--language", "rust", "-o", t.TempDir(), sourcePath)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `unknown language "rust"`)
+}
+
+const apiV1Source = `package api
+
+import "github.com/widmogrod/mkunion/f"
+
+//go:tag mkunion:"Request,answers=Response"
+type (
+	Search struct {
+		f.Returns[*Results]
+		Query string ` + "`json:\"query\"`" + `
+	}
+)
+
+//go:tag mkunion:"Response"
+type (
+	Results struct {
+		Names []string ` + "`json:\"names\"`" + `
+	}
+)
+`
+
+// runCLICapture runs the app without letting cli.Exit end the test process.
+func runCLICapture(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+	app := newApp(context.Background())
+	var out strings.Builder
+	app.Writer = &out
+	app.ExitErrHandler = func(*cli.Context, error) {}
+	err := app.RunContext(context.Background(), append([]string{"mkunion"}, args...))
+	return out.String(), err
+}
+
+func TestShapeSnapshotAndBreaking(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "api.go")
+	require.NoError(t, os.WriteFile(source, []byte(apiV1Source), 0644))
+	snapshot := filepath.Join(dir, "shapes.json")
+
+	out, err := runCLICapture(t, "shape-snapshot", "-o", snapshot, source)
+	require.NoError(t, err)
+	assert.Equal(t, snapshot+"\n", out)
+	assert.FileExists(t, snapshot)
+
+	t.Run("unchanged API passes", func(t *testing.T) {
+		out, err := runCLICapture(t, "breaking", "--against", snapshot, source)
+		require.NoError(t, err)
+		assert.Empty(t, out)
+	})
+
+	t.Run("renamed json field fails with exit code 1", func(t *testing.T) {
+		changed := strings.Replace(apiV1Source, `json:"query"`, `json:"q"`, 1)
+		require.NoError(t, os.WriteFile(source, []byte(changed), 0644))
+
+		out, err := runCLICapture(t, "breaking", "--against", snapshot, source)
+		var exit cli.ExitCoder
+		require.ErrorAs(t, err, &exit)
+		assert.Equal(t, 1, exit.ExitCode())
+		assert.Contains(t, out, source+`:9: breaking: Search.Query: json name changed "query" → "q"`)
+	})
+
+	t.Run("missing snapshot is an error", func(t *testing.T) {
+		_, err := runCLICapture(t, "breaking", "--against", filepath.Join(dir, "nope.json"), source)
+		assert.Error(t, err)
+	})
 }
