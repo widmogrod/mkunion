@@ -255,6 +255,29 @@ func AroundQuery(next QueryHandler, around func(ctx context.Context, op Query, c
 	)
 }
 
+// QueryNames lists the $type name of every Query variant, in declaration order:
+// what a server accepts, and the routes of a per-variant transport.
+func QueryNames() []string {
+	return []string{"query.GetUser", "query.FindUsers", "query.CountUsers", "query.DeleteUser"}
+}
+
+// NewQueryByName returns the zero value of the variant whose $type name is name,
+// with or without the package prefix ("query.GetUser" or "GetUser"), and false for
+// a name that is not a Query. A transport decodes a bare payload into it.
+func NewQueryByName(name string) (Query, bool) {
+	switch name {
+	case "query.GetUser", "GetUser":
+		return &GetUser{}, true
+	case "query.FindUsers", "FindUsers":
+		return &FindUsers{}, true
+	case "query.CountUsers", "CountUsers":
+		return &CountUsers{}, true
+	case "query.DeleteUser", "DeleteUser":
+		return &DeleteUser{}, true
+	}
+	return nil, false
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.CountUsers", CountUsersFromJSON, CountUsersToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/query.DeleteUser", DeleteUserFromJSON, DeleteUserToJSON)

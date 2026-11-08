@@ -673,6 +673,33 @@ func AroundMyEff(next MyEffHandler, around func(ctx context.Context, op MyEff, c
 	)
 }
 
+// MyEffNames lists the $type name of every MyEff variant, in declaration order:
+// what a server accepts, and the routes of a per-variant transport.
+func MyEffNames() []string {
+	return []string{"welcome.Log", "welcome.Now", "welcome.ReadFile", "welcome.Random", "welcome.Send", "welcome.Charge"}
+}
+
+// NewMyEffByName returns the zero value of the variant whose $type name is name,
+// with or without the package prefix ("welcome.Log" or "Log"), and false for
+// a name that is not a MyEff. A transport decodes a bare payload into it.
+func NewMyEffByName(name string) (MyEff, bool) {
+	switch name {
+	case "welcome.Log", "Log":
+		return &Log{}, true
+	case "welcome.Now", "Now":
+		return &Now{}, true
+	case "welcome.ReadFile", "ReadFile":
+		return &ReadFile{}, true
+	case "welcome.Random", "Random":
+		return &Random{}, true
+	case "welcome.Send", "Send":
+		return &Send{}, true
+	case "welcome.Charge", "Charge":
+		return &Charge{}, true
+	}
+	return nil, false
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/welcome.Charge", ChargeFromJSON, ChargeToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/welcome.Log", LogFromJSON, LogToJSON)

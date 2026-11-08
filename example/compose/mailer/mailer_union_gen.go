@@ -184,6 +184,25 @@ func AroundEffect(next EffectHandler, around func(ctx context.Context, op Effect
 	)
 }
 
+// EffectNames lists the $type name of every Effect variant, in declaration order:
+// what a server accepts, and the routes of a per-variant transport.
+func EffectNames() []string {
+	return []string{"mailer.Resolve", "mailer.Send"}
+}
+
+// NewEffectByName returns the zero value of the variant whose $type name is name,
+// with or without the package prefix ("mailer.Resolve" or "Resolve"), and false for
+// a name that is not a Effect. A transport decodes a bare payload into it.
+func NewEffectByName(name string) (Effect, bool) {
+	switch name {
+	case "mailer.Resolve", "Resolve":
+		return &Resolve{}, true
+	case "mailer.Send", "Send":
+		return &Send{}, true
+	}
+	return nil, false
+}
+
 func init() {
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/compose/mailer.Effect", EffectFromJSON, EffectToJSON)
 	shared.JSONMarshallerRegister("github.com/widmogrod/mkunion/example/compose/mailer.Resolve", ResolveFromJSON, ResolveToJSON)

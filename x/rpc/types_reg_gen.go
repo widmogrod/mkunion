@@ -7,8 +7,10 @@ import (
 )
 
 func init() {
+	shared.TypeRegistryStore[any]("any")
 	shared.TypeRegistryStore[StatusError]("github.com/widmogrod/mkunion/x/rpc.StatusError")
 	shared.TypeRegistryStore[http.Client]("net/http.Client")
 	shared.TypeRegistryStore[http.MaxBytesError]("net/http.MaxBytesError")
 	shared.TypeRegistryStore[http.Request]("net/http.Request")
+	shared.TypeRegistryStore[http.ServeMux]("net/http.ServeMux")
 }
