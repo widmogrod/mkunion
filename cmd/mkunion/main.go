@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/widmogrod/mkunion/cmd/internal/gen"
 	"github.com/widmogrod/mkunion/x/shape"
+	"github.com/widmogrod/mkunion/x/shape/breaking"
 	"github.com/widmogrod/mkunion/x/shared"
 )
 
@@ -74,6 +75,39 @@ func newApp(ctx context.Context) *cli.App {
 					verboseFlag(),
 				},
 				Action: shapeExportAction,
+			},
+			{
+				Name:        "shape-snapshot",
+				Usage:       "Save the shapes of an API, for 'mkunion breaking'",
+				ArgsUsage:   " [file.go ...]",
+				Description: "Write every union, variant, struct and alias of the given Go files as one JSON document.\nCommit it next to the API and compare later changes against it with 'mkunion breaking':\n\n   mkunion shape-snapshot -o shapes.json api.go",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "output",
+						Aliases: []string{"o"},
+						Usage:   "file to write the snapshot to",
+						Value:   "shapes.json",
+					},
+					inputGoFileFlag(`Go file(s) to snapshot; when not provided, falls back to the GOFILE environment variable`),
+					verboseFlag(),
+				},
+				Action: shapeSnapshotAction,
+			},
+			{
+				Name:        "breaking",
+				Usage:       "List wire-breaking changes against a shape snapshot",
+				ArgsUsage:   " [file.go ...]",
+				Description: "Infer the shapes of the given Go files, compare them with a snapshot from 'mkunion shape-snapshot'\nand print one finding per line as file:line: severity: subject: message.\nExits 1 when any finding is breaking for clients built against the snapshot:\n\n   mkunion breaking --against shapes.json api.go",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "against",
+						Usage:    "snapshot written by shape-snapshot",
+						Required: true,
+					},
+					inputGoFileFlag(`Go file(s) to check; when not provided, falls back to the GOFILE environment variable`),
+					verboseFlag(),
+				},
+				Action: breakingAction,
 			},
 			{
 				Name:        "watch",
@@ -216,6 +250,56 @@ func shapeExportAction(c *cli.Context) error {
 		return fmt.Errorf("failed to write to dir %s: %w", c.String("output-dir"), err)
 	}
 
+	return nil
+}
+
+func shapeSnapshotAction(c *cli.Context) error {
+	setLogLevel(c, log.ErrorLevel)
+
+	sourcePaths := sourcePathsOrExit(c)
+
+	snapshot, err := breaking.Take(sourcePaths)
+	if err != nil {
+		return err
+	}
+
+	err = breaking.WriteFile(c.String("output"), snapshot)
+	if err != nil {
+		return fmt.Errorf("shape-snapshot: %w", err)
+	}
+
+	fmt.Fprintln(c.App.Writer, c.String("output"))
+	return nil
+}
+
+func breakingAction(c *cli.Context) error {
+	setLogLevel(c, log.ErrorLevel)
+
+	sourcePaths := sourcePathsOrExit(c)
+
+	against, err := breaking.ReadFile(c.String("against"))
+	if err != nil {
+		return err
+	}
+
+	current, err := breaking.Take(sourcePaths)
+	if err != nil {
+		return err
+	}
+
+	loc, err := breaking.Locate(sourcePaths)
+	if err != nil {
+		return fmt.Errorf("breaking: %w", err)
+	}
+
+	findings := breaking.Compare(against, current, loc)
+	for _, finding := range findings {
+		fmt.Fprintln(c.App.Writer, finding.String())
+	}
+
+	if n := breaking.CountBreaking(findings); n > 0 {
+		return cli.Exit(fmt.Sprintf("breaking: %d breaking change(s)", n), 1)
+	}
 	return nil
 }
 
