@@ -385,9 +385,14 @@ public enum Testasset {
 
     /// A Query variant that names its answer, from f.Returns[R] in Go.
     public protocol QueryOperation: Codable, Hashable, Sendable {
-        associatedtype Answer: Codable
+        associatedtype Answer: Codable & AnswerAnswer
         /// The operation as its union, so it carries its $type on the wire.
         var asQuery: Query { get }
+    }
+
+    /// What a Answer unwraps to: one of its variants, or a union of some of them.
+    public protocol AnswerAnswer {
+        init?(_ answer: Answer)
     }
 
     /// The Answer carried a variant other than the one the operation names, such as an error variant.
@@ -400,7 +405,7 @@ public enum Testasset {
     /// the typed answer. Any other variant is thrown as QueryUnexpectedAnswer.
     public static func send<Op: QueryOperation>(_ op: Op, via transport: (Query) async throws -> Answer) async throws -> Op.Answer {
         let response = try await transport(op.asQuery)
-        if let answer: Op.Answer = response.payload() { return answer }
+        if let answer = Op.Answer(response) { return answer }
         throw QueryUnexpectedAnswer(answer: response)
     }
 }
@@ -410,3 +415,31 @@ extension Testasset.Ping: Testasset.QueryOperation {}
 extension Testasset.Find: Testasset.QueryOperation {}
 
 extension Testasset.Open: Testasset.QueryOperation {}
+
+extension Testasset.Pong: Testasset.AnswerAnswer {
+    public init?(_ answer: Testasset.Answer) {
+        guard case .pong(let value) = answer else { return nil }
+        self = value
+    }
+}
+
+extension Testasset.Found: Testasset.AnswerAnswer {
+    public init?(_ answer: Testasset.Answer) {
+        guard case .found(let value) = answer else { return nil }
+        self = value
+    }
+}
+
+extension Testasset.Document: Testasset.AnswerAnswer {
+    public init?(_ answer: Testasset.Answer) {
+        guard case .document(let value) = answer else { return nil }
+        self = value
+    }
+}
+
+extension Testasset.Failure: Testasset.AnswerAnswer {
+    public init?(_ answer: Testasset.Answer) {
+        guard case .failure(let value) = answer else { return nil }
+        self = value
+    }
+}
