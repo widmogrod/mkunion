@@ -2,20 +2,12 @@
 package shape
 
 func init() {
-	Register(TypeScriptOptionsShape())
 	Register(TypeScriptRendererShape())
-	Register(packageImportNameShape())
-	Register(packageNameShape())
-	Register(shapeNameShape())
-}
-
-//shape:shape
-func TypeScriptOptionsShape() Shape {
-	return &StructLike{
-		Name:          "TypeScriptOptions",
-		PkgName:       "shape",
-		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-	}
+	Register(answerShape())
+	Register(tsFieldShape())
+	Register(tsOperationShape())
+	Register(tsPackageShape())
+	Register(tsWriterShape())
 }
 
 //shape:shape
@@ -28,34 +20,46 @@ func TypeScriptRendererShape() Shape {
 }
 
 //shape:shape
-func packageImportNameShape() Shape {
-	return &AliasLike{
-		Name:          "packageImportName",
+func answerShape() Shape {
+	return &StructLike{
+		Name:          "answer",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		IsAlias:       true,
-		Type:          &PrimitiveLike{Kind: &StringLike{}},
 	}
 }
 
 //shape:shape
-func packageNameShape() Shape {
-	return &AliasLike{
-		Name:          "packageName",
+func tsFieldShape() Shape {
+	return &StructLike{
+		Name:          "tsField",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		IsAlias:       true,
-		Type:          &PrimitiveLike{Kind: &StringLike{}},
 	}
 }
 
 //shape:shape
-func shapeNameShape() Shape {
-	return &AliasLike{
-		Name:          "shapeName",
+func tsOperationShape() Shape {
+	return &StructLike{
+		Name:          "tsOperation",
 		PkgName:       "shape",
 		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
-		IsAlias:       true,
-		Type:          &PrimitiveLike{Kind: &StringLike{}},
+	}
+}
+
+//shape:shape
+func tsPackageShape() Shape {
+	return &StructLike{
+		Name:          "tsPackage",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
+	}
+}
+
+//shape:shape
+func tsWriterShape() Shape {
+	return &StructLike{
+		Name:          "tsWriter",
+		PkgName:       "shape",
+		PkgImportName: "github.com/widmogrod/mkunion/x/shape",
 	}
 }

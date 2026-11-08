@@ -4,7 +4,6 @@ package shape
 import (
 	"github.com/widmogrod/mkunion/x/shared"
 	"go/ast"
-	"strings"
 )
 
 func init() {
@@ -37,7 +36,6 @@ func init() {
 	shared.TypeRegistryStore[StructLike]("github.com/widmogrod/mkunion/x/shape.StructLike")
 	shared.TypeRegistryStore[SwiftRenderer]("github.com/widmogrod/mkunion/x/shape.SwiftRenderer")
 	shared.TypeRegistryStore[TypeParam]("github.com/widmogrod/mkunion/x/shape.TypeParam")
-	shared.TypeRegistryStore[TypeScriptOptions]("github.com/widmogrod/mkunion/x/shape.TypeScriptOptions")
 	shared.TypeRegistryStore[TypeScriptRenderer]("github.com/widmogrod/mkunion/x/shape.TypeScriptRenderer")
 	shared.TypeRegistryStore[UInt]("github.com/widmogrod/mkunion/x/shape.UInt")
 	shared.TypeRegistryStore[UInt16]("github.com/widmogrod/mkunion/x/shape.UInt16")
@@ -60,5 +58,4 @@ func init() {
 	shared.TypeRegistryStore[ast.ValueSpec]("go/ast.ValueSpec")
 	shared.TypeRegistryStore[int]("int")
 	shared.TypeRegistryStore[string]("string")
-	shared.TypeRegistryStore[strings.Builder]("strings.Builder")
 }
