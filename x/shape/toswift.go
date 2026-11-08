@@ -26,8 +26,11 @@ import (
 //
 // A variant that embeds f.Returns[R] gets a conformance to the union's
 // <Union>Operation protocol with R as its Answer; when every answer is a
-// variant of one union, a generic send(_:via:) is emitted that posts the
-// request union through a transport and unwraps the typed answer.
+// variant of one union, or a union whose variants alias variants of that one
+// union (type GetSeriesSeries = Series), a generic send(_:via:) is emitted
+// that posts the request union through a transport and unwraps the typed
+// answer: a <Answer>Answer protocol with init?(_:) from the answer union,
+// which every answer variant and every such sub-union conforms to.
 //
 // Generic types are not supported yet: a shape with type parameters is an
 // error. Map keys other than string are written as String, which is what Go
@@ -192,7 +195,7 @@ func (r *SwiftRenderer) Render() (map[string]string, error) {
 		}
 		fileOf[fileName] = importName
 
-		w := &swiftWriter{r: r, pkg: pkg}
+		w := &swiftWriter{r: r, pkg: pkg, declared: map[string]bool{}, conformed: map[string]bool{}}
 		files[fileName] = w.renderPackage()
 	}
 	files["MkunionJSON.swift"] = swiftPrelude
@@ -225,6 +228,10 @@ type swiftWriter struct {
 	r   *SwiftRenderer
 	pkg *swiftPackage
 	b   strings.Builder
+	// declared and conformed keep the <Answer>Answer protocol and its
+	// conformances to one copy when several request unions share an answer union.
+	declared  map[string]bool
+	conformed map[string]bool
 }
 
 func (w *swiftWriter) line(indent int, format string, args ...any) {
@@ -500,16 +507,29 @@ func operationName(union *UnionLike) string {
 func (w *swiftWriter) renderOperationProtocol(x *UnionLike) {
 	union := swiftTypeName(x.Name)
 	as := "as" + union
+	plan, ok := w.answerPlan(x)
 	w.line(1, "/// A %s variant that names its answer, from f.Returns[R] in Go.", union)
 	w.line(1, "public protocol %s: Codable, Hashable, Sendable {", operationName(x))
-	w.line(2, "associatedtype Answer: Codable")
+	if ok {
+		w.line(2, "associatedtype Answer: Codable & %s", plan.protocol)
+	} else {
+		w.line(2, "associatedtype Answer: Codable")
+	}
 	w.line(2, "/// The operation as its union, so it carries its $type on the wire.")
 	w.line(2, "var %s: %s { get }", as, union)
 	w.line(1, "}")
 
-	answerUnion, ok := w.answerUnionOf(x)
 	if !ok {
 		return
+	}
+	answerUnion := plan.name
+	if !w.declared[plan.protocol] {
+		w.declared[plan.protocol] = true
+		w.blank()
+		w.line(1, "/// What a %s unwraps to: one of its variants, or a union of some of them.", answerUnion)
+		w.line(1, "public protocol %s {", plan.protocol)
+		w.line(2, "init?(_ answer: %s)", answerUnion)
+		w.line(1, "}")
 	}
 	w.blank()
 	w.line(1, "/// The %s carried a variant other than the one the operation names, such as an error variant.", answerUnion)
@@ -522,9 +542,52 @@ func (w *swiftWriter) renderOperationProtocol(x *UnionLike) {
 	w.line(1, "/// the typed answer. Any other variant is thrown as %sUnexpectedAnswer.", union)
 	w.line(1, "public static func send<Op: %s>(_ op: Op, via transport: (%s) async throws -> %s) async throws -> Op.Answer {", operationName(x), union, answerUnion)
 	w.line(2, "let response = try await transport(op.%s)", as)
-	w.line(2, "if let answer: Op.Answer = response.payload() { return answer }")
+	w.line(2, "if let answer = Op.Answer(response) { return answer }")
 	w.line(2, "throw %sUnexpectedAnswer(answer: response)", union)
 	w.line(1, "}")
+}
+
+// renderAnswerConformances declares, at file scope, how each answer is taken
+// out of the answer union: a variant by its case, a sub-union by the cases
+// of the variants it aliases.
+func (w *swiftWriter) renderAnswerConformances(x *UnionLike) {
+	plan, ok := w.answerPlan(x)
+	if !ok {
+		return
+	}
+	ns := swiftPkgName(w.pkg.name)
+	for _, v := range plan.union.Variant {
+		st, ok := v.(*StructLike)
+		if !ok || w.conformed[st.Name] {
+			continue
+		}
+		w.conformed[st.Name] = true
+		w.blank()
+		w.line(0, "extension %s.%s: %s.%s {", ns, swiftTypeName(st.Name), ns, plan.protocol)
+		w.line(1, "public init?(_ answer: %s.%s) {", ns, swiftTypeName(plan.union.Name))
+		w.line(2, "guard case .%s(let value) = answer else { return nil }", swiftCaseName(st.Name))
+		w.line(2, "self = value")
+		w.line(1, "}")
+		w.line(0, "}")
+	}
+	for _, sub := range plan.subs {
+		if w.conformed[sub.Name] {
+			continue
+		}
+		w.conformed[sub.Name] = true
+		w.blank()
+		w.line(0, "extension %s.%s: %s.%s {", ns, swiftTypeName(sub.Name), ns, plan.protocol)
+		w.line(1, "public init?(_ answer: %s.%s) {", ns, swiftTypeName(plan.union.Name))
+		w.line(2, "switch answer {")
+		for _, v := range sub.Variant {
+			leaf, _ := w.leafOf(v)
+			w.line(2, "case .%s(let value): self = .%s(value)", swiftCaseName(leaf.Name), swiftCaseName(Name(v)))
+		}
+		w.line(2, "default: return nil")
+		w.line(2, "}")
+		w.line(1, "}")
+		w.line(0, "}")
+	}
 }
 
 // renderOperationConformances declares, at file scope, that each variant with
@@ -542,6 +605,7 @@ func (w *swiftWriter) renderOperationConformances(x *UnionLike) {
 		w.blank()
 		w.line(0, "extension %s.%s: %s.%s {}", ns, swiftTypeName(st.Name), ns, operationName(x))
 	}
+	w.renderAnswerConformances(x)
 }
 
 // returnsOfStruct is the answer type a variant declares with f.Returns, if any.
@@ -554,10 +618,21 @@ func returnsOfStruct(x *StructLike) (Shape, bool) {
 	return nil, false
 }
 
-// answerUnionOf finds the one union every f.Returns answer of x is a variant
-// of, as its Swift type seen from this package.
-func (w *swiftWriter) answerUnionOf(x *UnionLike) (string, bool) {
+// swiftAnswerPlan is the answer union of a request union and how each answer
+// is taken out of it.
+type swiftAnswerPlan struct {
+	union    *UnionLike   // the answer union
+	name     string       // its Swift type seen from this package
+	protocol string       // <Union>Answer: the protocol every answer conforms to
+	subs     []*UnionLike // answers that are unions of aliased answer-union variants
+}
+
+// answerPlan finds the one union every f.Returns answer of x is a variant
+// of, directly or through a union whose variants alias its variants.
+func (w *swiftWriter) answerPlan(x *UnionLike) (*swiftAnswerPlan, bool) {
 	var found *RefName
+	var subs []*UnionLike
+	seen := map[string]bool{}
 	for _, v := range x.Variant {
 		st, ok := v.(*StructLike)
 		if !ok {
@@ -570,26 +645,74 @@ func (w *swiftWriter) answerUnionOf(x *UnionLike) (string, bool) {
 			}
 			ref, ok := unwrapPointer(answer).(*RefName)
 			if !ok {
-				return "", false
+				return nil, false
 			}
 			shape, ok := w.r.resolve(ref)
 			if !ok {
-				return "", false
+				return nil, false
 			}
-			unionRef := RetrieveVariantTypeRef(shape)
-			if unionRef == nil {
-				return "", false
+			leaves := []Shape{shape}
+			if sub, isUnion := shape.(*UnionLike); isUnion {
+				leaves = sub.Variant
+				if !seen[sub.Name] {
+					seen[sub.Name] = true
+					subs = append(subs, sub)
+				}
 			}
-			if found != nil && (found.Name != unionRef.Name || found.PkgImportName != unionRef.PkgImportName) {
-				return "", false
+			for _, leaf := range leaves {
+				st, ok := w.leafOf(leaf)
+				if !ok {
+					return nil, false
+				}
+				unionRef := RetrieveVariantTypeRef(st)
+				if unionRef == nil {
+					return nil, false
+				}
+				if found != nil && (found.Name != unionRef.Name || found.PkgImportName != unionRef.PkgImportName) {
+					return nil, false
+				}
+				found = unionRef
 			}
-			found = unionRef
 		}
 	}
 	if found == nil {
-		return "", false
+		return nil, false
 	}
-	return w.localName(found.PkgName, found.PkgImportName, found.Name), true
+	resolved, ok := w.r.resolve(found)
+	if !ok {
+		return nil, false
+	}
+	union, ok := resolved.(*UnionLike)
+	if !ok {
+		return nil, false
+	}
+	return &swiftAnswerPlan{
+		union:    union,
+		name:     w.localName(found.PkgName, found.PkgImportName, found.Name),
+		protocol: swiftTypeName(found.Name) + "Answer",
+		subs:     subs,
+	}, true
+}
+
+// leafOf is the struct a variant stands for: itself, or for a type alias the
+// struct it aliases.
+func (w *swiftWriter) leafOf(v Shape) (*StructLike, bool) {
+	switch y := v.(type) {
+	case *StructLike:
+		return y, true
+	case *AliasLike:
+		ref, ok := y.Type.(*RefName)
+		if !ok || !y.IsAlias {
+			return nil, false
+		}
+		resolved, ok := w.r.resolve(ref)
+		if !ok {
+			return nil, false
+		}
+		st, ok := resolved.(*StructLike)
+		return st, ok
+	}
+	return nil, false
 }
 
 func unwrapPointer(x Shape) Shape {

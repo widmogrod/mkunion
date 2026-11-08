@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/widmogrod/mkunion/f"
 	tu "github.com/widmogrod/mkunion/x/generators/testutils"
 	"github.com/widmogrod/mkunion/x/shared"
 )
@@ -26,6 +27,18 @@ func (d desk) HandleFetch(_ context.Context, op *tu.Fetch) (*tu.Page, error) {
 		return nil, errors.New("no such page")
 	}
 	return &tu.Page{Body: body}, nil
+}
+
+func (d desk) HandleLookup(_ context.Context, op *tu.Lookup) (f.Result[*tu.Page, tu.LookupRefusal], error) {
+	body, ok := d.pages[op.Key]
+	if !ok {
+		return f.MkErr[*tu.Page, tu.LookupRefusal](&tu.Missing{Key: op.Key}), nil
+	}
+	return f.MkOk[tu.LookupRefusal](&tu.Page{Body: body}), nil
+}
+
+func (desk) HandleScan(context.Context, *tu.Scan) (tu.ScanAnswer, error) {
+	return &tu.Page{Body: "all"}, nil
 }
 
 // endpoint is the whole server side: the generated DispatchInquiry plus the
@@ -59,6 +72,14 @@ func assertClient(t *testing.T, client tu.InquiryHandler) {
 	var unexpected *tu.InquiryUnexpectedAnswer
 	require.ErrorAs(t, err, &unexpected)
 	assert.Equal(t, &tu.Fetch{URL: "missing"}, unexpected.Inquiry)
+
+	// A refusal rides the same wire as an answer: the client gets the Result back.
+	looked, err := Call(ctx, client, &tu.Lookup{Key: "missing"}) // looked is f.Result[*tu.Page, tu.LookupRefusal]
+	require.NoError(t, err)
+	assert.Equal(t, &f.Err[*tu.Page, tu.LookupRefusal]{Error: &tu.Missing{Key: "missing"}}, looked)
+	scanned, err := Call(ctx, client, &tu.Scan{}) // scanned is tu.ScanAnswer
+	require.NoError(t, err)
+	assert.Equal(t, &tu.Page{Body: "all"}, scanned)
 }
 
 func TestClientOverHTTPAndClientOverSendAreTheSameClient(t *testing.T) {

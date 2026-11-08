@@ -208,6 +208,13 @@ func TestHandlerGenerator_rpcLayerWhenEveryAnswerIsAVariantOfOneUnion(t *testing
 		"type InquiryUnexpectedAnswer struct {\n\tInquiry Inquiry\n\tReply Reply\n}",
 		"func (e *InquiryUnexpectedAnswer) Unwrap() error {",
 		"func AroundInquiry(next InquiryHandler, around func(ctx context.Context, op Inquiry, call func(ctx context.Context) (any, error)) (any, error)) InquiryHandler {",
+		// f.Result[A, E]: Ok unwraps to A, Err lifts E onto Reply through E's Match.
+		"\t\t\tcase *f.Ok[*Page,LookupRefusal]:\n\t\t\t\treturn r.Value, nil",
+		"\t\t\t\treturn MatchLookupRefusalR1[Reply](r.Error, func(x *LookupMissing) Reply { return x }, func(x *LookupRefused) Reply { return x }), nil",
+		"\t\treturn &f.Err[*Page,LookupRefusal]{Error: refusal}, nil",
+		// a union answer: lifted onto Reply, asserted back on the client.
+		"\t\t\treturn MatchScanAnswerR1[Reply](res, func(x *ScanPage) Reply { return x }, func(x *ScanMissing) Reply { return x }), nil",
+		"\tif answer, ok := res.(ScanAnswer); ok {",
 	} {
 		assert.Contains(t, string(tagged), want)
 	}
@@ -238,6 +245,22 @@ func TestHandlerGenerator_answersOptionRefusesADriftedVariant(t *testing.T) {
 	silent.Variant = append(append([]shape.Shape{}, inquiry.Variant...), &shape.StructLike{Name: "Nudge", PkgName: inquiry.PkgName, PkgImportName: inquiry.PkgImportName})
 	_, err = NewHandlerGenerator(&silent).WithUnions(unions).Generate()
 	assert.EqualError(t, err, "generators.HandlerGenerator.Generate: union Inquiry: variant Nudge has no f.Returns, but answers=Reply needs every variant to answer with a Reply")
+
+	// A refusal union with a variant that has no place in Reply is an error too.
+	fpkg := "github.com/widmogrod/mkunion/f"
+	peek := &shape.StructLike{Name: "Peek", PkgName: inquiry.PkgName, PkgImportName: inquiry.PkgImportName, Fields: []*shape.FieldLike{{
+		Name: "Returns",
+		Type: &shape.RefName{Name: "Returns", PkgName: "f", PkgImportName: fpkg, Indexed: []shape.Shape{
+			&shape.RefName{Name: "Result", PkgName: "f", PkgImportName: fpkg, Indexed: []shape.Shape{
+				&shape.PointerLike{Type: &shape.RefName{Name: "Page", PkgName: inquiry.PkgName, PkgImportName: inquiry.PkgImportName}},
+				&shape.RefName{Name: "Reading", PkgName: inquiry.PkgName, PkgImportName: inquiry.PkgImportName},
+			}},
+		}},
+	}}}
+	refusing := *inquiry
+	refusing.Variant = append(append([]shape.Shape{}, inquiry.Variant...), peek)
+	_, err = NewHandlerGenerator(&refusing).WithUnions(unions).Generate()
+	assert.EqualError(t, err, "generators.HandlerGenerator.Generate: union Inquiry: variant Peek refuses with Reading, whose variant Celsius is not a variant of Reply")
 
 	// The same drift without the option is not an error: the RPC layer is
 	// simply not generated, and the code that called DispatchInquiry stops compiling.

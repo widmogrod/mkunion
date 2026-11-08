@@ -153,6 +153,6 @@ func TestNamesIsTheCatalogueOfAMount(t *testing.T) {
 		&Endpoint[tu.Inquiry, tu.Reply]{Names: tu.InquiryNames()},
 		&Endpoint[tu.Probe, tu.Reading]{Names: tu.ProbeNames()},
 	}
-	assert.Equal(t, []string{"testutils.Ping", "testutils.Fetch", "testutils.ReadTemp"}, Names(eps...))
+	assert.Equal(t, []string{"testutils.Ping", "testutils.Fetch", "testutils.Lookup", "testutils.Scan", "testutils.ReadTemp"}, Names(eps...))
 	assert.Nil(t, RequestFrom(context.Background()), "off HTTP there is no request")
 }

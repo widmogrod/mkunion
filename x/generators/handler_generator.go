@@ -54,6 +54,18 @@ import (
 // it instead, and then a variant whose answer is not a Reply is an error at
 // generation time, which is where a drifted contract should fail.
 //
+// Two more answer forms let a variant refuse with a value instead of an error:
+//
+//	Lookup struct{ f.Returns[f.Result[*Page, LookupRefusal]] }  // answers *Page, refuses with a LookupRefusal
+//	Scan   struct{ f.Returns[ScanAnswer] }                      // answers with any ScanAnswer variant
+//
+// In both, every leaf must be a variant of the answer union, so it has a place
+// on the wire: *Page is a Reply variant, and LookupRefusal and ScanAnswer are
+// unions of the same file whose variants are Reply variants, usually through
+// type aliases (type LookupMissing = Missing) because a struct is declared in
+// one union block only. DispatchX unwraps the Result or the union onto the
+// answer union; NewXClient rebuilds it from the Reply that comes back.
+//
 // Nothing generated has a default. A handler is complete or it does not compile.
 type HandlerGenerator struct {
 	union    *shape.UnionLike
@@ -86,6 +98,30 @@ type handlerVariant struct {
 	typ    string // GetUser, as written in this package
 	answer string // *User, as written in this package; "" for none
 	shape  shape.Shape
+	// result is set when the answer is f.Result[A, E]: A and E as shapes and
+	// as written in this package, and the Ok and Err types of the pair.
+	result *resultAnswer
+}
+
+// resultAnswer is an answer of the form f.Result[A, E].
+type resultAnswer struct {
+	ok, refuse       shape.Shape
+	okTyp, refuseTyp string
+	okCase, errCase  string // *f.Ok[A, E], *f.Err[A, E]
+}
+
+const (
+	resultName          = "Result"
+	resultPkgImportName = "github.com/widmogrod/mkunion/f"
+)
+
+// resultOf reports whether answer is f.Result[A, E], and gives A and E.
+func resultOf(answer shape.Shape) (a, e shape.Shape, ok bool) {
+	ref, isRef := answer.(*shape.RefName)
+	if !isRef || ref.Name != resultName || ref.PkgImportName != resultPkgImportName || len(ref.Indexed) != 2 {
+		return nil, nil, false
+	}
+	return ref.Indexed[0], ref.Indexed[1], true
 }
 
 // results is the method's result list: "(R, error)" or "error".
@@ -118,6 +154,16 @@ func (g *HandlerGenerator) variants() ([]handlerVariant, error) {
 				g.pkgUsed = MergePkgMaps(g.pkgUsed, shape.ExtractPkgImportNames(r))
 				hv.answer = shape.ToGoTypeName(r, root)
 				hv.shape = r
+				if a, e, ok := resultOf(r); ok {
+					ref := r.(*shape.RefName)
+					okRef := &shape.RefName{Name: "Ok", PkgName: ref.PkgName, PkgImportName: ref.PkgImportName, Indexed: ref.Indexed}
+					errRef := &shape.RefName{Name: "Err", PkgName: ref.PkgName, PkgImportName: ref.PkgImportName, Indexed: ref.Indexed}
+					hv.result = &resultAnswer{
+						ok: a, refuse: e,
+						okTyp: shape.ToGoTypeName(a, root), refuseTyp: shape.ToGoTypeName(e, root),
+						okCase: "*" + shape.ToGoTypeName(okRef, root), errCase: "*" + shape.ToGoTypeName(errRef, root),
+					}
+				}
 				break
 			}
 		}
@@ -141,42 +187,102 @@ func (g *HandlerGenerator) answerUnion(variants []handlerVariant) (*shape.UnionL
 		}
 	}
 	if named != "" {
-		var answers *shape.UnionLike
-		for _, u := range g.siblings {
-			if u.Name == named && u.PkgImportName == g.union.PkgImportName {
-				answers = u
-			}
-		}
-		if answers == nil {
-			return nil, fmt.Errorf("union %s: answers=%s names no union in package %s; the answer union must be declared in the same package", g.union.Name, named, shape.ToGoPkgName(g.union))
-		}
-		for _, v := range variants {
-			if v.shape == nil {
-				return nil, fmt.Errorf("union %s: variant %s has no f.Returns, but answers=%s needs every variant to answer with a %s", g.union.Name, v.name, named, named)
-			}
-			if !isVariantOf(v.shape, answers) {
-				return nil, fmt.Errorf("union %s: variant %s answers with %s, which is not a variant of %s", g.union.Name, v.name, v.answer, named)
-			}
-		}
-		return answers, nil
+		return g.namedAnswerUnion(named, variants)
 	}
+	return g.inferAnswerUnion(variants), nil
+}
+
+// namedAnswerUnion is the answers= union, after checking that every variant
+// answers with one of its variants.
+func (g *HandlerGenerator) namedAnswerUnion(named string, variants []handlerVariant) (*shape.UnionLike, error) {
+	var answers *shape.UnionLike
+	for _, u := range g.siblings {
+		if u.Name == named && u.PkgImportName == g.union.PkgImportName {
+			answers = u
+		}
+	}
+	if answers == nil {
+		return nil, fmt.Errorf("union %s: answers=%s names no union in package %s; the answer union must be declared in the same package", g.union.Name, named, shape.ToGoPkgName(g.union))
+	}
+	for _, v := range variants {
+		if err := g.checkAnswer(v, answers, named); err != nil {
+			return nil, err
+		}
+	}
+	return answers, nil
+}
+
+// checkAnswer is the error when v does not answer with a variant of answers:
+// a plain *V must be a variant, a union answer must have only variants of
+// answers as leaves, and an f.Result must hold both.
+func (g *HandlerGenerator) checkAnswer(v handlerVariant, answers *shape.UnionLike, named string) error {
+	if v.shape == nil {
+		return fmt.Errorf("union %s: variant %s has no f.Returns, but answers=%s needs every variant to answer with a %s", g.union.Name, v.name, named, named)
+	}
+	if v.result != nil {
+		if !isVariantOf(v.result.ok, answers) {
+			return fmt.Errorf("union %s: variant %s answers with %s, whose Ok type %s is not a variant of %s", g.union.Name, v.name, v.answer, v.result.okTyp, named)
+		}
+		refusal := g.sibling(v.result.refuse)
+		if refusal == nil {
+			return fmt.Errorf("union %s: variant %s refuses with %s, which is not a union of this file", g.union.Name, v.name, v.result.refuseTyp)
+		}
+		if bad := variantNotIn(refusal, answers); bad != "" {
+			return fmt.Errorf("union %s: variant %s refuses with %s, whose variant %s is not a variant of %s", g.union.Name, v.name, v.result.refuseTyp, bad, named)
+		}
+		return nil
+	}
+	if u := g.sibling(v.shape); u != nil {
+		if bad := variantNotIn(u, answers); bad != "" {
+			return fmt.Errorf("union %s: variant %s answers with %s, whose variant %s is not a variant of %s", g.union.Name, v.name, v.answer, bad, named)
+		}
+		return nil
+	}
+	if !isVariantOf(v.shape, answers) {
+		return fmt.Errorf("union %s: variant %s answers with %s, which is not a variant of %s", g.union.Name, v.name, v.answer, named)
+	}
+	return nil
+}
+
+// inferAnswerUnion is the one sibling union every variant answers into, or
+// nil when a variant has no answer or the variants do not agree.
+func (g *HandlerGenerator) inferAnswerUnion(variants []handlerVariant) *shape.UnionLike {
 	var found *shape.UnionLike
 	for _, v := range variants {
 		if v.shape == nil {
-			return nil, nil
+			return nil
 		}
-		var owner *shape.UnionLike
-		for _, u := range g.siblings {
-			if u != g.union && isVariantOf(v.shape, u) {
-				owner = u
-			}
-		}
+		owner := g.ownerOf(v)
 		if owner == nil || (found != nil && found != owner) {
-			return nil, nil
+			return nil
 		}
 		found = owner
 	}
-	return found, nil
+	return found
+}
+
+// ownerOf is the sibling union v answers into, or nil.
+func (g *HandlerGenerator) ownerOf(v handlerVariant) *shape.UnionLike {
+	var owner *shape.UnionLike
+	for _, u := range g.siblings {
+		if u == g.union {
+			continue
+		}
+		switch {
+		case v.result != nil:
+			refusal := g.sibling(v.result.refuse)
+			if isVariantOf(v.result.ok, u) && refusal != nil && refusal != u && variantNotIn(refusal, u) == "" {
+				owner = u
+			}
+		case g.sibling(v.shape) != nil:
+			if a := g.sibling(v.shape); a != u && variantNotIn(a, u) == "" {
+				owner = u
+			}
+		case isVariantOf(v.shape, u):
+			owner = u
+		}
+	}
+	return owner
 }
 
 // isVariantOf reports whether answer is *V for a variant V of u.
@@ -189,13 +295,58 @@ func isVariantOf(answer shape.Shape, u *shape.UnionLike) bool {
 	if !ok {
 		return false
 	}
+	return hasLeaf(u, ref.Name, ref.PkgImportName)
+}
+
+// sibling is the union of this file that answer names, or nil.
+func (g *HandlerGenerator) sibling(answer shape.Shape) *shape.UnionLike {
+	ref, ok := answer.(*shape.RefName)
+	if !ok {
+		return nil
+	}
+	for _, u := range g.siblings {
+		if u.Name == ref.Name && u.PkgImportName == ref.PkgImportName {
+			return u
+		}
+	}
+	return nil
+}
+
+// leafOf is the struct a variant stands for: itself, or for a type alias
+// (type LookupMissing = Missing) the struct it aliases. A struct is declared
+// in one union block, so an alias is how one struct is a variant of two unions.
+func leafOf(v shape.Shape) (name, pkgImportName string, ok bool) {
+	switch x := v.(type) {
+	case *shape.StructLike:
+		return x.Name, x.PkgImportName, true
+	case *shape.AliasLike:
+		if ref, isRef := x.Type.(*shape.RefName); isRef && x.IsAlias {
+			return ref.Name, ref.PkgImportName, true
+		}
+	}
+	return "", "", false
+}
+
+// hasLeaf reports whether u has a variant that is, or aliases, the named struct.
+func hasLeaf(u *shape.UnionLike, name, pkgImportName string) bool {
 	for _, v := range u.Variant {
-		st, ok := v.(*shape.StructLike)
-		if ok && st.Name == ref.Name && st.PkgImportName == ref.PkgImportName {
+		if n, p, ok := leafOf(v); ok && n == name && p == pkgImportName {
 			return true
 		}
 	}
 	return false
+}
+
+// variantNotIn names the first variant of sub whose leaf is not a variant of
+// u, or "" when every variant of sub has a place in u.
+func variantNotIn(sub, u *shape.UnionLike) string {
+	for _, v := range sub.Variant {
+		n, p, ok := leafOf(v)
+		if !ok || !hasLeaf(u, n, p) {
+			return shape.ToGoTypeName(v, shape.WithRootPkgName(shape.ToGoPkgName(sub)))
+		}
+	}
+	return ""
 }
 
 // ExtractImports lists the packages the generated code names: context, fmt
@@ -391,7 +542,31 @@ func (g *HandlerGenerator) generateRPC(out *bytes.Buffer, variants []handlerVari
 	fmt.Fprintf(out, "func Dispatch%s(ctx context.Context, h %sHandler, op %s) (%s, error) {\n", name, name, name, ans)
 	fmt.Fprintf(out, "\treturn %s[%s, error](op,\n", MatchUnionFuncName(g.union, 2), ans)
 	for _, v := range variants {
-		fmt.Fprintf(out, "\t\tfunc(x *%s) (%s, error) { return h.Handle%s(ctx, x) },\n", v.typ, ans, v.name)
+		switch {
+		case v.result != nil:
+			// Ok carries the answer variant; Err carries a refusal union whose
+			// every variant is an answer variant, so its Match lifts it.
+			fmt.Fprintf(out, "\t\tfunc(x *%s) (%s, error) {\n", v.typ, ans)
+			fmt.Fprintf(out, "\t\t\tres, err := h.Handle%s(ctx, x)\n", v.name)
+			fmt.Fprintf(out, "\t\t\tif err != nil {\n\t\t\t\treturn nil, err\n\t\t\t}\n")
+			fmt.Fprintf(out, "\t\t\tswitch r := res.(type) {\n")
+			fmt.Fprintf(out, "\t\t\tcase %s:\n\t\t\t\treturn r.Value, nil\n", v.result.okCase)
+			fmt.Fprintf(out, "\t\t\tcase %s:\n", v.result.errCase)
+			fmt.Fprintf(out, "\t\t\t\tif r.Error == nil {\n\t\t\t\t\treturn nil, fmt.Errorf(\"%s: %s refused with a nil %s\")\n\t\t\t\t}\n", pkg, v.name, v.result.refuseTyp)
+			fmt.Fprintf(out, "\t\t\t\treturn %s, nil\n", g.liftUnion(g.sibling(v.result.refuse), "r.Error", ans, root))
+			fmt.Fprintf(out, "\t\t\t}\n")
+			fmt.Fprintf(out, "\t\t\treturn nil, fmt.Errorf(\"%s: %s answered with %%T, want %s\", res)\n", pkg, v.name, v.answer)
+			fmt.Fprintf(out, "\t\t},\n")
+		case g.sibling(v.shape) != nil:
+			fmt.Fprintf(out, "\t\tfunc(x *%s) (%s, error) {\n", v.typ, ans)
+			fmt.Fprintf(out, "\t\t\tres, err := h.Handle%s(ctx, x)\n", v.name)
+			fmt.Fprintf(out, "\t\t\tif err != nil {\n\t\t\t\treturn nil, err\n\t\t\t}\n")
+			fmt.Fprintf(out, "\t\t\tif res == nil {\n\t\t\t\treturn nil, fmt.Errorf(\"%s: %s answered with a nil %s\")\n\t\t\t}\n", pkg, v.name, v.answer)
+			fmt.Fprintf(out, "\t\t\treturn %s, nil\n", g.liftUnion(g.sibling(v.shape), "res", ans, root))
+			fmt.Fprintf(out, "\t\t},\n")
+		default:
+			fmt.Fprintf(out, "\t\tfunc(x *%s) (%s, error) { return h.Handle%s(ctx, x) },\n", v.typ, ans, v.name)
+		}
 	}
 	fmt.Fprintf(out, "\t)\n")
 	fmt.Fprintf(out, "}\n\n")
@@ -414,9 +589,18 @@ func (g *HandlerGenerator) generateRPC(out *bytes.Buffer, variants []handlerVari
 		fmt.Fprintf(out, "\tif err != nil {\n")
 		fmt.Fprintf(out, "\t\treturn zero, err\n")
 		fmt.Fprintf(out, "\t}\n")
-		fmt.Fprintf(out, "\tif answer, ok := res.(%s); ok {\n", v.answer)
-		fmt.Fprintf(out, "\t\treturn answer, nil\n")
-		fmt.Fprintf(out, "\t}\n")
+		if v.result != nil {
+			fmt.Fprintf(out, "\tif answer, ok := res.(%s); ok {\n", v.result.okTyp)
+			fmt.Fprintf(out, "\t\treturn &%s{Value: answer}, nil\n", strings.TrimPrefix(v.result.okCase, "*"))
+			fmt.Fprintf(out, "\t}\n")
+			fmt.Fprintf(out, "\tif refusal, ok := res.(%s); ok {\n", v.result.refuseTyp)
+			fmt.Fprintf(out, "\t\treturn &%s{Error: refusal}, nil\n", strings.TrimPrefix(v.result.errCase, "*"))
+			fmt.Fprintf(out, "\t}\n")
+		} else {
+			fmt.Fprintf(out, "\tif answer, ok := res.(%s); ok {\n", v.answer)
+			fmt.Fprintf(out, "\t\treturn answer, nil\n")
+			fmt.Fprintf(out, "\t}\n")
+		}
 		fmt.Fprintf(out, "\treturn zero, &%sUnexpectedAnswer{%s: op, %s: res}\n", name, name, ans)
 		fmt.Fprintf(out, "}\n\n")
 	}
@@ -440,6 +624,18 @@ func (g *HandlerGenerator) generateRPC(out *bytes.Buffer, variants []handlerVari
 	fmt.Fprintf(out, "\t}\n")
 	fmt.Fprintf(out, "\treturn nil\n")
 	fmt.Fprintf(out, "}\n\n")
+}
+
+// liftUnion is the expression that turns value, a sub of the answer union
+// ans (every variant of sub is a variant of ans), into an ans: the generated
+// Match of sub with one identity arm per variant, so the compiler checks that
+// each variant is an ans.
+func (g *HandlerGenerator) liftUnion(sub *shape.UnionLike, value, ans string, root shape.ToGoTypeNameOptionFunc) string {
+	arms := make([]string, 0, len(sub.Variant))
+	for _, v := range sub.Variant {
+		arms = append(arms, fmt.Sprintf("func(x *%s) %s { return x }", shape.ToGoTypeName(v, root), ans))
+	}
+	return fmt.Sprintf("%s[%s](%s, %s)", MatchUnionFuncName(sub, 1), ans, value, strings.Join(arms, ", "))
 }
 
 // lowerFirst is the unexported spelling of an exported name.
