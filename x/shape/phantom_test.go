@@ -1,6 +1,7 @@
 package shape
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,10 +33,12 @@ type Query struct {
 	assert.False(t, ok, "a plain field is not the marker")
 	assert.False(t, IsPhantomField(query.Fields[1]))
 
-	assert.Equal(t, `export type Query = {
-	Name?: string,
-}
-`, ToTypeScript(query, &TypeScriptOptions{currentPkgName: "example"}), "TypeScript export skips the phantom")
+	r := NewTypeScriptRenderer()
+	r.AddShape(query)
+	files, err := r.Render()
+	require.NoError(t, err)
+	assert.Equal(t, "export type Query = {\n  Name: string;\n};\n", files["example.ts"][strings.Index(files["example.ts"], "export type Query"):], "TypeScript export skips the phantom and keeps the field, untagged, under its Go name")
+	assert.NotContains(t, files, "f.ts", "the phantom's package is not a file")
 
 	assert.Equal(t, "example", ExtractPkgImportNames(query)["example"][len("github.com/widmogrod/mkunion/"):], "sanity: own package is listed")
 	assert.NotContains(t, ExtractPkgImportNames(query), "f", "the phantom's package is not imported")
