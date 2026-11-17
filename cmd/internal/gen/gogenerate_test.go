@@ -3,8 +3,11 @@ package gen
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -189,6 +192,49 @@ func main() {
 		// Test the function - should not run go generate
 		err = RunGoGenerate([]string{tempDir})
 		assert.NoError(t, err, "should skip directories without generate directives")
+	})
+}
+
+// ASR f21a4661-fdf0-4951-9665-6d83bbed356f/mkunion--cmd-mkunion:bugbounty.P1
+// Running go generate executes workspace-supplied commands, so the user must be
+// warned (and told about the opt-out) only when directives are actually going to run.
+func TestRunGoGenerateWarnsAboutExecutingDirectives(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	t.Cleanup(hook.Reset)
+
+	warned := func() bool {
+		for _, e := range hook.AllEntries() {
+			if e.Level == logrus.WarnLevel &&
+				strings.Contains(e.Message, "//go:generate") &&
+				strings.Contains(e.Message, "--dont-run-go-generate") {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Run("warns_before_executing_directives", func(t *testing.T) {
+		hook.Reset()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n\ngo 1.21\n"), 0644))
+		content := "package test\n\n" + "//go" + ":generate touch generated.txt\n"
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "test.go"), []byte(content), 0644))
+
+		require.NoError(t, RunGoGenerate([]string{dir}))
+		assert.True(t, warned(), "a warning about executing directives must be logged")
+		assert.Contains(t, hook.LastEntry().Message, "Finished", "legitimate use must still run go generate")
+		_, err := os.Stat(filepath.Join(dir, "generated.txt"))
+		assert.NoError(t, err, "go generate must still run when enabled")
+	})
+
+	t.Run("no_warning_when_nothing_runs", func(t *testing.T) {
+		hook.Reset()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n\ngo 1.21\n"), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "test.go"), []byte("package test\n"), 0644))
+
+		require.NoError(t, RunGoGenerate([]string{dir}))
+		assert.False(t, warned())
 	})
 }
 

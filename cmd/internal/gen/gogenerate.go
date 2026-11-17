@@ -33,6 +33,12 @@ func RunGoGenerate(dirs []string) error {
 		return nil
 	}
 
+	// 'go generate' executes arbitrary commands taken from //go:generate lines
+	// in the scanned sources. Make that visible, and tell users how to opt out.
+	log.Warnf("Running 'go generate' executes commands from //go:generate directives found in: %s. "+
+		"Do not run this on untrusted code; pass --dont-run-go-generate (-G) to skip it.",
+		strings.Join(dirsToProcess, ", "))
+
 	hasErrors := false
 	for _, dir := range dirsToProcess {
 		log.Infof("Running 'go generate ./...' in %s", dir)
