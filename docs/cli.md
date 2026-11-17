@@ -15,7 +15,9 @@ go tool mkunion watch ./...
 ```
 
 - `-g`, `--generate-only` - generate once and exit (CI, scripts)
-- `-G`, `--dont-run-go-generate` - skip the automatic `go generate ./...` step
+- `-G`, `--dont-run-go-generate` - skip the automatic `go generate ./...` step. **Security:** `go generate` executes the commands in `//go:generate` directives of the scanned sources, so use this flag when running mkunion on untrusted repositories. mkunion logs a warning before it runs them.
+
+> **Security:** `go generate` executes the commands in `//go:generate` directives of the scanned sources. mkunion logs a warning before running it. Do not run `mkunion watch` on untrusted repositories without `-G`.
 - `--type-registry` - generate `types_reg_gen.go` type registries (default: `true`)
 - `-v`, `--verbose` - debug-level logging
 
