@@ -1,6 +1,6 @@
 module github.com/widmogrod/mkunion
 
-go 1.25.1
+go 1.25.14
 
 retract v0.0.0-20220926122055-0884a4bef836 // Contains replace directives, cannot be installed
 
